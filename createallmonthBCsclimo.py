@@ -36,7 +36,7 @@ testplots = 0
 model = 'CanESM2'
 timeres = 'Amon'
 
-field = 'ts' # 'ts', 'sic', 'sit' # these are the model output CMIP names
+field = 'sit' # 'ts', 'sic', 'sit' # these are the model output CMIP names
 adjustsst=1
 threshtype = 'abs'
 thresh = 10
@@ -162,7 +162,7 @@ if field == 'ts' and adjustsst:
     # ideally don't want to change these vals over land though. landmask==-1
     fldptmp=copy.copy(fldp)
     fldptmp=ma.masked_where(np.logical_and(landmask != -1,fldptmp<271.2),fldptmp) # first mask out land.    
-    fldp[np.logical_and(sicp<=.15,fldptmp.mask)] = 271.2
+    fldp[np.logical_and(sicp<=15,fldptmp.mask)] = 271.2
     
     #badsst = ma.masked_where(np.logical_and(sicp<=.15,fldp<=271.2),fldp)
     #cplt.map_allmonths(badsst,lat,lon,cmin=238,cmax=308,cmap='blue2red_20',type='nh',lmask=1)
@@ -173,7 +173,7 @@ elif field == 'ts' and ~adjustsst:
     
     fldp = copy.copy(fldc)
 
-    # also need to get sea-ice concentration to check open water temp against pert SIConc
+    # also need to get pert sea-ice concentration to check open water temp against SIConc
     filename = basepath + model + '/' + casename + '/sic/' + \
                'sic_OImon_' + model + '_' + casename + \
                '_ens_' + timeper + 'climo.nc'
@@ -182,8 +182,12 @@ elif field == 'ts' and ~adjustsst:
     
     #print "Not done: check no open water is < 271.2"
     fldptmp=copy.copy(fldp)
-    fldptmp=ma.masked_where(np.logical_and(landmask!=-1,fldptmp<271.2),fldptmp) # first mask out land.
-    fldp[np.logical_and(sicp<=.15,fldptmp.mask)] = 271.2
+    # mask anywhere that is not land and below icefreeze
+    fldptmp=ma.masked_where(np.logical_and(landmask!=-1,fldptmp<271.2),fldptmp)
+    # anywhere that is not land, below icefreeze AND has sea-ice conc<.15, set to 271.2
+    flddum = fldp[np.logical_and(sicp<=15,fldptmp.mask)]
+    print flddum.shape # this can't be right, it only has a couple elements
+    fldp[np.logical_and(sicp<=15,fldptmp.mask)] = 271.2
     
     #badsstnoadj = ma.masked_where(np.logical_and(sicp<=.15,fldp<=271.2),fldp)
     #cplt.map_allmonths(badsst,lat,lon,cmin=238,cmax=308,cmap='blue2red_20',type='nh',lmask=1)
@@ -294,7 +298,7 @@ if writefiles:
                 outfile= bcfield + 'adjusted_BC_CanESM2_' + casenameout + '_' + thetimeper + '_' +\
                          datestr + '_' + threshtype + str(thresh) + 'thresh.nc'
             elif thetimeper==timeper and field == 'ts' and ~adjustsst:
-                outfile = bcfield + 'freezechkfor_' + casename + timeper + '_BC_CanESM2_' +\
+                outfile = bcfield + 'frzchk' + casename + timeper + '_BC_CanESM2_' +\
                           casenamec + '_' + timeperc + '_' + datestr + '.nc'           
                 # the data is the control, but open water temps are checked for below freezing where no pert ice
             elif thetimeper==timeper and field == 'sit' and controlsit:
@@ -314,18 +318,18 @@ if writefiles:
             # create the dimensions
             #    not sure why these need python variables, they are never used@@
             #    I guess they are the keys in the dict of Dimensions...
-            outtime = outnc.createDimension('time',None) 
+            outtime = outnc.createDimension('time', None) # len(timeoutall)) 
             outlat = outnc.createDimension('lat',len(bclat))
             outlon = outnc.createDimension('lon',len(bclon))
 
             # create variables
-            outtimes = outnc.createVariable('time','f8',('time',))
-            outlats = outnc.createVariable('lat','f4',('lat',))
-            outlons = outnc.createVariable('lon','f4',('lon',))
-            outfld = outnc.createVariable(bcfield,'f4',('time','lat','lon',))
+            outtimes = outnc.createVariable('time','f8',('time',)) # f8 and d are the same dtype
+            outlats = outnc.createVariable('lat','d',('lat',))
+            outlons = outnc.createVariable('lon','d',('lon',))
+            outfld = outnc.createVariable(bcfield,'f4',('time','lat','lon',),fill_value=1.0e38)
 
             # add attributes to variables
-            outfld.FillValue_ = np.float(1.0e38)
+            #outfld._FillValue = np.float(1.0e38) # do in variable creation step
             outfld.units = bcunits
             outfld.long_name = bcdescrip
 
@@ -350,7 +354,7 @@ if writefiles:
             elif thetimeper == timeper and field == 'ts' and ~adjustsst:
                 outnc.title = 'Boundary condition dataset generated from CanESM2 ' +\
                               casenamec + ' ' + outflds.keys()[0] + ', but open water <271.2K in ' +\
-                              casename + ' ' + outflds.keys()[1] + ' is set to 271.2 (where SIC<.15)'
+                              casename + ' ' + outflds.keys()[1] + ' is set to 271.2 (where SIC<15)'
             elif thetimeper == timeper and field == 'sit' and controlsit:
                 outnc.title = 'Boundary condition dataset generated from CanESM2 ' +\
                               casenamec + ' ' + outflds.keys()[0] +\
@@ -369,3 +373,4 @@ if writefiles:
             outfld[:] = fldout
 
             outnc.close()
+

@@ -185,7 +185,7 @@ def map_allmonths(fld, lat, lon,title='',units='',cmap='blue2red_w20',type='sq',
 
     midx=0
     fig, spax = plt.subplots(2,6)
-    fig.set_size_inches(12,6)
+    fig.set_size_inches(12,4.5) # changed from 12,6 on 4/24/14. see how it saves
     fig.subplots_adjust(hspace=0,wspace=0)
 
     for ax in spax.flat:
