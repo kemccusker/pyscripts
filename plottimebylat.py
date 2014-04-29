@@ -3,31 +3,36 @@
     Used canam4sims_stats2.py as a template
     
 """
+#import sys as sys
+#sys.path.insert(0,'./classes/')
 
 import copy
-import numpy as np
+#import numpy as np
 import numpy.ma as ma
-import scipy as sp # scientific python
+#import scipy as sp # scientific python
 import scipy.stats
-import matplotlib.pyplot as plt
-import platform as platform
-import cccmaplots as cplt
+import matplotlib.font_manager as fm
+#import matplotlib.pyplot as plt
+#import platform as platform
+#import cccmaplots as cplt
 import constants as con
 import cccmautils as cutl
-import cccmaNC as cnc
+#import cccmaNC as cnc
 import cccmacmaps as ccm
 
-cplt = reload(cplt)
-con = reload(con)
-cutl = reload(cutl)
-ccm = reload(ccm)
-cnc = reload(cnc)
+#cplt = reload(cplt)
+#con = reload(con)
+#cutl = reload(cutl)
+#ccm = reload(ccm)
+#cnc = reload(cnc)
+# commented out all the things I supposedly fixed in config
+# and startup scripts: 4/28/2014
 
 plt.close("all")
 plt.ion()
 
 printtofile=1
-seasonal = 0
+seasonal = 1
 seacycle = 1
 
 # version 2 uses control climo as baseline (rather than individual times),
@@ -42,6 +47,7 @@ threed = 0
 
 ############ set simulations #############
 casename = 'kemctl1'
+casenameh = 'kemhadctl'
 timstr = '001-111'
 timstr1 = '001-061' # for 3d vars
 timstr2 = '062-111' # "
@@ -51,11 +57,21 @@ timesel = '0002-01-01,0111-12-31'
 casenamep1 = 'kem1pert1'  # 2002-2012 sic and sit
 casenamep2 = 'kem1pert2'  # 2002-2012 sic, sit, adjusted sst
 casenamep3 = 'kem1pert3'  # 2002-2012 sic, adjusted sst. control sit
+casenameph = 'kemhadpert'
 timstrp = '001-111'
 timstrp1 = '001-061' # for 3d vars
 timstrp2 = '062-111' # "
 
-casenamep = casenamep2
+
+casenamep = casenameph
+
+if casenamep == casenameph:
+    casename = casenameh
+    timstr = '001-121'
+    timstr2 = '062-121'
+    timstrp = '001-121'
+    timstrp2 = '062-121'
+    timesel = '0002-01-01,0121-12-31'
 
 print 'CONTROL IS ' + casename
 print 'PERT IS ' + casenamep
@@ -63,9 +79,11 @@ print 'PERT IS ' + casenamep
 
 # # # ######## set Field info ###################
 # st, sic, gt, pmsl, pcp, hfl, hfs, turb, flg, fsg, fn, pcpn, zn, su, sv (@@later ufs,vfs)
-# OR threed: 'gz'
-field = 'pcpn'
+# OR threed: 'gz','t','u'
+field = 'gz'
 level = 85000  # only for threed vars
+thickness=1 # do thickness instead: just for gz
+tlev1=100000; tlev2=70000 # 1000-700hPa thickness
 
 cmap = 'blue2red_w20' # default cmap
 cmapclimo = 'Spectral_r'
@@ -198,8 +216,8 @@ elif field == 'zn': # snow depth (m)
     cmap = 'brown2blue_16w'
     cmin = -2
     cmax = 2
-    cminm = -3
-    cmaxm = 3
+    cminm = -1
+    cmaxm = 1
     cminpct=-10
     cmaxpct=10
     cminmpct=-10
@@ -279,6 +297,8 @@ elif field == 'u':
         cmin = -2; cmax = 2
         cminm = -.25; cmaxm = .25
         #cminsea = -3; cmaxsea = 3
+    elif level == 85000:
+        cminm = -.15; cmaxm = .15
     else:
         cmin = -1; cmax = 1
         cminm = -.25; cmaxm = .25
@@ -289,6 +309,8 @@ elif field == 'u':
 else:
     print 'No settings for ' + field
 
+## fontP = fm.FontProperties()
+## fontP.set_size('small')
 
 # # # ########## Read NC data ###############
 plat = platform.system()
@@ -317,17 +339,17 @@ else:
         fnamecb = basepath + casename + subdir + casename + '_' + fieldb + '_' + timstr + '_ts.nc'
         fnamepb = basepath + casenamep + subdir + casenamep + '_' + fieldb + '_' + timstrp + '_ts.nc'
 
-        fldc = cnc.getNCvar(fnamec,field.upper(),timesel=timesel)*conv + \
-               cnc.getNCvar(fnamecb,fieldb.upper(),timesel=timesel)*conv
-        fldp = cnc.getNCvar(fnamep,field.upper(),timesel=timesel)*conv+ \
-               cnc.getNCvar(fnamepb,fieldb.upper(),timesel=timesel)*conv
+        ## fldc = cnc.getNCvar(fnamec,field.upper(),timesel=timesel)*conv + \
+        ##        cnc.getNCvar(fnamecb,fieldb.upper(),timesel=timesel)*conv
+        ## fldp = cnc.getNCvar(fnamep,field.upper(),timesel=timesel)*conv+ \
+        ##        cnc.getNCvar(fnamepb,fieldb.upper(),timesel=timesel)*conv
         field='turb'
     else:
         fnamec = basepath + casename + subdir + casename + '_' + field + '_' + timstr + '_ts.nc'
         fnamep = basepath + casenamep + subdir + casenamep + '_' + field + '_' + timstrp + '_ts.nc'
 
-        fldc = cnc.getNCvar(fnamec,field.upper(),timesel=timesel)*conv
-        fldp = cnc.getNCvar(fnamep,field.upper(),timesel=timesel)*conv
+        ## fldc = cnc.getNCvar(fnamec,field.upper(),timesel=timesel)*conv
+        ## fldp = cnc.getNCvar(fnamep,field.upper(),timesel=timesel)*conv
 
 lat = cnc.getNCvar(fnamec,'lat')
 lon = cnc.getNCvar(fnamec,'lon')
@@ -349,39 +371,42 @@ if seasonal:
 
     midx=0
     fig,axs = plt.subplots(4,1) 
-    fig.set_size_inches(6,9)
+    fig.set_size_inches(6,8)
     fig.subplots_adjust(hspace=.15,wspace=.05)
 
     for ax in axs.flat:
 
         if threed:
-            fldcsea = np.append(cnc.getNCvar(fnamec,ncfield,timesel='0002-01-01,0061-12-31',levsel=level,seas=seasons[midx])*conv,
+            if field == 'gz' and thickness == 1:
+                print '@@ implement thickness calc!'
+                
+            fldcsea = np.append(cnc.getNCvar(fnamec,ncfield,timesel=timesel,levsel=level,seas=seasons[midx])*conv,
                    cnc.getNCvar(fnamec2,ncfield,levsel=level,seas=seasons[midx])*conv,
                    axis=0)
-            fldpsea = np.append(cnc.getNCvar(fnamep,ncfield,timesel='0002-01-01,0061-12-31',levsel=level,seas=seasons[midx])*conv,
+            fldpsea = np.append(cnc.getNCvar(fnamep,ncfield,timesel=timesel,levsel=level,seas=seasons[midx])*conv,
                    cnc.getNCvar(fnamep2,ncfield,levsel=level,seas=seasons[midx])*conv,
                    axis=0)
         else:
             if field=='turb':
                 field='hfl'; fieldb='hfs'
-                fldcsea = cnc.getNCvar(fnamec,field.upper(),timesel='0002-01-01,0111-12-31',
+                fldcsea = cnc.getNCvar(fnamec,field.upper(),timesel=timesel,
                                                seas=seasons[midx])*conv + cnc.getNCvar(fnamecb,fieldb.upper(),
-                                               timesel='0002-01-01,0111-12-31',seas=seasons[midx])*conv
-                fldpsea = cnc.getNCvar(fnamep,field.upper(),timesel='0002-01-01,0111-12-31',
+                                               timesel=timesel,seas=seasons[midx])*conv
+                fldpsea = cnc.getNCvar(fnamep,field.upper(),timesel=timesel,
                                                seas=seasons[midx])*conv + cnc.getNCvar(fnamepb,fieldb.upper(),
-                                               timesel='0002-01-01,0111-12-31',seas=seasons[midx])*conv 
+                                               timesel=timesel,seas=seasons[midx])*conv 
                 field='turb'
             else:
-                fldcsea = cnc.getNCvar(fnamec,field.upper(),timesel='0002-01-01,0111-12-31',
-                                               seas=seasons[midx])*conv # @@ returns only 109 indices?, oh prob for winter...
-                fldpsea = cnc.getNCvar(fnamep,field.upper(),timesel='0002-01-01,0111-12-31',
+                fldcsea = cnc.getNCvar(fnamec,field.upper(),timesel=timesel,
+                                               seas=seasons[midx])*conv # @@note winter returns 2 fewer elements
+                fldpsea = cnc.getNCvar(fnamep,field.upper(),timesel=timesel,
                                                seas=seasons[midx])*conv
 
         nyr,nlat,nlon = fldcsea.shape
         years = np.arange(0,nyr)
         # take a zonal mean for each time
-        fldcseazm = np.mean(fldcsea[...,-1],axis=2) # time x lat
-        fldpseazm = np.mean(fldpsea[...,-1],axis=2)
+        fldcseazm = np.mean(fldcsea[...,:-1],axis=2) # time x lat
+        fldpseazm = np.mean(fldpsea[...,:-1],axis=2)
         fldcseazmtm = np.mean(fldcseazm,axis=0) # time mean now
 
         plotd = np.zeros((nyr,nlat))
@@ -432,6 +457,7 @@ if seasonal:
         fig.colorbar(cf,cax=cbar_ax)
 
         plt.suptitle(field + ' (' + units + ')')
+        #plt.tight_layout() # makes it worse
 
     if printtofile:
         if threed:
@@ -454,25 +480,23 @@ if seacycle: # want month x lat (or height)
     months = con.get_mon()
     
     if threed:
-        fldc = np.append(cnc.getNCvar(fnamec,ncfield,timesel='0002-01-01,0061-12-31',levsel=level)*conv,
+        fldc = np.append(cnc.getNCvar(fnamec,ncfield,timesel=timesel,levsel=level)*conv,
                cnc.getNCvar(fnamec2,ncfield,levsel=level)*conv,
                axis=0)
-        fldp = np.append(cnc.getNCvar(fnamep,ncfield,timesel='0002-01-01,0061-12-31',levsel=level)*conv,
+        fldp = np.append(cnc.getNCvar(fnamep,ncfield,timesel=timesel,levsel=level)*conv,
                cnc.getNCvar(fnamep2,ncfield,levsel=level)*conv,
                axis=0)
     else:
         if field=='turb':
             field='hfl'; fieldb='hfs'
-            fldc = cnc.getNCvar(fnamec,field.upper(),timesel='0002-01-01,0111-12-31',
-                                           seas=seasons[midx])*conv + cnc.getNCvar(fnamecb,fieldb.upper(),
-                                           timesel='0002-01-01,0111-12-31')*conv
-            fldp = cnc.getNCvar(fnamep,field.upper(),timesel='0002-01-01,0111-12-31',
-                                           seas=seasons[midx])*conv + cnc.getNCvar(fnamepb,fieldb.upper(),
-                                           timesel='0002-01-01,0111-12-31')*conv 
+            fldc = cnc.getNCvar(fnamec,field.upper(),timesel=timesel)*conv + \
+                   cnc.getNCvar(fnamecb,fieldb.upper(),timesel=timesel)*conv
+            fldp = cnc.getNCvar(fnamep,field.upper(),timesel=timesel)*conv + \
+                   cnc.getNCvar(fnamepb,fieldb.upper(),timesel=timesel)*conv 
             field='turb'
         else:
-            fldc = cnc.getNCvar(fnamec,field.upper(),timesel='0002-01-01,0111-12-31')*conv
-            fldp = cnc.getNCvar(fnamep,field.upper(),timesel='0002-01-01,0111-12-31')*conv
+            fldc = cnc.getNCvar(fnamec,field.upper(),timesel=timesel)*conv
+            fldp = cnc.getNCvar(fnamep,field.upper(),timesel=timesel)*conv
 
     tstat = np.zeros((12,fldc.shape[1]))
     pval = np.zeros((12,fldc.shape[1]))
@@ -494,7 +518,7 @@ if seacycle: # want month x lat (or height)
 
  
     fig2,ax = plt.subplots(1,1)
-    fig2.set_size_inches(5,2.5)
+    fig2.set_size_inches(6, 5)
            
     plotfld = monfldpzmclimo - monfldczmclimo
 
@@ -517,6 +541,7 @@ if seacycle: # want month x lat (or height)
     fig2.colorbar(cf,cax=cbar_ax)
 
     plt.suptitle(field + ' (' + units + ')')
+    #plt.tight_layout() makes it worse
 
     if printtofile:
         if threed:
