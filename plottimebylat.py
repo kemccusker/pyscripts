@@ -63,7 +63,7 @@ timstrp1 = '001-061' # for 3d vars
 timstrp2 = '062-111' # "
 
 
-casenamep = casenameph
+casenamep = casenamep2
 
 if casenamep == casenameph:
     casename = casenameh
@@ -81,9 +81,9 @@ print 'PERT IS ' + casenamep
 # st, sic, gt, pmsl, pcp, hfl, hfs, turb, flg, fsg, fn, pcpn, zn, su, sv (@@later ufs,vfs)
 # OR threed: 'gz','t','u'
 field = 'gz'
-level = 85000  # only for threed vars
+level = 100000  # only for threed vars
 thickness=1 # do thickness instead: just for gz
-tlev1=100000; tlev2=70000 # 1000-700hPa thickness
+level2=70000 # for thickness calc: typically 1000-700hPa thickness
 
 cmap = 'blue2red_w20' # default cmap
 cmapclimo = 'Spectral_r'
@@ -264,6 +264,9 @@ elif field == 'gz':
         #cminsea = -15; cmaxsea = 15
         cminm = -10; cmaxm = 10  # for monthly
 
+    if thickness:
+        cminm = -15; cmaxm = 15
+
 elif field == 't':
     threed=1
     ncfield = 'TEMP'
@@ -377,8 +380,7 @@ if seasonal:
     for ax in axs.flat:
 
         if threed:
-            if field == 'gz' and thickness == 1:
-                print '@@ implement thickness calc!'
+            
                 
             fldcsea = np.append(cnc.getNCvar(fnamec,ncfield,timesel=timesel,levsel=level,seas=seasons[midx])*conv,
                    cnc.getNCvar(fnamec2,ncfield,levsel=level,seas=seasons[midx])*conv,
@@ -386,6 +388,19 @@ if seasonal:
             fldpsea = np.append(cnc.getNCvar(fnamep,ncfield,timesel=timesel,levsel=level,seas=seasons[midx])*conv,
                    cnc.getNCvar(fnamep2,ncfield,levsel=level,seas=seasons[midx])*conv,
                    axis=0)
+
+            if field == 'gz' and thickness == 1:
+                # get level2, then thickness is level2-level
+                fldcsea2 = np.append(cnc.getNCvar(fnamec,ncfield,timesel=timesel,levsel=level2,seas=seasons[midx])*conv,
+                       cnc.getNCvar(fnamec2,ncfield,levsel=level2,seas=seasons[midx])*conv,
+                       axis=0)
+                fldpsea2 = np.append(cnc.getNCvar(fnamep,ncfield,timesel=timesel,levsel=level2,seas=seasons[midx])*conv,
+                       cnc.getNCvar(fnamep2,ncfield,levsel=level2,seas=seasons[midx])*conv,
+                       axis=0)
+                fldcsea = fldcsea2 - fldcsea
+                fldpsea = fldpsea2 - fldpsea
+
+                
         else:
             if field=='turb':
                 field='hfl'; fieldb='hfs'
@@ -429,11 +444,6 @@ if seasonal:
                 else:
                     pval[yr,:] = np.ones((1,nlat))
             
-        # figuring out how to get stat sig will be harder -->
-        # prob have to loop through time variable, each time adding another time period.
-        # do that next.
-        #tstat[midx,:,:],pval[midx,:,:] = sp.stats.ttest_ind(fldpsea,fldcsea,axis=0)
-
         lats,times = np.meshgrid(lat,years)
         
         plotfld = plotd #@@fldpseazm - fldcseazm # the thing is, these years could be in any order...how take this into account??
@@ -453,20 +463,32 @@ if seasonal:
             ax.set_xlabel('Time')
 
         midx=midx+1
-        cbar_ax = fig.add_axes([.91,.15, .02,.7])
-        fig.colorbar(cf,cax=cbar_ax)
+    cbar_ax = fig.add_axes([.91,.15, .02,.7])
+    fig.colorbar(cf,cax=cbar_ax)
 
+    if threed:
+        if field == 'gz' and thickness==1:
+            plt.suptitle(field + ' ' + str(level2/100) + '-' + str(level/100) + ' (' + units + ')')
+        else:
+            plt.suptitle(field + ' ' + str(level/100) + ' (' + units + ')')
+
+    else:
         plt.suptitle(field + ' (' + units + ')')
+
         #plt.tight_layout() # makes it worse
 
     if printtofile:
+        prfield = field # print field
         if threed:
-            field = field + str(level/100)
+            if field == 'gz' and thickness==1:
+                prfield = field + str(level2/100) + '-' + str(level/100)
+            else:
+                prfield = field + str(level/100)
         if v2:
-            fig.savefig(field + 'diffsig' + sigtype + '_' + casenamep +\
+            fig.savefig(prfield + 'diffsig' + sigtype + '_' + casenamep +\
                         '_v_' + casename + '_timexlat_seas_nh_v2.' + suff)
         else:
-            fig.savefig(field + 'diffsig' + sigtype + '_' + casenamep +\
+            fig.savefig(prfield + 'diffsig' + sigtype + '_' + casenamep +\
                         '_v_' + casename + '_timexlat_seas_nh.' + suff)
 
 
@@ -540,12 +562,24 @@ if seacycle: # want month x lat (or height)
     cbar_ax = fig2.add_axes([.91,.15, .02,.7])
     fig2.colorbar(cf,cax=cbar_ax)
 
-    plt.suptitle(field + ' (' + units + ')')
+    if threed:
+        if field == 'gz' and thickness==1:
+            plt.suptitle(field + ' ' + str(level2/100) + '-' + str(level/100) + ' (' + units + ')')
+        else:
+            plt.suptitle(field + ' ' + str(level/100) + ' (' + units + ')')
+
+    else:
+        plt.suptitle(field + ' (' + units + ')')
     #plt.tight_layout() makes it worse
 
     if printtofile:
+        prfield = field
+
         if threed:
-            field = field + str(level/100)
+            if field == 'gz' and thickness==1:
+                prfield = field + str(level2/100) + '-' + str(level/100)
+            else:
+                prfield = field + str(level/100)
             
-        fig2.savefig(field + 'diffsig' + sigtype + '_' + casenamep +\
+        fig2.savefig(prfield + 'diffsig' + sigtype + '_' + casenamep +\
                     '_v_' + casename + '_monxlat_nh.' + suff)

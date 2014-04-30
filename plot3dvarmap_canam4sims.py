@@ -9,23 +9,23 @@
 #              cccmaNC module to read and average netcdf data
 """   
 
-import numpy as np # for array handling
-import scipy as sp # scientific python
+#import numpy as np # for array handling
+#import scipy as sp # scientific python
 import scipy.stats
-import matplotlib.pyplot as plt # for basic plotting
+#import matplotlib.pyplot as plt # for basic plotting
 import matplotlib.cm as cm
 from subprocess import call # for doing system calls - not really needed
-from netCDF4 import Dataset
-from mpl_toolkits.basemap import Basemap # for maps
+#from netCDF4 import Dataset
+#from mpl_toolkits.basemap import Basemap # for maps
 import datetime as datetime
 import matplotlib.colors as col
 import platform as platform
-import cccmaplots as cplt
+#import cccmaplots as cplt # in startup now: ~/.config/ipython/profile_default/startup/00-startup.py
 import constants as con
 import cccmautils as cutl
 import matplotlib.font_manager as fm
-import cccmaNC as cnc
-import cccmacmaps
+#import cccmaNC as cnc # in startup
+#import cccmacmaps # in startup
 
 #import cdo as cdo; cdo = cdo.Cdo()
 #import os
@@ -33,10 +33,11 @@ import cccmacmaps
 # https://code.zmaw.de/projects/cdo/wiki/Cdo%7Brbpy%7D
 
 # while I'm still creating these modules, have to reload to get changes
-cplt = reload(cplt)
-con = reload(con)
-cutl = reload(cutl)
-cnc = reload(cnc)
+# don't need to do anymore b/c added to configuration (autoreload)
+#cplt = reload(cplt)
+#con = reload(con)
+#cutl = reload(cutl)
+#cnc = reload(cnc)
 
 #os.system('rm -rf /tmp/cdoPy*')
 plt.close("all")
@@ -44,14 +45,16 @@ plt.ion()
 
 printtofile=1
 allmos=1 # make monthly figures
-bimos=0  # bi-monthly figures
+bimos=0  # bi-monthly figures. not implemented yet 4/29/14
 seasonal=1 # seasonal figures
 singleplots=1  # seasonal climo and mean diff
 obssims=1    # this will overrule the simulation settings and set to kemhad*
+thickness=0; level2=70000 # calc thickness between level and level2 for GZ only, typically 1000-700hPa
+#level = 100000 # for thickness calc
 
-level = 30000
+#level = 30000
 #level = 50000 # 500hPa
-#level = 70000
+level = 70000
 
 sigtype = 'cont' # significance: 'cont' or 'hatch' which is default
 
@@ -73,9 +76,6 @@ season = 'ANN'
 casename = 'kemctl1'
 timstr = '001-061'
 timstr2 = '062-111'
-#timstr = '001-111' # only for climo
-#styr = 2             # skip year 1
-#enyr = 61 
 
 # Pert run
 casenamep1 = 'kem1pert1'  # 2002-2012 sic and sit
@@ -83,24 +83,25 @@ casenamep2 = 'kem1pert2'  # 2002-2012 sic, sit, adjusted sst
 casenamep3 = 'kem1pert3'  # 2002-2012 sic, adjusted sst. control sit
 timstrp = '001-061'
 timstrp2 = '062-111'
-#timstrp = '001-111' # only for climo
-#styrp = 2             # skip year 1
-#enyrp = 61
+
 
 ######## set pert run ############
-casenamep = casenamep2
+casenamep = casenamep1
 
 ########### OR SET OTHER RUNS ##############
 if obssims:
     casename = 'kemhadctl'
     casenamep = 'kemhadpert'
+    timstr2 = '062-121'
+    timstrp2 = '062-121'
+
 
 cmap = 'blue2red_w20'
 cmapclimo = 'Spectral_r'
 conv = 1   # conversion factor to convert units, etc
 
 # # # ######## set Field info ###############
-field = 't'  # t, u, gz
+field = 'gz'  # t, u, gz
 
 
 if sigtype=='cont':
@@ -155,6 +156,8 @@ elif field == 'gz':
         cminc=2800; cmaxc = 3200
     elif level==30000:
         cminc=8600; cmaxc = 9800
+    elif level==100000: # use this for thickness calc 1000-700
+        cminc=2650; cmaxc = 3050
         
     cmin = -8 # annual mean
     cmax = 8  # annual mean
@@ -166,6 +169,8 @@ elif field == 'gz':
     else:
         cminsea = -15; cmaxsea = 15
         cminm = -20; cmaxm = 20  # for monthly
+
+        
 else:
     print 'no such field: ' + field
 
@@ -192,6 +197,7 @@ fnamep2 = basepath + casenamep + subdir + casenamep + '_' + field + '_' + timstr
 ## fnamep32 = basepath + casenamep3 + subdir + casenamep3 + '_' + field + '_' + timstrp2 + '_' + ftype + '.nc'
 
 print field + ' level ' + str(level/100)
+if field=='gz' and thickness==1: print ' to level ' + str(level2/100)
 print 'CONTROL: ' + casename
 print 'PERT: ' + casenamep
 
@@ -199,18 +205,21 @@ lat = cnc.getNCvar(fnamec,'lat')
 lon = cnc.getNCvar(fnamec,'lon')
 
 
-if casename == 'kemhadctl':
-    print '@@ temporarily just getting years 1-61 for ' + casename
-    
-    seasfldc = cnc.getNCvar(fnamec,ncfield,timesel='0002-01-01,0061-12-31',levsel=level,seas=season)*conv
-    seasfldp = cnc.getNCvar(fnamep,ncfield,timesel='0002-01-01,0061-12-31',levsel=level,seas=season)*conv
-else:
-    seasfldc = np.append(cnc.getNCvar(fnamec,ncfield,timesel='0002-01-01,0061-12-31',levsel=level,seas=season)*conv,
-                   cnc.getNCvar(fnamec2,ncfield,levsel=level,seas=season)*conv,
+seasfldc = np.append(cnc.getNCvar(fnamec,ncfield,timesel='0002-01-01,0061-12-31',levsel=level,seas=season)*conv,
+               cnc.getNCvar(fnamec2,ncfield,levsel=level,seas=season)*conv,
+               axis=0)
+seasfldp = np.append(cnc.getNCvar(fnamep,ncfield,timesel='0002-01-01,0061-12-31',levsel=level,seas=season)*conv,
+               cnc.getNCvar(fnamep2,ncfield,levsel=level,seas=season)*conv,
+               axis=0)
+if field=='gz' and thickness==1:
+    seasfldc2 = np.append(cnc.getNCvar(fnamec,ncfield,timesel='0002-01-01,0061-12-31',levsel=level2,seas=season)*conv,
+                   cnc.getNCvar(fnamec2,ncfield,levsel=level2,seas=season)*conv,
                    axis=0)
-    seasfldp = np.append(cnc.getNCvar(fnamep,ncfield,timesel='0002-01-01,0061-12-31',levsel=level,seas=season)*conv,
-                   cnc.getNCvar(fnamep2,ncfield,levsel=level,seas=season)*conv,
+    seasfldp2 = np.append(cnc.getNCvar(fnamep,ncfield,timesel='0002-01-01,0061-12-31',levsel=level2,seas=season)*conv,
+                   cnc.getNCvar(fnamep2,ncfield,levsel=level2,seas=season)*conv,
                    axis=0)
+    seasfldc=seasfldc2 - seasfldc
+    seasfldp=seasfldp2 - seasfldp
 
 
 
@@ -234,7 +243,10 @@ seasfldptm=np.mean(seasfldp,0)
 ############################## SEASONAL (ANN) MEAN ##########################
 if singleplots:
     #   SEASONAL MEAN CLIMO (CONTROL)
-    title = season + " " + field + ": " + casename
+    if field=='gz' and thickness==1:
+        title = season + ' ' + field + ' ' + str(level2/100) + '-' + str(level/100) + ': ' + casename
+    else:
+        title = season + ' ' + field + ' ' + str(level/100) + ': ' + casename
 
     plotfld = seasfldctm
 
@@ -242,8 +254,12 @@ if singleplots:
     bm,pc = cplt.kemmap(plotfld,lat,lon,cmin=cminc,cmax=cmaxc,cmap=cmapclimo,type='nh',\
                         title=title,units=units)
     if printtofile:
-        fig1.savefig(field + 'LEV' + str(level/100) + '_' + season + \
-                    '_' + casename + '_nh.' + suff)
+        if field=='gz' and thickness==1:
+            fig1.savefig(field + 'THK' + str(level2/100) + '-' + str(level/100) + '_' + season + \
+                         '_' + casename + '_nh.' + suff)
+        else:
+            fig1.savefig(field + 'LEV' + str(level/100) + '_' + season + \
+                         '_' + casename + '_nh.' + suff)
 
 
     #   SEASONAL MEAN DIFF
@@ -256,23 +272,33 @@ if singleplots:
     cplt.addtsigm(bm,pval,lat,lon,type=sigtype)    
 
     if printtofile:
-        fig.savefig(field + 'DIFFLEV' + str(level/100) + sigtype + '_' + season + \
-                    '_' + casenamep + '_v_' + casename + '_nh.' + suff)
+        if field=='gz' and thickness==1:
+            fig.savefig(field + 'DIFFTHK' + str(level2/100) + '-' + str(level/100) + sigtype + '_' + season + \
+                        '_' + casenamep + '_v_' + casename + '_nh.' + suff)
+        else:
+            fig.savefig(field + 'DIFFLEV' + str(level/100) + sigtype + '_' + season + \
+                        '_' + casenamep + '_v_' + casename + '_nh.' + suff)
 
 
 
 ######################## ALL MONTHS #######################
 if allmos:
-    if casename == 'kemhadctl':
-        fldc = cnc.getNCvar(fnamec,ncfield,timesel='0002-01-01,0061-12-31',levsel=level)*conv
-        fldp = cnc.getNCvar(fnamep,ncfield,timesel='0002-01-01,0061-12-31',levsel=level)*conv
-    else:
-        fldc = np.append(cnc.getNCvar(fnamec,ncfield,timesel='0002-01-01,0061-12-31',levsel=level)*conv,
-                   cnc.getNCvar(fnamec2,ncfield,levsel=level)*conv,
+
+    fldc = np.append(cnc.getNCvar(fnamec,ncfield,timesel='0002-01-01,0061-12-31',levsel=level)*conv,
+               cnc.getNCvar(fnamec2,ncfield,levsel=level)*conv,
+               axis=0)
+    fldp = np.append(cnc.getNCvar(fnamep,ncfield,timesel='0002-01-01,0061-12-31',levsel=level)*conv,
+               cnc.getNCvar(fnamep2,ncfield,levsel=level)*conv,
+               axis=0)
+    if field == 'gz' and thickness==1:
+        fldc2 = np.append(cnc.getNCvar(fnamec,ncfield,timesel='0002-01-01,0061-12-31',levsel=level2)*conv,
+                   cnc.getNCvar(fnamec2,ncfield,levsel=level2)*conv,
                    axis=0)
-        fldp = np.append(cnc.getNCvar(fnamep,ncfield,timesel='0002-01-01,0061-12-31',levsel=level)*conv,
-                   cnc.getNCvar(fnamep2,ncfield,levsel=level)*conv,
+        fldp2 = np.append(cnc.getNCvar(fnamep,ncfield,timesel='0002-01-01,0061-12-31',levsel=level2)*conv,
+                   cnc.getNCvar(fnamep2,ncfield,levsel=level2)*conv,
                    axis=0)
+        fldc = fldc2 - fldc
+        fldp = fldp2 - fldp
     
     #     ALL MONTHS
     months = con.get_mon()
@@ -306,9 +332,16 @@ if allmos:
     #fig4.colorbar(pc,cax=cbar_ax,orientation='horizontal')
     cbar_ax = fig4.add_axes([.91,.25, .02,.5])
     fig4.colorbar(pc,cax=cbar_ax)
-    plt.suptitle(ncfield + ' (' + units + ')')
+    if field=='gz' and thickness==1:
+        plt.suptitle(ncfield + ' ' + str(level2/100) + '-' + str(level/100)+ ' (' + units + ')')
+    else:
+        plt.suptitle(ncfield + ' ' + str(level/100) + ' (' + units + ')')
     if printtofile:
-        fig4.savefig(field + 'DIFFLEV' + str(level/100) + sigtype + '_' + casenamep +\
+        if field=='gz' and thickness==1:
+            fig4.savefig(field + 'DIFFTHK' + str(level2/100) + '-' + str(level/100) + sigtype + '_' + casenamep +\
+                    '_v_' + casename + '_allmos_nh.' + suff)
+        else:
+            fig4.savefig(field + 'DIFFLEV' + str(level/100) + sigtype + '_' + casenamep +\
                     '_v_' + casename + '_allmos_nh.' + suff)
 
 
@@ -328,21 +361,25 @@ if seasonal:
     fig6.subplots_adjust(hspace=.15,wspace=.05)
     for ax in ax6.flat:
 
-        if casename == 'kemhadctl':
-            fldcsea = cnc.getNCvar(fnamec,ncfield,timesel='0002-01-01,0061-12-31',
-                                           levsel=level,seas=seasons[midx])*conv
-            fldpsea = cnc.getNCvar(fnamep,ncfield,timesel='0002-01-01,0061-12-31',
-                                           levsel=level,seas=seasons[midx])*conv
-        else:
-            fldcsea = np.append(cnc.getNCvar(fnamec,ncfield,timesel='0002-01-01,0061-12-31',
-                                           levsel=level,seas=seasons[midx])*conv,
-                              cnc.getNCvar(fnamec2,ncfield,levsel=level,seas=seasons[midx])*conv,
-                              axis=0)
-            fldpsea = np.append(cnc.getNCvar(fnamep,ncfield,timesel='0002-01-01,0061-12-31',
-                                           levsel=level,seas=seasons[midx])*conv,
-                              cnc.getNCvar(fnamep2,ncfield,levsel=level,seas=seasons[midx])*conv,
-                              axis=0)
-        
+        fldcsea = np.append(cnc.getNCvar(fnamec,ncfield,timesel='0002-01-01,0061-12-31',
+                                       levsel=level,seas=seasons[midx])*conv,
+                          cnc.getNCvar(fnamec2,ncfield,levsel=level,seas=seasons[midx])*conv,
+                          axis=0)
+        fldpsea = np.append(cnc.getNCvar(fnamep,ncfield,timesel='0002-01-01,0061-12-31',
+                                       levsel=level,seas=seasons[midx])*conv,
+                          cnc.getNCvar(fnamep2,ncfield,levsel=level,seas=seasons[midx])*conv,
+                          axis=0)
+
+        if field == 'gz' and thickness==1:
+            fldcsea2 = np.append(cnc.getNCvar(fnamec,ncfield,timesel='0002-01-01,0061-12-31',levsel=level2,seas=seasons[midx])*conv,
+                       cnc.getNCvar(fnamec2,ncfield,levsel=level2,seas=seasons[midx])*conv,
+                       axis=0)
+            fldpsea2 = np.append(cnc.getNCvar(fnamep,ncfield,timesel='0002-01-01,0061-12-31',levsel=level2,seas=seasons[midx])*conv,
+                       cnc.getNCvar(fnamep2,ncfield,levsel=level2,seas=seasons[midx])*conv,
+                       axis=0)
+            fldcsea = fldcsea2 - fldcsea
+            fldpsea = fldpsea2 - fldpsea
+
         tstat[midx,:,:],pval[midx,:,:] = sp.stats.ttest_ind(fldpsea,fldcsea,axis=0)
         fldcallseas[midx,:,:] = np.mean(fldcsea,axis=0)
         fldpallseas[midx,:,:] = np.mean(fldpsea,axis=0)
@@ -362,6 +399,10 @@ if seasonal:
     fig6.colorbar(pc,cax=cbar_ax)
     #plt.suptitle(ncfield + ' (' + units + ')')
     if printtofile:
-        fig6.savefig(field + 'DIFFLEV' + str(level/100) + sigtype + '_' + casenamep +\
-                    '_v_' + casename + '_seas_nh.' + suff)
+        if field=='gz' and thickness==1:
+            fig6.savefig(field + 'DIFFTHK' + str(level2/100) + '-' + str(level/100) + sigtype + '_' + casenamep +\
+                         '_v_' + casename + '_seas_nh.' + suff)
+        else:
+            fig6.savefig(field + 'DIFFLEV' + str(level/100) + sigtype + '_' + casenamep +\
+                         '_v_' + casename + '_seas_nh.' + suff)
  

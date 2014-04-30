@@ -5,32 +5,32 @@
 
 """
 
-import numpy as np # for array handling
-import numpy.ma as ma
+#import numpy as np # for array handling
+#import numpy.ma as ma
 import scipy as sp # scientific python
 import scipy.stats
-import matplotlib.pyplot as plt # for basic plotting
+#import matplotlib.pyplot as plt # for basic plotting
 import matplotlib.cm as cm
 from subprocess import call # for doing system calls - not really needed
-from netCDF4 import Dataset
-from mpl_toolkits.basemap import Basemap # for maps
+#from netCDF4 import Dataset
+#from mpl_toolkits.basemap import Basemap # for maps
 import datetime as datetime
 import matplotlib.colors as col
 import platform as platform
-import cccmaplots as cplt    # my module
+#import cccmaplots as cplt    # my module
 import constants as con      # my module
 import cccmautils as cutl    # my module
 import matplotlib.font_manager as fm
 import copy
-import cccmacmaps as ccm
-import cccmaNC as cnc
+#import cccmacmaps as ccm
+#import cccmaNC as cnc
 
 # while I'm still creating these modules, have to reload to get changes
-cplt = reload(cplt)
-con = reload(con)
-cutl = reload(cutl)
-ccm = reload(ccm)
-cnc = reload(cnc)
+## cplt = reload(cplt)
+## con = reload(con)
+## cutl = reload(cutl)
+## ccm = reload(ccm)
+## cnc = reload(cnc)
 
 plt.close("all")
 plt.ion()
@@ -40,6 +40,7 @@ plotann=1    # annual average
 plotallmos=1 # each month separately
 bimos=0 # averages every 2 mos (JF, MA, MJ, JA, SO, ND) @@ add
 seasonal=1 # averages seasons (DJF, MAM, JJA, SON)
+obssims=1  # override settings to do observed runs (kemhad*)
 
 sigtype = 'cont' # significance: 'cont' or 'hatch' which is default
 
@@ -50,24 +51,14 @@ model = 'CanAM4'
 # # # ########### set Simulations #############
 # Control run
 casename = 'kemctl1'
-#timstr = '001-061'
-#timstr2 = '062-111'
-# @@ 2D variables are in one timeseries: 001-111
 timstr = '001-111'
 timesel = '0002-01-01,0111-12-31'
-#styr = 2             # skip year 1
-#enyr = 61 
 
 # Pert run
 casenamep1 = 'kem1pert1'  # 2002-2012 sic and sit
 casenamep2 = 'kem1pert2'  # 2002-2012 sic, sit, adjusted sst
 casenamep3 = 'kem1pert3'  # 2002-2012 sic, adjusted sst. control sit
-#timstrp = '001-061'
-#timstrp2 = '062-111'
-# @@ 2D variables are in one timeseries: 001-111
 timstrp = '001-111'
-#styrp = 2             # skip year 1
-#enyrp = 61
 
 ####### SET PERT RUN ############
 casenamep = casenamep2
@@ -75,11 +66,12 @@ casenamep = casenamep2
 #casename = casenamep3
 
 ########## SET OBSERVED RUNS #######
-## casename = 'kemhadctl'
-## casenamep = 'kemhadpert'
-## timstr = '001-061'
-## timstrp = timstr
-## timesel = '0002-01-01,0061-12-31'
+if obssims==1:
+    casename = 'kemhadctl'
+    casenamep = 'kemhadpert'
+    timstr = '001-121'
+    timstrp = timstr
+    timesel = '0002-01-01,0121-12-31'
 
 print 'CONTROL IS ' + casename
 print 'PERT IS ' + casenamep
@@ -87,7 +79,7 @@ print 'PERT IS ' + casenamep
 
 # # # ######## set Field info ###################
 # st, sic, gt, pmsl, pcp, hfl, hfs, turb, flg, fsg, fn, pcpn, zn, su, sv (@@later ufs,vfs)
-field = 'st'
+field = 'su'
 
 cmap = 'blue2red_w20' # default cmap
 cmapclimo = 'Spectral_r'
@@ -106,9 +98,9 @@ if field == 'st':
     cmin = -2; cmax = 2  # for anomaly plots
     cminp=-.5; cmaxp=.5 # for when pert is 'ctl'
     cminm = -3; cmaxm = 3   # monthly
-    print 'small clim!'
-    cmin = -1; cmax = 1  # for anomaly plots
-    cminm = -1.5; cmaxm = 1.5   # monthly
+    ## print 'small clim!'
+    ## cmin = -1; cmax = 1  # for anomaly plots
+    ## cminm = -1.5; cmaxm = 1.5   # monthly
     
     cminmp = -1; cmaxmp = 1 # for when pert is 'ctl'
     cmap = 'blue2red_w20'
@@ -266,12 +258,8 @@ if field=='turb':
     field='hfl'; fieldb='hfs'
     fnamec = basepath + casename + subdir + casename + '_' + field + '_' + timstr + '_ts.nc'
     fnamep = basepath + casenamep + subdir + casenamep + '_' + field + '_' + timstrp + '_ts.nc'
-    ## fnamep2 = basepath + casenamep2 + subdir + casenamep2 + '_' + field + '_' + timstrp + '_ts.nc'
-    ## fnamep3 = basepath + casenamep3 + subdir + casenamep3 + '_' + field + '_' + timstrp + '_ts.nc'
-    ## fnamecb = basepath + casename + subdir + casename + '_' + fieldb + '_' + timstr + '_ts.nc'
-    ## fnamep1b = basepath + casenamep1 + subdir + casenamep1 + '_' + fieldb + '_' + timstrp + '_ts.nc'
-    ## fnamep2b = basepath + casenamep2 + subdir + casenamep2 + '_' + fieldb + '_' + timstrp + '_ts.nc'
-    ## fnamep3b = basepath + casenamep3 + subdir + casenamep3 + '_' + fieldb + '_' + timstrp + '_ts.nc'
+    fnamecb = basepath + casename + subdir + casename + '_' + fieldb + '_' + timstr + '_ts.nc'
+    fnamepb = basepath + casenamep + subdir + casenamep + '_' + fieldb + '_' + timstrp + '_ts.nc'
 
     fldc = cnc.getNCvar(fnamec,field.upper(),timesel=timesel)*conv + \
            cnc.getNCvar(fnamecb,fieldb.upper(),timesel=timesel)*conv

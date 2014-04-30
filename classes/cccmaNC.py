@@ -162,6 +162,7 @@ def getNCvar(filename,field,timesel=None,levsel=None,monsel=None,seas=None,calc=
                 fld = np.squeeze(cdo.selmon(monsel,input = filename,returnArray = field))
                 os.system('rm -rf /tmp/cdoPy*')
             else: # get all data
+                print '@@ getting memory errors here...try using CDO to select appropriate lons for the zm calc'
                 fld = ncfile.variables[field][...] # have to get field before removing lon
 
             if remlon:

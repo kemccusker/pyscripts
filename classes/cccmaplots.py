@@ -151,6 +151,8 @@ def addtsig(ploth, pvals, dim1, dim2, siglevel=0.05,color='k',type='hatch',cmap=
     Add significance contour to given pyplot handle.
     type can be 'hatch', 'color', 'cont' (the else case is cont)
     """
+
+    print 'be careful, I am not sure this works properly 4/29/14' #@@ might just be when i screwed w/ dims and tried to plot lat x time?
     
     plotfld = copy.copy(pvals) # shallow copy
     plotfld = ma.masked_where(pvals>siglevel,pvals)

@@ -5,22 +5,22 @@
 #              cccmaNC module to read and average netcdf data
 #    
 
-import numpy as np # for array handling
-import scipy as sp # scientific python
+#import numpy as np # for array handling
+#import scipy as sp # scientific python
 import scipy.stats
-import matplotlib.pyplot as plt # for basic plotting
+#import matplotlib.pyplot as plt # for basic plotting
 import matplotlib.cm as cm
 from subprocess import call # for doing system calls - not really needed
-from netCDF4 import Dataset
-from mpl_toolkits.basemap import Basemap # for maps
+#from netCDF4 import Dataset
+#from mpl_toolkits.basemap import Basemap # for maps
 import datetime as datetime
 import matplotlib.colors as col
 import platform as platform
-import cccmaplots as cplt
+#import cccmaplots as cplt
 import constants as con
 import cccmautils as cutl
 import matplotlib.font_manager as fm
-import cccmaNC as cnc
+#import cccmaNC as cnc
 import cccmacmaps
 
 #import cdo as cdo; cdo = cdo.Cdo()
@@ -29,26 +29,26 @@ import cccmacmaps
 # https://code.zmaw.de/projects/cdo/wiki/Cdo%7Brbpy%7D
 
 # while I'm still creating these modules, have to reload to get changes
-cplt = reload(cplt)
-con = reload(con)
-cutl = reload(cutl)
-cnc = reload(cnc)
+## cplt = reload(cplt)
+## con = reload(con)
+## cutl = reload(cutl)
+## cnc = reload(cnc)
 
 #os.system('rm -rf /tmp/cdoPy*')
 plt.close("all")
 plt.ion()
 
-printtofile=0
-allmos=0 # make monthly figures
+printtofile=1
+allmos=1 # make monthly figures
 bimos=0  # bi-monthly figures
-seasonal=0 # seasonal figures
+seasonal=1 # seasonal figures
 singleplots=1  # seasonal climo and mean diff
 addcontlines=1 # want contour lines in addition to colors on figs
-obssims=0    # this will overrule the simulation settings and set to kemhad*
+obssims=1    # this will overrule the simulation settings and set to kemhad*
 obssimscomp=0 # compare hadpert to pert2 @@ not ready yet
 
 # # # ######## set Field info ###############
-field = 'gz'  # t, u, gz
+field = 't'  # t, u, gz
 
 
 seasons = 'DJF','MAM','JJA','SON'
@@ -63,9 +63,6 @@ season = 'ANN'
 casename = 'kemctl1'
 timstr = '001-061'
 timstr2 = '062-111'
-#timstr = '001-111' # only for climo
-#styr = 2             # skip year 1
-#enyr = 61 
 
 # Pert run
 casenamep1 = 'kem1pert1'  # 2002-2012 sic and sit
@@ -73,9 +70,6 @@ casenamep2 = 'kem1pert2'  # 2002-2012 sic, sit, adjusted sst
 casenamep3 = 'kem1pert3'  # 2002-2012 sic, adjusted sst. control sit
 timstrp = '001-061'
 timstrp2 = '062-111'
-#timstrp = '001-111' # only for climo
-#styrp = 2             # skip year 1
-#enyrp = 61
 
 ######## set pert run ############
 casenamep = casenamep2
@@ -88,6 +82,8 @@ casename = casenamep3
 if obssims:
     casename = 'kemhadctl'
     casenamep = 'kemhadpert'
+    timstr2 = '062-121'
+    timstrp2 = '062-121'
 elif obssimscomp: # can't do this yet...need had runs to finish
     casename = 'kemhadpert'
     casenamep = 'kem1pert2'
@@ -171,18 +167,12 @@ lev = cnc.getNCvar(fnamec,'plev')
 #fldczm = cnc.getNCvar(fnamec,ncfield,calc='zm',timechunk=((styr-1)*12,enyr*12+1) )*conv
 #fldpzm = cnc.getNCvar(fnamep2,ncfield,calc='zm',timechunk=((styr-1)*12,enyr*12+1) )*conv
 
-if casename == 'kemhadctl':
-    print '@@ temporarily just getting years 1-61 for ' + casename
-    
-    seasfldczm = cnc.getNCvar(fnamec,ncfield,timesel='0002-01-01,0061-12-31',seas=season,calc='zm')*conv
-    seasfldpzm = cnc.getNCvar(fnamep,ncfield,timesel='0002-01-01,0061-12-31',seas=season,calc='zm')*conv
-else:
-    seasfldczm = np.append(cnc.getNCvar(fnamec,ncfield,timesel='0002-01-01,0061-12-31',seas=season,calc='zm')*conv,
-                   cnc.getNCvar(fnamec2,ncfield,seas=season,calc='zm')*conv,
-                   axis=0)
-    seasfldpzm = np.append(cnc.getNCvar(fnamep,ncfield,timesel='0002-01-01,0061-12-31',seas=season,calc='zm')*conv,
-                   cnc.getNCvar(fnamep2,ncfield,seas=season,calc='zm')*conv,
-                   axis=0)
+seasfldczm = np.append(cnc.getNCvar(fnamec,ncfield,timesel='0002-01-01,0061-12-31',seas=season,calc='zm')*conv,
+               cnc.getNCvar(fnamec2,ncfield,seas=season,calc='zm')*conv,
+               axis=0)
+seasfldpzm = np.append(cnc.getNCvar(fnamep,ncfield,timesel='0002-01-01,0061-12-31',seas=season,calc='zm')*conv,
+               cnc.getNCvar(fnamep2,ncfield,seas=season,calc='zm')*conv,
+               axis=0)
 
 
 
@@ -337,16 +327,12 @@ if allmos:
 
     months = con.get_mon()
     # these are suitable for plotting, but not tstat calcs. they come back as climos
-    if casename == 'kemhadctl':
-        fldczm = cnc.getNCvar(fnamec,ncfield,timesel='0002-01-01,0061-12-31',seas='climo',calc='zm')*conv
-        fldpzm = cnc.getNCvar(fnamep,ncfield,timesel='0002-01-01,0061-12-31',seas='climo',calc='zm')*conv
-    else:
-        fldczm = np.append(cnc.getNCvar(fnamec,ncfield,timesel='0002-01-01,0061-12-31',seas='climo',calc='zm')*conv,
-                       cnc.getNCvar(fnamec2,ncfield,seas='climo',calc='zm')*conv,
-                       axis=0)
-        fldpzm = np.append(cnc.getNCvar(fnamep,ncfield,timesel='0002-01-01,0061-12-31',seas='climo',calc='zm')*conv,
-                       cnc.getNCvar(fnamep2,ncfield,seas='climo',calc='zm')*conv,
-                       axis=0)
+    fldczm = np.append(cnc.getNCvar(fnamec,ncfield,timesel='0002-01-01,0061-12-31',seas='climo',calc='zm')*conv,
+                   cnc.getNCvar(fnamec2,ncfield,seas='climo',calc='zm')*conv,
+                   axis=0)
+    fldpzm = np.append(cnc.getNCvar(fnamep,ncfield,timesel='0002-01-01,0061-12-31',seas='climo',calc='zm')*conv,
+                   cnc.getNCvar(fnamep2,ncfield,seas='climo',calc='zm')*conv,
+                   axis=0)
 
     tstat = np.zeros((12,nlev,nlat))
     pval = np.zeros((12,nlev,nlat))
@@ -357,16 +343,12 @@ if allmos:
     fig4.subplots_adjust(hspace=.15,wspace=.05)
     for ax in ax4.flat:
 
-        if casename == 'kemhadctl':
-            fldczmmo = cnc.getNCvar(fnamec,ncfield,timesel='0002-01-01,0061-12-31',seas=midx+1,calc='zm')*conv
-            fldpzmmo = cnc.getNCvar(fnamep,ncfield,timesel='0002-01-01,0061-12-31',seas=midx+1,calc='zm')*conv
-        else:                
-            fldczmmo = np.append(cnc.getNCvar(fnamec,ncfield,timesel='0002-01-01,0061-12-31',seas=midx+1,calc='zm')*conv,
-                             cnc.getNCvar(fnamec2,ncfield,seas=midx+1,calc='zm')*conv,
-                             axis=0)
-            fldpzmmo = np.append(cnc.getNCvar(fnamep,ncfield,timesel='0002-01-01,0061-12-31',seas=midx+1,calc='zm')*conv,
-                             cnc.getNCvar(fnamep2,ncfield,seas=midx+1,calc='zm')*conv,
-                             axis=0)
+        fldczmmo = np.append(cnc.getNCvar(fnamec,ncfield,timesel='0002-01-01,0061-12-31',seas=midx+1,calc='zm')*conv,
+                         cnc.getNCvar(fnamec2,ncfield,seas=midx+1,calc='zm')*conv,
+                         axis=0)
+        fldpzmmo = np.append(cnc.getNCvar(fnamep,ncfield,timesel='0002-01-01,0061-12-31',seas=midx+1,calc='zm')*conv,
+                         cnc.getNCvar(fnamep2,ncfield,seas=midx+1,calc='zm')*conv,
+                         axis=0)
         tstat[midx,:,:],pval[midx,:,:] = sp.stats.ttest_ind(fldpzmmo,fldczmmo,axis=0)
 
         plotfld = fldpzm[midx,:,:] - fldczm[midx,:,:]
@@ -503,20 +485,14 @@ if seasonal:
     for ax in ax6.flat:
 
 
-        if casename == 'kemhadctl':
-            fldczmsea = cnc.getNCvar(fnamec,ncfield,timesel='0002-01-01,0061-12-31',
-                                           seas=seasons[midx],calc='zm')*conv
-            fldpzmsea = cnc.getNCvar(fnamep,ncfield,timesel='0002-01-01,0061-12-31',
-                                           seas=seasons[midx],calc='zm')*conv
-        else:
-            fldczmsea = np.append(cnc.getNCvar(fnamec,ncfield,timesel='0002-01-01,0061-12-31',
-                                           seas=seasons[midx],calc='zm')*conv,
-                              cnc.getNCvar(fnamec2,ncfield,seas=seasons[midx],calc='zm')*conv,
-                              axis=0)
-            fldpzmsea = np.append(cnc.getNCvar(fnamep,ncfield,timesel='0002-01-01,0061-12-31',
-                                           seas=seasons[midx],calc='zm')*conv,
-                              cnc.getNCvar(fnamep2,ncfield,seas=seasons[midx],calc='zm')*conv,
-                              axis=0)
+        fldczmsea = np.append(cnc.getNCvar(fnamec,ncfield,timesel='0002-01-01,0061-12-31',
+                                       seas=seasons[midx],calc='zm')*conv,
+                          cnc.getNCvar(fnamec2,ncfield,seas=seasons[midx],calc='zm')*conv,
+                          axis=0)
+        fldpzmsea = np.append(cnc.getNCvar(fnamep,ncfield,timesel='0002-01-01,0061-12-31',
+                                       seas=seasons[midx],calc='zm')*conv,
+                          cnc.getNCvar(fnamep2,ncfield,seas=seasons[midx],calc='zm')*conv,
+                          axis=0)
         
         tstat[midx,:,:],pval[midx,:,:] = sp.stats.ttest_ind(fldpzmsea,fldczmsea,axis=0)
         fldczmallseas[midx,:,:] = np.mean(fldczmsea,axis=0)
