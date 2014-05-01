@@ -48,7 +48,7 @@ obssims=1    # this will overrule the simulation settings and set to kemhad*
 obssimscomp=0 # compare hadpert to pert2 @@ not ready yet
 
 # # # ######## set Field info ###############
-field = 't'  # t, u, gz
+field = 'gz'  # t, u, gz
 
 
 seasons = 'DJF','MAM','JJA','SON'
@@ -345,12 +345,12 @@ if allmos:
     fig4.subplots_adjust(hspace=.15,wspace=.05)
     for ax in ax4.flat:
 
-        fldczmmo = np.mean(np.append(cnc.getNCvar(fnamec,ncfield,timesel='0002-01-01,0061-12-31',seas=midx+1,calc='zm')*conv,
+        fldczmmo = np.append(cnc.getNCvar(fnamec,ncfield,timesel='0002-01-01,0061-12-31',seas=midx+1,calc='zm')*conv,
                          cnc.getNCvar(fnamec2,ncfield,seas=midx+1,calc='zm')*conv,
-                         axis=0),axis=0)
-        fldpzmmo = np.mean(np.append(cnc.getNCvar(fnamep,ncfield,timesel='0002-01-01,0061-12-31',seas=midx+1,calc='zm')*conv,
+                         axis=0)
+        fldpzmmo = np.append(cnc.getNCvar(fnamep,ncfield,timesel='0002-01-01,0061-12-31',seas=midx+1,calc='zm')*conv,
                          cnc.getNCvar(fnamep2,ncfield,seas=midx+1,calc='zm')*conv,
-                         axis=0),axis=0)
+                         axis=0)
         tstat[midx,:,:],pval[midx,:,:] = sp.stats.ttest_ind(fldpzmmo,fldczmmo,axis=0)
 
         fldczmmos[midx,:,:] = np.mean(fldczmmo,axis=0)
