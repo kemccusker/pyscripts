@@ -91,31 +91,46 @@ def getNCvar(filename,field,timesel=None,levsel=None,monsel=None,seas=None,calc=
             # select dates and zm. thus can't use CDO for zm (unless can pass it data instead of a file?)
 
             #fld = np.squeeze(cdo.zonmean( input = cdo.seldate(timesel,input = filename), returnArray = field))
+            print 'assuming T42(63) 64x128 resolution for zonal mean'
             if levsel != None:
                 if monsel != None:
-                    fld = np.squeeze(cdo.seldate(timesel,input =
-                                                 cdo.sellevel(levsel,input =
-                                                              cdo.selmon(monsel, input = filename)),
-                                                 returnArray = field))
+                    fld = np.squeeze(cdo.seldate(timesel,input = cdo.zonmean( input = 
+                                                 cdo.selindexbox(1,128,1,64,input =
+                                                                 cdo.sellevel(levsel,input =
+                                                                              cdo.selmon(monsel, input = filename)))),
+                                                 returnArray = field))# @@@@
                 else:
-                    fld = np.squeeze(cdo.seldate(timesel,input = cdo.sellevel(levsel,input = filename), returnArray = field))
+                    fld = np.squeeze(cdo.seldate(timesel,input = cdo.zonmean( input = 
+                                                 cdo.selindexbox(1,128,1,64,input =
+                                                                 cdo.sellevel(levsel,input = filename))),
+                                                 returnArray = field))
             else:
                 if monsel != None:
-                    fld = cdo.seldate(timesel,input = cdo.selmon(monsel,input = filename), returnArray = field)
+                    fld = np.squeeze(cdo.seldate(timesel,input =
+                                                 cdo.zonmean( input =
+                                                              cdo.selindexbox(1,128,1,64,input =
+                                                                              cdo.selmon(monsel,input = filename))),
+                                                              returnArray = field))
                 else:
-                    fld = cdo.seldate(timesel,input = filename, returnArray = field)
+                    fld = np.squeeze(cdo.seldate(timesel,input =
+                                                 cdo.zonmean(input =
+                                                             cdo.selindexbox(1,128,1,64,input = filename)),
+                                      returnArray = field))
             os.system('rm -rf /tmp/cdoPy*')
 
-            if remlon:
-                # remove extra lon
-                fld = np.squeeze(fld[...,0:-1])
+            ## if remlon:
+            ##     # remove extra lon
+            ##     fld = np.squeeze(fld[...,0:-1])
 
-            lastdimidx = ndims-1
-            fld = np.mean(fld,lastdimidx)     
+            ## lastdimidx = ndims-1
+            ## fld = np.mean(fld,lastdimidx)  
+            
 
         elif timesel != None and calc != None:
             if levsel != None and monsel == None:
-                fld = np.squeeze(cdo.seldate(timesel,input = cdo.sellevel(levsel,input = filename),returnArray = field))
+                fld = np.squeeze(cdo.seldate(timesel,input =
+                                             cdo.sellevel(levsel,input = filename),
+                                             returnArray = field))
             elif levsel != None and monsel != None:
                 fld = np.squeeze(
                     cdo.seldate(timesel,input =
@@ -129,7 +144,7 @@ def getNCvar(filename,field,timesel=None,levsel=None,monsel=None,seas=None,calc=
             else: # levsel and monsel are both None
                 fld = cdo.seldate(timesel,input = filename, returnArray = field)
             os.system('rm -rf /tmp/cdoPy*')
-            print "only calc='zm' is implemented now. Returning only selected date range."
+            print "only calc='zm' is implemented now. Returning only selected date range/level/month."
 
         elif timesel != None:
             if levsel != None and monsel == None:
@@ -149,32 +164,52 @@ def getNCvar(filename,field,timesel=None,levsel=None,monsel=None,seas=None,calc=
             os.system('rm -rf /tmp/cdoPy*')
             
         elif calc == 'zm': # and timesel must be None
+            print 'assuming T42(63) 64x128 resolution for zonal mean'
+            
             if levsel != None and monsel == None:
-                fld = np.squeeze(cdo.sellevel(levsel,input = filename, returnArray = field))
-                os.system('rm -rf /tmp/cdoPy*')
+                fld = np.squeeze(cdo.sellevel(levsel,input =
+                                              cdo.zonmean(input =
+                                                          cdo.selindexbox(1,128,1,64,input =
+                                                                          filename)),
+                                              returnArray = field))
+
             elif levsel != None and monsel != None:
                 fld = np.squeeze(
                     cdo.sellevel(levsel,input =
-                                 cdo.selmon(monsel,input = filename),
+                                 cdo.zonmean(input =
+                                             cdo.selindexbox(1,128,1,64,input =
+                                                             cdo.selmon(monsel,input =
+                                                                        filename))),
                                  returnArray = field))
-                os.system('rm -rf /tmp/cdoPy*')
-            elif levsel == None and monsel != None:
-                fld = np.squeeze(cdo.selmon(monsel,input = filename,returnArray = field))
-                os.system('rm -rf /tmp/cdoPy*')
-            else: # get all data
-                print '@@ getting memory errors here...try using CDO to select appropriate lons for the zm calc'
-                fld = ncfile.variables[field][...] # have to get field before removing lon
 
-            if remlon:
-                # remove extra lon
-                if ndims==4:
-                    fld = np.squeeze(fld[:,:,:,0:-1])
-                elif ndims==3:
-                    fld = np.squeeze(fld[:,:,0:-1])
-                else: # shouldn't really get here, not expecting 2D (time x lon?)
-                    fld = np.squeeze(fld[:,0:-1])
-            lastdimidx = ndims-1
-            fld = np.mean(fld,lastdimidx)         
+            elif levsel == None and monsel != None:
+                fld = np.squeeze(cdo.zonmean(input =
+                                             cdo.selindexbox(1,128,1,64,input =
+                                                             cdo.selmon(monsel,input =
+                                                                        filename)),
+                                                 returnArray = field))
+               
+            else: # get all data
+                fld = np.squeeze(cdo.zonmean(input =
+                                             cdo.selindexbox(1,128,1,64,input =
+                                                             filename),
+                                             returnArray = field))
+                
+                #print '@@ getting memory errors here...try using CDO to select appropriate lons for the zm calc'
+                #fld = ncfile.variables[field][...] # have to get field before removing lon
+
+            os.system('rm -rf /tmp/cdoPy*')
+            ## if remlon:
+            ##     # remove extra lon
+            ##     if ndims==4:
+            ##         fld = np.squeeze(fld[:,:,:,0:-1])
+            ##     elif ndims==3:
+            ##         fld = np.squeeze(fld[:,:,0:-1])
+            ##     else: # shouldn't really get here, not expecting 2D (time x lon?)
+            ##         fld = np.squeeze(fld[:,0:-1])
+            ## lastdimidx = ndims-1
+            ## fld = np.mean(fld,lastdimidx)  
+            
 
         else:
             print "huh? timesel and calc combo doesn't make sense"
