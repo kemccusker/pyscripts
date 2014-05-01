@@ -41,8 +41,8 @@ plt.ion()
 printtofile=1
 allmos=1 # make monthly figures
 bimos=0  # bi-monthly figures
-seasonal=1 # seasonal figures
-singleplots=1  # seasonal climo and mean diff
+seasonal=0 # seasonal figures
+singleplots=0  # seasonal climo and mean diff
 addcontlines=1 # want contour lines in addition to colors on figs
 obssims=1    # this will overrule the simulation settings and set to kemhad*
 obssimscomp=0 # compare hadpert to pert2 @@ not ready yet
@@ -327,15 +327,17 @@ if allmos:
 
     months = con.get_mon()
     # these are suitable for plotting, but not tstat calcs. they come back as climos
-    fldczm = np.append(cnc.getNCvar(fnamec,ncfield,timesel='0002-01-01,0061-12-31',seas='climo',calc='zm')*conv,
-                   cnc.getNCvar(fnamec2,ncfield,seas='climo',calc='zm')*conv,
-                   axis=0)
-    fldpzm = np.append(cnc.getNCvar(fnamep,ncfield,timesel='0002-01-01,0061-12-31',seas='climo',calc='zm')*conv,
-                   cnc.getNCvar(fnamep2,ncfield,seas='climo',calc='zm')*conv,
-                   axis=0)
+    ## fldczm = np.append(cnc.getNCvar(fnamec,ncfield,timesel='0002-01-01,0061-12-31',seas='climo',calc='zm')*conv,
+    ##                cnc.getNCvar(fnamec2,ncfield,seas='climo',calc='zm')*conv,
+    ##                axis=0)
+    ## fldpzm = np.append(cnc.getNCvar(fnamep,ncfield,timesel='0002-01-01,0061-12-31',seas='climo',calc='zm')*conv,
+    ##                cnc.getNCvar(fnamep2,ncfield,seas='climo',calc='zm')*conv,
+    ##                axis=0)
 
     tstat = np.zeros((12,nlev,nlat))
     pval = np.zeros((12,nlev,nlat))
+    fldczmmos = np.zeros((12,nlev,nlat))
+    fldpzmmos = np.zeros((12,nlev,nlat))
 
     midx=0
     fig4,ax4 = plt.subplots(2,6) 
@@ -343,15 +345,19 @@ if allmos:
     fig4.subplots_adjust(hspace=.15,wspace=.05)
     for ax in ax4.flat:
 
-        fldczmmo = np.append(cnc.getNCvar(fnamec,ncfield,timesel='0002-01-01,0061-12-31',seas=midx+1,calc='zm')*conv,
+        fldczmmo = np.mean(np.append(cnc.getNCvar(fnamec,ncfield,timesel='0002-01-01,0061-12-31',seas=midx+1,calc='zm')*conv,
                          cnc.getNCvar(fnamec2,ncfield,seas=midx+1,calc='zm')*conv,
-                         axis=0)
-        fldpzmmo = np.append(cnc.getNCvar(fnamep,ncfield,timesel='0002-01-01,0061-12-31',seas=midx+1,calc='zm')*conv,
+                         axis=0),axis=0)
+        fldpzmmo = np.mean(np.append(cnc.getNCvar(fnamep,ncfield,timesel='0002-01-01,0061-12-31',seas=midx+1,calc='zm')*conv,
                          cnc.getNCvar(fnamep2,ncfield,seas=midx+1,calc='zm')*conv,
-                         axis=0)
+                         axis=0),axis=0)
         tstat[midx,:,:],pval[midx,:,:] = sp.stats.ttest_ind(fldpzmmo,fldczmmo,axis=0)
 
-        plotfld = fldpzm[midx,:,:] - fldczm[midx,:,:]
+        fldczmmos[midx,:,:] = np.mean(fldczmmo,axis=0)
+        fldpzmmos[midx,:,:] = np.mean(fldpzmmo,axis=0)
+        
+        # plotfld = fldpzm[midx,:,:] - fldczm[midx,:,:]
+        plotfld = fldpzmmos[midx,:,:] - fldczmmos[midx,:,:]
 
         ## pc = ax.pcolormesh(lats,levs/100,plotfld,\
         ##                    cmap= plt.cm.get_cmap(cmap),shading='gouraud',\
@@ -412,7 +418,8 @@ if allmos:
     fig5.set_size_inches(12,4.5)
     fig5.subplots_adjust(hspace=.15,wspace=.05)
     for ax in ax5.flat:
-        plotfld = fldpzm[midx,:,:] - fldczm[midx,:,:]
+        plotfld = fldpzmmos[midx,:,:] - fldczmmos[midx,:,:]
+        
         ## pc = ax.pcolormesh(lats,levs/100,plotfld,\
         ##                    cmap= plt.cm.get_cmap(cmap),shading='gouraud',\
         ##                    vmin=cminsc,vmax=cmaxsc)

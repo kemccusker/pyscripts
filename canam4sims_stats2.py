@@ -6,8 +6,8 @@
 """
 
 #import numpy as np # for array handling
-#import numpy.ma as ma
-import scipy as sp # scientific python
+import numpy.ma as ma
+#import scipy as sp # scientific python
 import scipy.stats
 #import matplotlib.pyplot as plt # for basic plotting
 import matplotlib.cm as cm
