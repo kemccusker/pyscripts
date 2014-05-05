@@ -63,7 +63,7 @@ timstrp1 = '001-061' # for 3d vars
 timstrp2 = '062-111' # "
 
 
-casenamep = casenamep2
+casenamep = casenamep3
 
 if casenamep == casenameph:
     casename = casenameh
@@ -80,9 +80,9 @@ print 'PERT IS ' + casenamep
 # # # ######## set Field info ###################
 # st, sic, gt, pmsl, pcp, hfl, hfs, turb, flg, fsg, fn, pcpn, zn, su, sv (@@later ufs,vfs)
 # OR threed: 'gz','t','u'
-field = 'gz'
+field = 'sic'
 level = 100000  # only for threed vars
-thickness=1 # do thickness instead: just for gz
+thickness=0 # do thickness instead: just for gz
 level2=70000 # for thickness calc: typically 1000-700hPa thickness
 
 cmap = 'blue2red_w20' # default cmap
@@ -104,13 +104,33 @@ if field == 'st':
     cminmp = -1; cmaxmp = 1 # for when pert is 'ctl'
     cmap = 'blue2red_w20'
     #cmap = 'blue2red_20'
+elif field == 'gt':
+    units = 'K'
+    conv = 1  # no conversion
+    cmin = -2; cmax = 2  # for anomaly plots
+    cminp=-.5; cmaxp=.5 # for when pert is 'ctl'
+    cminm = -3; cmaxm = 3   # monthly
+    ## print 'small clim!'
+    ## cmin = -1; cmax = 1  # for anomaly plots
+    cminm = -2; cmaxm = 2   # monthly
+    
+    cminmp = -1; cmaxmp = 1 # for when pert is 'ctl'
+    cmap = 'blue2red_w20'
 elif field == 'sic':
     units='m'
     conv=1/913.
     cmin=-.5
     cmax=.5
-    cminm=-.5
-    cmaxm=.5
+    cminm=-.2
+    cmaxm=.2
+    cmap = 'red2blue_w20'
+elif field == 'sicn':
+    units='frac'
+    conv = 1
+    cmin=-.15
+    cmax=.15
+    cminm=-.1
+    cmaxm=.1
     cmap = 'red2blue_w20'
 elif field == 'gt':
     units='K'

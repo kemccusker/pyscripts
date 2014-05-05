@@ -27,7 +27,8 @@ testsic=0
 mtype='nh'  # map type (nh,sh,sq)
 plotallmos=0
 plotseacyc=0
-plotseacycmag=1 # only for SST
+plotseacycmag=0 # only for SST
+diffobs=1 # difference canesm and hadisst bcs
 
 had=0
 hurr=0
@@ -40,11 +41,11 @@ canesm=1 # assume pert2 if "doBCs"
 #    so something is wrong w/ my CanESM calc. Potentially it's just related to masking
 #    and/or polar average function.
 
-sic=0
+sic=1
 sicn=0
 #else SST
 
-doBCs=1  # use the actual BC files @@so far only hadisst sst
+doBCs=0  # use the actual BC files @@so far only hadisst sst
 latlim=50
 
 flipmask=0 # flip the landmask (for HURRELL)
@@ -56,14 +57,17 @@ if sicn:
     # SICN caxis info
     cminm=-.25; cmaxm=.25
     cminm=-.15; cmaxm=.15 # @@
+    cmind=-.15; cmaxd=.15 # for differencing canesm and hadisst
     cmap = 'red2blue_w20'
 elif sic:
     cminm=-.5*deni
     cmaxm = .5*deni
+    cmind=cminm; cmaxd=cmaxm
     cmap = 'red2blue_w20'
 else: # sst
     cminm=-2
     cmaxm=2
+    cmind=-2; cmaxd=2
     cmap = 'blue2red_w20'
 
 # # # ########## Read NC data ###############
@@ -85,15 +89,16 @@ timeperp='2002-2012' # CanESM2 (or HadISST)
 timeperp2='2002-2011' # Hadisst, Hurrell and NSIDC bootstrap
 
 if sicn:
+    field = 'sicn'
     # @@ check what the units are: are they all fraction?
     fhadsic = basepath + 'HadISST/hadisst1.1_bc_128_64_1870_2013m03_sicn_' + timeper + 'climo.nc' #SICN, 129x64
-    fhadsicts = basepath + 'HadISST/SICN_BC_HadISST_' + timeper + '_0000120100-0125120100.nc' # test matlab generated BC file
+    fhadsicts = basepath2 + 'HadISST/SICN_BC_HadISST_' + timeper + '_1870010100-2011020100.nc' #0000120100-0125120100.nc' # test matlab generated BC file
     
     fhurrsic = basepath + 'HURRELL/MODEL_ICE.T42_' + timeper + 'climo.nc' #SEAICE (%), 128x64
     fnsidcsic = basepath + 'NSIDC/nsidc_bt_128x64_1978m11_2011m12_sicn_' + timeper + 'climo.nc' #SICN, 129x64
 
     fhadsicp = basepath + 'HadISST/hadisst1.1_bc_128_64_1870_2013m03_sicn_' + timeperp2 + 'climo.nc' #SICN, 129x64
-    fhadsicpts = basepath + 'HadISST/SICN_BC_HadISST_' + timeperp2 + '_0000120100-0125120100.nc' # test matlab generated BC file
+    fhadsicpts = basepath2 + 'HadISST/SICN_BC_HadISST_' + timeperp2 + '_1870010100-2011020100.nc' #0000120100-0125120100.nc' # test matlab generated BC file
     fhurrsicp = basepath + 'HURRELL/MODEL_ICE.T42_' + timeperp2 + 'climo.nc' #SEAICE (%), 128x64
     fnsidcsicp = basepath + 'NSIDC/nsidc_bt_128x64_1978m11_2011m12_sicn_' + timeperp2 + 'climo.nc' #SICN, 129x64
 
@@ -112,6 +117,10 @@ if sicn:
     hadsicp = cnc.getNCvar(fhadsicp,'SICN')
     hadsicpts = cnc.getNCvar(fhadsicpts,'SICN')
     hadsicpclimo,junk = cutl.climatologize3d(hadsicpts)
+
+    hadsicc = hadsicc[...,:-1]
+    hadsicp = hadsicp[...,:-1]
+    hadsicd = hadsicp - hadsicc
     
     hurrsicp = cnc.getNCvar(fhurrsicp,'SEAICE')/100
     #hurrsicc.resize(hadsicc.shape) # other datasets have extra lon.
@@ -124,8 +133,8 @@ if sicn:
     nsidcsicd = nsidcsicp-nsidcsicc
 
     # add CanESM2 boundary conditions too
-    fcansic = basepath + 'CanESM2/SICN_BC_CanESM2_historical' + timeper + '_climo.nc'
-    fcansicp = basepath + 'CanESM2/SICN_BC_CanESM2_historical' + timeperp + '_climo.nc'
+    fcansic = basepath2 + 'CanESM2/SICN_BC_CanESM2_historical' + timeper + '_climo.nc'
+    fcansicp = basepath2 + 'CanESM2/SICN_BC_CanESM2_historical' + timeperp + '_climo.nc'
     
     cansicc = cnc.getNCvar(fcansic,'SICN')
     cansicp = cnc.getNCvar(fcansicp,'SICN')
@@ -134,11 +143,11 @@ if sicn:
     cansicd = cansicp - cansicc
     
 elif sic:
-    
+    field = 'sic'
     fhadsic = basepath + 'HadISST/hadisst1.1_bc_128_64_1870_2013m03_sic_' + timeper + 'climo.nc' #SIC, 129x64
     fhadsicp = basepath + 'HadISST/hadisst1.1_bc_128_64_1870_2013m03_sic_' + timeperp2 + 'climo.nc' #SIC, 129x64
-    fhadsicts = temppath + 'HadISST/SIC_BC_HadISST_' + timeper + '_1870010100-2011020100.nc' # test matlab generated BC file
-    fhadsicpts = temppath + 'HadISST/SIC_BC_HadISST_' + timeperp2 + '_1870010100-2011020100.nc' # test matlab generated BC file
+    fhadsicts = basepath2 + 'HadISST/SIC_BC_HadISST_' + timeper + '_1870010100-2011020100.nc' # test matlab generated BC file
+    fhadsicpts = basepath2 + 'HadISST/SIC_BC_HadISST_' + timeperp2 + '_1870010100-2011020100.nc' # test matlab generated BC file
 
     fhadsicorig = basepath + 'HadISST/hadisst1.1_bc_128_64_1870_2013m03_sic_1870010100-2013030100.nc'
     fhadsicnorig = basepath + 'HadISST/hadisst1.1_bc_128_64_1870_2013m03_sicn_1870010100-2013030100.nc'
@@ -149,6 +158,10 @@ elif sic:
     hadsiccclimo,junk = cutl.climatologize3d(hadsiccts)
     hadsicpts = cnc.getNCvar(fhadsicpts,'SIC')
     hadsicpclimo,junk = cutl.climatologize3d(hadsicpts)
+
+    hadsicc = hadsicc[...,:-1]
+    hadsicp = hadsicp[...,:-1]
+    hadsicd = hadsicp - hadsicc
 
     # also need sicn for averaging
     fhadsicn = basepath + 'HadISST/hadisst1.1_bc_128_64_1870_2013m03_sicn_' + timeper + 'climo.nc' #SICN, 129x64
@@ -180,7 +193,7 @@ elif sic:
 
 else:
     # SST (var names are sic still...)
-
+    field = 'gt'
     if doBCs:
         bcstr='BC'
         
@@ -206,8 +219,8 @@ else:
         hadsicp = cnc.getNCvar(fhadsicp,'GT')
 
     # CanESM2 uses BC files regardless of doBCs flag
-    fcansic = basepath + 'CanESM2/GT_BC_CanESM2_historical1979-1989_1870010100-2011020100.nc'
-    fcansicp = basepath + 'CanESM2/GTadjusted_BC_CanESM2_historical2002-2012_1870010100-2011020100_abs10thresh.nc'
+    fcansic = basepath2 + 'CanESM2/GT_BC_CanESM2_historical1979-1989_1870010100-2011020100.nc'
+    fcansicp = basepath2 + 'CanESM2/GTadjusted_BC_CanESM2_historical2002-2012_1870010100-2011020100_abs10thresh.nc'
 #    fcansicp = basepath + 'CanESM2/canesm2_kem1pert2_128x64_0001_0120_gt_0000120100-0120120100.nc' # adjusted ssts, shifted one month from above file
     
 
@@ -255,12 +268,12 @@ if testsic==0:
 
 
     if had:
-        hadsicc = hadsicc[:,:,0:-1]
-        hadsicp = hadsicp[:,:,0:-1]
-        #hadsiccclimo = hadsiccclimo[:,:,0:-1] # @@ shouldn't need anymore? already tested
-        #hadsicpclimo = hadsicpclimo[:,:,0:-1]
+##        hadsicc = hadsicc[:,:,0:-1]
+##        hadsicp = hadsicp[:,:,0:-1]
+##        #hadsiccclimo = hadsiccclimo[:,:,0:-1] # @@ shouldn't need anymore? already tested
+##        #hadsicpclimo = hadsicpclimo[:,:,0:-1]
 
-        hadsicd = hadsicp-hadsicc
+##        hadsicd = hadsicp-hadsicc
         #hadsicclimod = hadsicpclimo-hadsiccclimo
 
         plotflds=hadsicd
@@ -315,6 +328,18 @@ if testsic==0:
 
 
     cmlen = float(15)
+
+    if diffobs: # difference CanESM and HadISST
+
+        plotfld = cansicd - hadsicd
+        cplt.map_allmonths(plotfld,lat,lon,cmin=cmind,cmax=cmaxd,title='CanESM-HadISST ' + field,type='nh',cmap=cmap)
+        if printtofile==1:
+            plt.savefig('CanESM-HadISST_' + field + 'diffs_abt' + savstr + '_allmos_nh.pdf')
+
+        cplt.map_allmonths(plotfld,lat,lon,cmin=cmind,cmax=cmaxd,title='CanESM-HadISST ' + field,cmap=cmap)
+        if printtofile==1:
+            plt.savefig('CanESM-HadISST_' + field + 'diffs_abt' + savstr + '_allmos_sq.pdf')
+
 
     if plotseacycmag: # only for CanESM2 SST
         maxfld = np.max(plotflds,axis=0)
