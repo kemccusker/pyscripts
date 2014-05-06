@@ -22,19 +22,20 @@ import matplotlib.font_manager as fm
 #    (historicalrcp45-historical) - (kem1pert2-kemctl1)
 #          OR
 #    historicalrcp45-kem1pert2
-#    ?
+#    ? I think the first way for sure. Care about the forcing diffs.
 # how similar are the control time periods?? historical v kemctl1
 
 
 plt.close("all")
 plt.ion()
 
-printtofile=0
+printtofile=1
 plotann=1    # annual average
 plotallmos=1 # each month separately
 bimos=0 # averages every 2 mos (JF, MA, MJ, JA, SO, ND) @@ add
 seasonal=1 # averages seasons (DJF, MAM, JJA, SON)
-
+compareallmos=0  # make allmonth figs of CanESM/CanAM and their diff
+canesmens=1; ensnum=5 # look at ens members separately
 
 sigtype = 'cont' # significance: 'cont' or 'hatch' which is default
 
@@ -61,13 +62,13 @@ comp = 'Amon'
 
 
 # # # ######## set Field info (CanAM name) ###################
-# st, sic, gt, pmsl, pcp, hfl, hfs, turb, flg, fsg, fn, pcpn, zn, su, sv (@@later ufs,vfs)
-afield = 'st'
+# st, sicn, gt, pmsl, pcp, hfl, hfs, turb, flg, fsg, fn, pcpn, zn, su, sv (@@later ufs,vfs)
+afield = 'sicn'
 
 if afield == 'st':
     cfield = 'tas' # coupled (CMIP) field name
     units = 'K'
-    conv = 1  # no conversion
+    aconv = 1; cconv=aconv  # no conversion
     cmin = -2; cmax = 2  # for anomaly plots
     cminp=-.5; cmaxp=.5 # for when pert is 'ctl'
     cminm = -3; cmaxm = 3   # monthly
@@ -77,10 +78,19 @@ if afield == 'st':
     
     cminmp = -1; cmaxmp = 1 # for when pert is 'ctl'
     cmap = 'blue2red_w20'
+elif afield == 'sicn':
+    cfield = 'sic'
+    comp = 'OImon'
+    units = 'frac'
+    aconv = 1; cconv=1/100. # make fraction
+    cmin = -.15; cmax = .15  # for anomaly plots
+    cminp=-.10; cmaxp=.10 # for when pert is 'ctl'
+    cminm = -.15; cmaxm = .15   # monthly
+    cmap = 'red2blue_w20'
 elif afield == 'pmsl':
     cfield = 'psl'
     units = 'hPa' # pretty sure hpa @@double check
-    conv = 1
+    aconv = 1; cconv=1 # @@@ double check
     cmin = -1; cmax = 1  # for anomaly plots
     cminm=-2; cmaxm=2  # for monthly maps
     cminp=cmin; cmaxp=cmax # for when pert is 'ctl'
@@ -112,24 +122,39 @@ cfnamep = cbasepath + ccasenamep + '/' + cfield + '/' + cfield + '_' + comp + '_
 lat = cnc.getNCvar(afnamec,'lat')
 lon = cnc.getNCvar(afnamec,'lon')
 
-afldc = cnc.getNCvar(afnamec,afield.upper())*conv
-afldp = cnc.getNCvar(afnamep,afield.upper())*conv
-cfldc = cnc.getNCvar(cfnamec,cfield)*conv
-cfldp = cnc.getNCvar(cfnamep,cfield)*conv
+afldc = cnc.getNCvar(afnamec,afield.upper())*aconv
+afldp = cnc.getNCvar(afnamep,afield.upper())*aconv
+cfldc = cnc.getNCvar(cfnamec,cfield)*cconv
+cfldp = cnc.getNCvar(cfnamep,cfield)*cconv
 cfldc = np.dstack((cfldc,cfldc[...,0])) # add wraparound lon
 cfldp = np.dstack((cfldp,cfldp[...,0])) # add wraparound lon
 
-mon = np.arange(1,afldc.shape[0]+1)
 
-cplt.map_allmonths(afldp-afldc,lat,lon,title='CanAM4',cmin=cminm,cmax=cmaxm,cmap=cmap,type='nh')
+if compareallmos:
+    cplt.map_allmonths(afldp-afldc,lat,lon,title='CanAM4',cmin=cminm,cmax=cmaxm,cmap=cmap,type='nh')
+    if printtofile:
+        plt.savefig('CanAM4_' + afield + '_' + acasenamep + '_v_' + acasename +
+                     '_allmos_nh.pdf')
 
-cplt.map_allmonths(cfldp-cfldc,lat,lon,title='CanESM2',cmin=cminm,cmax=cmaxm,cmap=cmap,type='nh')
+    cplt.map_allmonths(cfldp-cfldc,lat,lon,title='CanESM2',cmin=cminm,cmax=cmaxm,cmap=cmap,type='nh')
+    if printtofile:
+        plt.savefig('CanESM2_' + cfield + '_' + ccasename + '_' + ctimstrp + '-' + ctimstr +
+                     '_allmos_nh.pdf')
 
-cplt.map_allmonths((cfldp-cfldc)-(afldp-afldc),lat,lon,title='CanESM2diff-CanAM4diff',
-                   cmin=cminm,cmax=cmaxm,cmap=cmap,type='nh')
+    cplt.map_allmonths((cfldp-cfldc)-(afldp-afldc),lat,lon,title='CanESM2diff-CanAM4diff',
+                       cmin=cminm,cmax=cmaxm,cmap=cmap,type='nh')
+    if printtofile:
+        plt.savefig('CanESM2-CanAM4_' + afield + '_' + ccasename + '_' + ctimstrp + '-' + ctimstr +
+                     '_allmos_nh.pdf')
 
-cplt.map_allmonths(cfldp-afldp,lat,lon,title='CanESM2pert-CanAM4pert',
-                   cmin=cminm,cmax=cmaxm,cmap=cmap,type='nh') # think this is the wrong way to look at it
+    #cplt.map_allmonths(cfldp-afldp,lat,lon,title='CanESM2pert-CanAM4pert',
+    #                   cmin=cminm,cmax=cmaxm,cmap=cmap,type='nh') # think this is the wrong way to look at it
+
+    cplt.map_allseas((cfldp-cfldc)-(afldp-afldc),lat,lon,title='CanESM2diff-CanAM4diff',
+                       cmin=cminm,cmax=cmaxm,cmap=cmap,type='nh')
+    if printtofile:
+        plt.savefig('CanESM2-CanAM4_' + afield + '_' + ccasename + '_' + ctimstrp + '-' + ctimstr +
+                     '_seas_nh.pdf')
 
 
 # zonal means
@@ -139,8 +164,10 @@ cfldczm = np.mean(cfldc[...,:-1],axis=2)
 cfldpzm = np.mean(cfldp[...,:-1],axis=2)
 
 # Yay, also works.
-#afldczm2 = cnc.getNCvar(afnamec,afield.upper(),calc='zm')*conv
-#afldpzm2 = cnc.getNCvar(afnamep,afield.upper(),calc='zm')*conv
+#afldczm2 = cnc.getNCvar(afnamec,afield.upper(),calc='zm')*aconv
+#afldpzm2 = cnc.getNCvar(afnamep,afield.upper(),calc='zm')*aconv
+
+mon = np.arange(1,afldc.shape[0]+1)
 
 
 lats,mons = np.meshgrid(lat,mon)
@@ -150,44 +177,111 @@ incr = (cmaxm-cminm) / (cmlen)
 conts = np.arange(cminm,cmaxm+incr,incr)
 
 
+fig1,ax1 = plt.subplots(1,3)
+fig1.set_size_inches(10,6)
+plotfld = cfldpzm-cfldczm
+
+pc = ax1[0].contourf(mons,lats,plotfld,
+                  cmap=plt.cm.get_cmap(cmap),levels=conts,
+                  vmin=cminm,vmax=cmaxm,extend='both')
+ax1[0].set_title('Full historical')
+ax1[0].set_xlabel('months')
+ax1[0].set_ylabel('lat')
 
 plotfld = afldpzm-afldczm
 
-fig1 = plt.figure()
-ax1 = fig1.add_subplot(111)
-pc = plt.contourf(mons,lats,plotfld,
+pc = ax1[1].contourf(mons,lats,plotfld,
                   cmap=plt.cm.get_cmap(cmap),levels=conts,
                   vmin=cminm,vmax=cmaxm,extend='both')
-ax1.set_title('CanAM4')
-ax1.set_xlabel('months')
-ax1.set_ylabel('lat')
-cbar = fig1.colorbar(pc)
-
-
-plotfld = cfldpzm-cfldczm
-
-fig2 = plt.figure()
-ax2 = fig2.add_subplot(111)
-pc = plt.contourf(mons,lats,plotfld,
-                  cmap=plt.cm.get_cmap(cmap),levels=conts,
-                  vmin=cminm,vmax=cmaxm,extend='both')
-ax2.set_title('CanESM2')
-ax2.set_xlabel('months')
-ax2.set_ylabel('lat')
-cbar = fig2.colorbar(pc)
-
+ax1[1].set_title('Sea-ice only')
+ax1[1].set_xlabel('months')
 
 plotfld = (cfldpzm-cfldczm)-(afldpzm-afldczm)
 
-fig3 = plt.figure()
-ax3 = fig3.add_subplot(111)
-pc = plt.contourf(mons,lats,plotfld,
+pc = ax1[2].contourf(mons,lats,plotfld,
                   cmap=plt.cm.get_cmap(cmap),levels=conts,
                   vmin=cminm,vmax=cmaxm,extend='both')
-ax3.set_title('CanESM2diff-CanAM4diff')
-ax3.set_xlabel('months')
-ax3.set_ylabel('lat')
-cbar = fig3.colorbar(pc)
+ax1[2].set_title('Residual')
+ax1[2].set_xlabel('months')
+cbar_ax = fig1.add_axes([.91,.15, .02,.7])
+fig1.colorbar(pc,cax=cbar_ax)
 
+if printtofile:
+    fig1.savefig('CanESM2_CanAM4_andDIFF_' + afield + '_' + ccasename + '_' +
+                 ctimstrp + '-' + ctimstr + '_monxlat.pdf')
+
+
+# Northern HEM only
+fig1,ax1 = plt.subplots(1,3)
+fig1.set_size_inches(10,4)
+plotfld = cfldpzm-cfldczm
+
+pc = ax1[0].contourf(mons,lats,plotfld,
+                  cmap=plt.cm.get_cmap(cmap),levels=conts,
+                  vmin=cminm,vmax=cmaxm,extend='both')
+ax1[0].set_title('Full historical')
+ax1[0].set_xlabel('months')
+ax1[0].set_ylabel('lat')
+ax1[0].set_ylim(0,90)
+
+plotfld = afldpzm-afldczm
+
+pc = ax1[1].contourf(mons,lats,plotfld,
+                  cmap=plt.cm.get_cmap(cmap),levels=conts,
+                  vmin=cminm,vmax=cmaxm,extend='both')
+ax1[1].set_title('Sea-ice only')
+ax1[1].set_xlabel('months')
+ax1[1].set_ylim(0,90)
+
+plotfld = (cfldpzm-cfldczm)-(afldpzm-afldczm)
+
+pc = ax1[2].contourf(mons,lats,plotfld,
+                  cmap=plt.cm.get_cmap(cmap),levels=conts,
+                  vmin=cminm,vmax=cmaxm,extend='both')
+ax1[2].set_title('Residual')
+ax1[2].set_xlabel('months')
+ax1[2].set_ylim(0,90)
+cbar_ax = fig1.add_axes([.91,.15, .02,.7])
+fig1.colorbar(pc,cax=cbar_ax)
+
+if printtofile:
+    fig1.savefig('CanESM2_CanAM4_andDIFF_' + afield + '_' + ccasename + '_' +
+                 ctimstrp + '-' + ctimstr + '_monxlat_nh.pdf')
+
+
+if canesmens:
+    # plot each ensemble member individually
+    # do they resemble hadisst runs at all? does one?
+
+    for eii in range(1,ensnum+1): # five ens members
+        
+        cfnamec = cbasepath + ccasename + '/' + cfield + '/' + cfield +\
+                  '_' + comp + '_' + cmodel + '_' + ccasename +\
+                  '_r' + str(eii) + 'i1p1_' + ctimstr + 'climo.nc'
+        cfnamep = cbasepath + ccasenamep + '/' + cfield + '/' + cfield +\
+                  '_' + comp + '_' + cmodel + '_' + ccasenamep +\
+                  '_r' + str(eii) + 'i1p1_' + ctimstrp + 'climo.nc'
+
+
+        cfldc = cnc.getNCvar(cfnamec,cfield)*cconv
+        cfldp = cnc.getNCvar(cfnamep,cfield)*cconv
+        cfldc = np.dstack((cfldc,cfldc[...,0])) # add wraparound lon
+        cfldp = np.dstack((cfldp,cfldp[...,0])) # add wraparound lon
+
+        fig = cplt.map_allmonths(cfldp-cfldc,lat,lon,
+                                 title='CanESM r' + str(eii) + ' ' + cfield,
+                                 cmin=cminm,cmax=cmaxm,cmap=cmap,type='nh')
+        if printtofile:
+            fig.savefig('CanESMr' + str(eii) + '_' + cfield + '_' +
+                        ccasename + '_' + ctimstrp + '-' + ctimstr +
+                        '_allmos_nh.pdf')
+
+
+        
+
+
+        
+
+    
 
 

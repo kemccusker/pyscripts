@@ -219,3 +219,43 @@ def map_allmonths(fld, lat, lon,title='',units='',cmap='blue2red_w20',type='sq',
     plt.suptitle(title)
     
     return fig
+
+
+def map_allseas(fld, lat, lon,title='',units='',cmap='blue2red_w20',type='sq',
+           cmin='',cmax='',axis=None, suppcb=0,lmask=0,climo=0,flipmask=0,
+                  pvals = None,sigtype='hatch',conts=None):
+
+    """ default seasons = 'DJF','MAM','JJA','SON'
+    """
+    import cccmautils as cutl
+    
+    seasons = 'DJF','MAM','JJA','SON'
+
+    midx=0
+    fig,axs = plt.subplots(1,4) 
+    fig.set_size_inches(12,3)
+    fig.subplots_adjust(hspace=.15,wspace=.05)
+
+    for ax in axs.flat:
+        
+        plotfld = np.mean(cutl.seasonalize_monthlyts(fld,season=seasons[midx],climo=climo),axis=0)
+        
+        bm,pc = cplt.kemmap(plotfld,lat,lon,cmin=cminm,cmax=cmaxm,cmap=cmap,type='nh',\
+                        axis=ax,suppcb=1)
+        ax.set_title(seasons[midx])
+        if pvals != None:
+            cplt.addtsigm(bm,pvals,lat,lon,type=sigtype)
+
+        if conts != None:
+            # add specified contour(s)
+            lons, lats = np.meshgrid(lon,lat)
+            bm.contour(lons,lats,plotfld,[conts],colors='k',linewidths=2,latlon=True)
+
+        midx = midx+1
+
+    cbar_ax = fig.add_axes([.91,.25, .02,.5])
+    fig.colorbar(pc,cax=cbar_ax)
+    plt.suptitle(title)
+
+    return fig
+        
