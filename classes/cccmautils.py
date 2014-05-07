@@ -66,29 +66,43 @@ def polar_mean_areawgted3d(input,lat,lon,latlim=60,hem='nh',cellareas=None):
     return pm
 
 def annualize_monthlyts(input, includenan=0):
+    """ It is expected that the input variable is 3 dimension, with time being first
+        But on 5/6/2014 I tried to generalize to any dimension...needs to be tested.
+    """
 
     # time must be first dimension
     # figure out nyears (truncate if only some months in last year)
-
+    dims = input.shape
     nt = input.shape[0] # number of times
     nyrs = nt/12        # I think this will automatically return an integer
-    ndim2 = input.shape[1]
-    ndim3 = input.shape[2]
+
+    #ndim2 = input.shape[1]
+    #ndim3 = input.shape[2]
     
     wgts = con.get_monweights()
-    wgts = np.tile(wgts,(ndim2,ndim3,1)) # make a weights array for each grid pt
-    # put the 3rd dim (2) in first spot, 1st dim (0) in second spot, 2nd dim (1) in third spot
-    # this effectively shifts the dimensions back to time,dim2,dim3
-    wgts = np.transpose(wgts,(2,0,1))
-    
+
+    if len(dims)>1:
+        diml = list(dims[1:]) # this one is for wgts array
+        diml.append(1) # insert size nyrs into first dimension
+        diml = tuple(diml)
+        
+        diml2 = list(dims[1:]) # this one is for initializing the timeseries array
+        diml2.insert(0,nyrs) # insert size nyrs into first dimension
+
+        wgts = np.tile(wgts,diml) # make a weights array for each grid pt
+        # put the 3rd dim (2) in first spot, 1st dim (0) in second spot, 2nd dim (1) in third spot
+        # this effectively shifts the dimensions back to time,dim2,dim3
+        wgts = np.transpose(wgts,(2,0,1))
+    else:
+        diml2 = nyrs,
 
     #yidx=0
     counter=0
-    annts = np.zeros((nyrs,ndim2,ndim3))
+    annts = np.zeros(diml2)
     
     # Loop through 12-month chunks
     for yidx in range(0, nyrs):
-        annts[yidx,:,:] = np.average(input[counter:counter+12,:,:],axis=0,weights=wgts)
+        annts[yidx,...] = np.average(input[counter:counter+12,...],axis=0,weights=wgts)
         counter = counter+12
 
     return annts
@@ -98,7 +112,8 @@ def seasonalize_monthlyts(input,season=None,includenan=0,mo=0,climo=0):
     if season == None and mo==0:
         print 'Must specify either season or mo! Months indexed starting from 1'
         return
-    
+
+    dims = input.shape
     nt = input.shape[0]
     nyrs = nt/12 # should be integer
     incr=3 # default increment is 3 (for 3-month "seasons")
@@ -112,7 +127,7 @@ def seasonalize_monthlyts(input,season=None,includenan=0,mo=0,climo=0):
     if mo != 0:
         # simply pick out the month and return ts
         incr=0
-        seasts = input[(mo-1)::12,:,:] # increments of 12 months
+        seasts = input[(mo-1)::12,...] # increments of 12 months
         return seasts
     elif season=='ANN':
         return annualize_monthlyts(input,includenan)
@@ -121,7 +136,7 @@ def seasonalize_monthlyts(input,season=None,includenan=0,mo=0,climo=0):
         
         if climo==1:
             subwgts = wgts[[0,1,11]]
-            seasts = np.average(input[[0,1,11],:,:],weights=subwgts,axis=0)
+            seasts = np.average(input[[0,1,11],...],weights=subwgts,axis=0)
             return seasts
 
         subwgts = wgts[[0,1,11]] 
@@ -133,7 +148,7 @@ def seasonalize_monthlyts(input,season=None,includenan=0,mo=0,climo=0):
     elif season=='NDJ':
         if climo==1:
             subwgts = wgts[[0,10,11]]
-            seasts = np.average(input[[0,10,11],:,:],weights=subwgts,axis=0)
+            seasts = np.average(input[[0,10,11],...],weights=subwgts,axis=0)
             return seasts
         
         subwgts = wgts[[0,10,11]]
@@ -149,16 +164,29 @@ def seasonalize_monthlyts(input,season=None,includenan=0,mo=0,climo=0):
         print "Season not supported!"
         return None
 
-    subwgts = np.tile(subwgts,(input.shape[1],input.shape[2],1))
-    # put the 3rd dim (2) in first spot, 1st dim (0) in second spot, 2nd dim (1) in third spot
-    # this effectively shifts the dimensions back to time,dim2,dim3
-    subwgts = np.transpose(subwgts,(2,0,1))
-    seasts = np.zeros((nyrs,input.shape[1],input.shape[2]))
+    if len(dims)>1:
+        diml = list(dims[1:]) # this one is for subwgts array
+        diml.append(1) # insert size nyrs into first dimension
+        diml = tuple(diml)
+        
+        diml2 = list(dims[1:]) # this one is for initializing the timeseries array
+        diml2.insert(0,nyrs) # insert size nyrs into first dimension
+
+        subwgts = np.tile(subwgts,diml)
+        # put the 3rd dim (2) in first spot, 1st dim (0) in second spot, 2nd dim (1) in third spot
+        # this effectively shifts the dimensions back to time,dim2,dim3
+        subwgts = np.transpose(subwgts,(2,0,1))
+    
+    else:
+        diml2 = nyrs,
+
+
+    seasts = np.zeros(diml2)
     #print subwgts.shape
     
     for yridx in range(0,nyrs):
         subsamp = range(start+yridx*12,start+yridx*12+incr)
-        seasts[yridx,:,:] = np.average(input[subsamp,:,:],weights=subwgts,axis=0)        
+        seasts[yridx,...] = np.average(input[subsamp,...],weights=subwgts,axis=0)        
     # @@ implement includenan? If set = 1, then the mean will not ignore a NaN
     #    such that if a NaN is present, the mean is NaN
     

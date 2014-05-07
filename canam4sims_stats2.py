@@ -36,11 +36,11 @@ plt.close("all")
 plt.ion()
 
 printtofile=1
-plotann=1    # annual average
+plotann=0    # annual average
 plotallmos=1 # each month separately
 bimos=0 # averages every 2 mos (JF, MA, MJ, JA, SO, ND) @@ add
-seasonal=1 # averages seasons (DJF, MAM, JJA, SON)
-obssims=1  # override settings to do observed runs (kemhad*)
+seasonal=0 # averages seasons (DJF, MAM, JJA, SON)
+obssims=0  # override settings to do observed runs (kemhad*)
 
 sigtype = 'cont' # significance: 'cont' or 'hatch' which is default
 
@@ -59,9 +59,12 @@ casenamep1 = 'kem1pert1'  # 2002-2012 sic and sit
 casenamep2 = 'kem1pert2'  # 2002-2012 sic, sit, adjusted sst
 casenamep3 = 'kem1pert3'  # 2002-2012 sic, adjusted sst. control sit
 timstrp = '001-111'
+casenamepra = 'kem1rcp85a' # 2022-2032 sic, adjusted sst, sit from RCP8.5
+
+
 
 ####### SET PERT RUN ############
-casenamep = casenamep2
+casenamep = casenamepra
 ####### SET NEW CTL RUN #########
 #casename = casenamep3
 
@@ -73,13 +76,16 @@ if obssims==1:
     timstrp = timstr
     timesel = '0002-01-01,0121-12-31'
 
+if casenamep == casenamepra:
+    timstrp = '001-061'
+    
 print 'CONTROL IS ' + casename
 print 'PERT IS ' + casenamep
 
 
 # # # ######## set Field info ###################
 # st, sic, gt, pmsl, pcp, hfl, hfs, turb, flg, fsg, fn, pcpn, zn, su, sv (@@later ufs,vfs)
-field = 'su'
+field = 'pmsl'
 
 cmap = 'blue2red_w20' # default cmap
 cmapclimo = 'Spectral_r'
@@ -369,7 +375,7 @@ if plotann:
         cmin=cminpct
         cmax=cmaxpct
     else:
-        plotfld = np.mean(anntsp-anntsc,0)
+        plotfld = np.mean(anntsp,0)-np.mean(anntsc,0)
 
     fig1 = plt.figure()
     bm,pc = cplt.kemmap(plotfld,lat,lon,cmin=cmin,cmax=cmax,cmap=cmap,type='nh',\
@@ -406,7 +412,8 @@ if plotallmos:
     title = field + ": " + casenamep + "-" + casename
     midx=0
     fig, spax = plt.subplots(2,6)
-    fig.set_size_inches(12,6)
+    #fig.set_size_inches(12,6)
+    fig.set_size_inches(12,4.5)
     fig.subplots_adjust(hspace=0,wspace=0)
 
     for ax in spax.flat:
@@ -426,7 +433,7 @@ if plotallmos:
             cminm=cminmpct
             cmaxm=cmaxmpct
         else:
-            plotfld = np.mean(monfldp-monfldc,0)
+            plotfld = np.mean(monfldp,0)-np.mean(monfldc,0)
 
         bm,pc = cplt.kemmap(plotfld,lat,lon,cmin=cminm,cmax=cmaxm,cmap=cmap,type='nh',\
                      title=months[midx],axis=ax,suppcb=1)

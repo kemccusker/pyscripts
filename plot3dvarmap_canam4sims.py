@@ -39,7 +39,6 @@ import matplotlib.font_manager as fm
 #cutl = reload(cutl)
 #cnc = reload(cnc)
 
-#os.system('rm -rf /tmp/cdoPy*')
 plt.close("all")
 plt.ion()
 
@@ -83,7 +82,7 @@ casenamep2 = 'kem1pert2'  # 2002-2012 sic, sit, adjusted sst
 casenamep3 = 'kem1pert3'  # 2002-2012 sic, adjusted sst. control sit
 timstrp = '001-061'
 timstrp2 = '062-111'
-
+casenamepra = 'kem1rcp85a' # 2022-2032 sic, adjusted sst, sit from RCP8.5
 
 ######## set pert run ############
 casenamep = casenamep1
@@ -95,6 +94,8 @@ if obssims:
     timstr2 = '062-121'
     timstrp2 = '062-121'
 
+if casenamep == casenamepra:
+    timstrp2 = '062-121'
 
 cmap = 'blue2red_w20'
 cmapclimo = 'Spectral_r'

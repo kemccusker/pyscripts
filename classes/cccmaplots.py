@@ -238,10 +238,21 @@ def map_allseas(fld, lat, lon,title='',units='',cmap='blue2red_w20',type='sq',
 
     for ax in axs.flat:
         
-        plotfld = np.mean(cutl.seasonalize_monthlyts(fld,season=seasons[midx],climo=climo),axis=0)
+        #print seasons[midx]
+        tmpfld=np.squeeze(cutl.seasonalize_monthlyts(fld,season=seasons[midx],climo=climo))
+        #print tmpfld.shape # already 2D... only when climo=1?
+        #if seasons[midx]=='DJF':
+        #    print tmpfld
+
+        if climo:
+            plotfld = tmpfld
+        else:
+            plotfld = np.mean(tmpfld,axis=0)
+
+        #print plotfld.shape
         
-        bm,pc = cplt.kemmap(plotfld,lat,lon,cmin=cminm,cmax=cmaxm,cmap=cmap,type='nh',\
-                        axis=ax,suppcb=1)
+        bm,pc = kemmap(plotfld,lat,lon,cmin=cmin,cmax=cmax,cmap=cmap,type=type,\
+                       axis=ax,suppcb=1,lmask=lmask,flipmask=flipmask,units=units)
         ax.set_title(seasons[midx])
         if pvals != None:
             cplt.addtsigm(bm,pvals,lat,lon,type=sigtype)
