@@ -193,10 +193,15 @@ def seasonalize_monthlyts(input,season=None,includenan=0,mo=0,climo=0):
     return seasts
 
         
-def calc_cellareas(lat,lon):
+def calc_cellareas(lat,lon, repeat=None):
 
     """ assumes longitudes are evenly spaced and lat and lon cover whole globe
-        DOES NOT work for fraction of globe """
+        DOES NOT work for fraction of globe
+        repeat should be the shape of the field that
+        we want to multiply cellareas by. Assume the last
+        two numbers are lat and lon sizes
+        If None, no repeating necessary
+        """
 
     nlat = lat.shape[0]
     nlon = lon.shape[0]
@@ -225,6 +230,12 @@ def calc_cellareas(lat,lon):
     # need to repmat this into number of longitudes
     cellareas = np.tile(cellareas,(nlon,1))
     cellareas = np.transpose(cellareas,(1,0))
+
+    if repeat != None:
+        nrep = repeat[0:-2] # leave off last 2 dims (lat, lon)
+        nrep = nrep + (1,1)
+        cellareas = np.tile(cellareas,nrep)
+        
     return cellareas
                      
 def get_cellwgts(lat,lon,repeat=None):

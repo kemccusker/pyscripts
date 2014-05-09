@@ -52,3 +52,23 @@ def get_g():
     # this is the value used to convert PHI in model output to meters (divide PHI by g)
     g = 9.810616 
     return g
+
+def casenamec():
+    return 'kemctl1'
+
+def casenamep1():
+    return 'kem1pert1'
+
+def casenamep2():
+    return 'kem1pert2'
+
+def casenamep3():
+    return 'kem1pert3'
+
+def casenamech():
+    return 'kemhadctl'
+
+def casenameph():
+    return 'kemhadpert'
+
+

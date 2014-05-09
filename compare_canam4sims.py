@@ -628,10 +628,14 @@ if plotbar:
         fldp3pmseasstd = {}
         for seas in seasons:
 
-            fldcpmseasts = cutl.polar_mean_areawgted3d(cutl.seasonalize_monthlyts(fldc,season=seas),lat,lon,latlim=latlim)
-            fldp1pmseasts = cutl.polar_mean_areawgted3d(cutl.seasonalize_monthlyts(fldp1,season=seas),lat,lon,latlim=latlim)
-            fldp2pmseasts = cutl.polar_mean_areawgted3d(cutl.seasonalize_monthlyts(fldp2,season=seas),lat,lon,latlim=latlim)
-            fldp3pmseasts = cutl.polar_mean_areawgted3d(cutl.seasonalize_monthlyts(fldp3,season=seas),lat,lon,latlim=latlim)
+            fldcpmseasts = cutl.polar_mean_areawgted3d(
+                cutl.seasonalize_monthlyts(fldc,season=seas),lat,lon,latlim=latlim)
+            fldp1pmseasts = cutl.polar_mean_areawgted3d(
+                cutl.seasonalize_monthlyts(fldp1,season=seas),lat,lon,latlim=latlim)
+            fldp2pmseasts = cutl.polar_mean_areawgted3d(
+                cutl.seasonalize_monthlyts(fldp2,season=seas),lat,lon,latlim=latlim)
+            fldp3pmseasts = cutl.polar_mean_areawgted3d(
+                cutl.seasonalize_monthlyts(fldp3,season=seas),lat,lon,latlim=latlim)
 
             ttestp1,pvalp1 = sp.stats.ttest_ind(fldp1pmseasts,fldcpmseasts,axis=0)
             ttestp2,pvalp2 = sp.stats.ttest_ind(fldp2pmseasts,fldcpmseasts,axis=0)

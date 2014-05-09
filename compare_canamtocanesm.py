@@ -5,6 +5,7 @@
                simulation: subtracting CanESM-CanAM should give an
                idea of what part of the signal is due to sea ice
                and what is due to the forcing
+               ALSO, plot individual CanESM ensemble members
                Use canam4sims_stats2.py as guide.
 """
 import scipy.stats
@@ -32,9 +33,9 @@ plt.ion()
 
 printtofile=1
 plotallmos=0 # make allmonth figs of CanESM/CanAM and their diff
-seasonal=0 # averages seasons (DJF, MAM, JJA, SON)
-monxlat=0
-canesmens=1; ensnum=5 # look at ens members separately
+seasonal=1 # averages seasons (DJF, MAM, JJA, SON)
+monxlat=1
+canesmens=0; ensnum=5 # look at ens members separately
 
 sigtype = 'cont' # significance: 'cont' or 'hatch' which is default
 
@@ -62,7 +63,7 @@ comp = 'Amon'
 
 # # # ######## set Field info (CanAM name) ###################
 # st, sicn, gt, pmsl, pcp, hfl, hfs, turb, flg, fsg, fn, pcpn, zn, su, sv (@@later ufs,vfs)
-afield = 'sicn'
+afield = 'pcp'
 
 if afield == 'st':
     cfield = 'tas' # coupled (CMIP) field name
@@ -89,12 +90,27 @@ elif afield == 'sicn':
 elif afield == 'pmsl':
     cfield = 'psl'
     units = 'hPa' # pretty sure hpa @@double check
-    aconv = 1; cconv=1 # @@@ double check
+    aconv = 1; cconv=1/100. # @@@ double check
     cmin = -1; cmax = 1  # for anomaly plots
     cminm=-2; cmaxm=2  # for monthly maps
     cminp=cmin; cmaxp=cmax # for when pert is 'ctl'
     cminmp=cminm; cmaxmp=cmaxm
     cmap = 'blue2red_20'
+elif afield == 'pcp':
+#    pct=1; units = '%'
+    cfield = 'pr'
+    units = 'mm/day' # original: kg m-2 s-1
+    aconv = 86400; cconv=aconv  # convert from kg m-2 s-1 to mm/day
+    cmin = -.2; cmax = .2  # for anomaly plots
+    cminp=-.15; cmaxp=.15
+    cminm = -.2; cmaxm = .2
+    #cmap = 'PuOr'
+    cmap = 'brown2blue_16w'
+    cminpct=-12; cmaxpct=12
+    cminmpct=-20; cmaxmpct=20
+    cminmp =-.25; cmaxmp=.25
+    cminpctp=-8; cmaxpctp=8
+    cminpctmp=-12; cmaxpctmp=12
 
 else:
     print 'No settings for ' + afield
