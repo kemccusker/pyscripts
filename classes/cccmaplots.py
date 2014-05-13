@@ -54,8 +54,11 @@ def kemmap(fld, lat, lon,title='',units='',cmap='blue2red_w20',type='sq',
         mapparams = dict(projection='robin',lon_0=180,lat_0=0, resolution='c')
     elif type == 'nh':
         #mapparams = dict(projection='npstere',boundinglat=45,lon_0=310,resolution='c')
-        mapparams = dict(projection='ortho',lon_0=0,lat_0=90,\
-                         resolution='c') #llcrnrlon='300',llcrnrlat='45',urcrnrlon='120',urcrnrlat='45'
+        mapparams = dict(projection='ortho',lon_0=0.,lat_0=90.,\
+                         resolution='c') #llcrnrlon='-180',llcrnrlat='45',urcrnrlon='180',urcrnrlat='90'
+        # I thought the above corner limits would work to zoom on NH but I'm getting
+        # AttributeError: 'Basemap' object has no attribute '_height'
+        # 5/12/14 -- don't know why. same goes for lat_0=0.
     elif type == 'sh':
         mapparams = dict(projection='spstere',boundinglat=-45,lon_0=310,resolution='c')
     else:
@@ -79,6 +82,10 @@ def kemmap(fld, lat, lon,title='',units='',cmap='blue2red_w20',type='sq',
 
     if axis != None: # if an axis is given, add to dict for basemap
         mapparams['ax'] = axis
+
+    """ m = Basemap(projection='ortho',lon_0=lon_0,lat_0=lat_0,resolution='l',\
+    llcrnrx=0.,llcrnry=0.,urcrnrx=m1.urcrnrx/2.,urcrnry=m1.urcrnry/2.)
+    """
 
     bm = Basemap(**mapparams)
         

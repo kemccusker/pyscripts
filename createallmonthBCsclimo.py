@@ -30,24 +30,25 @@ plat = platform.system()
 months = con.get_mon()
 
 writefiles = 1
-skipcontrolwrite=1 # skip writing control BC files
-testplots = 0
+skipcontrolwrite=0 # skip writing control BC files
+testplots = 1
 
 model = 'CanESM2'
 timeres = 'Amon'
 
-field = 'sit' # 'ts', 'sic', 'sit' # these are the model output CMIP names
+field = 'ts' # 'ts', 'sic', 'sit' # these are the model output CMIP names
 adjustsst=1
-threshtype = 'abs'
-thresh = 10
-controlsit=0 # set to 1 if want to keep the control sit. not implemented 4/22/14
+threshtype = 'abs' # absolute or relative threshold for sea ice conc change
+thresh = 10  # threshold for where to change SST
 
+controlsit=0 # set to 1 if want to keep the control sit. not implemented 4/22/14
+ensmembers = 1; eindex=5 # make BC files for specified CanESM ensemble member
 
 casenamec = 'historical'; timeperc = '1979-1989'
-casename = 'rcp85';
+#casename = 'rcp85';
 #timeper = '2022-2032'
-timeper = '2042-2052'
-#casename = 'historicalrcp45'; timeper='2002-2012' # test against matlab-generated BCs
+#timeper = '2042-2052'
+casename = 'historicalrcp45'; timeper='2002-2012' # test against matlab-generated BCs
 
 
 deni = 913 # kg/m3 density of ice
@@ -55,12 +56,12 @@ deni = 913 # kg/m3 density of ice
 
 if field == 'ts': # Surface Temperature (K)
     units = 'K';
-    clims=[238, 308]
+    clims=[236.2, 306.2]
     if casename == 'rcp85':
         climsdiff=[-4, 4]
     else:
         climsdiff=[-2, 2]
-    cmap='kem_w20'; cmapclimo=cmap; # actually only 18 colors...
+    cmap='kem_w20'; cmapclimo='blue2red_20'; # actually only 18 colors...
     bcfield='GT'
     bcdescrip='ground temperature (K)'
     bcunits='K'
@@ -109,10 +110,13 @@ landmask = con.get_t63landmask()
 landmask=landmask[...,:-1]
 landmask = np.tile(landmask,(12,1,1))
 
-
+enstype = 'ens'
+if ensmembers:
+    enstype = 'r' + str(eindex) + 'i1p1'
+    
 filename = basepath + model + '/' + casename + '/' + field + '/' + \
            field + '_' + timeres + '_' + model + '_' + casename + \
-           '_ens_' + timeper + 'climo.nc'
+           '_' + enstype + '_' + timeper + 'climo.nc'
 print filename
 
 timefldp = cnc.getNCvar(filename,'time')
@@ -124,7 +128,7 @@ fldp = cnc.getNCvar(filename,field)
 # control time period is in the historical run
 filenamec =  basepath + model + '/' + casenamec + '/' + field + '/' + \
             field + '_' + timeres + '_' + model + '_' + casenamec + \
-            '_ens_' + timeperc + 'climo.nc'
+            '_' + enstype + '_' + timeperc + 'climo.nc'
 print filenamec
 
 fldc = cnc.getNCvar(filenamec,field) # we should only need this to set SSTs in near-future BCs
@@ -136,13 +140,13 @@ if field == 'ts' and adjustsst:
     # also need to get sea-ice concentration to know where to set pert SSTs
     filename = basepath + model + '/' + casename + '/sic/' + \
                'sic_OImon_' + model + '_' + casename + \
-               '_ens_' + timeper + 'climo.nc'
+               '_' + enstype + '_' + timeper + 'climo.nc'
     sicp = cnc.getNCvar(filename,'sic')
     print filename
     
     filename = basepath + model + '/' + casenamec + '/sic/' + \
                'sic_OImon_' + model + '_' + casenamec + \
-               '_ens_' + timeperc + 'climo.nc'
+               '_' + enstype + '_' + timeperc + 'climo.nc'
     print filename
     
     sicc = cnc.getNCvar(filename,'sic')
@@ -161,8 +165,8 @@ if field == 'ts' and adjustsst:
     #print "Not done: check no open water is < 271.2"
     # ideally don't want to change these vals over land though. landmask==-1
     fldptmp=copy.copy(fldp)
-    fldptmp=ma.masked_where(np.logical_and(landmask != -1,fldptmp<271.2),fldptmp) # first mask out land.    
-    fldp[np.logical_and(sicp<=15,fldptmp.mask)] = 271.2
+    fldptmp=ma.masked_where(np.logical_and(landmask != -1,fldptmp<271.2),fldptmp) # first mask out cold temps where not land    
+    fldp[np.logical_and(sicp<=15,fldptmp.mask)] = 271.2 # where SIC is less than 15% (ie "no ice") and not land and it's too cold, set to freezing
     
     #badsst = ma.masked_where(np.logical_and(sicp<=.15,fldp<=271.2),fldp)
     #cplt.map_allmonths(badsst,lat,lon,cmin=238,cmax=308,cmap='blue2red_20',type='nh',lmask=1)
@@ -176,7 +180,7 @@ elif field == 'ts' and ~adjustsst:
     # also need to get pert sea-ice concentration to check open water temp against SIConc
     filename = basepath + model + '/' + casename + '/sic/' + \
                'sic_OImon_' + model + '_' + casename + \
-               '_ens_' + timeper + 'climo.nc'
+               '_' + enstype + '_' + timeper + 'climo.nc'
     print filename
     sicp = cnc.getNCvar(filename,'sic')
     
@@ -185,8 +189,7 @@ elif field == 'ts' and ~adjustsst:
     # mask anywhere that is not land and below icefreeze
     fldptmp=ma.masked_where(np.logical_and(landmask!=-1,fldptmp<271.2),fldptmp)
     # anywhere that is not land, below icefreeze AND has sea-ice conc<.15, set to 271.2
-    flddum = fldp[np.logical_and(sicp<=15,fldptmp.mask)]
-    print flddum.shape # this can't be right, it only has a couple elements
+#    flddum = fldp[np.logical_and(sicp<=15,fldptmp.mask)]
     fldp[np.logical_and(sicp<=15,fldptmp.mask)] = 271.2
     
     #badsstnoadj = ma.masked_where(np.logical_and(sicp<=.15,fldp<=271.2),fldp)
@@ -264,10 +267,17 @@ if testplots:
     if field == 'sic' or field == 'sit':
         plotfldp = ma.masked_where(fldp<=0,fldp)
         plotfldc = ma.masked_where(fldc<=0,fldc)
+    else:
+        plotfldc = fldc
+        plotfldp = fldp
+    pparams = dict(type='nh',cmin=clims[0],cmax=clims[1],cmap=cmapclimo)
+
+    if field == 'ts':
+        pparams['conts'] = 271.2
         
-    figp = cplt.map_allmonths(plotfldp,bclat,bclon, title='pert ' + field,type='nh',cmin=clims[0],cmax=clims[1],cmap=cmapclimo)
-    figc = cplt.map_allmonths(plotfldc,bclat,bclon, title='ctrl ' + field,type='nh',cmin=clims[0],cmax=clims[1],cmap=cmapclimo)
-    figd = cplt.map_allmonths(plotfldp-plotfldc,bclat,bclon, title='diff',type='nh',cmin=climsdiff[0],cmax=climsdiff[1],cmap=cmap)
+    figp = cplt.map_allmonths(plotfldp,bclat,bclon, title='pert ' + field,**pparams)
+    figc = cplt.map_allmonths(plotfldc,bclat,bclon, title='ctrl ' + field,**pparams)
+    figd = cplt.map_allmonths(fldp-fldc,bclat,bclon, title='diff',type='nh',cmin=climsdiff[0],cmax=climsdiff[1],cmap=cmap)
     if field == 'ts':
         figd2 = cplt.map_allmonths(fldp-fldsave,bclat,bclon, title='pert - originalpert',type='nh',cmin=climsdiff[0],cmax=climsdiff[1],cmap=cmap)
         figd3 = cplt.map_allmonths(fldsave-fldc,bclat,bclon, title='originalpert - control',type='nh',cmin=climsdiff[0],cmax=climsdiff[1],cmap=cmap)
@@ -290,18 +300,25 @@ if writefiles:
 
             fldout = outflds[thetimeper]
             casenameout = casenames[thetimeper]
+            if ensmembers:
+                casenameout = casenameout + 'r' + str(eindex)
 
             print fldout.shape
 
-
+            # note that timeper is the perturbed time period
             if thetimeper==timeper and field == 'ts' and adjustsst: 
                 outfile= bcfield + 'adjusted_BC_CanESM2_' + casenameout + '_' + thetimeper + '_' +\
                          datestr + '_' + threshtype + str(thresh) + 'thresh.nc'
             elif thetimeper==timeper and field == 'ts' and ~adjustsst:
+                if ensmembers:
+                    print 'the casename on this output file does not include ensemble #! eindex=' + str(eindex)
+                    
                 outfile = bcfield + 'frzchk' + casename + timeper + '_BC_CanESM2_' +\
                           casenamec + '_' + timeperc + '_' + datestr + '.nc'           
                 # the data is the control, but open water temps are checked for below freezing where no pert ice
             elif thetimeper==timeper and field == 'sit' and controlsit:
+                if ensmembers:
+                    print 'the casename on this output file does not include ensemble #! eindex=' + str(eindex)
                 if usesictest:
                     outfile=bcfield + '_BC_CanESM2_' + casenamec + '_' + timeperc + 'forpert_' +\
                              datestr + '_usesictest.nc'
@@ -362,7 +379,9 @@ if writefiles:
             else:
                 outnc.title = 'Boundary condition dataset generated from CanESM2 ' +\
                               casenameout + ' ' + thetimeper + ' climo'
-
+            if ensmembers:
+                outnc.title = outnc.title + '. Ensemble member r' + str(eindex) + 'i1p1'
+                
             outnc.creation_date = time.ctime(time.time())
             outnc.created_by = 'Kelly E. McCusker, CCCma / U. of Victoria'
 
