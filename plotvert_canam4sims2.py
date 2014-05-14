@@ -39,7 +39,7 @@ plt.close("all")
 plt.ion()
 
 printtofile=1
-allmos=1 # make monthly figures
+allmos=0 # make monthly figures
 bimos=0  # bi-monthly figures
 seasonal=1 # seasonal figures
 singleplots=0 # seasonal climo and mean diff
@@ -48,7 +48,7 @@ obssims=0    # this will overrule the simulation settings and set to kemhad*
 obssimscomp=0 # compare hadpert to pert2 @@ not ready yet
 
 # # # ######## set Field info ###############
-field = 't'  # t, u, gz
+field = 'u'  # t, u, gz
 
 
  
