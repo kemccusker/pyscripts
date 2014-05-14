@@ -34,6 +34,8 @@ kemmap(fld, lat, lon, title='', units='', cmap='blue2red_w20', type='sq', cmin='
             suppcb: suppress colorbar. default = 0 (do not suppress)
             lmask: add land mask (e.g. for ocean-only data). default is no mask (0)
             flipmask: a hack to flip the lat direction of lmask (e.g. for HURRELL data)
+            latlim: if polar projection, it will be the equatorward limit (so far only
+                    works if do a stereographic proj, not ortho 5/13/2014
 
     Returns: basemap handle (to add to bm after function call),
              pcolormesh handle (typically to add colorbar after func call)
@@ -41,7 +43,7 @@ kemmap(fld, lat, lon, title='', units='', cmap='blue2red_w20', type='sq', cmin='
 """
 
 def kemmap(fld, lat, lon,title='',units='',cmap='blue2red_w20',type='sq',
-           cmin='',cmax='',axis=None, suppcb=0,lmask=0,flipmask=0):
+           cmin='',cmax='',axis=None, suppcb=0,lmask=0,flipmask=0,latlim=None):
 
     if cmap =='':
         cmap='blue2red_w20'
@@ -53,14 +55,21 @@ def kemmap(fld, lat, lon,title='',units='',cmap='blue2red_w20',type='sq',
     if type == 'sq':
         mapparams = dict(projection='robin',lon_0=180,lat_0=0, resolution='c')
     elif type == 'nh':
-        #mapparams = dict(projection='npstere',boundinglat=45,lon_0=310,resolution='c')
-        mapparams = dict(projection='ortho',lon_0=0.,lat_0=90.,\
-                         resolution='c') #llcrnrlon='-180',llcrnrlat='45',urcrnrlon='180',urcrnrlat='90'
+        if latlim != None:
+            mapparams = dict(projection='npstere',boundinglat=latlim,lon_0=0,resolution='c')
+        else:
+            # try mill, hammer, merc
+            mapparams = dict(projection='ortho',lon_0=0.,lat_0=90.,\
+                             resolution='c') #llcrnrlon='-180',llcrnrlat='45',urcrnrlon='180',urcrnrlat='90'
         # I thought the above corner limits would work to zoom on NH but I'm getting
         # AttributeError: 'Basemap' object has no attribute '_height'
         # 5/12/14 -- don't know why. same goes for lat_0=0.
     elif type == 'sh':
-        mapparams = dict(projection='spstere',boundinglat=-45,lon_0=310,resolution='c')
+        if latlim != None:
+            mapparams = dict(projection='spstere',boundinglat=latlim,lon_0=0,resolution='c')
+        else:
+            mapparams = dict(projection='ortho',lon_0=0.,lat_0=-90., resolution='c')
+            # same error if add: llcrnrlon='-180',llcrnrlat='-90',urcrnrlon='180',urcrnrlat='-45'
     else:
         print "Incorrect map type. Choose sq,nh,sh"
         exit

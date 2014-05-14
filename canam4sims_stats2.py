@@ -36,10 +36,10 @@ plt.close("all")
 plt.ion()
 
 printtofile=1
-plotann=0    # annual average
+plotann=1    # annual average
 plotallmos=1 # each month separately
 bimos=0 # averages every 2 mos (JF, MA, MJ, JA, SO, ND) @@ add
-seasonal=0 # averages seasons (DJF, MAM, JJA, SON)
+seasonal=1 # averages seasons (DJF, MAM, JJA, SON)
 obssims=0  # override settings to do observed runs (kemhad*)
 
 sigtype = 'cont' # significance: 'cont' or 'hatch' which is default
@@ -55,7 +55,9 @@ timstr = '001-111'
 timesel = '0002-01-01,0111-12-31'
 
 # Pert run
-casenamep1 = 'kem1pert1'  # 2002-2012 sic and sit
+#casenamep1 = 'kem1pert1'  # 2002-2012 sic and sit
+casenamep1 = 'kem1pert1b'  # 2002-2012 sic and sit
+
 casenamep2 = 'kem1pert2'  # 2002-2012 sic, sit, adjusted sst
 casenamep3 = 'kem1pert3'  # 2002-2012 sic, adjusted sst. control sit
 timstrp = '001-111'
@@ -76,8 +78,9 @@ if obssims==1:
     timstrp = timstr
     timesel = '0002-01-01,0121-12-31'
 
-if casenamep == casenamepra:
-    timstrp = '001-061'
+if casenamep == casenamepra or casenamep == 'kem1pert1b':
+    timstrp = '001-121'
+    timesel = '0002-01-01,0121-12-31'
     
 print 'CONTROL IS ' + casename
 print 'PERT IS ' + casenamep
@@ -85,7 +88,7 @@ print 'PERT IS ' + casenamep
 
 # # # ######## set Field info ###################
 # st, sic, gt, pmsl, pcp, hfl, hfs, turb, flg, fsg, fn, pcpn, zn, su, sv (@@later ufs,vfs)
-field = 'pmsl'
+field = 'su'
 
 cmap = 'blue2red_w20' # default cmap
 cmapclimo = 'Spectral_r'
