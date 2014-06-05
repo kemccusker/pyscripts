@@ -40,8 +40,7 @@ def get_monweights():
     return monwgts
 
 def get_mon():
-    months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', \
-              'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+    months = 'Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'
     return months
 
 def get_earthrad():

@@ -129,7 +129,10 @@ def kemmap(fld, lat, lon,title='',units='',cmap='blue2red_w20',type='sq',
     #bm.drawlsmask(land_color='0.7',lsmask=con.get_t63landmask(),ax=axis)
     #bm.drawparallels(np.arange(-90.,120.,30.))
     #bm.drawmeridians(np.arange(0.,360.,30.))
-    plt.title(title)
+    if axis!=None:
+        axis.set_title(title,fontsize=10)
+    else:
+        plt.title(title,fontsize=10)
 
     # add colorbar.
     if suppcb == 0:

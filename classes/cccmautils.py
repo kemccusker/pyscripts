@@ -9,7 +9,8 @@ Put my utility functions in this module.
 
 import numpy as np
 import constants as con
-
+import collections
+ 
 con = reload(con)
 
 def find_nearest(array,value):
@@ -17,6 +18,23 @@ def find_nearest(array,value):
         element with nearest value to value
     """
     return (np.abs(array-value)).argmin()
+
+def updatedict(dd,ud):
+    """ update a nested dictionary without overwriting everything
+        http://stackoverflow.com/questions/3232943/update-value-of-a-nested-dictionary-of-varying-depth
+        dd: dictionary to update
+        ud: the update dictionary
+        6/5/2014: note that this didn't solve my problem: was trying to update inner keys before outter keys
+                  Switched the order and didn't need this function anymore anyway.
+    """
+    for key, val in ud.iteritems():
+        if isinstance(val, collections.Mapping):
+            #print 'recurse'
+            rec = updatedict(dd.get(key, {}), val)
+            dd[key] = rec
+        else:
+            dd[key] = ud[key]
+    return dd
 
 
 def global_mean_areawgted3d(input, lat, lon):
