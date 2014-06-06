@@ -9,25 +9,17 @@
 
 """
 
-#import numpy as np # for array handling
 import numpy.ma as ma
-#import scipy as sp # scientific python
 import scipy.stats
-#import matplotlib.pyplot as plt # for basic plotting
 import matplotlib.cm as cm
 from subprocess import call # for doing system calls - not really needed
-#from netCDF4 import Dataset
-#from mpl_toolkits.basemap import Basemap # for maps
 import datetime as datetime
 import matplotlib.colors as col
 import platform as platform
-#import cccmaplots as cplt    # my module
 import constants as con      # my module
 import cccmautils as cutl    # my module
 import matplotlib.font_manager as fm
 import copy
-#import cccmacmaps as ccm
-#import cccmaNC as cnc
 
 # while I'm still creating these modules, have to reload to get changes
 cplt = reload(cplt)
@@ -76,7 +68,7 @@ timstr2='001-111'
 # # # ######## set Field info ###################
 # gz, t, u, v, q (3D !)
 # st, sic, sicn, gt, pmsl, pcp, hfl, hfs, turb, flg, fsg, fn, pcpn, zn, su, sv (@@later ufs,vfs)
-field = 'pcp'
+field = 'st'
 print field
 timeavg = 'DJF'
 
@@ -779,17 +771,19 @@ if plotzonmean==1 or plotseacyc==1:
         pass # seasons is defined above
     elif plotseacyc:
         latlim = 70 # for area averaging
-        #seasons = 1,2,3,4,5,6,7,8,9,10,11,12
         seasons = con.get_mon()
 
     sims = bcasename + 'r1', bcasename+'r2',bcasename+'r3',bcasename+'r4', bcasename+'r5',bcasename+'ens',bcasename
+    
     tstatdict = dict.fromkeys(sims,{}); pvaldict = dict.fromkeys(sims,{})
     fldcdict = dict.fromkeys(sims,{}); fldpdict = dict.fromkeys(sims,{})
+    fldcstddict = dict.fromkeys(sims,{}); fldpstddict = dict.fromkeys(sims,{})
     flddiffdict = dict.fromkeys(sims,{}); flddmaskdict = dict.fromkeys(sims,{})
 
     for ridx in range(0,7): # # of simulations
         seatstatdict=dict.fromkeys(seasons); seapvaldict=dict.fromkeys(seasons)
         seafldcdict=dict.fromkeys(seasons); seafldpdict=dict.fromkeys(seasons)
+        seafldcstddict=dict.fromkeys(seasons); seafldpstddict=dict.fromkeys(seasons)
         seadiffdict=dict.fromkeys(seasons); seadmaskdict=dict.fromkeys(seasons)
         
         if ridx==5: # 2nd to last sim is the ens mean
@@ -882,6 +876,8 @@ if plotzonmean==1 or plotseacyc==1:
                 fldczm = cutl.polar_mean_areawgted3d(fldczm,lat,lon,latlim=latlim)
                 fldpzm = cutl.polar_mean_areawgted3d(fldpzm,lat,lon,latlim=latlim)
 
+            seafldcstddict[sea] = np.std(fldczm,axis=0)
+            seafldpstddict[sea] = np.std(fldpzm,axis=0)
             ttmp,pvtmp = sp.stats.ttest_ind(fldpzm,fldczm,axis=0)
             seatstatdict[sea] = ttmp
             seapvaldict[sea] = pvtmp
@@ -890,6 +886,8 @@ if plotzonmean==1 or plotseacyc==1:
             seadiffdict[sea] = np.mean(fldpzm,axis=0)- np.mean(fldczm,axis=0)
             seadmaskdict[sea] = ma.masked_where(pvtmp>siglevel,seadiffdict[sea])
 
+        fldcstddict[sim] = seafldcstddict
+        fldpstddict[sim] = seafldpstddict
         tstatdict[sim] = seatstatdict
         pvaldict[sim] = seapvaldict
         fldcdict[sim] = seafldcdict
@@ -917,7 +915,29 @@ colordict = {'kemctl1r1': darkseagreen, 'kemctl1r2': darkseagreen4, 'kemctl1r3':
 
 # now make the figures ==============================================
 if plotzonmean:
-    
+
+    tmpval = fldcdict.values()[0]
+
+    fldcestd = np.zeros((len(seasons),tmpval.values()[0].shape[0]))
+    fldpestd = np.zeros((len(seasons),tmpval.values()[0].shape[0]))
+
+    # take standard deviation over ensemble members:
+    for sii,enssea in enumerate(seasons):
+
+        tmpc = np.zeros((5,tmpval.values()[0].shape[0])) # 5 sims
+        tmpp = np.zeros((5,tmpval.values()[0].shape[0]))
+        for eii,enssim in enumerate(sims[0:-2]): # skip last 2 sims
+            tmpc[eii,...] = fldcdict[enssim][enssea] # gather all ens members for calc
+            tmpp[eii,...] = fldpdict[enssim][enssea]
+
+        fldcestd[sii,...] = np.std(tmpc,axis=0) # for each season, what is sigma
+        fldpestd[sii,...] = np.std(tmpp,axis=0)
+
+    print fldcestd.shape
+
+
+
+    # climo
     fig,axs = plt.subplots(4,1)
     fig.set_size_inches(6,12)
     fig.subplots_adjust(hspace=.2,wspace=.2)
@@ -943,8 +963,41 @@ if plotzonmean:
         ax.set_title(sea)
         
     ax.set_xlabel('lat')
+    if printtofile:
+        fig.savefig(fieldstr + '_ens_meanBC_allseassp_zonmean.pdf')
 
+    # standard deviation
+    fig,axs = plt.subplots(4,1)
+    fig.set_size_inches(6,12)
+    fig.subplots_adjust(hspace=.2,wspace=.2)
+    for ii,ax in enumerate(axs.flat):
+        sea = seasons[ii]
+        ax.plot(lat,fldcstddict[bcasename+'r1'][sea],color=colors[0])
+        ax.plot(lat,fldcstddict[bcasename+'r2'][sea],color=colors[1])
+        ax.plot(lat,fldcstddict[bcasename+'r3'][sea],color=colors[2])
+        ax.plot(lat,fldcstddict[bcasename+'r4'][sea],color=colors[3])
+        ax.plot(lat,fldcstddict[bcasename+'r5'][sea],color=colors[4])
+        ax.plot(lat,fldcstddict[bcasename+'ens'][sea],color=colors[5],linewidth=2)
+        ax.plot(lat,fldcstddict[bcasename][sea],color=colors[6],linewidth=2)
+        ax.plot(lat,fldcestd[ii,...],color='k',linewidth=2)
 
+        ax.plot(lat,fldpstddict[bcasename+'r1'][sea],color=colors[0],linestyle='--')
+        ax.plot(lat,fldpstddict[bcasename+'r2'][sea],color=colors[1],linestyle='--')
+        ax.plot(lat,fldpstddict[bcasename+'r3'][sea],color=colors[2],linestyle='--')
+        ax.plot(lat,fldpstddict[bcasename+'r4'][sea],color=colors[3],linestyle='--')
+        ax.plot(lat,fldpstddict[bcasename+'r5'][sea],color=colors[4],linestyle='--')
+        ax.plot(lat,fldpstddict[bcasename+'ens'][sea],color=colors[5],linestyle='--',linewidth=2)
+        ax.plot(lat,fldpstddict[bcasename][sea],color=colors[6],linestyle='--',linewidth=2)
+        ax.plot(lat,fldpestd[ii,...],color='k',linestyle='--',linewidth=2)
+        
+        ax.set_xlim(-90,90)
+        ax.set_title(sea)
+        
+    ax.set_xlabel('lat')
+    if printtofile:
+        fig.savefig(fieldstr + 'STD_ens_meanBC_allseassp_zonmean.pdf')
+
+    # differences
     fig,axs = plt.subplots(4,1)
     fig.set_size_inches(6,12)
     fig.subplots_adjust(hspace=.2,wspace=.2)
@@ -975,28 +1028,88 @@ if plotzonmean:
     if printtofile:
         fig.savefig(fieldstr + 'diff_ens_meanBC_allseassp_zonmean_nh.pdf')
 
+    # standard deviation differences
+    fig,axs = plt.subplots(4,1)
+    fig.set_size_inches(6,12)
+    fig.subplots_adjust(hspace=.2,wspace=.2)
+    for ii,ax in enumerate(axs.flat):
+        sea = seasons[ii]
+
+        ax.plot(lat,fldpstddict[bcasename+'r1'][sea]-fldcstddict[bcasename+'r1'][sea],color=colors[0])
+        ax.plot(lat,fldpstddict[bcasename+'r2'][sea]-fldcstddict[bcasename+'r2'][sea],color=colors[1])
+        ax.plot(lat,fldpstddict[bcasename+'r3'][sea]-fldcstddict[bcasename+'r3'][sea],color=colors[2])
+        ax.plot(lat,fldpstddict[bcasename+'r4'][sea]-fldcstddict[bcasename+'r4'][sea],color=colors[3])
+        ax.plot(lat,fldpstddict[bcasename+'r5'][sea]-fldcstddict[bcasename+'r5'][sea],color=colors[4])
+        ax.plot(lat,fldpstddict[bcasename+'ens'][sea]-fldcstddict[bcasename+'ens'][sea],color=colors[5],linewidth=2)
+        ax.plot(lat,fldpstddict[bcasename][sea]-fldcstddict[bcasename][sea],color=colors[6],linewidth=2)
+        ax.plot(lat,fldpestd[ii,...]-fldcestd[ii,...],color='k',linewidth=2)
+
+        ax.set_xlim(0,90)
+        ax.set_title(field + ': ' + sea)
+        
+    ax.set_xlabel('lat')
+    
+    if printtofile:
+        fig.savefig(fieldstr + 'STDdiff_ens_meanBC_allseassp_zonmean_nh.pdf')
+
 if plotseacyc:
+
+
+#    tmpval = fldcdict.values()[0]
+
+    fldcestd = np.zeros((len(seasons)))
+    fldpestd = np.zeros((len(seasons)))
+
+    # take standard deviation over ensemble members:
+    for sii,enssea in enumerate(seasons):
+
+        tmpc = np.zeros(5) # 5 sims
+        tmpp = np.zeros(5)
+        for eii,enssim in enumerate(sims[0:-2]): # skip last 2 sims
+            tmpc[eii] = fldcdict[enssim][enssea] # gather all ens members for calc
+            tmpp[eii] = fldpdict[enssim][enssea]
+
+        fldcestd[sii] = np.std(tmpc,axis=0) # for each season, what is sigma
+        fldpestd[sii] = np.std(tmpp,axis=0)
+
+    print fldcestd.shape
+
 
     fontP = fm.FontProperties()
     fontP.set_size('small')
     
-    seacycdict = dict.fromkeys(sims)
+    seacycddict = dict.fromkeys(sims)
+    seacyccdict = dict.fromkeys(sims)
+    seacycpdict = dict.fromkeys(sims)
     seacycmaskdict = dict.fromkeys(sims)
+    seacycdstddict = dict.fromkeys(sims)
+    seacyccstddict = dict.fromkeys(sims)
+    seacycpstddict = dict.fromkeys(sims)
     
     # first, reorganize the data: put all months into an array
-    for skey,simval in flddiffdict.iteritems():        
-        seacyc = np.zeros(12)
-        print skey
+    for skey,simval in flddiffdict.iteritems():
+        cfld = fldcdict[skey]
+        pfld = fldpdict[skey]
+        
+        seacycd = np.zeros(12)
+        seacycc = np.zeros(12)
+        seacycp = np.zeros(12)
+        #print skey
         sii=0
         for seakey,seaval in simval.iteritems():
-            seacyc[sii] = seaval
+            
+            seacycd[sii] = seaval
+            seacycc[sii] = cfld[seakey]
+            seacycp[sii] = pfld[seakey]
             sii=sii+1
             
-        seacycdict[skey] = seacyc
+        seacycddict[skey] = seacycd
+        seacyccdict[skey] = seacycc
+        seacycpdict[skey] = seacycp
         
     for skey,simval in flddmaskdict.iteritems():        
         seacyc = np.zeros(12)
-        print skey
+        #print skey
         sii=0
         for seakey,seaval in simval.iteritems():
             seacyc[sii] = seaval
@@ -1004,12 +1117,58 @@ if plotseacyc:
             
         seacycmaskdict[skey] = seacyc
 
+    # standard deviation
+    for skey,simval in fldcstddict.iteritems():
+        pstd = fldpstddict[skey]
+        
+        seacycd = np.zeros(12)
+        seacycc = np.zeros(12)
+        seacycp = np.zeros(12)
+        #print skey
+        sii=0
+        for seakey,seaval in simval.iteritems():
+            pstdval = pstd[seakey]
+            
+            seacycd[sii] = pstdval - seaval
+            seacycc[sii] = seaval
+            seacycp[sii] = pstdval
+            sii=sii+1
+            
+        seacycdstddict[skey] = seacycd
+        seacyccstddict[skey] = seacycc
+        seacycpstddict[skey] = seacycp
+
 
     # Now can plot the seasonal cycle
     mons=np.arange(1,13)
-    
+
+    # climo
     fig,axs = plt.subplots()
-    for skey,val in seacycdict.iteritems():
+    for skey,val in seacyccdict.iteritems():
+
+        if skey == 'kemctl1' or skey == 'kemctl1ens':
+            axs.plot(range(1,13),val,color=colordict[skey],linewidth=3)
+        else:
+            axs.plot(range(1,13),val,color=colordict[skey],linewidth=2)
+
+    for skey,val in seacycpdict.iteritems():
+        if skey == 'kemctl1' or skey == 'kemctl1ens':
+            axs.plot(range(1,13),val,color=colordict[skey],linewidth=3,linestyle='--')
+        else:
+            axs.plot(range(1,13),val,color=colordict[skey],linewidth=2,linestyle='--')
+         
+    plt.legend(seacyccdict.keys(),'upper left', prop=fontP)
+    plt.xlim((1,12))
+    plt.xlabel('Month')
+    plt.ylabel(fieldstr)       
+
+    if printtofile:
+        fig.savefig(fieldstr + '_ens_meanBC_seacyc_pol' + str(latlim) + 'N.pdf')
+
+
+    # differences
+    fig,axs = plt.subplots()
+    for skey,val in seacycddict.iteritems():
         if skey == 'kemctl1' or skey == 'kemctl1ens':
             axs.plot(range(1,13),val,color=colordict[skey],linewidth=3)
         else:
@@ -1018,15 +1177,58 @@ if plotseacyc:
     for skey,val in seacycmaskdict.iteritems():
         axs.plot(mons,val,linestyle='none',color=colordict[skey],marker='s')
          
-    plt.legend(seacycdict.keys(),'upper left', prop=fontP)
+    plt.legend(seacycddict.keys(),'upper left', prop=fontP)
     plt.xlim((1,12))
     plt.xlabel('Month')
-    plt.ylabel(fieldstr)
-        
+    plt.ylabel(fieldstr)       
 
     if printtofile:
         fig.savefig(fieldstr + 'diff_ens_meanBC_seacyc_pol' + str(latlim) + 'N.pdf')
 
+
+    # Standard deviation
+    fig,axs = plt.subplots()
+    for skey,val in seacyccstddict.iteritems():
+
+        if skey == 'kemctl1' or skey == 'kemctl1ens':
+            axs.plot(range(1,13),val,color=colordict[skey],linewidth=3)
+        else:
+            axs.plot(range(1,13),val,color=colordict[skey],linewidth=2)
+
+    for skey,val in seacycpstddict.iteritems():
+        if skey == 'kemctl1' or skey == 'kemctl1ens':
+            axs.plot(range(1,13),val,color=colordict[skey],linestyle='--',linewidth=3)
+        else:
+            axs.plot(range(1,13),val,color=colordict[skey],linestyle='--',linewidth=2)
+
+    axs.plot(range(1,13),fldcestd,color='k',linewidth=3)
+    axs.plot(range(1,13),fldpestd,color='k',linewidth=3,linestyle='--')
+             
+    plt.legend(seacyccstddict.keys(),'upper left', prop=fontP)
+    plt.xlim((1,12))
+    plt.xlabel('Month')
+    plt.ylabel(fieldstr)       
+
+    if printtofile:
+        fig.savefig(fieldstr + 'STD_ens_meanBC_seacyc_pol' + str(latlim) + 'N.pdf')
+
+
+    # Difference in standard deviation
+    fig,axs = plt.subplots()
+    for skey,val in seacycdstddict.iteritems():
+        if skey == 'kemctl1' or skey == 'kemctl1ens':
+            axs.plot(range(1,13),val,color=colordict[skey],linewidth=3)
+        else:
+            axs.plot(range(1,13),val,color=colordict[skey],linewidth=2)
+    axs.plot(range(1,13),fldpestd-fldcestd,color='k',linewidth=3)
+             
+    plt.legend(seacycdstddict.keys(),'upper left', prop=fontP)
+    plt.xlim((1,12))
+    plt.xlabel('Month')
+    plt.ylabel(fieldstr)       
+
+    if printtofile:
+        fig.savefig(fieldstr + 'STDdiff_ens_meanBC_seacyc_pol' + str(latlim) + 'N.pdf')
 
 
 
