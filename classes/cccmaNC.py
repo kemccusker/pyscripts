@@ -48,10 +48,11 @@ def getNCvar(filename,field,timesel=None,levsel=None,monsel=None,seas=None,calc=
             print '@@ not sure calc will work on mac. calc=' + calc
 
         if levsel!=None:
-            plev= [100, 200, 300, 500, 700, 1000, 2000, 3000, 5000, 7000, 10000, 12500,
+            plev= np.array([100, 200, 300, 500, 700, 1000, 2000, 3000, 5000, 7000, 10000, 12500,
                    15000, 17500, 20000, 22500, 25000, 30000, 35000, 40000, 45000, 50000,
                    55000, 60000, 65000, 70000, 75000, 77500, 80000, 82500, 85000, 87500,
-                   90000, 92500, 95000, 97500, 100000]
+                   90000, 92500, 95000, 97500, 100000])
+
             level=cutl.find_nearest(plev,levsel)
         else:
             level=None        

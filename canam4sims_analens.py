@@ -33,13 +33,14 @@ plt.ion()
 
 printtofile=1
 
-plotann=1    # seasonal avg map, comparing ens runs and meanBC
+plotann=0    # seasonal avg map, comparing ens runs and meanBC
 plotallmos=0 # monthly maps (@@ not implemented)
 seasonal=0 # seasonal maps (DJF, MAM, JJA, SON)
 plotzonmean=0 # plotzonmean and plotseacyc are mutually exclusive
-plotseacyc=0 # plotzonmean and plotseacyc are mutually exclusive
+plotseacyc=1 # plotzonmean and plotseacyc are mutually exclusive
 testhadisst=0
-normbystd=1
+normbystd=0
+addobs=1 # add mean of kemhad* runs to line plots (so far@@)
 
 sigtype = 'cont' # significance: 'cont' or 'hatch' which is default
 sigoff=0 # if 1, don't add significance
@@ -69,14 +70,14 @@ timstr2='001-111'
 # # # ######## set Field info ###################
 # gz, t, u, v, q (3D !)
 # st, sic, sicn, gt, pmsl, pcp, hfl, hfs, turb, flg, fsg, fn, pcpn, zn, su, sv (@@later ufs,vfs)
-field = 'pmsl'
+field = 'pcp'
 print field
 timeavg = 'DJF'
 
 # only for threed vars
-#level = 30000
+level = 30000
 #level = 50000 # 500hPa
-level = 70000
+#level = 70000
 
 # HERE THE SECOND SET OF RUNS IS HadISST BC's
 if testhadisst:
@@ -113,6 +114,8 @@ if field == 'st':
     cminmp = -1; cmaxmp = 1 # for when pert is 'ctl'
     cminn = -5; cmaxn = 5 # for norm by std
     cmap = 'blue2red_w20'
+
+    leglocs = 'upper left', 'upper left', 'upper right', 'upper left'
 elif field == 'sic':
     units='m'
     conv=1/913.
@@ -127,7 +130,7 @@ elif field == 'sicn':
     cmin=-.15; cmax=.15
     cminm=-.15; cmaxm=.15
     cmap = 'red2blue_w20'
-    
+    leglocs = 'lower left', 'lower left', 'upper left', 'upper left'
 elif field == 'gt':
     units='K'
     conv=1
@@ -145,6 +148,7 @@ elif field == 'pmsl':
     cminmp=cminm; cmaxmp=cmaxm
     cmap = 'blue2red_20'
     cminn = -1; cmaxn = 1 # for norm by std
+    leglocs = 'lower left', 'upper left', 'upper center', 'upper left'
 elif field == 'pcp':
     units = 'mm/day' # original: kg m-2 s-1
     
@@ -161,6 +165,7 @@ elif field == 'pcp':
     cminmp =-.25; cmaxmp=.25
     cminpctp=-8; cmaxpctp=8
     cminpctmp=-12; cmaxpctmp=12
+    leglocs = 'upper left', 'upper left', 'upper left', 'upper left'
 elif field == 'hfl': # sfc upward LH flux
     units = 'W/m2'
     conv = 1
@@ -250,6 +255,7 @@ elif field == 'su':
     cminm = -1; cmaxm = 1
     cminp = -.5; cmaxp=.5
     cminmp = -.5; cmaxmp=.5
+    leglocs = 'upper left', 'lower left', 'upper left', 'upper left'
 elif field == 'sv':
     units = 'm/s'
     conv = 1;
@@ -336,7 +342,7 @@ else:
 plat = platform.system()
 
 if plat == 'Darwin':  # means I'm on my mac
-    basepath = '/Users/kelly/CCCma/CanSISE/RUNS/'
+    basepath = '/Volumes/MyPassport1TB/DATA/CanSISE/' + model + '/'
     subdir = '/'
 else:  # on linux workstation in Vic
     basepath = '/home/rkm/work/DATA/' + model + '/'
@@ -796,14 +802,17 @@ if plotzonmean==1 or plotseacyc==1:
         latlim = 70 # for area averaging
         seasons = con.get_mon()
 
-    sims = bcasename + 'r1', bcasename+'r2',bcasename+'r3',bcasename+'r4', bcasename+'r5',bcasename+'ens',bcasename
+    if addobs:
+        sims = bcasename + 'r1', bcasename+'r2',bcasename+'r3',bcasename+'r4', bcasename+'r5',bcasename+'ens',bcasename,'kemhadctl'
+    else:
+        sims = bcasename + 'r1', bcasename+'r2',bcasename+'r3',bcasename+'r4', bcasename+'r5',bcasename+'ens',bcasename
     
     tstatdict = dict.fromkeys(sims,{}); pvaldict = dict.fromkeys(sims,{})
     fldcdict = dict.fromkeys(sims,{}); fldpdict = dict.fromkeys(sims,{})
     fldcstddict = dict.fromkeys(sims,{}); fldpstddict = dict.fromkeys(sims,{})
     flddiffdict = dict.fromkeys(sims,{}); flddmaskdict = dict.fromkeys(sims,{})
 
-    for ridx in range(0,7): # # of simulations
+    for ridx in range(0,len(sims)): # # of simulations
         seatstatdict=dict.fromkeys(seasons); seapvaldict=dict.fromkeys(seasons)
         seafldcdict=dict.fromkeys(seasons); seafldpdict=dict.fromkeys(seasons)
         seafldcstddict=dict.fromkeys(seasons); seafldpstddict=dict.fromkeys(seasons)
@@ -840,6 +849,19 @@ if plotzonmean==1 or plotseacyc==1:
                 fnamep2 = frootp + '062-111_ts.nc'
 
             sim = bcasename
+        elif ridx==7: # observation simulation
+            frootc = basepath + 'kemhadctl' + subdir + 'kemhadctl' + '_' + field + '_'
+            frootp = basepath + 'kemhadpert' + subdir + 'kemhadpert' + '_' + field + '_'
+            if threed==0:
+                fnamec =  frootc + timstr + '_ts.nc'
+                fnamep =  frootp + timstrp + '_ts.nc'
+            else:
+                fnamec = frootc + '001-061_ts.nc'
+                fnamec2 = frootc + '062-121_ts.nc'
+                fnamep = frootp + '001-061_ts.nc'
+                fnamep2 = frootp + '062-121_ts.nc'
+
+            sim = 'kemhadctl'
 
         else:
             frootc =  basepath + bcasename + 'r' + str(ridx+1) + subdir + bcasename +\
@@ -930,10 +952,14 @@ lightsteelblue4 = np.array([110, 123, 139])/255. # more grey looking
 steelblue3 = np.array([79, 148, 205])/255.  # more blue looking
 steelblue4 = np.array([54, 100, 139])/255.  # more blue looking
 
-colors = darkseagreen,darkseagreen4,lightsteelblue3,lightsteelblue4,steelblue4,dodgerblue,orangered4
+colors = darkseagreen,darkseagreen4,lightsteelblue3,lightsteelblue4,steelblue4,dodgerblue,orangered4,darkolivegreen3
 colordict = {'kemctl1r1': darkseagreen, 'kemctl1r2': darkseagreen4, 'kemctl1r3': lightsteelblue3,
              'kemctl1r4': lightsteelblue4, 'kemctl1r5': steelblue4, 'kemctl1ens': dodgerblue,
-             'kemctl1': orangered4 }
+             'kemctl1': orangered4, 'kemhadctl': darkolivegreen3 }
+if addobs:
+    skip=-3 # use this to only take std dev over ens members r*
+else:
+    skip=-2
 
 
 # now make the figures ==============================================
@@ -949,7 +975,7 @@ if plotzonmean:
 
         tmpc = np.zeros((5,tmpval.values()[0].shape[0])) # 5 sims
         tmpp = np.zeros((5,tmpval.values()[0].shape[0]))
-        for eii,enssim in enumerate(sims[0:-2]): # skip last 2 sims
+        for eii,enssim in enumerate(sims[0:skip]): # skip last 2 sims
             tmpc[eii,...] = fldcdict[enssim][enssea] # gather all ens members for calc
             tmpp[eii,...] = fldpdict[enssim][enssea]
 
@@ -973,6 +999,8 @@ if plotzonmean:
         ax.plot(lat,fldcdict[bcasename+'r5'][sea],color=colors[4])
         ax.plot(lat,fldcdict[bcasename+'ens'][sea],color=colors[5],linewidth=2)
         ax.plot(lat,fldcdict[bcasename][sea],color=colors[6],linewidth=2)
+        if addobs:
+            ax.plot(lat,fldcdict['kemhadctl'][sea],color=colordict['kemhadctl'],linewidth=2)
 
         ax.plot(lat,fldpdict[bcasename+'r1'][sea],color=colors[0],linestyle='--')
         ax.plot(lat,fldpdict[bcasename+'r2'][sea],color=colors[1],linestyle='--')
@@ -981,6 +1009,8 @@ if plotzonmean:
         ax.plot(lat,fldpdict[bcasename+'r5'][sea],color=colors[4],linestyle='--')
         ax.plot(lat,fldpdict[bcasename+'ens'][sea],color=colors[5],linestyle='--',linewidth=2)
         ax.plot(lat,fldpdict[bcasename][sea],color=colors[6],linestyle='--',linewidth=2)
+        if addobs:
+            ax.plot(lat,fldpdict['kemhadctl'][sea],color=colordict['kemhadctl'],linestyle='--',linewidth=2)
 
         ax.set_xlim(-90,90)
         ax.set_title(sea)
@@ -1002,6 +1032,8 @@ if plotzonmean:
         ax.plot(lat,fldcstddict[bcasename+'r5'][sea],color=colors[4])
         ax.plot(lat,fldcstddict[bcasename+'ens'][sea],color=colors[5],linewidth=2)
         ax.plot(lat,fldcstddict[bcasename][sea],color=colors[6],linewidth=2)
+        if addobs:
+            ax.plot(lat,fldcstddict['kemhadctl'][sea],color=colordict['kemhadctl'],linewidth=2)
         ax.plot(lat,fldcestd[ii,...],color='k',linewidth=2)
 
         ax.plot(lat,fldpstddict[bcasename+'r1'][sea],color=colors[0],linestyle='--')
@@ -1011,6 +1043,8 @@ if plotzonmean:
         ax.plot(lat,fldpstddict[bcasename+'r5'][sea],color=colors[4],linestyle='--')
         ax.plot(lat,fldpstddict[bcasename+'ens'][sea],color=colors[5],linestyle='--',linewidth=2)
         ax.plot(lat,fldpstddict[bcasename][sea],color=colors[6],linestyle='--',linewidth=2)
+        if addobs:
+            ax.plot(lat,fldpstddict['kemhadctl'][sea],color=colordict['kemhadctl'],linestyle='--',linewidth=2)
         ax.plot(lat,fldpestd[ii,...],color='k',linestyle='--',linewidth=2)
         
         ax.set_xlim(-90,90)
@@ -1034,6 +1068,8 @@ if plotzonmean:
         ax.plot(lat,flddiffdict[bcasename+'r5'][sea],color=colors[4])
         ax.plot(lat,flddiffdict[bcasename+'ens'][sea],color=colors[5],linewidth=2)
         ax.plot(lat,flddiffdict[bcasename][sea],color=colors[6],linewidth=2)
+        if addobs:
+            ax.plot(lat,flddiffdict['kemhadctl'][sea],color=colordict['kemhadctl'],linewidth=2)
 
         ax.plot(lat,flddmaskdict[bcasename+'r1'][sea],linestyle='none',marker='s',color=colors[0])
         ax.plot(lat,flddmaskdict[bcasename+'r2'][sea],linestyle='none',marker='s',color=colors[1])
@@ -1042,6 +1078,8 @@ if plotzonmean:
         ax.plot(lat,flddmaskdict[bcasename+'r5'][sea],linestyle='none',marker='s',color=colors[4])
         ax.plot(lat,flddmaskdict[bcasename+'ens'][sea],linestyle='none',marker='s',color=colors[5])
         ax.plot(lat,flddmaskdict[bcasename][sea],linestyle='none',marker='s',color=colors[6])
+        if addobs:
+            ax.plot(lat,flddmaskdict['kemhadctl'][sea],color=colordict['kemhadctl'],linestyle='none',marker='s')
 
         ax.set_xlim(0,90)
         ax.set_title(field + ': ' + sea)
@@ -1065,6 +1103,9 @@ if plotzonmean:
         ax.plot(lat,fldpstddict[bcasename+'r5'][sea]-fldcstddict[bcasename+'r5'][sea],color=colors[4])
         ax.plot(lat,fldpstddict[bcasename+'ens'][sea]-fldcstddict[bcasename+'ens'][sea],color=colors[5],linewidth=2)
         ax.plot(lat,fldpstddict[bcasename][sea]-fldcstddict[bcasename][sea],color=colors[6],linewidth=2)
+        if addobs:
+            ax.plot(lat,fldpstddict['kemhadctl'][sea]-fldcstddict['kemhadctl'][sea],color=colordict['kemhadctl'],linewidth=2)
+
         ax.plot(lat,fldpestd[ii,...]-fldcestd[ii,...],color='k',linewidth=2)
 
         ax.set_xlim(0,90)
@@ -1077,10 +1118,7 @@ if plotzonmean:
 
 if plotseacyc:
 
-
-#    tmpval = fldcdict.values()[0]
-
-    fldcestd = np.zeros((len(seasons)))
+    fldcestd = np.zeros((len(seasons))) # ensemble std dev
     fldpestd = np.zeros((len(seasons)))
 
     fldcestddict = dict.fromkeys(seasons)
@@ -1091,7 +1129,7 @@ if plotseacyc:
 
         tmpc = np.zeros(5) # 5 sims
         tmpp = np.zeros(5)
-        for eii,enssim in enumerate(sims[0:-2]): # skip last 2 sims
+        for eii,enssim in enumerate(sims[0:skip]): # skip last 2 sims
             tmpc[eii] = fldcdict[enssim][enssea] # gather all ens members for calc
             tmpp[eii] = fldpdict[enssim][enssea]
 
@@ -1178,18 +1216,18 @@ if plotseacyc:
     fig,axs = plt.subplots()
     for skey,val in seacyccdict.iteritems():
 
-        if skey == 'kemctl1' or skey == 'kemctl1ens':
+        if skey == 'kemctl1' or skey == 'kemctl1ens' or skey=='kemhadctl':
             axs.plot(range(1,13),val,color=colordict[skey],linewidth=3)
         else:
             axs.plot(range(1,13),val,color=colordict[skey],linewidth=2)
 
     for skey,val in seacycpdict.iteritems():
-        if skey == 'kemctl1' or skey == 'kemctl1ens':
+        if skey == 'kemctl1' or skey == 'kemctl1ens' or skey=='kemhadctl':
             axs.plot(range(1,13),val,color=colordict[skey],linewidth=3,linestyle='--')
         else:
             axs.plot(range(1,13),val,color=colordict[skey],linewidth=2,linestyle='--')
          
-    plt.legend(seacyccdict.keys(),'upper left', prop=fontP,ncol=2)
+    plt.legend(seacyccdict.keys(),leglocs[0], prop=fontP,ncol=2)
     plt.xlim((1,12))
     plt.xlabel('Month')
     plt.ylabel(fieldstr)       
@@ -1201,7 +1239,7 @@ if plotseacyc:
     # differences
     fig,axs = plt.subplots()
     for skey,val in seacycddict.iteritems():
-        if skey == 'kemctl1' or skey == 'kemctl1ens':
+        if skey == 'kemctl1' or skey == 'kemctl1ens' or skey=='kemhadctl':
             axs.plot(range(1,13),val,color=colordict[skey],linewidth=3)
         else:
             axs.plot(range(1,13),val,color=colordict[skey],linewidth=2)
@@ -1209,7 +1247,7 @@ if plotseacyc:
     for skey,val in seacycmaskdict.iteritems():
         axs.plot(mons,val,linestyle='none',color=colordict[skey],marker='s')
          
-    plt.legend(seacycddict.keys(),'upper left', prop=fontP,ncol=2)
+    plt.legend(seacycddict.keys(),leglocs[1], prop=fontP,ncol=2)
     plt.xlim((1,12))
     plt.xlabel('Month')
     plt.ylabel(fieldstr)       
@@ -1222,13 +1260,13 @@ if plotseacyc:
     fig,axs = plt.subplots()
     for skey,val in seacyccstddict.iteritems():
 
-        if skey == 'kemctl1' or skey == 'kemctl1ens':
+        if skey == 'kemctl1' or skey == 'kemctl1ens' or skey=='kemhadctl':
             axs.plot(range(1,13),val,color=colordict[skey],linewidth=3)
         else:
             axs.plot(range(1,13),val,color=colordict[skey],linewidth=2)
 
     for skey,val in seacycpstddict.iteritems():
-        if skey == 'kemctl1' or skey == 'kemctl1ens':
+        if skey == 'kemctl1' or skey == 'kemctl1ens' or skey=='kemhadctl':
             axs.plot(range(1,13),val,color=colordict[skey],linestyle='--',linewidth=3)
         else:
             axs.plot(range(1,13),val,color=colordict[skey],linestyle='--',linewidth=2)
@@ -1236,7 +1274,7 @@ if plotseacyc:
     axs.plot(range(1,13),fldcestd,color='k',linewidth=3)
     axs.plot(range(1,13),fldpestd,color='k',linewidth=3,linestyle='--')
              
-    plt.legend(seacyccstddict.keys(),'upper left', prop=fontP,ncol=2)
+    plt.legend(seacyccstddict.keys(),leglocs[2], prop=fontP,ncol=2)
     plt.xlim((1,12))
     plt.xlabel('Month')
     plt.ylabel(fieldstr)       
@@ -1248,13 +1286,13 @@ if plotseacyc:
     # Difference in standard deviation
     fig,axs = plt.subplots()
     for skey,val in seacycdstddict.iteritems():
-        if skey == 'kemctl1' or skey == 'kemctl1ens':
+        if skey == 'kemctl1' or skey == 'kemctl1ens' or skey=='kemhadctl':
             axs.plot(range(1,13),val,color=colordict[skey],linewidth=3)
         else:
             axs.plot(range(1,13),val,color=colordict[skey],linewidth=2)
     axs.plot(range(1,13),fldpestd-fldcestd,color='k',linewidth=3)
              
-    plt.legend(seacycdstddict.keys(),'upper left', prop=fontP,ncol=2)
+    plt.legend(seacycdstddict.keys(),leglocs[3], prop=fontP,ncol=2)
     plt.xlim((1,12))
     plt.xlabel('Month')
     plt.ylabel(fieldstr)       
@@ -1310,8 +1348,8 @@ if testhadisst:
         #cplt.map_allmonths((fldpdict[sim]-fldcdict[sim]) - (fldp2-fldc2),
         #                   lat,lon,cmin=-.1,cmax=.1,cmap='red2blue_w20',title=sim,type='nh')
 
-        # root mean square error(?) @@
-        # want to take the difference b/w the ensrun and hadisst at each grid point,
+        # root mean square error(?) @@not quite
+        # want to take the difference b/w the ensrun and hadisst anomalies at each grid point,
         # squaring and square rooting will get the distance away ensrun is from hadisst
         # then take the polar mean of the distances
         #yrfld = np.zeros(12)
