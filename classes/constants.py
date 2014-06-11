@@ -12,10 +12,13 @@ import numpy as np
 from netCDF4 import Dataset
 import platform as platform
 
-def get_t63landmask():
+def get_t63landmask(repeat=None):
     """ Return ground cover.
         64x129
         -1=land, 0=open water, 1=sea ice (not present), 2=inland lake
+
+        repeat: shape you want landmask as. assume last 2 dims are lat,lon
+        
         """
     plat = platform.system()
 
@@ -30,6 +33,12 @@ def get_t63landmask():
     #           GC:min_avg_max = -1.f, -0.2944274f, 2.f ;
     # Also 2 is inland lake
     lmask = ncfile.variables['GC'][...]
+
+    if repeat != None:
+        nrep = repeat[0:-2] # leave off last 2 dims (lat, lon)
+        nrep = nrep + (1,1)
+        lmask = np.tile(lmask,nrep)
+        
     return lmask
         
 

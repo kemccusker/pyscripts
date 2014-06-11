@@ -10,6 +10,7 @@ Put my utility functions in this module.
 import numpy as np
 import constants as con
 import collections
+import numpy.ma as ma
  
 con = reload(con)
 
@@ -36,6 +37,32 @@ def updatedict(dd,ud):
             dd[key] = ud[key]
     return dd
 
+def calc_seaicearea(input,lat,lon):
+    """ Calculate sea ice area from sea ice concentration
+        input: 2D or greater array of sea ice concentration.
+               If > 2D, time must be first dimension
+        lat: array of coordinate lats
+        lon: array of coordinate lons
+
+        returns: MASKED array of sea ice area with same
+                 shape as input. The array is masked such
+                 that land is masked out             
+    """
+
+    ishape = input.shape
+    ndims=len(ishape)
+
+    if ndims>2: # first dim is tim
+        areas = calc_cellareas(lat,lon,repeat=ishape)
+        lmask = con.get_t63landmask(repeat=ishape) # @@ note assuming T63 here...
+    else:
+        areas = calc_cellareas(lat,lon)
+        lmask = con.get_t63landmask()
+
+    sia = input*areas
+    sia = ma.masked_where(lmask==-1,sia) # mask where land
+    
+    return sia
 
 def global_mean_areawgted3d(input, lat, lon):
 
