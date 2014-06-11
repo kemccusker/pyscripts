@@ -31,14 +31,14 @@ cnc = reload(cnc)
 plt.close("all")
 plt.ion()
 
-printtofile=1
+printtofile=0
 
 plotann=0    # seasonal avg map, comparing ens runs and meanBC
 plotallmos=0 # monthly maps (@@ not implemented)
 seasonal=0 # seasonal maps (DJF, MAM, JJA, SON)
 plotzonmean=0 # plotzonmean and plotseacyc are mutually exclusive
-plotseacyc=1 # plotzonmean and plotseacyc are mutually exclusive
-testhadisst=0
+plotseacyc=0 # plotzonmean and plotseacyc are mutually exclusive
+testhadisst=1
 normbystd=0
 addobs=1 # add mean of kemhad* runs to line plots (so far@@)
 
@@ -49,6 +49,7 @@ seasons = 'DJF','MAM','JJA','SON'
 
 model = 'CanAM4'
 threed=0
+sia=0 # is the requested field sea ice area
 
 
 # # # ########### set Simulations #############
@@ -69,8 +70,8 @@ timstr2='001-111'
 
 # # # ######## set Field info ###################
 # gz, t, u, v, q (3D !)
-# st, sic, sicn, gt, pmsl, pcp, hfl, hfs, turb, flg, fsg, fn, pcpn, zn, su, sv (@@later ufs,vfs)
-field = 'pcp'
+# st, sic, sicn (sia), gt, pmsl, pcp, hfl, hfs, turb, flg, fsg, fn, pcpn, zn, su, sv (@@later ufs,vfs)
+field = 'sia'
 print field
 timeavg = 'DJF'
 
@@ -124,7 +125,8 @@ elif field == 'sic':
     cminm=-.5
     cmaxm=.5
     cmap = 'red2blue_w20'
-elif field == 'sicn':
+    leglocs = 'lower left', 'lower left', 'upper left', 'upper left'
+elif field == 'sicn' or field == 'sia':
     units = 'frac'
     conv=1
     cmin=-.15; cmax=.15
@@ -232,6 +234,7 @@ elif field == 'pcpn': # snowfall rate (water equivalent, kg/m2/s)
     cmaxpct=12
     cminmpct=-25
     cmaxmpct=25
+    leglocs = 'upper left', 'upper left', 'upper center', 'upper left'
 
 elif field == 'zn': # snow depth (m)
 #    pct=1; units='%'
@@ -246,6 +249,7 @@ elif field == 'zn': # snow depth (m)
     cmaxpct=10
     cminmpct=-10
     cmaxmpct=10
+    leglocs = 'upper right', 'lower left', 'upper right', 'lower right'
 
 elif field == 'su':
     units = 'm/s'
@@ -365,6 +369,10 @@ if field=='turb':
     field='turb'
 else:
     if threed==0:
+        if field == 'sia':
+            sia=1
+            field='sicn' # only really sia for zonal mean and seasonal cycle
+            
         fnamec = basepath + casename + subdir + casename + '_' + field + '_' + timstr + '_ts.nc'
         fnamep = basepath + casenamep + subdir + casenamep + '_' + field + '_' + timstrp + '_ts.nc'
 
@@ -376,6 +384,9 @@ else:
 
         fldc2 = cnc.getNCvar(fnamec2,field.upper(),timesel=timesel)*conv
         fldp2 = cnc.getNCvar(fnamep2,field.upper(),timesel=timesel)*conv
+
+        if sia==1:
+            field='sia'
     else:
         # read 3D variables at specified level, 2 timeseries files
         frootc = basepath + casename + subdir + casename + '_' + field + '_'
@@ -446,6 +457,9 @@ else:
 
 if plotann:
     print timeavg
+    if field=='sia':
+        print 'Plotting maps of SICN instead of sia'
+        field='sicn'
 
     if pct:
         seastsctm = np.mean(seastsc,0)
@@ -658,6 +672,9 @@ if plotallmos:
 
 if seasonal:
 
+    if field=='sia':
+        print 'Plotting maps of SICN instead of sia'
+        field='sicn'
 
     cmlen=float( plt.cm.get_cmap(cmap).N) # or: from __future__ import division
 
@@ -794,7 +811,6 @@ if seasonal:
 
 
 if plotzonmean==1 or plotseacyc==1:
-    #if plotzonmean:
     # get data for either zonal mean or sea cycle figures
     if plotzonmean:
         pass # seasons is defined above
@@ -806,7 +822,10 @@ if plotzonmean==1 or plotseacyc==1:
         sims = bcasename + 'r1', bcasename+'r2',bcasename+'r3',bcasename+'r4', bcasename+'r5',bcasename+'ens',bcasename,'kemhadctl'
     else:
         sims = bcasename + 'r1', bcasename+'r2',bcasename+'r3',bcasename+'r4', bcasename+'r5',bcasename+'ens',bcasename
-    
+
+    if sia==1:
+        field = 'sicn' # while getting the data...
+        
     tstatdict = dict.fromkeys(sims,{}); pvaldict = dict.fromkeys(sims,{})
     fldcdict = dict.fromkeys(sims,{}); fldpdict = dict.fromkeys(sims,{})
     fldcstddict = dict.fromkeys(sims,{}); fldpstddict = dict.fromkeys(sims,{})
@@ -912,14 +931,24 @@ if plotzonmean==1 or plotseacyc==1:
                     fldpzm = np.append(cnc.getNCvar(fnamep,ncfield,timesel='0002-01-01,061-12-31',**ncparams)*conv,
                                         cnc.getNCvar(fnamep2,ncfield,**ncparams)*conv,
                                         axis=0)
+                if sia==1:                    
+                    fldczm = cutl.calc_seaicearea(fldczm,lat,lon)
+                    fldpzm = cutl.calc_seaicearea(fldpzm,lat,lon)
+                    
+                    
 
             if plotzonmean:
                 fldczm = np.mean(fldczm[...,:-1],axis=2)
                 fldpzm = np.mean(fldpzm[...,:-1],axis=2)
 
             elif plotseacyc:
-                fldczm = cutl.polar_mean_areawgted3d(fldczm,lat,lon,latlim=latlim)
-                fldpzm = cutl.polar_mean_areawgted3d(fldpzm,lat,lon,latlim=latlim)
+                if field == 'sia':
+                    #calc total area instead of average
+                    fldczm = np.sum(np.sum(fldczm[lat>0,:],axis=2),axis=1)
+                    fldpzm = np.sum(np.sum(fldpzm[lat>0,:],axis=2),axis=1)
+                else:
+                    fldczm = cutl.polar_mean_areawgted3d(fldczm,lat,lon,latlim=latlim)
+                    fldpzm = cutl.polar_mean_areawgted3d(fldpzm,lat,lon,latlim=latlim)
 
             seafldcstddict[sea] = np.std(fldczm,axis=0)
             seafldpstddict[sea] = np.std(fldpzm,axis=0)
@@ -931,6 +960,8 @@ if plotzonmean==1 or plotseacyc==1:
             seadiffdict[sea] = np.mean(fldpzm,axis=0)- np.mean(fldczm,axis=0)
             seadmaskdict[sea] = ma.masked_where(pvtmp>siglevel,seadiffdict[sea])
 
+            # end loop through seasons
+
         fldcstddict[sim] = seafldcstddict
         fldpstddict[sim] = seafldpstddict
         tstatdict[sim] = seatstatdict
@@ -939,6 +970,10 @@ if plotzonmean==1 or plotseacyc==1:
         fldpdict[sim] = seafldpdict
         flddiffdict[sim] = seadiffdict
         flddmaskdict[sim] = seadmaskdict
+
+        # end loop through simulations
+    if sia==1:
+        field = 'sia' # put back after getting the data
 
 
 darkolivegreen1 = np.array([202, 255, 112])/255 # terrible
@@ -1085,7 +1120,7 @@ if plotzonmean:
         ax.set_title(field + ': ' + sea)
         
     ax.set_xlabel('lat')
-    
+    ax.legend(sims,'upper left', prop=fontP,ncol=2)
     if printtofile:
         fig.savefig(fieldstr + 'diff_ens_meanBC_allseassp_zonmean_nh.pdf')
 
@@ -1230,7 +1265,8 @@ if plotseacyc:
     plt.legend(seacyccdict.keys(),leglocs[0], prop=fontP,ncol=2)
     plt.xlim((1,12))
     plt.xlabel('Month')
-    plt.ylabel(fieldstr)       
+    plt.ylabel(fieldstr)
+    plt.title('Climos')
 
     if printtofile:
         fig.savefig(fieldstr + '_ens_meanBC_seacyc_pol' + str(latlim) + 'N.pdf')
@@ -1250,7 +1286,8 @@ if plotseacyc:
     plt.legend(seacycddict.keys(),leglocs[1], prop=fontP,ncol=2)
     plt.xlim((1,12))
     plt.xlabel('Month')
-    plt.ylabel(fieldstr)       
+    plt.ylabel(fieldstr)
+    plt.title('Anomalies')
 
     if printtofile:
         fig.savefig(fieldstr + 'diff_ens_meanBC_seacyc_pol' + str(latlim) + 'N.pdf')
@@ -1277,7 +1314,8 @@ if plotseacyc:
     plt.legend(seacyccstddict.keys(),leglocs[2], prop=fontP,ncol=2)
     plt.xlim((1,12))
     plt.xlabel('Month')
-    plt.ylabel(fieldstr)       
+    plt.ylabel(fieldstr)
+    plt.title('Sigma')
 
     if printtofile:
         fig.savefig(fieldstr + 'STD_ens_meanBC_seacyc_pol' + str(latlim) + 'N.pdf')
@@ -1295,7 +1333,8 @@ if plotseacyc:
     plt.legend(seacycdstddict.keys(),leglocs[3], prop=fontP,ncol=2)
     plt.xlim((1,12))
     plt.xlabel('Month')
-    plt.ylabel(fieldstr)       
+    plt.ylabel(fieldstr)
+    plt.title('Sigma anomalies')
 
     if printtofile:
         fig.savefig(fieldstr + 'STDdiff_ens_meanBC_seacyc_pol' + str(latlim) + 'N.pdf')
@@ -1308,8 +1347,12 @@ if testhadisst:
     # can use fldc2 and fldp2 for hadisst data
     # need to get all the r* runs
 
+    corrlim=40 # the latitude north of which to consider the pattern correlation
+    lmask = con.get_t63landmask()
+    
     fldcdict = {}; fldpdict = {}
     diffdict = {}
+    pcorrdict = {}
     
     for ridx in range(0,7): # # of simulations
 
@@ -1360,6 +1403,20 @@ if testhadisst:
                     
         diffdict[sim] = tmpfld
 
+        # do correlation here:
+        pcorr = np.zeros((12))
+        for moidx in range(0,12):
+            ensmem = fldpdict[sim][moidx,lat>corrlim,...] - fldcdict[sim][moidx,lat>corrlim,...]
+            obsbc = fldp2[moidx,lat>corrlim,...] - fldc2[moidx,lat>corrlim,...]
+
+            ensmem = ma.masked_where(lmask[lat>corrlim,:]==-1,ensmem) # mask out land
+            obsbc = ma.masked_where(lmask[lat>corrlim,:]==-1,obsbc) # mask out land
+            
+            tmpcorr = np.corrcoef(ensmem.flatten(), obsbc.flatten())
+            pcorr[moidx] = tmpcorr[0,1]
+            
+        pcorrdict[sim] = pcorr
+
     mons = range(1,13)
     fontP = fm.FontProperties()
     fontP.set_size('small')
@@ -1374,6 +1431,19 @@ if testhadisst:
     plt.plot(mons,diffdict['kemctl1'],color=colors[6])
     plt.legend(('r1','r2','r3','r4','r5','ens','meanBC'),prop=fontP)
     plt.xlim((1,12))
+    plt.title('RMSE-ish')
+
+    plt.figure();
+    plt.plot(mons,pcorrdict['kemctl1r1'],color=colors[0])
+    plt.plot(mons,pcorrdict['kemctl1r2'],color=colors[1])
+    plt.plot(mons,pcorrdict['kemctl1r3'],color=colors[2])
+    plt.plot(mons,pcorrdict['kemctl1r4'],color=colors[3])
+    plt.plot(mons,pcorrdict['kemctl1r5'],color=colors[4])
+    plt.plot(mons,pcorrdict['kemctl1ens'],color=colors[5])
+    plt.plot(mons,pcorrdict['kemctl1'],color=colors[6])
+    plt.legend(('r1','r2','r3','r4','r5','ens','meanBC'),'upper left',prop=fontP)
+    plt.xlim((1,12))
+    plt.title('pattern correlation')
 
     wgts = con.get_monweights()
     print 'r1: ' + str(np.average(diffdict['kemctl1r1'],weights=wgts))
@@ -1383,6 +1453,21 @@ if testhadisst:
     print 'r5: ' + str(np.average(diffdict['kemctl1r5'],weights=wgts))
     print 'ens: ' + str(np.average(diffdict['kemctl1ens'],weights=wgts))
     print 'meanBC: ' + str(np.average(diffdict['kemctl1'],weights=wgts))
+
+    print '===== PATTERN CORR ====='
+    print 'r1: ' + str(np.average(pcorrdict['kemctl1r1'],weights=wgts))
+    print 'r2: ' + str(np.average(pcorrdict['kemctl1r2'],weights=wgts))
+    print 'r3: ' + str(np.average(pcorrdict['kemctl1r3'],weights=wgts))
+    print 'r4: ' + str(np.average(pcorrdict['kemctl1r4'],weights=wgts))
+    print 'r5: ' + str(np.average(pcorrdict['kemctl1r5'],weights=wgts))
+    print 'ens: ' + str(np.average(pcorrdict['kemctl1ens'],weights=wgts))
+    print 'meanBC: ' + str(np.average(pcorrdict['kemctl1'],weights=wgts))
+
+    # @@ ens/meanBC wins for both of these measures when considering all cells
+    #        north of 0 (corr=0.419) or 40N (corr=0.404) (no masking).
+    #        R4 wins otherwise (corr=0.39,0.38)
+    #  masking out land changes nothing
+    # HM but this isn't weighted by area! need to do that somehow @@
 
 """
 Pattern correlation calc?:
@@ -1418,4 +1503,7 @@ Pattern correlation calc?:
 > R_y = Sum_y/(sqrt(Sum_dev_Y)*sqrt(Sum_dev_O)) ; R_y = 0.98
 >
 > 
+
+Also try: Pearson product-moment correlation coefficient
+
 """
