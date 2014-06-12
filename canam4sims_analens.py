@@ -31,16 +31,17 @@ cnc = reload(cnc)
 plt.close("all")
 plt.ion()
 
-printtofile=0
+printtofile=1
 
 plotann=0    # seasonal avg map, comparing ens runs and meanBC
 plotallmos=0 # monthly maps (@@ not implemented)
 seasonal=0 # seasonal maps (DJF, MAM, JJA, SON)
 plotzonmean=0 # plotzonmean and plotseacyc are mutually exclusive
 plotseacyc=0 # plotzonmean and plotseacyc are mutually exclusive
-testhadisst=1
+testhadisst=1 # check which ens member most similar to hadisst
 normbystd=0
-addobs=1 # add mean of kemhad* runs to line plots (so far@@)
+addobs=1 # add mean of kemhad* runs to line plots, seasonal maps (so far@@)
+latlim = None #45 # lat limit for NH plots. Set to None otherwise.
 
 sigtype = 'cont' # significance: 'cont' or 'hatch' which is default
 sigoff=0 # if 1, don't add significance
@@ -71,14 +72,14 @@ timstr2='001-111'
 # # # ######## set Field info ###################
 # gz, t, u, v, q (3D !)
 # st, sic, sicn (sia), gt, pmsl, pcp, hfl, hfs, turb, flg, fsg, fn, pcpn, zn, su, sv (@@later ufs,vfs)
-field = 'sia'
+field = 't'
 print field
 timeavg = 'DJF'
 
 # only for threed vars
-level = 30000
+#level = 30000
 #level = 50000 # 500hPa
-#level = 70000
+level = 70000
 
 # HERE THE SECOND SET OF RUNS IS HadISST BC's
 if testhadisst:
@@ -687,13 +688,19 @@ if seasonal:
     incr = (cmaxm-cminm) / (cmlen)
     conts = np.arange(cminm,cmaxm+incr,incr)
 
+    if addobs:
+        sims = bcasename + 'r1', bcasename+'r2',bcasename+'r3',bcasename+'r4', bcasename+'r5',bcasename+'ens',bcasename,'kemhadctl'
+    else:
+        sims = bcasename + 'r1', bcasename+'r2',bcasename+'r3',bcasename+'r4', bcasename+'r5',bcasename+'ens',bcasename
 #    cidx=0 # traverse cols (seasons)
 #    ridx=0 # traverse rows
-    fig6,ax6 = plt.subplots(7,4) # 1 row for e/ of 5 ens members, plus mean, plus meanBC
-    fig6.set_size_inches(8,12)
+#    fig6,ax6 = plt.subplots(7,4) # 1 row for e/ of 5 ens members, plus mean, plus meanBC
+#    fig6.set_size_inches(8,12)
+    fig6,ax6 = plt.subplots(4,len(sims)) # 1 row for e/ of 5 ens members, plus mean, plus meanBC
+    fig6.set_size_inches(12,8)  
     fig6.subplots_adjust(hspace=.15,wspace=.05)
-
-    for ridx in range(0,7): # traverse rows
+        
+    for ridx in range(0,len(sims)): # traverse rows
 
         cidx=0
 
@@ -728,6 +735,21 @@ if seasonal:
                 fnamep2 = frootp + '062-111_ts.nc'
             
             rowl = 'meanBC'
+
+        elif ridx==7: # observation simulation
+            frootc = basepath + 'kemhadctl' + subdir + 'kemhadctl' + '_' + field + '_'
+            frootp = basepath + 'kemhadpert' + subdir + 'kemhadpert' + '_' + field + '_'
+            if threed==0:
+                fnamec =  frootc + timstr + '_ts.nc'
+                fnamep =  frootp + timstrp + '_ts.nc'
+            else:
+                fnamec = frootc + '001-061_ts.nc'
+                fnamec2 = frootc + '062-121_ts.nc'
+                fnamep = frootp + '001-061_ts.nc'
+                fnamep2 = frootp + '062-121_ts.nc'
+
+            rowl = 'had'
+            
         else:
             frootc =  basepath + bcasename + 'r' + str(ridx+1) + subdir + bcasename +\
                      'r' + str(ridx+1) + '_' + field + '_'
@@ -745,7 +767,8 @@ if seasonal:
             rowl = 'r' + str(ridx+1)
         
         for sea in seasons: # traverse cols
-            ax = ax6[ridx][cidx]
+            #ax = ax6[ridx][cidx]
+            ax = ax6[cidx][ridx] # swapped row and col index positions in subplot
             
             if field=='turb':
                 field='hfl'; fieldb='hfs'
@@ -782,15 +805,15 @@ if seasonal:
                 plotfld = fldpallseas[cidx,:,:] - fldcallseas[cidx,:,:]
 
             bm,pc = cplt.kemmap(plotfld,lat,lon,cmin=cminm,cmax=cmaxm,cmap=cmap,type='nh',\
-                            axis=ax,suppcb=1)
-            if ridx==0:
-                ax.set_title(sea)
+                            axis=ax,suppcb=1,latlim=latlim)#@@
+            if cidx==0: # when row index is 0, set simulation
+                ax.set_title(rowl)
 
             if sigoff==0:
                 cplt.addtsigm(bm,pval[cidx,:,:],lat,lon,type=sigtype)
                 
-            if cidx==0:
-                ax.set_ylabel(rowl)
+            if ridx==0: # when col index is 0, set season
+                ax.set_ylabel(sea)
 
             cidx = cidx+1
 
@@ -802,11 +825,21 @@ if seasonal:
             sigstr='sig' + sigtype
         else:
             sigstr=''
+        if addobs:
+            obsstr = 'had'
+        else:
+            obsstr = ''
+        if latlim!= None:
+            latstr=str(latlim)
+        else:
+            latstr=''
             
         if pct:
-            fig6.savefig(fieldstr + 'pctdiff' + sigstr + '_enssubplot_seas_nh.' + suff)
+            fig6.savefig(fieldstr + 'pctdiff' + sigstr + '_enssubplot' + obsstr +
+                         '_seas_nh' + latstr + '.' + suff)
         else:
-            fig6.savefig(fieldstr + 'diff' + sigstr + '_enssubplot_seas_nh.' + suff)
+            fig6.savefig(fieldstr + 'diff' + sigstr + '_enssubplot' + obsstr + '_seas_nh'
+                         + latstr + '.' + suff)
 
 
 
@@ -1396,10 +1429,10 @@ if testhadisst:
         # squaring and square rooting will get the distance away ensrun is from hadisst
         # then take the polar mean of the distances
         #yrfld = np.zeros(12)
-        tmpfld = cutl.polar_mean_areawgted3d(np.sqrt(
-            np.square((fldpdict[sim][0:12,...]-fldcdict[sim][0:12,...]) -
-                      (fldp2[0:12,...]-fldc2[0:12,...]))),
-                                             lat,lon,latlim=40)
+        tmpfld = np.sqrt(cutl.polar_mean_areawgted3d(np.square((fldpdict[sim][0:12,...]-
+                                                                fldcdict[sim][0:12,...]) -
+                                                               (fldp2[0:12,...]-fldc2[0:12,...])),
+                                                     lat,lon,latlim=40))
                     
         diffdict[sim] = tmpfld
 
@@ -1409,10 +1442,20 @@ if testhadisst:
             ensmem = fldpdict[sim][moidx,lat>corrlim,...] - fldcdict[sim][moidx,lat>corrlim,...]
             obsbc = fldp2[moidx,lat>corrlim,...] - fldc2[moidx,lat>corrlim,...]
 
+            # weight the fields by area
+            areas = cutl.calc_cellareas(lat,lon)
+            areas = areas[lat>corrlim,:]
+            areas = ma.masked_where(lmask[lat>corrlim,:]==-1,areas)
+            weights = areas / np.sum(np.sum(areas,axis=1),axis=0)
+
             ensmem = ma.masked_where(lmask[lat>corrlim,:]==-1,ensmem) # mask out land
             obsbc = ma.masked_where(lmask[lat>corrlim,:]==-1,obsbc) # mask out land
-            
-            tmpcorr = np.corrcoef(ensmem.flatten(), obsbc.flatten())
+
+            # @@@ note have to use masked corrcoef!
+            # @@ This is probably doing a centered pearson where I really
+            # want uncentered (no central mean removed). Could calc myself from
+            # http://www.stanford.edu/~maureenh/quals/html/ml/node53.html 
+            tmpcorr = ma.corrcoef(ensmem.flatten()*weights.flatten(), obsbc.flatten()*weights.flatten())
             pcorr[moidx] = tmpcorr[0,1]
             
         pcorrdict[sim] = pcorr
@@ -1422,28 +1465,32 @@ if testhadisst:
     fontP.set_size('small')
     
     plt.figure();
-    plt.plot(mons,diffdict['kemctl1r1'],color=colors[0])
-    plt.plot(mons,diffdict['kemctl1r2'],color=colors[1])
-    plt.plot(mons,diffdict['kemctl1r3'],color=colors[2])
-    plt.plot(mons,diffdict['kemctl1r4'],color=colors[3])
-    plt.plot(mons,diffdict['kemctl1r5'],color=colors[4])
-    plt.plot(mons,diffdict['kemctl1ens'],color=colors[5])
-    plt.plot(mons,diffdict['kemctl1'],color=colors[6])
+    plt.plot(mons,diffdict['kemctl1r1'],color=colordict['kemctl1r1'],linewidth=2)
+    plt.plot(mons,diffdict['kemctl1r2'],color=colordict['kemctl1r2'],linewidth=2)
+    plt.plot(mons,diffdict['kemctl1r3'],color=colordict['kemctl1r3'],linewidth=2)
+    plt.plot(mons,diffdict['kemctl1r4'],color=colordict['kemctl1r4'],linewidth=2)
+    plt.plot(mons,diffdict['kemctl1r5'],color=colordict['kemctl1r5'],linewidth=2)
+    plt.plot(mons,diffdict['kemctl1ens'],color=colordict['kemctl1ens'],linewidth=3)
+    plt.plot(mons,diffdict['kemctl1'],color=colordict['kemctl1'],linewidth=3)
     plt.legend(('r1','r2','r3','r4','r5','ens','meanBC'),prop=fontP)
     plt.xlim((1,12))
-    plt.title('RMSE-ish')
+    plt.title('RMSE compared to HadISST')
+    if printtofile:
+        plt.savefig('sicnRMSE_ens_v_hadisst_seacycle.pdf')
 
     plt.figure();
-    plt.plot(mons,pcorrdict['kemctl1r1'],color=colors[0])
-    plt.plot(mons,pcorrdict['kemctl1r2'],color=colors[1])
-    plt.plot(mons,pcorrdict['kemctl1r3'],color=colors[2])
-    plt.plot(mons,pcorrdict['kemctl1r4'],color=colors[3])
-    plt.plot(mons,pcorrdict['kemctl1r5'],color=colors[4])
-    plt.plot(mons,pcorrdict['kemctl1ens'],color=colors[5])
-    plt.plot(mons,pcorrdict['kemctl1'],color=colors[6])
+    plt.plot(mons,pcorrdict['kemctl1r1'],color=colordict['kemctl1r1'],linewidth=2)
+    plt.plot(mons,pcorrdict['kemctl1r2'],color=colordict['kemctl1r2'],linewidth=2)
+    plt.plot(mons,pcorrdict['kemctl1r3'],color=colordict['kemctl1r3'],linewidth=2)
+    plt.plot(mons,pcorrdict['kemctl1r4'],color=colordict['kemctl1r4'],linewidth=2)
+    plt.plot(mons,pcorrdict['kemctl1r5'],color=colordict['kemctl1r5'],linewidth=2)
+    plt.plot(mons,pcorrdict['kemctl1ens'],color=colordict['kemctl1ens'],linewidth=3)
+    plt.plot(mons,pcorrdict['kemctl1'],color=colordict['kemctl1'],linewidth=3)
     plt.legend(('r1','r2','r3','r4','r5','ens','meanBC'),'upper left',prop=fontP)
     plt.xlim((1,12))
-    plt.title('pattern correlation')
+    plt.title('pattern correlation with HadISST')
+    if printtofile:
+        plt.savefig('sicnPatternCorr_ens_v_hadisst_seacycle.pdf')
 
     wgts = con.get_monweights()
     print 'r1: ' + str(np.average(diffdict['kemctl1r1'],weights=wgts))
@@ -1464,10 +1511,10 @@ if testhadisst:
     print 'meanBC: ' + str(np.average(pcorrdict['kemctl1'],weights=wgts))
 
     # @@ ens/meanBC wins for both of these measures when considering all cells
-    #        north of 0 (corr=0.419) or 40N (corr=0.404) (no masking).
-    #        R4 wins otherwise (corr=0.39,0.38)
-    #  masking out land changes nothing
-    # HM but this isn't weighted by area! need to do that somehow @@
+    #        north of 0 (corr=0.419) or 40N (corr=0.404) (no masking, unweighted).
+    #        R4 wins otherwise (corr=0.39,0.38) (no masking, unweighted)
+    #  masking out land and weighting by area makes ens corr=0.422, R4 corr=0.407
+
 
 """
 Pattern correlation calc?:
