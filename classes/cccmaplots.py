@@ -19,7 +19,8 @@ import cccmacmaps as ccm
 
 
 """
-kemmap(fld, lat, lon, title='', units='', cmap='blue2red_w20', type='sq', cmin='', cmax='')
+kemmap(fld, lat, lon, title='', units='', cmap='blue2red_w20', type='sq', cmin='', cmax='',
+       axis=None, suppcb=0,lmask=0,flipmask=0,latlim=None)
 
     Inputs: fld: 2D matrix of data [lat x lon]
             lat: 1D lat array
