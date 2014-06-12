@@ -184,7 +184,7 @@ location = 'gt' + str(northbnd) + 'N'
 plotfld = anntsp2 - anntsc
 cellwgts = cutl.get_cellwgts(lat,lon,repeat=plotfld.shape)
 plotfld = plotfld[:,lat>=northbnd,:]
-cellwgts = cellwgts[:,lat>=northbnd,:]
+cellwgts = cellwgts[:,lat>=northbnd,:]# can't do this b/c weights won't add to 1
 plotfld = plotfld.flatten()
 
 (histc,binedgesc) = np.histogram(anntsc[:,lat>=northbnd,:].flatten(),bins=100,density=True)
