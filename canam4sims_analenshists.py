@@ -31,13 +31,17 @@ cnc = reload(cnc)
 plt.close("all")
 plt.ion()
 
-printtofile=1
+printtofile=0
 
 
 seasonal=0 # seasonal maps (DJF, MAM, JJA, SON)
 normbystd=0
 addobs=1 # add mean of kemhad* runs to line plots, seasonal maps (so far@@)
-latlim = None #45 # lat limit for NH plots. Set to None otherwise.
+latlim = 45 # lat limit for NH plots. Set to None otherwise.
+maskland=False
+
+seasonal=1 # mutually exclusive
+monthly=0  # mutually exclusive
 
 seasons = 'DJF','MAM','JJA','SON'
 
@@ -65,7 +69,7 @@ timstr2='001-111'
 # # # ######## set Field info ###################
 # gz, t, u, v, q (3D !)
 # st, sic, sicn (sia), gt, pmsl, pcp, hfl, hfs, turb, flg, fsg, fn, pcpn, zn, su, sv (@@later ufs,vfs)
-field = 't'
+field = 'pcp'
 print field
 timeavg = 'DJF'
 
@@ -74,12 +78,12 @@ timeavg = 'DJF'
 #level = 50000 # 500hPa
 level = 70000
 
-# HERE THE SECOND SET OF RUNS IS HadISST BC's
-if testhadisst:
-    casename2 = 'kemhadctl'
-    casenamep2 = 'kemhadpert'
-    timstr2=timstr
-    field='sicn'
+## # HERE THE SECOND SET OF RUNS IS HadISST BC's
+## if testhadisst:
+##     casename2 = 'kemhadctl'
+##     casenamep2 = 'kemhadpert'
+##     timstr2=timstr
+##     field='sicn'
 
 
 cmap = 'blue2red_w20' # default cmap
@@ -455,17 +459,21 @@ else:
 if sia==1:
     field = 'sicn' # while getting the data...
 
-tstatdict = dict.fromkeys(sims,{}); pvaldict = dict.fromkeys(sims,{})
-fldcdict = dict.fromkeys(sims,{}); fldpdict = dict.fromkeys(sims,{})
-fldcstddict = dict.fromkeys(sims,{}); fldpstddict = dict.fromkeys(sims,{})
-flddiffdict = dict.fromkeys(sims,{}); flddmaskdict = dict.fromkeys(sims,{})
+## tstatdict = dict.fromkeys(sims,{}); pvaldict = dict.fromkeys(sims,{})
+## fldcdict = dict.fromkeys(sims,{}); fldpdict = dict.fromkeys(sims,{})
+## fldcstddict = dict.fromkeys(sims,{}); fldpstddict = dict.fromkeys(sims,{})
+## flddiffdict = dict.fromkeys(sims,{}); flddmaskdict = dict.fromkeys(sims,{})
+flddiffhistdict = dict.fromkeys(sims,{})
+binedgedict = dict.fromkeys(sims,{})
 
 for ridx in range(0,len(sims)): # # of simulations
-    seatstatdict=dict.fromkeys(seasons); seapvaldict=dict.fromkeys(seasons)
-    seafldcdict=dict.fromkeys(seasons); seafldpdict=dict.fromkeys(seasons)
-    seafldcstddict=dict.fromkeys(seasons); seafldpstddict=dict.fromkeys(seasons)
-    seadiffdict=dict.fromkeys(seasons); seadmaskdict=dict.fromkeys(seasons)
-
+    ## seatstatdict=dict.fromkeys(seasons); seapvaldict=dict.fromkeys(seasons)
+    ## seafldcdict=dict.fromkeys(seasons); seafldpdict=dict.fromkeys(seasons)
+    ## seafldcstddict=dict.fromkeys(seasons); seafldpstddict=dict.fromkeys(seasons)
+    ## seadiffdict=dict.fromkeys(seasons); seadmaskdict=dict.fromkeys(seasons)
+    seadiffhistdict=dict.fromkeys(seasons)
+    seabinedgedict=dict.fromkeys(seasons)
+    
     if ridx==5: # 2nd to last sim is the ens mean
         frootc = basepath + bcasename + 'ens' + subdir + bcasename +\
                  'ens' + '_' + field + '_'
@@ -529,9 +537,9 @@ for ridx in range(0,len(sims)): # # of simulations
 
     for sii,sea in enumerate(seasons):
 
-        if plotzonmean:# @@ fix
+        if seasonal:# @@ fix
             ncparams = {'seas': sea}
-        elif plotseacyc: # @@fix
+        elif monthly: # @@fix
             ncparams = {'monsel': sii+1}
 
         # Now get the data
@@ -569,16 +577,26 @@ for ridx in range(0,len(sims)): # # of simulations
         #  @@ from hists script:
         areas = cutl.calc_cellareas(lat,lon,repeat=fldc.shape)
         areas = areas[:,lat>latlim,:]
+        fldc = fldc[:,lat>latlim,:]
+        fldp = fldp[:,lat>latlim,:]
         if maskland:
             areas = ma.masked_where(lmask[:,lat>latlim,:]==-1,areas)
             fldc = ma.masked_where(lmask[:,lat>latlim,:]==-1,fldc)
             fldp = ma.masked_where(lmask[:,lat>latlim,:]==-1,fldp)
-            
-        weights = areas / np.sum(np.sum(areas,axis=2),axis=1)# @@ this won't work prob. have to tile
+
+        totarea = np.sum(np.sum(areas,axis=2),axis=1)
+        totarea = np.tile(totarea,(fldc.shape[1],fldc.shape[2],1))
+        totarea = np.transpose(totarea,(2,0,1))
+        weights = areas/totarea
+        #weights = np.tile(weights,(len(lat),len(lon),fldc.shape[0]))
+        #weights = np.transpose(weights,(2,0,1))
+                          
 
         histfld = fldp-fldc
-        (seadiffhistdict,binedges) = np.histogram(histfld.flatten(),bins=100,weights=weights.flatten(),density=True)
-        widths = np.diff(binedges)
+        (seadiffhistdict[sea],seabinedgedict[sea]) = np.histogram(histfld.flatten(),
+                                                       bins=100,weights=weights.flatten(),
+                                                       density=True)
+        #widths = np.diff(binedges)
         
         ## seafldcstddict[sea] = np.std(fldc,axis=0)
         ## seafldpstddict[sea] = np.std(fldpaxis=0)
@@ -593,6 +611,7 @@ for ridx in range(0,len(sims)): # # of simulations
         # end loop through seasons
 
     flddiffhistdict[sim] = seadiffhistdict
+    binedgedict[sim] = seabinedgedict
     
     ## fldcstddict[sim] = seafldcstddict
     ## fldpstddict[sim] = seafldpstddict
@@ -608,6 +627,90 @@ if sia==1:
     field = 'sia' # put back after getting the data
 
 # @@ plot HISTOGRAMS HERE
+
+widths=0.15 # np.diff(binedges)
+sea='DJF'
+
+fig = plt.figure()
+for sim in sims:
+    binedges = binedgedict[sim][sea]
+    plt.bar(binedges[0:-1],flddiffhistdict[sim][sea],
+            width=widths,color=colordict[sim],alpha=0.5)
+#plt.xlim(xlims)
+plt.grid()
+
+fig = plt.figure()
+for sim in sims:
+    binedges = binedgedict[sim][sea]
+    plotfld = flddiffhistdict[sim][sea]
+    plotfld = plotfld / np.sum(plotfld)*100
+    
+    plt.bar(binedges[0:-1],plotfld,
+            width=widths,color=colordict[sim],alpha=0.5)
+plt.xlim(xlims)
+plt.grid()
+plt.ylabel('% of total')
+plt.title(sea + ' ' + fieldstr + '>' + str(latlim) + 'N')
+
+
+xlims = -15,15; ylims = 0,0.6; ylims2=0,11 # ST DJF @@
+sea='DJF'
+fig2,axs = plt.subplots(2,4)
+for sii,ax in enumerate(axs.flat):
+    sim = sims[sii]
+    plotfld=flddiffhistdict[sim][sea]
+    binedges = binedgedict[sim][sea]
+    ax.bar(binedges[0:-1],plotfld,
+           width=widths,color=colordict[sim],alpha=0.7,
+           linewidth=0,edgecolor='none')
+    ax.set_xlim(xlims)
+    ax.set_ylim(ylims)
+    ax.set_title(sim)
+    ax.grid()
+
+
+fig2,axs = plt.subplots(2,4)
+for sii,ax in enumerate(axs.flat):
+    sim = sims[sii]
+    plotfld=flddiffhistdict[sim][sea]
+    plotfld=plotfld / np.sum(plotfld)*100
+    binedges = binedgedict[sim][sea]
+    ax.bar(binedges[0:-1],plotfld,
+           width=widths,color=colordict[sim],alpha=0.7,
+           linewidth=0,edgecolor='none')
+    ax.set_xlim(xlims)
+    ax.set_ylim(ylims2)
+    ax.set_title(sim)
+    if sii==0 or sii==4:
+        ax.set_ylabel('% of total')
+    ax.grid()
+
+
+# # Cumulative PDF
+# @@ consider using 'ax.fill_between' for the r set of runs
+# @@ also see example of cum here:
+# http://matplotlib.org/examples/pylab_examples/histogram_demo_extended.html
+fig = plt.figure()
+for sim in sims:
+    binedges = binedgedict[sim][sea]
+    plotfld = flddiffhistdict[sim][sea]
+
+    dcum = np.zeros(plotfld.shape)
+    for el in np.arange(1,len(dcum)+1):
+        dcum[el-1] = np.sum(plotfld[0:el])
+        
+    plotfld = dcum / np.sum(plotfld)
+    
+    plt.plot(binedges[0:-1],plotfld,
+            color=colordict[sim],linewidth=2)
+plt.xlim(xlims)
+plt.grid()
+plt.ylabel('Fraction of total')
+plt.title(sea + ' ' + fieldstr + '>' + str(latlim) + 'N')
+
+    
+
+
 
 
 
