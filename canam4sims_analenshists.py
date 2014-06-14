@@ -31,11 +31,10 @@ cnc = reload(cnc)
 plt.close("all")
 plt.ion()
 
-printtofile=0
+printtofile=1
 
 
 seasonal=0 # seasonal maps (DJF, MAM, JJA, SON)
-normbystd=0
 addobs=1 # add mean of kemhad* runs to line plots, seasonal maps (so far@@)
 latlim = 45 # lat limit for NH plots. Set to None otherwise.
 maskland=False
@@ -71,7 +70,6 @@ timstr2='001-111'
 # st, sic, sicn (sia), gt, pmsl, pcp, hfl, hfs, turb, flg, fsg, fn, pcpn, zn, su, sv (@@later ufs,vfs)
 field = 'pcp'
 print field
-timeavg = 'DJF'
 
 # only for threed vars
 #level = 30000
@@ -115,6 +113,7 @@ if field == 'st':
     cmap = 'blue2red_w20'
 
     leglocs = 'upper left', 'upper left', 'upper right', 'upper left'
+    xlims = -14,14; ylims = 0,0.6; ylims2=0,11 
 elif field == 'sic':
     units='m'
     conv=1/913.
@@ -166,6 +165,7 @@ elif field == 'pcp':
     cminpctp=-8; cmaxpctp=8
     cminpctmp=-12; cmaxpctmp=12
     leglocs = 'upper left', 'upper left', 'upper left', 'upper left'
+    xlims = -4,4; ylims=0,3; ylims2 = 0,20
 elif field == 'hfl': # sfc upward LH flux
     units = 'W/m2'
     conv = 1
@@ -639,6 +639,7 @@ for sim in sims:
 #plt.xlim(xlims)
 plt.grid()
 
+
 fig = plt.figure()
 for sim in sims:
     binedges = binedgedict[sim][sea]
@@ -647,14 +648,15 @@ for sim in sims:
     
     plt.bar(binedges[0:-1],plotfld,
             width=widths,color=colordict[sim],alpha=0.5)
-plt.xlim(xlims)
+#plt.xlim(xlims)
 plt.grid()
 plt.ylabel('% of total')
 plt.title(sea + ' ' + fieldstr + '>' + str(latlim) + 'N')
+if printtofile:
+    fig.savefig(fieldstr + 'diffpcthist_' + str(latlim) + 'N' + '_' + sea + '.pdf')
 
 
-xlims = -15,15; ylims = 0,0.6; ylims2=0,11 # ST DJF @@
-sea='DJF'
+#xlims = -15,15; ylims = 0,0.6; ylims2=0,11 # ST DJF @@
 fig2,axs = plt.subplots(2,4)
 for sii,ax in enumerate(axs.flat):
     sim = sims[sii]
@@ -667,6 +669,8 @@ for sii,ax in enumerate(axs.flat):
     ax.set_ylim(ylims)
     ax.set_title(sim)
     ax.grid()
+if printtofile:
+    fig2.savefig(fieldstr + 'diffhist_' + str(latlim) + 'N' + '_' + sea + '_subplt.pdf')
 
 
 fig2,axs = plt.subplots(2,4)
@@ -684,6 +688,8 @@ for sii,ax in enumerate(axs.flat):
     if sii==0 or sii==4:
         ax.set_ylabel('% of total')
     ax.grid()
+if printtofile:
+    fig2.savefig(fieldstr + 'diffpcthist_' + str(latlim) + 'N' + '_' + sea + '_subplt.pdf')
 
 
 # # Cumulative PDF
@@ -707,6 +713,8 @@ plt.xlim(xlims)
 plt.grid()
 plt.ylabel('Fraction of total')
 plt.title(sea + ' ' + fieldstr + '>' + str(latlim) + 'N')
+if printtofile:
+    fig.savefig(fieldstr + 'difffracCDD_' + str(latlim) + 'N' + '_' + sea + '.pdf')
 
     
 
