@@ -34,6 +34,7 @@ plt.ion()
 printtofile=1
 seasonal = 1
 seacycle = 1
+pattcorr=0 # do pattern correlation with time instead
 
 # version 2 uses control climo as baseline (rather than individual times),
 #   and full timeseries for ttest
@@ -58,15 +59,38 @@ casenamep1 = 'kem1pert1'  # 2002-2012 sic and sit
 casenamep2 = 'kem1pert2'  # 2002-2012 sic, sit, adjusted sst
 casenamep3 = 'kem1pert3'  # 2002-2012 sic, adjusted sst. control sit
 casenameph = 'kemhadpert'
+casenamep21 = 'kem1pert2r1'; 
+casenamep22 = 'kem1pert2r2'
+casenamep23 = 'kem1pert2r3'
+casenamep24 = 'kem1pert2r4'
+casenamep25 = 'kem1pert2r5'
+ensruns = casenamep21, casenamep22, casenamep23, casenamep24, casenamep25
+casenamep2e = 'kem1pert2ens'
+
 timstrp = '001-111'
 timstrp1 = '001-061' # for 3d vars
 timstrp2 = '062-111' # "
 
 
-casenamep = casenamep3
+casenamep = casenamep2e
+rnum=5 # @@ set if casenamep is one of the ens members
 
 if casenamep == casenameph:
     casename = casenameh
+    timstr = '001-121'
+    timstr2 = '062-121'
+    timstrp = '001-121'
+    timstrp2 = '062-121'
+    timesel = '0002-01-01,0121-12-31'
+elif casenamep in ensruns:
+    casename = casename + 'r' + str(rnum)
+    timstr = '001-121'
+    timstr2 = '062-121'
+    timstrp = '001-121'
+    timstrp2 = '062-121'
+    timesel = '0002-01-01,0121-12-31'
+elif casenamep == casenamep2e:
+    casename = 'kemctl1ens'
     timstr = '001-121'
     timstr2 = '062-121'
     timstrp = '001-121'
@@ -78,9 +102,9 @@ print 'PERT IS ' + casenamep
 
 
 # # # ######## set Field info ###################
-# st, sic, gt, pmsl, pcp, hfl, hfs, turb, flg, fsg, fn, pcpn, zn, su, sv (@@later ufs,vfs)
+# st, sicn, sic, gt, pmsl, pcp, hfl, hfs, turb, flg, fsg, fn, pcpn, zn, su, sv (@@later ufs,vfs)
 # OR threed: 'gz','t','u'
-field = 'sic'
+field = 'pmsl'
 level = 100000  # only for threed vars
 thickness=0 # do thickness instead: just for gz
 level2=70000 # for thickness calc: typically 1000-700hPa thickness
@@ -385,7 +409,7 @@ if sigtype == 'hatch':
 else:
     suff = 'pdf'
     
-if seasonal:
+if seasonal: # plot all 4 seasons in a subplot
 
     cmlen=float( plt.cm.get_cmap(cmap).N) # or: from __future__ import division
     
@@ -457,6 +481,9 @@ if seasonal:
                     tstat[yr,:],pval[yr,:] = sp.stats.ttest_ind(fldpseazm[0:yr,:],fldcseazm,axis=0)
                 else:
                     pval[yr,:] = np.ones((1,nlat))
+            elif pattcorr:
+                # do a pattern correlation with time
+                print '@@ implement pattern corr with time!'
             else:
                 plotd[yr,:] = np.mean(fldpseazm[0:yr,:]-fldcseazm[0:yr,:],axis=0)
                 if yr>5: # start doing stats after 5 years
