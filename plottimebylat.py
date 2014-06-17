@@ -33,9 +33,9 @@ plt.ion()
 
 printtofile=1
 seasonal = 1
-seacycle = 1
-pattcorr=0 # do pattern correlation with time instead
-dostd=1 # plot standard dev with time (just the pert run, not anomaly for now@@)
+seacycle = 0
+pattcorr=1 # do pattern correlation with time instead
+dostd=0 # plot standard dev with time (just the pert run, not anomaly for now@@)
 
 # version 2 uses control climo as baseline (rather than individual times),
 #   and full timeseries for ttest
@@ -73,8 +73,8 @@ timstrp1 = '001-061' # for 3d vars
 timstrp2 = '062-111' # "
 
 
-casenamep = casenameph
-rnum=5 # @@ set if casenamep is one of the ens members
+casenamep = casenamep21
+rnum=1 # @@ set if casenamep is one of the ens members
 
 
 
@@ -477,20 +477,72 @@ if seasonal: # plot all 4 seasons in a subplot
 
         nyr,nlat,nlon = fldcsea.shape
         years = np.arange(0,nyr)
-        # take a zonal mean for each time
-        fldcseazm = np.mean(fldcsea[...,:-1],axis=2) # time x lat
-        fldpseazm = np.mean(fldpsea[...,:-1],axis=2)
-        fldcseazmtm = np.mean(fldcseazm,axis=0) # time mean now
+        
+        
+        if pattcorr==1:
 
-        plotd = np.zeros((nyr,nlat))
-        tstat = np.zeros((nyr,nlat))
-        pval = np.zeros((nyr,nlat))
+            fldcseazm = fldcsea # do not take zonal mean
+            fldpseazm = fldpsea
+            fldcseazmtm = np.mean(fldcseazm,axis=0) # time mean now
+            fldpseazmtm = np.mean(fldpseazm,axis=0)
+
+            plotd = np.zeros(nyr)
+            tstat = np.zeros(nyr)
+            pval = np.zeros(nyr)
+        else:
+            # take a zonal mean for each time
+            fldcseazm = np.mean(fldcsea[...,:-1],axis=2) # time x lat
+            fldpseazm = np.mean(fldpsea[...,:-1],axis=2)
+            fldcseazmtm = np.mean(fldcseazm,axis=0) # time mean now
+            fldpseazmtm = np.mean(fldpseazm,axis=0)
+
+            plotd = np.zeros((nyr,nlat))
+            tstat = np.zeros((nyr,nlat))
+            pval = np.zeros((nyr,nlat))
         
         for yr in years:
             
             if pattcorr==1:
                 # do a pattern correlation with time
-                print '@@ implement pattern corr with time!'
+                
+                corrlim=45 # @@
+
+                areas = cutl.calc_cellareas(lat,lon)
+                areas = areas[lat>corrlim,:]
+                #areas = ma.masked_where(lmask[lat>corrlim,:]==-1,areas)
+                weights = areas / np.sum(np.sum(areas,axis=1),axis=0)
+                
+                # @@ could also do each year's pattern corr rather than cumulative mean
+                # @@ OR, use the mean pattern as the end pattern!
+                # @@ Also, would be nice to have multiple variables in one plot and/or multiple simulations
+                tmp = np.mean(fldpseazm[0:yr,lat>corrlim,...],axis=0)-fldcseazmtm[lat>corrlim,...] # anomaly pattern corr w/ the end anomaly pattern
+                tmpmean = fldpseazmtm[lat>corrlim,...]-fldcseazmtm[lat>corrlim,...] # the end pattern
+
+                tmpcorr = ma.corrcoef(tmp.flatten()*weights.flatten(),
+                                        tmpmean.flatten()*weights.flatten())
+                plotd[yr] = tmpcorr[0,1]
+
+                """ from canam4sims_analens.py. modify for here
+                ensmem = fldpdict[sim][moidx,lat>corrlim,...] - fldcdict[sim][moidx,lat>corrlim,...]
+                obsbc = fldp2[moidx,lat>corrlim,...] - fldc2[moidx,lat>corrlim,...]
+
+                # weight the fields by area
+                areas = cutl.calc_cellareas(lat,lon)
+                areas = areas[lat>corrlim,:]
+                areas = ma.masked_where(lmask[lat>corrlim,:]==-1,areas)
+                weights = areas / np.sum(np.sum(areas,axis=1),axis=0)
+
+                ensmem = ma.masked_where(lmask[lat>corrlim,:]==-1,ensmem) # mask out land
+                obsbc = ma.masked_where(lmask[lat>corrlim,:]==-1,obsbc) # mask out land
+
+                # @@@ note have to use masked corrcoef!
+                # @@ This is probably doing a centered pearson where I really
+                # want uncentered (no central mean removed). Could calc myself from
+                # http://www.stanford.edu/~maureenh/quals/html/ml/node53.html 
+                tmpcorr = ma.corrcoef(ensmem.flatten()*weights.flatten(), obsbc.flatten()*weights.flatten())
+                pcorr[moidx] = tmpcorr[0,1]
+                """
+
             elif dostd==1:
                                 
                 if yr>=5:
@@ -514,28 +566,37 @@ if seasonal: # plot all 4 seasons in a subplot
                 else:
                     pval[yr,:] = np.ones((1,nlat))
             
-        lats,times = np.meshgrid(lat,years)
+        if pattcorr: # pattern corr by time
+            ax.plot(years,plotd)
+
+        else: # lat by time
+            lats,times = np.meshgrid(lat,years)
         
-        plotfld = plotd #@@fldpseazm - fldcseazm # the thing is, these years could be in any order...how take this into account??
+            plotfld = plotd #@@fldpseazm - fldcseazm # the thing is, these years could be in any order...how take this into account??
         
-        cf = ax.contourf(times,lats,plotfld,cmap=plt.cm.get_cmap(cmap),
-                          levels=conts,vmin=cminm,vmax=cmaxm,extend='both')
-        #cplt.addtsig(ax,pval,lat,years,type=sigtype) # @@ I don't think the stats are right.
-        if dostd!=1:
-            if sigtype == 'cont':
-                ax.contour(times,lats,pval,levels=[0.05,0.05],colors='k')
-            elif sigtype == 'hatch':
-                ax.contourf(times,lats,pval,levels=[0,0.05],colors='none',hatches='.')
-        
-        ax.set_xlim(0,nyr)
-        ax.set_ylim(0,90)
+            cf = ax.contourf(times,lats,plotfld,cmap=plt.cm.get_cmap(cmap),
+                              levels=conts,vmin=cminm,vmax=cmaxm,extend='both')
+            #cplt.addtsig(ax,pval,lat,years,type=sigtype) # @@ I don't think the stats are right.
+            if dostd!=1:
+                if sigtype == 'cont':
+                    ax.contour(times,lats,pval,levels=[0.05,0.05],colors='k')
+                elif sigtype == 'hatch':
+                    ax.contourf(times,lats,pval,levels=[0,0.05],colors='none',hatches='.')
+
+            
+            ax.set_ylim(0,90)
+            
         ax.set_ylabel(seasons[midx])
         if midx == 3:
             ax.set_xlabel('Time')
+        ax.set_xlim(0,nyr)
 
         midx=midx+1
-    cbar_ax = fig.add_axes([.91,.15, .02,.7])
-    fig.colorbar(cf,cax=cbar_ax)
+        # ending the loop through seasons
+
+    if pattcorr!=1:
+        cbar_ax = fig.add_axes([.91,.15, .02,.7])
+        fig.colorbar(cf,cax=cbar_ax)
 
     if threed:
         if field == 'gz' and thickness==1:
