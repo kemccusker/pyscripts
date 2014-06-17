@@ -37,8 +37,10 @@ plotann=0    # seasonal avg map, comparing ens runs and meanBC
 plotallmos=0 # monthly maps (@@ not implemented)
 seasonal=0 # seasonal maps (DJF, MAM, JJA, SON)
 plotzonmean=0 # plotzonmean and plotseacyc are mutually exclusive
-plotseacyc=1 # plotzonmean and plotseacyc are mutually exclusive
-withlat=1
+plotseacyc=0 # plotzonmean and plotseacyc are mutually exclusive
+withlat=0 # plot the seasonal cycle with latitude dimension too (only for plotseacyc=1)
+pattcorrwithtime=1 # plot pattern correlation with time for each ens member
+
 testhadisst=0 # check which ens member most similar to hadisst
 normbystd=0
 addobs=1 # add mean of kemhad* runs to line plots, seasonal maps (so far@@)
@@ -73,7 +75,7 @@ timstr2='001-111'
 # # # ######## set Field info ###################
 # gz, t, u, v, q (3D !)
 # st, sic, sicn (sia), gt, pmsl, pcp, hfl, hfs, turb, flg, fsg, fn, pcpn, zn, su, sv (@@later ufs,vfs)
-field = 'gz'
+field = 'st'
 print field
 timeavg = 'DJF'
 
@@ -360,110 +362,114 @@ else:  # on linux workstation in Vic
     basepath = '/home/rkm/work/DATA/' + model + '/'
     subdir = '/ts/'
 
-if field=='turb':
-    print 'not fully implemented! @@, no second set of sims'
-    
-    field='hfl'; fieldb='hfs'
-    fnamec = basepath + casename + subdir + casename + '_' + field + '_' + timstr + '_ts.nc'
-    fnamep = basepath + casenamep + subdir + casenamep + '_' + field + '_' + timstrp + '_ts.nc'
-    fnamecb = basepath + casename + subdir + casename + '_' + fieldb + '_' + timstr + '_ts.nc'
-    fnamepb = basepath + casenamep + subdir + casenamep + '_' + fieldb + '_' + timstrp + '_ts.nc'
 
-    fldc = cnc.getNCvar(fnamec,field.upper(),timesel=timesel)*conv + \
-           cnc.getNCvar(fnamecb,fieldb.upper(),timesel=timesel)*conv
-    fldp = cnc.getNCvar(fnamep,field.upper(),timesel=timesel)*conv+ \
-           cnc.getNCvar(fnamepb,fieldb.upper(),timesel=timesel)*conv
-
-    field='turb'
-else:
-    if threed==0:
-        if field == 'sia':
-            sia=1
-            field='sicn' # only really sia for zonal mean and seasonal cycle
-            
-        fnamec = basepath + casename + subdir + casename + '_' + field + '_' + timstr + '_ts.nc'
-        fnamep = basepath + casenamep + subdir + casenamep + '_' + field + '_' + timstrp + '_ts.nc'
-
-        fldc = cnc.getNCvar(fnamec,field.upper(),timesel=timesel)*conv
-        fldp = cnc.getNCvar(fnamep,field.upper(),timesel=timesel)*conv
-
-        fnamec2 = basepath + casename2 + subdir + casename2 + '_' + field + '_' + timstr2 + '_ts.nc'
-        fnamep2 = basepath + casenamep2 + subdir + casenamep2 + '_' + field + '_' + timstr2 + '_ts.nc'
-
-        fldc2 = cnc.getNCvar(fnamec2,field.upper(),timesel=timesel)*conv
-        fldp2 = cnc.getNCvar(fnamep2,field.upper(),timesel=timesel)*conv
-
-        if sia==1:
-            field='sia'
-    else:
-        # read 3D variables at specified level, 2 timeseries files
-        frootc = basepath + casename + subdir + casename + '_' + field + '_'
-        frootp =  basepath + casenamep + subdir + casenamep + '_' + field + '_'
-        fnamec = frootc + '001-061_ts.nc'
-        
-        fldc = np.append(cnc.getNCvar(fnamec,ncfield,
-                                      timesel='0002-01-01,061-12-31',levsel=level)*conv,
-                         cnc.getNCvar(frootc+'062-121_ts.nc',ncfield,levsel=level)*conv,
-                         axis=0)
-        fldp = np.append(cnc.getNCvar(frootp+'001-061_ts.nc',ncfield,
-                                      timesel='0002-01-01,061-12-31',levsel=level)*conv,
-                         cnc.getNCvar(frootp+'062-121_ts.nc',ncfield,levsel=level)*conv,
-                         axis=0)
-        
-        frootc2 = basepath + casename2 + subdir + casename2 + '_' + field + '_'
-        frootp2 =  basepath + casenamep2 + subdir + casenamep2 + '_' + field + '_'
-
-        fldc2 = np.append(cnc.getNCvar(frootc2+'001-061_ts.nc',ncfield,
-                                      timesel='0002-01-01,061-12-31',levsel=level)*conv,
-                         cnc.getNCvar(frootc2+'062-111_ts.nc',ncfield,levsel=level)*conv,
-                         axis=0)
-        fldp2 = np.append(cnc.getNCvar(frootp2+'001-061_ts.nc',ncfield,
-                                      timesel='0002-01-01,061-12-31',levsel=level)*conv,
-                         cnc.getNCvar(frootp2+'062-111_ts.nc',ncfield,levsel=level)*conv,
-                         axis=0)
-        
-
-lat = cnc.getNCvar(fnamec,'lat')
-lon = cnc.getNCvar(fnamec,'lon')
-
-
-if sigtype=='cont' or sigoff==1:
-    suff='pdf'
-else:
-    suff='png'
-
-# annual time-series (3d)
-seastsc = cutl.seasonalize_monthlyts(fldc,timeavg)
-seastsp = cutl.seasonalize_monthlyts(fldp,timeavg)
-#anntsc = cutl.annualize_monthlyts(fldc)
-#anntsp = cutl.annualize_monthlyts(fldp)
-
-nt,nlev,nlat = seastsc.shape # @@the var names are "wrong" but work fine in the script as written
-
-tstat,pval = sp.stats.ttest_ind(seastsp,seastsc,axis=0)
-seastdc = np.std(seastsc,axis=0)
-seastdp = np.std(seastsp,axis=0)
-
-seastsc2 = cutl.seasonalize_monthlyts(fldc2,timeavg)
-seastsp2 = cutl.seasonalize_monthlyts(fldp2,timeavg)
-
-nt2,nlev,nlat = seastsc.shape # @@the var names are "wrong" but work fine in the script as written
-
-tstat2,pval2 = sp.stats.ttest_ind(seastsp2,seastsc2,axis=0)
-seastdc2 = np.std(seastsc2,axis=0)
-seastdp2 = np.std(seastsp2,axis=0)
-
-if threed==1:
-    fieldstr=field+str(level/100)
-else:
-    fieldstr=field
-    
-#tstatb,pvalb = sp.stats.ttest_ind(anntsp,anntsc,axis=0,equal_var=False) # basically the same as above
-# Note that NaN is returned for zero variance (I think..from googling..)
-# If that is the case, pcolormesh() needs a masked_array rather than ndarray (??)
-#  : http://stackoverflow.com/questions/7778343/pcolormesh-with-missing-values
 
 if plotann:
+
+    if field=='turb':
+        print 'not fully implemented! @@, no second set of sims'
+
+        field='hfl'; fieldb='hfs'
+        fnamec = basepath + casename + subdir + casename + '_' + field + '_' + timstr + '_ts.nc'
+        fnamep = basepath + casenamep + subdir + casenamep + '_' + field + '_' + timstrp + '_ts.nc'
+        fnamecb = basepath + casename + subdir + casename + '_' + fieldb + '_' + timstr + '_ts.nc'
+        fnamepb = basepath + casenamep + subdir + casenamep + '_' + fieldb + '_' + timstrp + '_ts.nc'
+
+        fldc = cnc.getNCvar(fnamec,field.upper(),timesel=timesel)*conv + \
+               cnc.getNCvar(fnamecb,fieldb.upper(),timesel=timesel)*conv
+        fldp = cnc.getNCvar(fnamep,field.upper(),timesel=timesel)*conv+ \
+               cnc.getNCvar(fnamepb,fieldb.upper(),timesel=timesel)*conv
+
+        field='turb'
+    else:
+        if threed==0:
+            if field == 'sia':
+                sia=1
+                field='sicn' # only really sia for zonal mean and seasonal cycle
+
+            fnamec = basepath + casename + subdir + casename + '_' + field + '_' + timstr + '_ts.nc'
+            fnamep = basepath + casenamep + subdir + casenamep + '_' + field + '_' + timstrp + '_ts.nc'
+
+            fldc = cnc.getNCvar(fnamec,field.upper(),timesel=timesel)*conv
+            fldp = cnc.getNCvar(fnamep,field.upper(),timesel=timesel)*conv
+
+            fnamec2 = basepath + casename2 + subdir + casename2 + '_' + field + '_' + timstr2 + '_ts.nc'
+            fnamep2 = basepath + casenamep2 + subdir + casenamep2 + '_' + field + '_' + timstr2 + '_ts.nc'
+
+            fldc2 = cnc.getNCvar(fnamec2,field.upper(),timesel=timesel)*conv
+            fldp2 = cnc.getNCvar(fnamep2,field.upper(),timesel=timesel)*conv
+
+            if sia==1:
+                field='sia'
+        else:
+            # read 3D variables at specified level, 2 timeseries files
+            frootc = basepath + casename + subdir + casename + '_' + field + '_'
+            frootp =  basepath + casenamep + subdir + casenamep + '_' + field + '_'
+            fnamec = frootc + '001-061_ts.nc'
+
+            fldc = np.append(cnc.getNCvar(fnamec,ncfield,
+                                          timesel='0002-01-01,061-12-31',levsel=level)*conv,
+                             cnc.getNCvar(frootc+'062-121_ts.nc',ncfield,levsel=level)*conv,
+                             axis=0)
+            fldp = np.append(cnc.getNCvar(frootp+'001-061_ts.nc',ncfield,
+                                          timesel='0002-01-01,061-12-31',levsel=level)*conv,
+                             cnc.getNCvar(frootp+'062-121_ts.nc',ncfield,levsel=level)*conv,
+                             axis=0)
+
+            frootc2 = basepath + casename2 + subdir + casename2 + '_' + field + '_'
+            frootp2 =  basepath + casenamep2 + subdir + casenamep2 + '_' + field + '_'
+
+            fldc2 = np.append(cnc.getNCvar(frootc2+'001-061_ts.nc',ncfield,
+                                          timesel='0002-01-01,061-12-31',levsel=level)*conv,
+                             cnc.getNCvar(frootc2+'062-111_ts.nc',ncfield,levsel=level)*conv,
+                             axis=0)
+            fldp2 = np.append(cnc.getNCvar(frootp2+'001-061_ts.nc',ncfield,
+                                          timesel='0002-01-01,061-12-31',levsel=level)*conv,
+                             cnc.getNCvar(frootp2+'062-111_ts.nc',ncfield,levsel=level)*conv,
+                             axis=0)
+
+
+    lat = cnc.getNCvar(fnamec,'lat')
+    lon = cnc.getNCvar(fnamec,'lon')
+
+
+    if sigtype=='cont' or sigoff==1:
+        suff='pdf'
+    else:
+        suff='png'
+
+    # annual time-series (3d)
+    seastsc = cutl.seasonalize_monthlyts(fldc,timeavg)
+    seastsp = cutl.seasonalize_monthlyts(fldp,timeavg)
+    #anntsc = cutl.annualize_monthlyts(fldc)
+    #anntsp = cutl.annualize_monthlyts(fldp)
+
+    nt,nlev,nlat = seastsc.shape # @@the var names are "wrong" but work fine in the script as written
+
+    tstat,pval = sp.stats.ttest_ind(seastsp,seastsc,axis=0)
+    seastdc = np.std(seastsc,axis=0)
+    seastdp = np.std(seastsp,axis=0)
+
+    seastsc2 = cutl.seasonalize_monthlyts(fldc2,timeavg)
+    seastsp2 = cutl.seasonalize_monthlyts(fldp2,timeavg)
+
+    nt2,nlev,nlat = seastsc.shape # @@the var names are "wrong" but work fine in the script as written
+
+    tstat2,pval2 = sp.stats.ttest_ind(seastsp2,seastsc2,axis=0)
+    seastdc2 = np.std(seastsc2,axis=0)
+    seastdp2 = np.std(seastsp2,axis=0)
+
+    if threed==1:
+        fieldstr=field+str(level/100)
+    else:
+        fieldstr=field
+
+    #tstatb,pvalb = sp.stats.ttest_ind(anntsp,anntsc,axis=0,equal_var=False) # basically the same as above
+    # Note that NaN is returned for zero variance (I think..from googling..)
+    # If that is the case, pcolormesh() needs a masked_array rather than ndarray (??)
+    #  : http://stackoverflow.com/questions/7778343/pcolormesh-with-missing-values
+
+#if plotann: @@ moving this might require defining some things again...test...6/17
     print timeavg
     if field=='sia':
         print 'Plotting maps of SICN instead of sia'
@@ -623,8 +629,10 @@ if plotann:
             fig.savefig(fieldstr + 'diff' + sigstr + '_enssubplot_' + timeavg + '_nh.' + suff)
 
 
+# end plotann
 
-
+lat = cnc.getNCvar(fnamec,'lat')
+lon = cnc.getNCvar(fnamec,'lon')
 sigs = np.ones((12,fldc.shape[1],fldc.shape[2]))
 
 
@@ -850,11 +858,13 @@ if seasonal:
 
 
 
-if plotzonmean==1 or plotseacyc==1:
+if plotzonmean==1 or plotseacyc==1 or pattcorrwithtime==1:
     # get data for either zonal mean or sea cycle figures
-    if plotzonmean:
-        pass # seasons is defined above
-    elif plotseacyc:
+    if plotzonmean==1 or pattcorrwithtime==1:
+        # seasons is defined above
+        corrlim = 45
+    elif plotseacyc==1:
+        
         latlim = 70 # for area averaging
         seasons = con.get_mon()
 
@@ -870,12 +880,14 @@ if plotzonmean==1 or plotseacyc==1:
     fldcdict = dict.fromkeys(sims,{}); fldpdict = dict.fromkeys(sims,{})
     fldcstddict = dict.fromkeys(sims,{}); fldpstddict = dict.fromkeys(sims,{})
     flddiffdict = dict.fromkeys(sims,{}); flddmaskdict = dict.fromkeys(sims,{})
+    fldpcorrdict = dict.fromkeys(sims,{});
 
     for ridx in range(0,len(sims)): # # of simulations
         seatstatdict=dict.fromkeys(seasons); seapvaldict=dict.fromkeys(seasons)
         seafldcdict=dict.fromkeys(seasons); seafldpdict=dict.fromkeys(seasons)
         seafldcstddict=dict.fromkeys(seasons); seafldpstddict=dict.fromkeys(seasons)
         seadiffdict=dict.fromkeys(seasons); seadmaskdict=dict.fromkeys(seasons)
+        seapcorrdict=dict.fromkeys(seasons)
         
         if ridx==5: # 2nd to last sim is the ens mean
             frootc = basepath + bcasename + 'ens' + subdir + bcasename +\
@@ -940,9 +952,9 @@ if plotzonmean==1 or plotseacyc==1:
 
         for sii,sea in enumerate(seasons):
 
-            if plotzonmean:
+            if plotzonmean==1 or pattcorrwithtime==1:
                 ncparams = {'seas': sea}
-            elif plotseacyc:
+            elif plotseacyc==1:
                 ncparams = {'monsel': sii+1}
 
             # Now get the data
@@ -976,13 +988,32 @@ if plotzonmean==1 or plotseacyc==1:
                     fldpzm = cutl.calc_seaicearea(fldpzm,lat,lon)
                     
                     
-
-            if plotzonmean:
+            if plotzonmean==1:
                 fldczm = np.mean(fldczm[...,:-1],axis=2)
                 fldpzm = np.mean(fldpzm[...,:-1],axis=2)
+                
+            elif pattcorrwithtime==1:
+                # loop through each year
+                # calc pattern corr either yearly or integrated
+                years=np.arange(0,fldczm.shape[0])
+                fldctm = np.mean(fldczm[:,lat>corrlim,...],axis=0)
+                pcorr = np.zeros(len(years))
+                for yr in years:
+                    areas = cutl.calc_cellareas(lat,lon)
+                    areas = areas[lat>corrlim,:]
+                    weights = areas / np.sum(np.sum(areas,axis=1),axis=0)
+                    if pattcorryr:
+                        # yearly anomaly pattern corr w/ the time mean pattern
+                        tmp = fldpzm[yr,lat>corrlim,...]-fldctm
+                    else:
+                        tmp = np.mean(fldpzm[:yr,lat>corrlim,...],axis=0)-fldctm
+                    tmpmean = np.mean(fldpzm[:,lat>corrlim,...],axis=0) - fldctm # end pattern to compare against
+                    pcorr[yr] = cutl.pattcorr(tmp.flatten()*weights.flatten(),tmpmean.flatten()*weights.flatten())
 
-            elif plotseacyc:
-                if withlat:
+                seapcorrdict[sea] = pcorr
+
+            elif plotseacyc==1:
+                if withlat==1:
                     # leave the latitude dimension intact
                     # dims are time x lat x lon to start
                     # take zonal mean
@@ -1017,6 +1048,8 @@ if plotzonmean==1 or plotseacyc==1:
         fldpdict[sim] = seafldpdict
         flddiffdict[sim] = seadiffdict
         flddmaskdict[sim] = seadmaskdict
+        if pattcorrwithtime==1:
+            fldpcorrdict[sim] = seapcorrdict
 
         # end loop through simulations
     if sia==1:
@@ -1437,6 +1470,24 @@ if plotseacyc:
             fig.savefig(fieldstr + 'STDdiff_ens_meanBC_seacyc_pol' + str(latlim) + 'N.pdf')
 
 
+if pattcorrwithtime==1:
+
+    fig,axs = plt.subplots(4,1)
+    fig.set_size_inches(6,12)
+    fig.subplots_adjust(hspace=.2,wspace=.2)
+    for ii,ax in enumerate(axs.flat):
+        sea = seasons[ii]
+
+        for simii,sim in enumerate(sims):
+            
+            ax.plot(fldpcorrdict[sim][sea],color=colordict[sim])
+            
+        ax.set_title(field + ': ' + sea)
+        
+    ax.set_xlabel('lat')
+    ax.legend(sims,'lower right', prop=fontP,ncol=2)
+    if printtofile:
+        fig.savefig(fieldstr + 'diffpattcorr_ens_meanBC_allseassp_nh.pdf')
 
     
 if testhadisst:

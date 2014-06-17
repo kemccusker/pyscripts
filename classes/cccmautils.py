@@ -37,6 +37,24 @@ def updatedict(dd,ud):
             dd[key] = ud[key]
     return dd
 
+def pattcorr(x,y):
+    """ pattcorr(x,y)
+    
+           Return the pattern correlation coefficient between x and y (index 0,1 of matrix)
+              x and y must be flattened arrays (of a 2D map)
+              
+           This function is to test the results from np.corrcoef() and ma.corrcoef()
+              and gives the same result.
+    """
+
+    Cxy = np.cov(x,y)
+    Cxx = np.cov(x)
+    Cyy = np.cov(y)
+
+    Pxy = Cxy / np.sqrt(Cxx*Cyy)
+
+    return Pxy[0,1]
+
 def calc_seaicearea(input,lat,lon):
     """ Calculate sea ice area from sea ice concentration
         input: 2D or greater array of sea ice concentration.
@@ -46,7 +64,8 @@ def calc_seaicearea(input,lat,lon):
 
         returns: MASKED array of sea ice area with same
                  shape as input. The array is masked such
-                 that land is masked out             
+                 that land is masked out
+        @@@ needs testing
     """
 
     ishape = input.shape

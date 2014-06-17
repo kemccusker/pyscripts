@@ -22,7 +22,7 @@ import cccmacmaps as ccm
 
 #cplt = reload(cplt)
 #con = reload(con)
-#cutl = reload(cutl)
+cutl = reload(cutl)
 #ccm = reload(ccm)
 #cnc = reload(cnc)
 # commented out all the things I supposedly fixed in config
@@ -31,10 +31,11 @@ import cccmacmaps as ccm
 plt.close("all")
 plt.ion()
 
-printtofile=1
+printtofile=0
 seasonal = 1
 seacycle = 0
 pattcorr=1 # do pattern correlation with time instead
+pattcorryr=0 # yearly pattern corr with mean instead of time-integrated patt corr
 dostd=0 # plot standard dev with time (just the pert run, not anomaly for now@@)
 
 # version 2 uses control climo as baseline (rather than individual times),
@@ -73,7 +74,7 @@ timstrp1 = '001-061' # for 3d vars
 timstrp2 = '062-111' # "
 
 
-casenamep = casenamep21
+casenamep = casenamep2e
 rnum=1 # @@ set if casenamep is one of the ens members
 
 
@@ -82,7 +83,7 @@ rnum=1 # @@ set if casenamep is one of the ens members
 # # # ######## set Field info ###################
 # st, sicn, sic, gt, pmsl, pcp, hfl, hfs, turb, flg, fsg, fn, pcpn, zn, su, sv (@@later ufs,vfs)
 # OR threed: 'gz','t','u'
-field = 'gz'
+field = 'pmsl'
 level=30000
 #level = 100000  # only for threed vars
 thickness=0 # do thickness instead: just for gz
@@ -489,6 +490,8 @@ if seasonal: # plot all 4 seasons in a subplot
             plotd = np.zeros(nyr)
             tstat = np.zeros(nyr)
             pval = np.zeros(nyr)
+
+            testd = np.zeros(nyr) # @@
         else:
             # take a zonal mean for each time
             fldcseazm = np.mean(fldcsea[...,:-1],axis=2) # time x lat
@@ -512,15 +515,27 @@ if seasonal: # plot all 4 seasons in a subplot
                 #areas = ma.masked_where(lmask[lat>corrlim,:]==-1,areas)
                 weights = areas / np.sum(np.sum(areas,axis=1),axis=0)
                 
-                # @@ could also do each year's pattern corr rather than cumulative mean
-                # @@ OR, use the mean pattern as the end pattern!
+                # Could also do each year's pattern corr rather than cumulative mean DONE
+                # OR, use the ens mean pattern as the pattern to compare against -- not useful I think,
+                #        for what we want to know: is the pattern of response for each ensemble member random
+                #        or dependent on the boundary condition.
                 # @@ Also, would be nice to have multiple variables in one plot and/or multiple simulations
-                tmp = np.mean(fldpseazm[0:yr,lat>corrlim,...],axis=0)-fldcseazmtm[lat>corrlim,...] # anomaly pattern corr w/ the end anomaly pattern
+
+                if pattcorryr:
+                    # yearly anomaly pattern corr w/ the time mean pattern
+                    tmp = fldpseazm[yr,lat>corrlim,...] - fldcseazmtm[lat>corrlim,...]
+                else:
+                    # time-integrated anomaly pattern corr w/ the end anomaly pattern
+                    tmp = np.mean(fldpseazm[0:yr,lat>corrlim,...],axis=0)-fldcseazmtm[lat>corrlim,...] 
+
                 tmpmean = fldpseazmtm[lat>corrlim,...]-fldcseazmtm[lat>corrlim,...] # the end pattern
 
                 tmpcorr = ma.corrcoef(tmp.flatten()*weights.flatten(),
-                                        tmpmean.flatten()*weights.flatten())
+                                      tmpmean.flatten()*weights.flatten())
                 plotd[yr] = tmpcorr[0,1]
+                testd[yr] = cutl.pattcorr(tmp.flatten()*weights.flatten(),
+                                          tmpmean.flatten()*weights.flatten()) # @@ same result as built-in method
+ 
 
                 """ from canam4sims_analens.py. modify for here
                 ensmem = fldpdict[sim][moidx,lat>corrlim,...] - fldcdict[sim][moidx,lat>corrlim,...]
@@ -541,6 +556,7 @@ if seasonal: # plot all 4 seasons in a subplot
                 # http://www.stanford.edu/~maureenh/quals/html/ml/node53.html 
                 tmpcorr = ma.corrcoef(ensmem.flatten()*weights.flatten(), obsbc.flatten()*weights.flatten())
                 pcorr[moidx] = tmpcorr[0,1]
+                @@ see above: doesn't seem to remove mean, gives same result as calc'ing the cov, etc.
                 """
 
             elif dostd==1:
@@ -567,12 +583,19 @@ if seasonal: # plot all 4 seasons in a subplot
                     pval[yr,:] = np.ones((1,nlat))
             
         if pattcorr: # pattern corr by time
-            ax.plot(years,plotd)
-
+            
+            if pattcorryr:
+                plotd.sort()
+                ax.plot(years,plotd,marker='*')
+                ax.set_ylim(-1,1)
+            else:
+                ax.plot(years,plotd)
+                #ax.plot(years,testd,color='r',marker='.') @@ this gives same result!
+                ax.set_ylim(0,1)
         else: # lat by time
             lats,times = np.meshgrid(lat,years)
         
-            plotfld = plotd #@@fldpseazm - fldcseazm # the thing is, these years could be in any order...how take this into account??
+            plotfld = plotd #@@these years could be in any order...how take this into account??
         
             cf = ax.contourf(times,lats,plotfld,cmap=plt.cm.get_cmap(cmap),
                               levels=conts,vmin=cminm,vmax=cmaxm,extend='both')
@@ -618,8 +641,12 @@ if seasonal: # plot all 4 seasons in a subplot
                 prfield = field + str(level/100)
         
         if pattcorr==1:
-            fig.savefig(prfield + 'diffpattcorr' + '_' + casenamep +\
-                        '_v_' + casename + '_timexlat_seas_nh.' + suff)
+            if pattcorryr==1: # yearly
+                fig.savefig(prfield + 'diffpattcorryrly' + '_' + casenamep +\
+                            '_v_' + casename + '_timexlat_seas_nh' + str(corrlim) + 'N.' + suff)
+            else: # time-integrated
+                fig.savefig(prfield + 'diffpattcorr' + '_' + casenamep +\
+                            '_v_' + casename + '_timexlat_seas_nh' + str(corrlim) + 'N.' + suff)
         elif dostd==1:
              fig.savefig(prfield + 'stddev' + '_' + casenamep +\
                         '_timexlat_seas_nh.' + suff)
