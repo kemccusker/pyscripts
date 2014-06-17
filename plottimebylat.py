@@ -35,6 +35,7 @@ printtofile=1
 seasonal = 1
 seacycle = 1
 pattcorr=0 # do pattern correlation with time instead
+dostd=1 # plot standard dev with time (just the pert run, not anomaly for now@@)
 
 # version 2 uses control climo as baseline (rather than individual times),
 #   and full timeseries for ttest
@@ -72,8 +73,23 @@ timstrp1 = '001-061' # for 3d vars
 timstrp2 = '062-111' # "
 
 
-casenamep = casenamep2e
+casenamep = casenameph
 rnum=5 # @@ set if casenamep is one of the ens members
+
+
+
+
+# # # ######## set Field info ###################
+# st, sicn, sic, gt, pmsl, pcp, hfl, hfs, turb, flg, fsg, fn, pcpn, zn, su, sv (@@later ufs,vfs)
+# OR threed: 'gz','t','u'
+field = 'gz'
+level=30000
+#level = 100000  # only for threed vars
+thickness=0 # do thickness instead: just for gz
+level2=70000 # for thickness calc: typically 1000-700hPa thickness
+
+cmap = 'blue2red_w20' # default cmap
+cmapclimo = 'Spectral_r'
 
 if casenamep == casenameph:
     casename = casenameh
@@ -101,17 +117,6 @@ print 'CONTROL IS ' + casename
 print 'PERT IS ' + casenamep
 
 
-# # # ######## set Field info ###################
-# st, sicn, sic, gt, pmsl, pcp, hfl, hfs, turb, flg, fsg, fn, pcpn, zn, su, sv (@@later ufs,vfs)
-# OR threed: 'gz','t','u'
-field = 'pmsl'
-level = 100000  # only for threed vars
-thickness=0 # do thickness instead: just for gz
-level2=70000 # for thickness calc: typically 1000-700hPa thickness
-
-cmap = 'blue2red_w20' # default cmap
-cmapclimo = 'Spectral_r'
-
 # # # ###########################################
 #   Shouldn't have to mod below....
 
@@ -126,6 +131,9 @@ if field == 'st':
     cminm = -2; cmaxm = 2   # monthly
     
     cminmp = -1; cmaxmp = 1 # for when pert is 'ctl'
+    if dostd==1 and casenamep in casenamep2e:
+        cminm=-1.5; cmaxm=1.5
+
     cmap = 'blue2red_w20'
     #cmap = 'blue2red_20'
 elif field == 'gt':
@@ -172,6 +180,8 @@ elif field == 'pmsl':
     cminp=cmin; cmaxp=cmax # for when pert is 'ctl'
     cminmp=cminm; cmaxmp=cmaxm
     cmap = 'blue2red_20'
+    if dostd==1 and casenamep!=casenamep2e:
+        cminm=-5; cmaxm=5
 elif field == 'pcp':
 #    pct=1; units = '%'
     units = 'mm/day' # original: kg m-2 s-1
@@ -304,6 +314,10 @@ elif field == 'gz':
         cmin = -15; cmax = 15
         #cminsea=-20; cmaxsea = 20
         cminm = -15; cmaxm = 15  # for monthly
+        if dostd==1 and casenamep!=casenamep2e:
+            cminm=-60; cmaxm=60
+        elif dostd==1 and casenamep==casenamep2e:
+            cminm=-40; cmaxm=40
     else:
         #cminsea = -15; cmaxsea = 15
         cminm = -10; cmaxm = 10  # for monthly
@@ -473,7 +487,19 @@ if seasonal: # plot all 4 seasons in a subplot
         pval = np.zeros((nyr,nlat))
         
         for yr in years:
-            if v2:
+            
+            if pattcorr==1:
+                # do a pattern correlation with time
+                print '@@ implement pattern corr with time!'
+            elif dostd==1:
+                                
+                if yr>=5:
+                    plotd[yr,:] = np.std(fldpseazm[0:yr,:],axis=0)#@@-np.std(fldcseazmtm,axis=0)
+                    #tstat[yr,:],pval[yr,:] = sp.stats.ttest_ind(fldpseazm[0:yr,:],fldcseazm,axis=0)
+                else:
+                    #pval[yr,:] = np.ones((1,nlat))
+                    plotd[yr,:] = np.NaN
+            elif v2==1:
                 # here, use the control climo as the baseline (rather than 1 year), and give
                 #   the full control timeseries to the ttest every time
                 plotd[yr,:] = np.mean(fldpseazm[0:yr,:]-fldcseazmtm,axis=0)
@@ -481,9 +507,6 @@ if seasonal: # plot all 4 seasons in a subplot
                     tstat[yr,:],pval[yr,:] = sp.stats.ttest_ind(fldpseazm[0:yr,:],fldcseazm,axis=0)
                 else:
                     pval[yr,:] = np.ones((1,nlat))
-            elif pattcorr:
-                # do a pattern correlation with time
-                print '@@ implement pattern corr with time!'
             else:
                 plotd[yr,:] = np.mean(fldpseazm[0:yr,:]-fldcseazm[0:yr,:],axis=0)
                 if yr>5: # start doing stats after 5 years
@@ -498,10 +521,11 @@ if seasonal: # plot all 4 seasons in a subplot
         cf = ax.contourf(times,lats,plotfld,cmap=plt.cm.get_cmap(cmap),
                           levels=conts,vmin=cminm,vmax=cmaxm,extend='both')
         #cplt.addtsig(ax,pval,lat,years,type=sigtype) # @@ I don't think the stats are right.
-        if sigtype == 'cont':
-            ax.contour(times,lats,pval,levels=[0.05,0.05],colors='k')
-        elif sigtype == 'hatch':
-            ax.contourf(times,lats,pval,levels=[0,0.05],colors='none',hatches='.')
+        if dostd!=1:
+            if sigtype == 'cont':
+                ax.contour(times,lats,pval,levels=[0.05,0.05],colors='k')
+            elif sigtype == 'hatch':
+                ax.contourf(times,lats,pval,levels=[0,0.05],colors='none',hatches='.')
         
         ax.set_xlim(0,nyr)
         ax.set_ylim(0,90)
@@ -531,7 +555,14 @@ if seasonal: # plot all 4 seasons in a subplot
                 prfield = field + str(level2/100) + '-' + str(level/100)
             else:
                 prfield = field + str(level/100)
-        if v2:
+        
+        if pattcorr==1:
+            fig.savefig(prfield + 'diffpattcorr' + '_' + casenamep +\
+                        '_v_' + casename + '_timexlat_seas_nh.' + suff)
+        elif dostd==1:
+             fig.savefig(prfield + 'stddev' + '_' + casenamep +\
+                        '_timexlat_seas_nh.' + suff)
+        elif v2: 
             fig.savefig(prfield + 'diffsig' + sigtype + '_' + casenamep +\
                         '_v_' + casename + '_timexlat_seas_nh_v2.' + suff)
         else:
@@ -575,29 +606,44 @@ if seacycle: # want month x lat (or height)
     # loop through months, calcing mean pert and stat sig
     for midx in np.arange(0,12):
 
-        monfldczm = np.mean(fldc[midx::12,:,:-1],axis=2)
-        monfldpzm = np.mean(fldp[midx::12,:,:-1],axis=2)
+        if pattcorr:
+            print 'do pattern corr @@'
+        elif dostd:
+            # taken zonal mean
+            monfldczm = np.mean(fldc[midx::12,:,:-1],axis=2)
+            monfldpzm = np.mean(fldp[midx::12,:,:-1],axis=2)
+            # std dev
+            monfldczmclimo[midx,:] = np.std(monfldczm,axis=0)
+            monfldpzmclimo[midx,:] = np.std(monfldpzm,axis=0)
+        else:
+            # taken zonal mean
+            monfldczm = np.mean(fldc[midx::12,:,:-1],axis=2)
+            monfldpzm = np.mean(fldp[midx::12,:,:-1],axis=2)
+            # time mean
+            monfldczmclimo[midx,:] = np.mean(monfldczm,axis=0)
+            monfldpzmclimo[midx,:] = np.mean(monfldpzm,axis=0)
         
-        monfldczmclimo[midx,:] = np.mean(monfldczm,axis=0)
-        monfldpzmclimo[midx,:] = np.mean(monfldpzm,axis=0)
-        
-        tstat[midx,:],pval[midx,:] = sp.stats.ttest_ind(monfldpzm,monfldczm,axis=0)
+            tstat[midx,:],pval[midx,:] = sp.stats.ttest_ind(monfldpzm,monfldczm,axis=0)
 
     lats,mos = np.meshgrid(lat,np.arange(0,12))
 
  
     fig2,ax = plt.subplots(1,1)
     fig2.set_size_inches(6, 5)
-           
-    plotfld = monfldpzmclimo - monfldczmclimo
+
+    if dostd==1:
+        plotfld = monfldpzmclimo
+    else:
+        plotfld = monfldpzmclimo - monfldczmclimo
 
     cf = ax.contourf(mos,lats,plotfld,cmap=plt.cm.get_cmap(cmap),
                       levels=conts,vmin=cminm,vmax=cmaxm,extend='both')
 
-    if sigtype == 'cont':
-        ax.contour(mos,lats,pval,levels=[0.05,0.05],colors='k')
-    elif sigtype == 'hatch':
-        ax.contourf(mos,lats,pval,levels=[0,0.05],colors='none',hatches='.')
+    if dostd!=1:       
+        if sigtype == 'cont':
+            ax.contour(mos,lats,pval,levels=[0.05,0.05],colors='k')
+        elif sigtype == 'hatch':
+            ax.contourf(mos,lats,pval,levels=[0,0.05],colors='none',hatches='.')
 
     ax.set_xlim(0,11)
     ax.set_xticks(range(0,12))
@@ -614,7 +660,6 @@ if seacycle: # want month x lat (or height)
             plt.suptitle(field + ' ' + str(level2/100) + '-' + str(level/100) + ' (' + units + ')')
         else:
             plt.suptitle(field + ' ' + str(level/100) + ' (' + units + ')')
-
     else:
         plt.suptitle(field + ' (' + units + ')')
     #plt.tight_layout() makes it worse
@@ -627,6 +672,13 @@ if seacycle: # want month x lat (or height)
                 prfield = field + str(level2/100) + '-' + str(level/100)
             else:
                 prfield = field + str(level/100)
-            
-        fig2.savefig(prfield + 'diffsig' + sigtype + '_' + casenamep +\
+
+        if pattcorr==1:
+            fig2.savefig(prfield + 'diffpattcorr' + sigtype + '_' + casenamep +\
                     '_v_' + casename + '_monxlat_nh.' + suff)
+        elif dostd==1:
+            fig2.savefig(prfield + 'stddev' + '_' + casenamep +\
+                    '_monxlat_nh.' + suff)
+        else:
+            fig2.savefig(prfield + 'diffsig' + sigtype + '_' + casenamep +\
+                         '_v_' + casename + '_monxlat_nh.' + suff)
