@@ -40,6 +40,7 @@ plotzonmean=0 # plotzonmean and plotseacyc are mutually exclusive
 plotseacyc=0 # plotzonmean and plotseacyc are mutually exclusive
 withlat=0 # plot the seasonal cycle with latitude dimension too (only for plotseacyc=1)
 pattcorrwithtime=1 # plot pattern correlation with time for each ens member
+pattcorryr=1 # if 1, do a yearly anomaly pattern rather than time-integrated 
 
 testhadisst=0 # check which ens member most similar to hadisst
 normbystd=0
@@ -75,7 +76,7 @@ timstr2='001-111'
 # # # ######## set Field info ###################
 # gz, t, u, v, q (3D !)
 # st, sic, sicn (sia), gt, pmsl, pcp, hfl, hfs, turb, flg, fsg, fn, pcpn, zn, su, sv (@@later ufs,vfs)
-field = 'st'
+field = 'gz'
 print field
 timeavg = 'DJF'
 
@@ -363,6 +364,13 @@ else:  # on linux workstation in Vic
     subdir = '/ts/'
 
 
+if threed==1:
+    fieldstr=field+str(level/100)
+    fnamec = basepath + casename + subdir + casename + '_' + field + '_001-061_ts.nc' # for lat,lon
+
+else:
+    fieldstr=field
+    fnamec = basepath + casename + subdir + casename + '_' + field + '_' + timstr + '_ts.nc'
 
 if plotann:
 
@@ -459,10 +467,7 @@ if plotann:
     seastdc2 = np.std(seastsc2,axis=0)
     seastdp2 = np.std(seastsp2,axis=0)
 
-    if threed==1:
-        fieldstr=field+str(level/100)
-    else:
-        fieldstr=field
+    
 
     #tstatb,pvalb = sp.stats.ttest_ind(anntsp,anntsc,axis=0,equal_var=False) # basically the same as above
     # Note that NaN is returned for zero variance (I think..from googling..)
@@ -633,7 +638,7 @@ if plotann:
 
 lat = cnc.getNCvar(fnamec,'lat')
 lon = cnc.getNCvar(fnamec,'lon')
-sigs = np.ones((12,fldc.shape[1],fldc.shape[2]))
+#sigs = np.ones((12,fldc.shape[1],fldc.shape[2])) unused
 
 
 months=con.get_mon()
@@ -1006,7 +1011,7 @@ if plotzonmean==1 or plotseacyc==1 or pattcorrwithtime==1:
                         # yearly anomaly pattern corr w/ the time mean pattern
                         tmp = fldpzm[yr,lat>corrlim,...]-fldctm
                     else:
-                        tmp = np.mean(fldpzm[:yr,lat>corrlim,...],axis=0)-fldctm
+                        tmp = np.mean(fldpzm[:yr,lat>corrlim,...],axis=0)-fldctm # integrated anomaly pattern
                     tmpmean = np.mean(fldpzm[:,lat>corrlim,...],axis=0) - fldctm # end pattern to compare against
                     pcorr[yr] = cutl.pattcorr(tmp.flatten()*weights.flatten(),tmpmean.flatten()*weights.flatten())
 
@@ -1055,6 +1060,8 @@ if plotzonmean==1 or plotseacyc==1 or pattcorrwithtime==1:
     if sia==1:
         field = 'sia' # put back after getting the data
 
+fontP = fm.FontProperties()
+fontP.set_size('small')
 
 darkolivegreen1 = np.array([202, 255, 112])/255 # terrible
 darkolivegreen3 = np.array([162, 205, 90])/255.
@@ -1080,6 +1087,7 @@ else:
 # now make the figures ==============================================
 if plotzonmean:
 
+    
     tmpval = fldcdict.values()[0]
 
     fldcestd = np.zeros((len(seasons),tmpval.values()[0].shape[0]))
@@ -1472,6 +1480,10 @@ if plotseacyc:
 
 if pattcorrwithtime==1:
 
+    ylims = 0,1
+    if pattcorryr:
+        ylims = -1,1
+
     fig,axs = plt.subplots(4,1)
     fig.set_size_inches(6,12)
     fig.subplots_adjust(hspace=.2,wspace=.2)
@@ -1480,14 +1492,23 @@ if pattcorrwithtime==1:
 
         for simii,sim in enumerate(sims):
             
-            ax.plot(fldpcorrdict[sim][sea],color=colordict[sim])
-            
+            if pattcorryr:
+                sorted = fldpcorrdict[sim][sea]
+                sorted.sort()
+                ax.plot(sorted,color=colordict[sim])
+            else:
+                ax.plot(fldpcorrdict[sim][sea],color=colordict[sim])
+        ax.set_ylim(ylims)    
         ax.set_title(field + ': ' + sea)
         
     ax.set_xlabel('lat')
     ax.legend(sims,'lower right', prop=fontP,ncol=2)
+    
     if printtofile:
-        fig.savefig(fieldstr + 'diffpattcorr_ens_meanBC_allseassp_nh.pdf')
+        if pattcorryr:
+            fig.savefig(fieldstr + 'diffpattcorryrly_ens_meanBC_allseassp_nh.pdf')
+        else:
+            fig.savefig(fieldstr + 'diffpattcorr_ens_meanBC_allseassp_nh.pdf')
 
     
 if testhadisst:
