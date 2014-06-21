@@ -475,7 +475,22 @@ def get_linecolorwheel():
                   'magenta': np.array([112, 0, 102])/255.,
                   'violet': np.array([85, 0, 140])/255.,
                   'deepskyblue': np.array([0,191,255])/255.,
-                  'skyblue': np.array([135, 206, 250])/255. }
+                  'skyblue': np.array([135, 206, 250])/255.,
+                  'red1': np.array([118, 1, 1])/255.,    # dark to light: these reds are kind of pinky
+                  'red2': np.array([171, 31, 31])/255.,
+                  'red3': np.array([205, 72, 72])/255.,
+                  'red4': np.array([228, 121, 121])/255.,
+                  'red5': np.array([252, 191, 191])/255.,
+                  'orange1': np.array([145, 73, 0])/255.,  # dark to light: these oranges are browny
+                  'orange2': np.array([185, 93, 1])/255.,
+                  'orange3': np.array([219, 137, 35])/255.,
+                  'orange4': np.array([246, 144, 41])/255.,
+                  'orange5': np.array([250, 193, 135])/255.,
+                  'warm1': np.array([150, 1, 1])/255.,
+                  'warm2': np.array([215, 50, 1])/255., 
+                  'warm3': np.array([240, 119, 1])/255.,
+                  'warm4': np.array([255, 163, 1])/255.,
+                  'warm5': np.array([255, 200, 1])/255.}
 
     return linecolors
 
@@ -485,7 +500,9 @@ def show_linecolors():
     xx = np.array([0, 50])
     
     plt.figure(figsize=(5,10))
-    for cii,ckey in enumerate(linecolors):
+    lckeys=linecolors.keys()
+    lckeys.sort()
+    for cii,ckey in enumerate(lckeys):
         #print cii
         #print ckey
         plt.plot(xx,np.array([cii, cii]),color=linecolors[ckey],linewidth=4)
