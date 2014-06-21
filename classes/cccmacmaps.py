@@ -390,49 +390,124 @@ def register_cccmacms(cmap='all'):
     cm.register_cmap(cmap=thecmap)  
                       
 
+def get_linecolor(lckey):
+    """ get_linecolor(lckey)
+             return the RGB array defining a color
 
+                  'firebrick1': np.array([255, 48, 48])/255.,
+                  'firebrick': np.array([178, 34, 34])/255.,
+                  'orangered': np.array([255, 69, 0])/255.,
+                  'orangered4': np.array([139, 37, 0])/255.,
+                  'darkgoldenrod1': np.array([255, 185, 15])/255.,
+                  'darkgoldenrod': np.array([184, 134, 11])/255.,
+                  'darkolivegreen1': np.array([202, 255, 112])/255.,
+                  'darkolivegreen3': np.array([162, 205, 90])/255.,
+                  'darkseagreen': np.array([143, 188, 143])/255.,
+                  'darkseagreen4': np.array([105, 139, 105])/255.,
+                  'mediumpurple1': np.array([171, 130, 255])/255.,
+                  'mediumpurple4': np.array([93, 71, 139])/255.,
+                  'dodgerblue': np.array([30, 144, 255])/255.,
+                  'mediumblue': np.array([0, 0, 205])/255.,
+                  'limegreen': np.array([50, 205, 50])/255., 
+                  'lightsteelblue3': np.array([162, 181, 205])/255., # more grey looking
+                  'lightsteelblue4': np.array([110, 123, 139])/255., # more grey looking
+                  'steelblue3': np.array([79, 148, 205])/255.,  # more blue looking
+                  'steelblue4': np.array([54, 100, 139])/255.,
+                  'pink2': np.array([238, 169, 184])/255.,
+                  'pink4': np.array([139, 99, 108])/255.,
+                  'chocolate1': np.array([255, 127, 36])/255.,
+                  'chocolate4': np.array([139, 69, 19])/255.
+                  'barnred': np.array([124, 10, 2]/255.,
+                  'yelloworange': np.array([255, 155, 0])/255.,
+                  'darkyellow': np.array([242, 228, 40])/255.,
+                  'magenta': np.array([112, 0, 102])/255.,
+                  'violet': np.array([85, 0, 140])/255.,
+                  'deepskyblue': np.array([0,191,255])/255.,
+                  'skyblue': np.array([135, 206, 250])/255.
+
+                   http://web.njit.edu/~kevin/rgb.txt.html
+                   http://en.wikipedia.org/wiki/Shades_of_red
+                   http://www.rapidtables.com/web/color/RGB_Color.htm
+
+    """
+    linecolors = get_linecolorwheel()
+    
+    return linecolors[lckey]
+
+
+def get_linecolorwheel():
+    """ get_linecolorwheel()
+
+            return the dictionary of all linecolors
+
+             http://web.njit.edu/~kevin/rgb.txt.html
+             http://en.wikipedia.org/wiki/Shades_of_red
+             http://www.rapidtables.com/web/color/RGB_Color.htm
+
+    """
+
+    linecolors = {'firebrick1': np.array([255, 48, 48])/255.,
+                  'firebrick': np.array([178, 34, 34])/255.,
+                  'orangered': np.array([255, 69, 0])/255.,
+                  'orangered4': np.array([139, 37, 0])/255.,
+                  'darkgoldenrod1': np.array([255, 185, 15])/255.,
+                  'darkgoldenrod': np.array([184, 134, 11])/255.,
+                  'darkolivegreen1': np.array([202, 255, 112])/255.,
+                  'darkolivegreen3': np.array([162, 205, 90])/255.,
+                  'darkseagreen': np.array([143, 188, 143])/255.,
+                  'darkseagreen4': np.array([105, 139, 105])/255.,
+                  'mediumpurple1': np.array([171, 130, 255])/255.,
+                  'mediumpurple4': np.array([93, 71, 139])/255.,
+                  'dodgerblue': np.array([30, 144, 255])/255.,
+                  'mediumblue': np.array([0, 0, 205])/255.,
+                  'limegreen': np.array([50, 205, 50])/255., 
+                  'lightsteelblue3': np.array([162, 181, 205])/255., # more grey looking
+                  'lightsteelblue4': np.array([110, 123, 139])/255., # more grey looking
+                  'steelblue3': np.array([79, 148, 205])/255.,  # more blue looking
+                  'steelblue4': np.array([54, 100, 139])/255.,
+                  'pink2': np.array([238, 169, 184])/255.,
+                  'pink4': np.array([139, 99, 108])/255.,
+                  'chocolate1': np.array([255, 127, 36])/255.,
+                  'chocolate4': np.array([139, 69, 19])/255.,
+                  'barnred': np.array([124,10,2])/255.,
+                  'yelloworange': np.array([255, 155, 0])/255.,
+                  'darkyellow': np.array([242, 228, 40])/255.,
+                  'magenta': np.array([112, 0, 102])/255.,
+                  'violet': np.array([85, 0, 140])/255.,
+                  'deepskyblue': np.array([0,191,255])/255.,
+                  'skyblue': np.array([135, 206, 250])/255. }
+
+    return linecolors
+
+def show_linecolors():
+
+    linecolors = get_linecolorwheel()
+    xx = np.array([0, 50])
+    
+    plt.figure(figsize=(5,10))
+    for cii,ckey in enumerate(linecolors):
+        #print cii
+        #print ckey
+        plt.plot(xx,np.array([cii, cii]),color=linecolors[ckey],linewidth=4)
+        plt.text(1,cii-.5,ckey,fontsize=9)
+
+    plt.ylim((-1,len(linecolors)))
+
+    ## legend(('firebrick1','firebrick','orangered','orangered4',
+    ##        'darkgoldenrod1','darkgoldenrod','lightsteelblue3','lightsteelblue4', ...
+    ##     'darkolivegreen1','darkolivegreen3','darkseagreen','darkseagreen4', ...
+    ##     'mediumpurple1','mediumpurple4','steelblue3','steelblue4', ...
+    ##     'dodgerblue','mediumblue','limegreen',...
+    ##     'location','eastoutside')
+
+
+
+        
 # this means, if we are running this module as main script
 #    (not importing from another), register and show
 if __name__ == "__main__":
     register_cccmacms()
     show_cccmacms()
+    show_linecolors()
 else:
     register_cccmacms()
-
-
-
-
-## # # define the colormap function # # #
-## def discrete_cmap(N=22):
-##     """create a colormap with N (N<15) discrete colors and register it"""
-
-##     # define individual colors as RGB triples
-##     # from colorwheel.m
-##     # kem_w22 (22)
-##     # blueish at top, white in middle, reddish at bottom
-
-##     cpool = np.array([ [10,50,120], \
-##                        [15,75,165], \
-##                        [30,110,200],\
-##                        [60,160,240],\
-##                        [80,180,250],\
-##                        [130, 210, 255],\
-##                        [160, 230, 255],\
-##                        [190, 235, 255],\
-##                        [210, 245, 255],\
-##                        [255, 255, 255],\
-##                        [255, 255, 255],\
-##                        [250, 240, 150],\
-##                        [255, 222, 100],\
-##                        [255, 192, 60], \
-##                        [255, 160, 0], \
-##                        [255, 96, 0], \
-##                        [255, 50, 0], \
-##                        [225, 20, 0], \
-##                        [192, 0, 0], \
-##                        [165, 0, 0]],\
-##                        dtype=float)
-    
-##     kem_w22 = (cpool/255);
-##     thecmap = col.ListedColormap(kem_w22,'kem_w22')
-##     cm.register_cmap(cmap=thecmap)
