@@ -21,6 +21,7 @@ import cccmautils as cutl    # my module
 import matplotlib.font_manager as fm
 import copy
 import cccmacmaps as ccm
+import pandas as pd
 
 # while I'm still creating these modules, have to reload to get changes
 cplt = reload(cplt)
@@ -32,15 +33,15 @@ cnc = reload(cnc)
 plt.close("all")
 plt.ion()
 
-printtofile=0
+printtofile=1
 
 plotann=0    # seasonal avg map, comparing ens runs and meanBC
 plotallmos=0 # monthly maps (@@ not implemented)
 seasonal=0 # seasonal maps (DJF, MAM, JJA, SON)
 plotzonmean=0 # plotzonmean and plotseacyc are mutually exclusive
-plotseacyc=0 # plotzonmean and plotseacyc are mutually exclusive
+plotseacyc=1 # plotzonmean and plotseacyc are mutually exclusive
 withlat=0 # plot the seasonal cycle with latitude dimension too (only for plotseacyc=1)
-pattcorrwithtime=1 # plot pattern correlation with time for each ens member
+pattcorrwithtime=0 # plot pattern correlation with time for each ens member
 pattcorryr=0 # if 1, do a yearly anomaly pattern rather than time-integrated 
 
 testhadisst=0 # check which ens member most similar to hadisst
@@ -77,7 +78,7 @@ timstr2='001-111'
 # # # ######## set Field info ###################
 # gz, t, u, v, q (3D !)
 # st, sic, sicn (sia), gt, pmsl, pcp, hfl, hfs, turb, flg, fsg, fn, pcpn, zn, su, sv (@@later ufs,vfs)
-field = 'st'
+field = 'sia'
 print field
 timeavg = 'DJF'
 
@@ -382,6 +383,11 @@ else:
 
 lat = cnc.getNCvar(fnamec,'lat')
 lon = cnc.getNCvar(fnamec,'lon')
+
+# order ens simulations in order of most ice loss in melt season to least. Then ens mean, PERT2, observations if requested
+sims = bcasename+'r1', bcasename+'r4', bcasename+'r3', bcasename+'r5', bcasename+'r2', bcasename+'ens',bcasename
+if addobs:
+    sims = sims + ('kemhadctl',)
 
 
 if plotann:
@@ -718,10 +724,12 @@ if seasonal:
     incr = (cmaxm-cminm) / (cmlen)
     conts = np.arange(cminm,cmaxm+incr,incr)
 
-    if addobs:
-        sims = bcasename + 'r1', bcasename+'r2',bcasename+'r3',bcasename+'r4', bcasename+'r5',bcasename+'ens',bcasename,'kemhadctl'
-    else:
-        sims = bcasename + 'r1', bcasename+'r2',bcasename+'r3',bcasename+'r4', bcasename+'r5',bcasename+'ens',bcasename
+
+#    if addobs:
+#        sims = bcasename + 'r1', bcasename+'r2',bcasename+'r3',bcasename+'r4', bcasename+'r5',bcasename+'ens',bcasename,'kemhadctl'
+#    else:
+#        sims = bcasename + 'r1', bcasename+'r2',bcasename+'r3',bcasename+'r4', bcasename+'r5',bcasename+'ens',bcasename
+
 #    cidx=0 # traverse cols (seasons)
 #    ridx=0 # traverse rows
 #    fig6,ax6 = plt.subplots(7,4) # 1 row for e/ of 5 ens members, plus mean, plus meanBC
@@ -883,10 +891,10 @@ if plotzonmean==1 or plotseacyc==1 or pattcorrwithtime==1:
         latlim = 70 # for area averaging
         seasons = con.get_mon()
 
-    if addobs:
-        sims = bcasename + 'r1', bcasename+'r2',bcasename+'r3',bcasename+'r4', bcasename+'r5',bcasename+'ens',bcasename,'kemhadctl'
-    else:
-        sims = bcasename + 'r1', bcasename+'r2',bcasename+'r3',bcasename+'r4', bcasename+'r5',bcasename+'ens',bcasename
+#    if addobs:
+#        sims = bcasename + 'r1', bcasename+'r2',bcasename+'r3',bcasename+'r4', bcasename+'r5',bcasename+'ens',bcasename,'kemhadctl'
+#    else:
+#        sims = bcasename + 'r1', bcasename+'r2',bcasename+'r3',bcasename+'r4', bcasename+'r5',bcasename+'ens',bcasename
 
     if sia==1:
         field = 'sicn' # while getting the data...
@@ -1047,6 +1055,8 @@ if plotzonmean==1 or plotseacyc==1 or pattcorrwithtime==1:
                     else:
                         fldczm = cutl.polar_mean_areawgted3d(fldczm,lat,lon,latlim=latlim)
                         fldpzm = cutl.polar_mean_areawgted3d(fldpzm,lat,lon,latlim=latlim)
+            #if sea=='Jan' and sim=='kemctl1':
+            #    print fldczm # debugging non-zero standard dev in time for January only 6/21/14
 
             seafldcstddict[sea] = np.std(fldczm,axis=0)
             seafldpstddict[sea] = np.std(fldpzm,axis=0)
@@ -1096,14 +1106,32 @@ colors = darkseagreen,darkseagreen4,lightsteelblue3,lightsteelblue4,steelblue4,d
 
 # try to match the warmness of color to the amount of sea ice loss in the simulation
 #  Warmer means more loss in melt season. Ensemble mean, PERT2, and obs (hadisst) have special colors
-colordict = {'kemctl1r1': ccm.get_linecolor('chocolate4'), #'firebrick'),
+"""colordict = {'kemctl1r1': ccm.get_linecolor('chocolate4'), #'firebrick'),
              'kemctl1r4': ccm.get_linecolor('firebrick'), #'firebrick1'),
              'kemctl1r3': ccm.get_linecolor('firebrick1'), #'yelloworange'),#'chocolate1'),
              'kemctl1r5': ccm.get_linecolor('yelloworange'), #'darkyellow') #'skyblue'), #yelloworange'),
              'kemctl1r2': ccm.get_linecolor('darkyellow'), #'steelblue3'), #'darkgoldenrod1'),
              'kemctl1ens': ccm.get_linecolor('magenta'),
              'kemctl1': ccm.get_linecolor('dodgerblue'), #'mediumpurple1'), #darkyellow'),
-             'kemhadctl': ccm.get_linecolor('darkolivegreen3')}
+             'kemhadctl': ccm.get_linecolor('darkolivegreen3')} """
+
+"""colordict = {'kemctl1r1': ccm.get_linecolor('red1'), #'firebrick'),
+             'kemctl1r4': ccm.get_linecolor('red2'), #'firebrick1'),
+             'kemctl1r3': ccm.get_linecolor('red3'), #'yelloworange'),#'chocolate1'),
+             'kemctl1r5': ccm.get_linecolor('red4'), #'darkyellow') #'skyblue'), #yelloworange'),
+             'kemctl1r2': ccm.get_linecolor('red5'), #'steelblue3'), #'darkgoldenrod1'),
+             'kemctl1ens': ccm.get_linecolor('magenta'),
+             'kemctl1': ccm.get_linecolor('dodgerblue'), #'mediumpurple1'), #darkyellow'),
+             'kemhadctl': ccm.get_linecolor('darkolivegreen3')}"""
+
+colordict = {'kemctl1r1': ccm.get_linecolor('warm1'), #'firebrick'),
+             'kemctl1r4': ccm.get_linecolor('warm2'), #'firebrick1'),
+             'kemctl1r3': ccm.get_linecolor('warm3'), #'yelloworange'),#'chocolate1'),
+             'kemctl1r5': ccm.get_linecolor('warm4'), #'darkyellow') #'skyblue'), #yelloworange'),
+             'kemctl1r2': ccm.get_linecolor('warm5'), #'steelblue3'), #'darkgoldenrod1'),
+             'kemctl1ens': ccm.get_linecolor('magenta'),
+             'kemctl1': ccm.get_linecolor('mediumblue'), #'mediumpurple1'), #darkyellow'),
+             'kemhadctl': ccm.get_linecolor('deepskyblue')}
              
 if addobs:
     skip=-3 # use this to only take std dev over ens members r*
@@ -1287,12 +1315,13 @@ if plotseacyc:
     #      seacycle = df[simkey]
     #   change months tuple to list for indexing df and getting in correct order
     #      mol = list(months)
-    #      plt.plot(seacycle[mol] # plots in correct order
+    #      plt.plot(seacycle[mol]) # plots in correct order
 
     # @@ this should help with getting a range of ensemble runs (max,min) for shading
 
-    
-    if withlat:
+    mol = list(months) # use this list of strings for indexing the dataframe
+
+    """if withlat:
         fldcestd = np.zeros((len(seasons),len(lat))) # ensemble std dev
         fldpestd = np.zeros((len(seasons),len(lat)))
     else:
@@ -1316,14 +1345,15 @@ if plotseacyc:
             tmpp[eii] = fldpdict[enssim][enssea]
 
         fldcestddict[enssea] = np.std(tmpc,axis=0) # for each season, what is sigma
-        fldpestddict[enssea] = np.std(tmpp,axis=0)
+        fldpestddict[enssea] = np.std(tmpp,axis=0) """
 
     #print fldcestd.shape
 
 
     fontP = fm.FontProperties()
     fontP.set_size('small')
-    
+
+    """    
     seacycddict = dict.fromkeys(sims)
     seacyccdict = dict.fromkeys(sims)
     seacycpdict = dict.fromkeys(sims)
@@ -1403,9 +1433,9 @@ if plotseacyc:
     for sii,seakey in enumerate(seasons):
         fldcestd[sii,...] = fldcestddict[seakey]
         fldpestd[sii,...] = fldpestddict[seakey]
-
+    """
     # Now can plot the seasonal cycle
-    mons=np.arange(1,13)
+    moidxs=np.arange(1,13)
 
     if withlat:
         
@@ -1436,22 +1466,35 @@ if plotseacyc:
             fig.savefig(fieldstr + 'stddev_overens_monxlat_nh.' + suff)
         
     else: # regular seasonal cycle
+        
+
+        flddiffdf = pd.DataFrame(flddiffdict)
+        fldcdf = pd.DataFrame(fldcdict)
+        fldpdf = pd.DataFrame(fldpdict)
+        fldmaskdf = pd.DataFrame(flddmaskdict)
+        fldcstddf = pd.DataFrame(fldcstddict)
+        fldpstddf = pd.DataFrame(fldpstddict)
+        
         # climo
         fig,axs = plt.subplots()
-        for skey,val in seacyccdict.iteritems():
+        #for skey,val in seacyccdict.iteritems():
+        for skey in sims:
+            #seacycle = flddiffdf[skey]
 
             if skey == 'kemctl1' or skey == 'kemctl1ens' or skey=='kemhadctl':
-                axs.plot(range(1,13),val,color=colordict[skey],linewidth=3)
+                axs.plot(moidxs,fldcdf[skey][mol],color=colordict[skey],linewidth=3)
             else:
-                axs.plot(range(1,13),val,color=colordict[skey],linewidth=2)
+                axs.plot(moidxs,fldcdf[skey][mol],color=colordict[skey],linewidth=2)
 
-        for skey,val in seacycpdict.iteritems():
+        #for skey,val in seacycpdict.iteritems():
+        for skey in sims:
             if skey == 'kemctl1' or skey == 'kemctl1ens' or skey=='kemhadctl':
-                axs.plot(range(1,13),val,color=colordict[skey],linewidth=3,linestyle='--')
+                axs.plot(moidxs,fldpdf[skey][mol],color=colordict[skey],linewidth=3,linestyle='--')
             else:
-                axs.plot(range(1,13),val,color=colordict[skey],linewidth=2,linestyle='--')
+                axs.plot(moidxs,fldpdf[skey][mol],color=colordict[skey],linewidth=2,linestyle='--')
 
-        plt.legend(seacyccdict.keys(),leglocs[0], prop=fontP,ncol=2)
+        #plt.legend(seacyccdict.keys(),leglocs[0], prop=fontP,ncol=2)
+        plt.legend(sims,leglocs[0], prop=fontP,ncol=2)
         plt.xlim((1,12))
         plt.xlabel('Month')
         plt.ylabel(fieldstr)
@@ -1463,16 +1506,21 @@ if plotseacyc:
 
         # differences
         fig,axs = plt.subplots()
-        for skey,val in seacycddict.iteritems():
+        #for skey,val in seacycddict.iteritems():
+        for skey in sims:
             if skey == 'kemctl1' or skey == 'kemctl1ens' or skey=='kemhadctl':
-                axs.plot(range(1,13),val,color=colordict[skey],linewidth=3)
+                axs.plot(moidxs,flddiffdf[skey][mol],color=colordict[skey],linewidth=3)
             else:
-                axs.plot(range(1,13),val,color=colordict[skey],linewidth=2)
-        # significance dots
-        for skey,val in seacycmaskdict.iteritems():
-            axs.plot(mons,val,linestyle='none',color=colordict[skey],marker='s')
+                axs.plot(moidxs,flddiffdf[skey][mol],color=colordict[skey],linewidth=2)
+        for skey in sims:
+            axs.plot(moidxs,fldmaskdf[skey][mol],linestyle='none',color=colordict[skey],marker='s')
 
-        plt.legend(seacycddict.keys(),leglocs[1], prop=fontP,ncol=2)
+        # significance dots
+#        for skey,val in seacycmaskdict.iteritems():
+#            axs.plot(moidxs,val,linestyle='none',color=colordict[skey],marker='s')
+
+        #plt.legend(seacycddict.keys(),leglocs[1], prop=fontP,ncol=2)
+        plt.legend(sims,leglocs[1], prop=fontP,ncol=2)
         plt.xlim((1,12))
         plt.xlabel('Month')
         plt.ylabel(fieldstr)
@@ -1482,25 +1530,34 @@ if plotseacyc:
             fig.savefig(fieldstr + 'diff_ens_meanBC_seacyc_pol' + str(latlim) + 'N.pdf')
 
 
-        # Standard deviation
+        # Standard deviation climos
         fig,axs = plt.subplots()
-        for skey,val in seacyccstddict.iteritems():
-
+        #for skey,val in seacyccstddict.iteritems():
+        for skey in sims:
+            
             if skey == 'kemctl1' or skey == 'kemctl1ens' or skey=='kemhadctl':
-                axs.plot(range(1,13),val,color=colordict[skey],linewidth=3)
+                axs.plot(moidxs,fldcstddf[skey][mol],color=colordict[skey],linewidth=3)
             else:
-                axs.plot(range(1,13),val,color=colordict[skey],linewidth=2)
+                axs.plot(moidxs,fldcstddf[skey][mol],color=colordict[skey],linewidth=2)
 
-        for skey,val in seacycpstddict.iteritems():
+        #for skey,val in seacycpstddict.iteritems():
+        for skey in sims:
             if skey == 'kemctl1' or skey == 'kemctl1ens' or skey=='kemhadctl':
-                axs.plot(range(1,13),val,color=colordict[skey],linestyle='--',linewidth=3)
+                axs.plot(moidxs,fldpstddf[skey][mol],color=colordict[skey],linestyle='--',linewidth=3)
             else:
-                axs.plot(range(1,13),val,color=colordict[skey],linestyle='--',linewidth=2)
+                axs.plot(moidxs,fldpstddf[skey][mol],color=colordict[skey],linestyle='--',linewidth=2)
+        
+        tmpcdf = fldcdf.loc[mol]
+        tmppdf = fldpdf.loc[mol]
+        ce = np.array(tmpcdf.loc[:,sims[0:5]]) # gives array of month x simulation in correct order
+        pe = np.array(tmppdf.loc[:,sims[0:5]])
+        cestd = np.std(ce,axis=1) # std dev over ensemble, 1st 5 simulations
+        pestd = np.std(pe,axis=1)
 
-        axs.plot(range(1,13),fldcestd,color='k',linewidth=3)
-        axs.plot(range(1,13),fldpestd,color='k',linewidth=3,linestyle='--')
+        axs.plot(range(1,13),cestd,color='k',linewidth=3)
+        axs.plot(range(1,13),pestd,color='k',linewidth=3,linestyle='--')
 
-        plt.legend(seacyccstddict.keys(),leglocs[2], prop=fontP,ncol=2)
+        plt.legend(sims,leglocs[2], prop=fontP,ncol=2)
         plt.xlim((1,12))
         plt.xlabel('Month')
         plt.ylabel(fieldstr)
@@ -1512,14 +1569,15 @@ if plotseacyc:
 
         # Difference in standard deviation
         fig,axs = plt.subplots()
-        for skey,val in seacycdstddict.iteritems():
+        #for skey,val in seacycdstddict.iteritems():
+        for skey in sims:
             if skey == 'kemctl1' or skey == 'kemctl1ens' or skey=='kemhadctl':
-                axs.plot(range(1,13),val,color=colordict[skey],linewidth=3)
+                axs.plot(moidxs,fldpstddf[skey][mol]-fldcstddf[skey][mol],color=colordict[skey],linewidth=3)
             else:
-                axs.plot(range(1,13),val,color=colordict[skey],linewidth=2)
-        axs.plot(range(1,13),fldpestd-fldcestd,color='k',linewidth=3)
+                axs.plot(moidxs,fldpstddf[skey][mol]-fldcstddf[skey][mol],color=colordict[skey],linewidth=2)
+        axs.plot(moidxs,pestd-cestd,color='k',linewidth=3)
 
-        plt.legend(seacycdstddict.keys(),leglocs[3], prop=fontP,ncol=2)
+        plt.legend(sims,leglocs[3], prop=fontP,ncol=2)
         plt.xlim((1,12))
         plt.xlabel('Month')
         plt.ylabel(fieldstr)
@@ -1647,18 +1705,18 @@ if testhadisst:
             
         pcorrdict[sim] = pcorr
 
-    mons = range(1,13)
+    moidxs = range(1,13)
     fontP = fm.FontProperties()
     fontP.set_size('small')
     
     plt.figure();
-    plt.plot(mons,diffdict['kemctl1r1'],color=colordict['kemctl1r1'],linewidth=2)
-    plt.plot(mons,diffdict['kemctl1r2'],color=colordict['kemctl1r2'],linewidth=2)
-    plt.plot(mons,diffdict['kemctl1r3'],color=colordict['kemctl1r3'],linewidth=2)
-    plt.plot(mons,diffdict['kemctl1r4'],color=colordict['kemctl1r4'],linewidth=2)
-    plt.plot(mons,diffdict['kemctl1r5'],color=colordict['kemctl1r5'],linewidth=2)
-    plt.plot(mons,diffdict['kemctl1ens'],color=colordict['kemctl1ens'],linewidth=3)
-    plt.plot(mons,diffdict['kemctl1'],color=colordict['kemctl1'],linewidth=3)
+    plt.plot(moidxs,diffdict['kemctl1r1'],color=colordict['kemctl1r1'],linewidth=2)
+    plt.plot(moidxs,diffdict['kemctl1r2'],color=colordict['kemctl1r2'],linewidth=2)
+    plt.plot(moidxs,diffdict['kemctl1r3'],color=colordict['kemctl1r3'],linewidth=2)
+    plt.plot(moidxs,diffdict['kemctl1r4'],color=colordict['kemctl1r4'],linewidth=2)
+    plt.plot(moidxs,diffdict['kemctl1r5'],color=colordict['kemctl1r5'],linewidth=2)
+    plt.plot(moidxs,diffdict['kemctl1ens'],color=colordict['kemctl1ens'],linewidth=3)
+    plt.plot(moidxs,diffdict['kemctl1'],color=colordict['kemctl1'],linewidth=3)
     plt.legend(('r1','r2','r3','r4','r5','ens','meanBC'),prop=fontP)
     plt.xlim((1,12))
     plt.title('RMSE compared to HadISST')
@@ -1666,13 +1724,13 @@ if testhadisst:
         plt.savefig('sicnRMSE_ens_v_hadisst_seacycle.pdf')
 
     plt.figure();
-    plt.plot(mons,pcorrdict['kemctl1r1'],color=colordict['kemctl1r1'],linewidth=2)
-    plt.plot(mons,pcorrdict['kemctl1r2'],color=colordict['kemctl1r2'],linewidth=2)
-    plt.plot(mons,pcorrdict['kemctl1r3'],color=colordict['kemctl1r3'],linewidth=2)
-    plt.plot(mons,pcorrdict['kemctl1r4'],color=colordict['kemctl1r4'],linewidth=2)
-    plt.plot(mons,pcorrdict['kemctl1r5'],color=colordict['kemctl1r5'],linewidth=2)
-    plt.plot(mons,pcorrdict['kemctl1ens'],color=colordict['kemctl1ens'],linewidth=3)
-    plt.plot(mons,pcorrdict['kemctl1'],color=colordict['kemctl1'],linewidth=3)
+    plt.plot(moidxs,pcorrdict['kemctl1r1'],color=colordict['kemctl1r1'],linewidth=2)
+    plt.plot(moidxs,pcorrdict['kemctl1r2'],color=colordict['kemctl1r2'],linewidth=2)
+    plt.plot(moidxs,pcorrdict['kemctl1r3'],color=colordict['kemctl1r3'],linewidth=2)
+    plt.plot(moidxs,pcorrdict['kemctl1r4'],color=colordict['kemctl1r4'],linewidth=2)
+    plt.plot(moidxs,pcorrdict['kemctl1r5'],color=colordict['kemctl1r5'],linewidth=2)
+    plt.plot(moidxs,pcorrdict['kemctl1ens'],color=colordict['kemctl1ens'],linewidth=3)
+    plt.plot(moidxs,pcorrdict['kemctl1'],color=colordict['kemctl1'],linewidth=3)
     plt.legend(('r1','r2','r3','r4','r5','ens','meanBC'),'upper left',prop=fontP)
     plt.xlim((1,12))
     plt.title('pattern correlation with HadISST')
