@@ -344,6 +344,9 @@ def getNCvar_old(filename,field,timechunk=None,monsel=None,level=None,seas=None,
 
     if monsel != None:
         # send back only selected month
+        # monsel is 1-based! ie 1=Jan, 2=Feb. But the index is zero-based
+        #   so shift by 1:
+        monsel = monsel-1
         fld = fld[monsel::12,...]
 
         
