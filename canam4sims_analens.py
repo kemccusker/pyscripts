@@ -20,18 +20,19 @@ import constants as con      # my module
 import cccmautils as cutl    # my module
 import matplotlib.font_manager as fm
 import copy
+import cccmacmaps as ccm
 
 # while I'm still creating these modules, have to reload to get changes
 cplt = reload(cplt)
 con = reload(con)
 cutl = reload(cutl)
-#ccm = reload(ccm)
+ccm = reload(ccm)
 cnc = reload(cnc)
 
 plt.close("all")
 plt.ion()
 
-printtofile=1
+printtofile=0
 
 plotann=0    # seasonal avg map, comparing ens runs and meanBC
 plotallmos=0 # monthly maps (@@ not implemented)
@@ -40,7 +41,7 @@ plotzonmean=0 # plotzonmean and plotseacyc are mutually exclusive
 plotseacyc=0 # plotzonmean and plotseacyc are mutually exclusive
 withlat=0 # plot the seasonal cycle with latitude dimension too (only for plotseacyc=1)
 pattcorrwithtime=1 # plot pattern correlation with time for each ens member
-pattcorryr=1 # if 1, do a yearly anomaly pattern rather than time-integrated 
+pattcorryr=0 # if 1, do a yearly anomaly pattern rather than time-integrated 
 
 testhadisst=0 # check which ens member most similar to hadisst
 normbystd=0
@@ -76,7 +77,7 @@ timstr2='001-111'
 # # # ######## set Field info ###################
 # gz, t, u, v, q (3D !)
 # st, sic, sicn (sia), gt, pmsl, pcp, hfl, hfs, turb, flg, fsg, fn, pcpn, zn, su, sv (@@later ufs,vfs)
-field = 'gz'
+field = 'st'
 print field
 timeavg = 'DJF'
 
@@ -364,13 +365,24 @@ else:  # on linux workstation in Vic
     subdir = '/ts/'
 
 
+# set filename for getting lat,lon
 if threed==1:
     fieldstr=field+str(level/100)
     fnamec = basepath + casename + subdir + casename + '_' + field + '_001-061_ts.nc' # for lat,lon
 
 else:
     fieldstr=field
+    if field == 'sia':
+        sia=1
+        field='sicn' # only really sia for zonal mean and seasonal cycle
+        
     fnamec = basepath + casename + subdir + casename + '_' + field + '_' + timstr + '_ts.nc'
+    if sia==1:
+        field='sia'
+
+lat = cnc.getNCvar(fnamec,'lat')
+lon = cnc.getNCvar(fnamec,'lon')
+
 
 if plotann:
 
@@ -636,8 +648,6 @@ if plotann:
 
 # end plotann
 
-lat = cnc.getNCvar(fnamec,'lat')
-lon = cnc.getNCvar(fnamec,'lon')
 #sigs = np.ones((12,fldc.shape[1],fldc.shape[2])) unused
 
 
@@ -988,7 +998,11 @@ if plotzonmean==1 or plotseacyc==1 or pattcorrwithtime==1:
                     fldpzm = np.append(cnc.getNCvar(fnamep,ncfield,timesel='0002-01-01,061-12-31',**ncparams)*conv,
                                         cnc.getNCvar(fnamep2,ncfield,**ncparams)*conv,
                                         axis=0)
-                if sia==1:                    
+                if sia==1:
+                    #areas = cutl.calc_cellareas(lat,lon,repeat=fldczm.shape)
+                    #print areas.shape
+                    #fldczm = fldczm*areas
+                    #fldpzm = fldpzm*areas
                     fldczm = cutl.calc_seaicearea(fldczm,lat,lon)
                     fldpzm = cutl.calc_seaicearea(fldpzm,lat,lon)
                     
@@ -1025,10 +1039,11 @@ if plotzonmean==1 or plotseacyc==1 or pattcorrwithtime==1:
                     fldczm = np.mean(fldczm,axis=2)
                     fldpzm = np.mean(fldpzm,axis=2)
                 else:
-                    if field == 'sia':
+                    #print field
+                    if sia==1:
                         #calc total area instead of average
-                        fldczm = np.sum(np.sum(fldczm[lat>0,:],axis=2),axis=1)
-                        fldpzm = np.sum(np.sum(fldpzm[lat>0,:],axis=2),axis=1)
+                        fldczm = np.sum(np.sum(fldczm[:,lat>0,:],axis=2),axis=1)
+                        fldpzm = np.sum(np.sum(fldpzm[:,lat>0,:],axis=2),axis=1)
                     else:
                         fldczm = cutl.polar_mean_areawgted3d(fldczm,lat,lon,latlim=latlim)
                         fldpzm = cutl.polar_mean_areawgted3d(fldpzm,lat,lon,latlim=latlim)
@@ -1063,7 +1078,7 @@ if plotzonmean==1 or plotseacyc==1 or pattcorrwithtime==1:
 fontP = fm.FontProperties()
 fontP.set_size('small')
 
-darkolivegreen1 = np.array([202, 255, 112])/255 # terrible
+darkolivegreen1 = np.array([202, 255, 112])/255. # terrible
 darkolivegreen3 = np.array([162, 205, 90])/255.
 darkseagreen = np.array([143, 188, 143])/255.
 darkseagreen4 = np.array([105, 139, 105])/255.
@@ -1075,9 +1090,21 @@ steelblue3 = np.array([79, 148, 205])/255.  # more blue looking
 steelblue4 = np.array([54, 100, 139])/255.  # more blue looking
 
 colors = darkseagreen,darkseagreen4,lightsteelblue3,lightsteelblue4,steelblue4,dodgerblue,orangered4,darkolivegreen3
-colordict = {'kemctl1r1': darkseagreen, 'kemctl1r2': darkseagreen4, 'kemctl1r3': lightsteelblue3,
-             'kemctl1r4': lightsteelblue4, 'kemctl1r5': steelblue4, 'kemctl1ens': dodgerblue,
-             'kemctl1': orangered4, 'kemhadctl': darkolivegreen3 }
+## colordict = {'kemctl1r1': darkseagreen, 'kemctl1r2': darkseagreen4, 'kemctl1r3': lightsteelblue3,
+##              'kemctl1r4': lightsteelblue4, 'kemctl1r5': steelblue4, 'kemctl1ens': dodgerblue,
+##              'kemctl1': orangered4, 'kemhadctl': darkolivegreen3 }
+
+# try to match the warmness of color to the amount of sea ice loss in the simulation
+#  Warmer means more loss in melt season. Ensemble mean, PERT2, and obs (hadisst) have special colors
+colordict = {'kemctl1r1': ccm.get_linecolor('chocolate4'), #'firebrick'),
+             'kemctl1r4': ccm.get_linecolor('firebrick'), #'firebrick1'),
+             'kemctl1r3': ccm.get_linecolor('firebrick1'), #'yelloworange'),#'chocolate1'),
+             'kemctl1r5': ccm.get_linecolor('yelloworange'), #'darkyellow') #'skyblue'), #yelloworange'),
+             'kemctl1r2': ccm.get_linecolor('darkyellow'), #'steelblue3'), #'darkgoldenrod1'),
+             'kemctl1ens': ccm.get_linecolor('magenta'),
+             'kemctl1': ccm.get_linecolor('dodgerblue'), #'mediumpurple1'), #darkyellow'),
+             'kemhadctl': ccm.get_linecolor('darkolivegreen3')}
+             
 if addobs:
     skip=-3 # use this to only take std dev over ens members r*
 else:
@@ -1241,6 +1268,30 @@ if plotzonmean:
 
 if plotseacyc:
 
+    print '@@ Use pandas and DataFrame!'
+    # http://pandas.pydata.org/pandas-docs/stable/indexing.html#indexing
+    
+    ## Operation 	Syntax 	Result
+    ## Select column 	df[col] 	Series
+    ## Select row by label 	df.loc[label] 	Series
+    ## Select row by integer location 	df.iloc[loc] 	Series
+    ## Slice rows 	df[5:10] 	DataFrame
+    ## Select rows by boolean vector 	df[bool_vec] 	DataFrame
+
+    # To plot from DataFrame: @@
+    #      import pandas as pd
+    #   create DataFrame from dictionary:
+    #      df = pd.DataFrame(flddiffdict)
+    #   select all months for one simulation for plotting:
+    #      #this gets the 12 months for the given simulation, but months are out of order
+    #      seacycle = df[simkey]
+    #   change months tuple to list for indexing df and getting in correct order
+    #      mol = list(months)
+    #      plt.plot(seacycle[mol] # plots in correct order
+
+    # @@ this should help with getting a range of ensemble runs (max,min) for shading
+
+    
     if withlat:
         fldcestd = np.zeros((len(seasons),len(lat))) # ensemble std dev
         fldpestd = np.zeros((len(seasons),len(lat)))
@@ -1499,7 +1550,7 @@ if pattcorrwithtime==1:
             else:
                 ax.plot(fldpcorrdict[sim][sea],color=colordict[sim])
         ax.set_ylim(ylims)    
-        ax.set_title(field + ': ' + sea)
+        ax.set_title(fieldstr + ': ' + sea)
         
     ax.set_xlabel('lat')
     ax.legend(sims,'lower right', prop=fontP,ncol=2)
