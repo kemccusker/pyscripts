@@ -21,14 +21,14 @@ cnc = reload(cnc)
 plt.close("all")
 plt.ion()
 
-printtofile=1
+printtofile=0
 testsic=0
 
 mtype='nh'  # map type (nh,sh,sq)
 plotallmos=0
-plotseacyc=0
+plotseacyc=1
 plotseacycmag=0 # only for SST
-diffobs=1 # difference canesm and hadisst bcs
+diffobs=0 # difference canesm and hadisst bcs
 
 had=0
 hurr=0
@@ -41,8 +41,8 @@ canesm=1 # assume pert2 if "doBCs"
 #    so something is wrong w/ my CanESM calc. Potentially it's just related to masking
 #    and/or polar average function.
 
-sic=1
-sicn=0
+sic=0
+sicn=1
 #else SST
 
 doBCs=0  # use the actual BC files @@so far only hadisst sst
@@ -106,7 +106,7 @@ if sicn:
     hadsiccts = cnc.getNCvar(fhadsicts,'SICN')
     hadsiccclimo,junk = cutl.climatologize3d(hadsiccts)
     
-    hurrsicc = cnc.getNCvar(fhurrsic,'SEAICE')/100
+    hurrsicc = cnc.getNCvar(fhurrsic,'SEAICE')/100.
     hurrtimes = cnc.getNCvar(fhurrsic,'time')
     #hurrsicc.resize(hadsicc.shape) # can't resize like this. ??
     #np.append(hurrsicc,hurrsicc[:,:,0])#,axis=2) # could not get append to work
@@ -121,8 +121,10 @@ if sicn:
     hadsicc = hadsicc[...,:-1]
     hadsicp = hadsicp[...,:-1]
     hadsicd = hadsicp - hadsicc
+    hadsiccclimo = hadsiccclimo[...,:-1]
+    hadsicpclimo = hadsicpclimo[...,:-1]
     
-    hurrsicp = cnc.getNCvar(fhurrsicp,'SEAICE')/100
+    hurrsicp = cnc.getNCvar(fhurrsicp,'SEAICE')/100.
     #hurrsicc.resize(hadsicc.shape) # other datasets have extra lon.
     #hurrsicp[:,:,len(lon)-1] = hurrsicp[:,:,0] # add a wraparound
     hurrsicp = np.flipud(hurrsicp)  # the lats are flipped compared to hadisst and nsidc
@@ -510,10 +512,10 @@ if testsic==0:
 
             fig = plt.figure()
             plt.plot(hadsiacnh,'k'); plt.plot(hadsiapnh,'k--')
-            #plt.plot(hurrsiacnh,'b'); plt.plot(hurrsiapnh,'b--') # SCREWY
+            #plt.plot(hurrsiacnh,'b'); plt.plot(hurrsiapnh,'b--') # SCREWY, wrong hem?!
             plt.plot(nsidcsiacnh,'r'); plt.plot(nsidcsiapnh,'r--')
             plt.plot(cansiacnh,'g'); plt.plot(cansiapnh,'g--')
-            plt.plot(hadsiacclimonh,'c'); plt.plot(hadsiapclimonh,'c--')
+            #plt.plot(hadsiacclimonh,'c'); plt.plot(hadsiapclimonh,'c--')# this was for testing
             plt.legend(('HadISST 1979-89','HadISST 2002-11',
                         'NSIDCbt 1979-89','NSIDCbt 2002-11',
                         'CanESM2 1979-89','CanESM2 2002-12'),'lower left')
