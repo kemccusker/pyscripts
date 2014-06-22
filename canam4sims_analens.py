@@ -39,10 +39,10 @@ plotann=0    # seasonal avg map, comparing ens runs and meanBC
 plotallmos=0 # monthly maps (@@ not implemented)
 seasonal=0 # seasonal maps (DJF, MAM, JJA, SON)
 plotzonmean=0 # plotzonmean and plotseacyc are mutually exclusive
-plotseacyc=1 # plotzonmean and plotseacyc are mutually exclusive
+plotseacyc=0 # plotzonmean and plotseacyc are mutually exclusive
 withlat=0 # plot the seasonal cycle with latitude dimension too (only for plotseacyc=1)
-pattcorrwithtime=0 # plot pattern correlation with time for each ens member
-pattcorryr=0 # if 1, do a yearly anomaly pattern rather than time-integrated 
+pattcorrwithtime=1 # plot pattern correlation with time for each ens member
+pattcorryr=1 # if 1, do a yearly anomaly pattern rather than time-integrated 
 
 testhadisst=0 # check which ens member most similar to hadisst
 normbystd=0
@@ -78,7 +78,7 @@ timstr2='001-111'
 # # # ######## set Field info ###################
 # gz, t, u, v, q (3D !)
 # st, sic, sicn (sia), gt, pmsl, pcp, hfl, hfs, turb, flg, fsg, fn, pcpn, zn, su, sv (@@later ufs,vfs)
-field = 'sia'
+field = 'pmsl'
 print field
 timeavg = 'DJF'
 
@@ -891,11 +891,6 @@ if plotzonmean==1 or plotseacyc==1 or pattcorrwithtime==1:
         latlim = 70 # for area averaging
         seasons = con.get_mon()
 
-#    if addobs:
-#        sims = bcasename + 'r1', bcasename+'r2',bcasename+'r3',bcasename+'r4', bcasename+'r5',bcasename+'ens',bcasename,'kemhadctl'
-#    else:
-#        sims = bcasename + 'r1', bcasename+'r2',bcasename+'r3',bcasename+'r4', bcasename+'r5',bcasename+'ens',bcasename
-
     if sia==1:
         field = 'sicn' # while getting the data...
         
@@ -1604,9 +1599,9 @@ if pattcorrwithtime==1:
             if pattcorryr:
                 sorted = fldpcorrdict[sim][sea]
                 sorted.sort()
-                ax.plot(sorted,color=colordict[sim])
+                ax.plot(sorted,color=colordict[sim],linewidth=2)
             else:
-                ax.plot(fldpcorrdict[sim][sea],color=colordict[sim])
+                ax.plot(fldpcorrdict[sim][sea],color=colordict[sim],linewidth=2)
         ax.set_ylim(ylims)    
         ax.set_title(fieldstr + ': ' + sea)
         
