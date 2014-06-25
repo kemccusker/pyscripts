@@ -12,6 +12,26 @@ import numpy as np
 from netCDF4 import Dataset
 import platform as platform
 
+def get_basepath():
+    """ get_basepath():
+           returns path to data, depending on what machine we're running on
+           output: bp['basepath'|'subdir'] (dictionary with basepath and subdir keys)
+                     typically the pathtodata would be basepath+model+subdir
+    """
+
+    bp={}
+    
+    plat = platform.system()   
+    if plat == 'Darwin':  # means I'm on my mac
+        bp['basepath'] = '/Volumes/MyPassport1TB/DATA/CanSISE/'
+        bp['subdir'] = '/'
+
+    else:  # on linux workstation in Vic
+        bp['basepath'] = '/home/rkm/work/DATA/'
+        bp['subdir'] = '/ts/'
+
+    return bp
+    
 def get_t63landmask(repeat=None):
     """ Return ground cover.
         64x129
