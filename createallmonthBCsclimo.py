@@ -36,13 +36,14 @@ testplots = 1
 model = 'CanESM2'
 timeres = 'Amon'
 
-field = 'ts' # 'ts', 'sic', 'sit' # these are the model output CMIP names
-adjustsst=1
-threshtype = 'abs' # absolute or relative threshold for sea ice conc change
-thresh = 10  # threshold for where to change SST
+field = 'sit' # 'ts', 'sic', 'sit' # these are the model output CMIP names
+adjustsst=1 # for field='ts'
+threshtype = 'abs' # for field='sic'. absolute or relative threshold for sea ice conc change
+thresh = 10  #for field='sic'. threshold for where to change SST
 
-controlsit=0 # set to 1 if want to keep the control sit. not implemented 4/22/14
-ensmembers = 1; eindex=5 # make BC files for specified CanESM ensemble member
+controlsit=1 # for field='sit'. set to 1 if want to keep the control sit.
+usesictest=1 # for field='sit' and controlsit=1. use pert sea ice conc to check where sit=0
+ensmembers = 1; eindex=4 # make BC files for specified CanESM ensemble member
 
 casenamec = 'historical'; timeperc = '1979-1989'
 #casename = 'rcp85';
@@ -204,8 +205,29 @@ elif field == 'sic':
 
 elif field == 'sit' and controlsit:
     # keep control sit
-    print 'Keeping control SIT is not implemented. Do not need it anymore?' #@@
+    
+    fldc = fldc*deni
+    fldp = fldp*deni
+    
+    if usesictest==1: #use pert sea ice concentration as the check
+        # this is the one we use for kem1pert3
+        
+        # need to get pert sea-ice concentration to check thickness against SIConc
+        filename = basepath + model + '/' + casename + '/sic/' + \
+                   'sic_OImon_' + model + '_' + casename + \
+                   '_' + enstype + '_' + timeper + 'climo.nc'
+        print filename
+        sicp = cnc.getNCvar(filename,'sic')
 
+        fldtmp = copy.copy(fldc) # start with control thickness
+        fldtmp[sicp<0.01] = 0 # anywhere pert sic (concentration) is 0, make thickness 0
+        fldsave=copy.copy(fldp) # dummy, save orig pert
+        fldp = copy.copy(fldtmp)
+        print fldtmp.shape # @@
+    else:
+        #use pert sea ice thickness as the check
+        print 'Keep control SIT with usesittest is not implemented. Do not need it anymore?' #@@
+    
 elif field == 'sit':
     fldc = fldc*deni
     fldp = fldp*deni
@@ -306,26 +328,31 @@ if writefiles:
             print fldout.shape
 
             # note that timeper is the perturbed time period
+            # casenameout is the current casenames element
             if thetimeper==timeper and field == 'ts' and adjustsst: 
                 outfile= bcfield + 'adjusted_BC_CanESM2_' + casenameout + '_' + thetimeper + '_' +\
                          datestr + '_' + threshtype + str(thresh) + 'thresh.nc'
             elif thetimeper==timeper and field == 'ts' and ~adjustsst:
                 if ensmembers:
-                    print 'the casename on this output file does not include ensemble #! eindex=' + str(eindex)
-                    
-                outfile = bcfield + 'frzchk' + casename + timeper + '_BC_CanESM2_' +\
-                          casenamec + '_' + timeperc + '_' + datestr + '.nc'           
+                    outfile = bcfield + 'frzchk' + casename + 'r' + str(eindex) + timeper + '_BC_CanESM2_' +\
+                              casenamec + 'r' + str(eindex) + '_' + timeperc + '_' + datestr + '.nc'
+                else:
+                    outfile = bcfield + 'frzchk' + casename + timeper + '_BC_CanESM2_' +\
+                              casenamec + '_' + timeperc + '_' + datestr + '.nc'           
                 # the data is the control, but open water temps are checked for below freezing where no pert ice
             elif thetimeper==timeper and field == 'sit' and controlsit:
-                if ensmembers:
-                    print 'the casename on this output file does not include ensemble #! eindex=' + str(eindex)
+                
                 if usesictest:
-                    outfile=bcfield + '_BC_CanESM2_' + casenamec + '_' + timeperc + 'forpert_' +\
-                             datestr + '_usesictest.nc'
+                    teststr='usesictest'                   
+                else:
+                    teststr='usesittest'
+
+                if ensmembers:
+                    outfile=bcfield + '_BC_CanESM2_' + casenamec + 'r' + str(eindex) + '_' + timeperc + 'forpert_' +\
+                             datestr + '_' + teststr + '.nc'
                 else:
                     outfile=bcfield + '_BC_CanESM2_' + casenamec + '_' + timeperc + 'forpert_' +\
-                             datestr + '_usesittest.nc'
-
+                             datestr + '_' + teststr + '.nc'
             else:
                 outfile=bcfield + '_BC_CanESM2_' + casenameout + '_' + thetimeper + '_' + datestr + '.nc'
 
