@@ -15,7 +15,7 @@ import matplotlib.cm as cm
 from subprocess import call # for doing system calls - not really needed
 import datetime as datetime
 import matplotlib.colors as col
-import platform as platform
+#import platform as platform
 import constants as con      # my module
 import cccmautils as cutl    # my module
 import matplotlib.font_manager as fm
@@ -42,7 +42,7 @@ plotzonmean=0 # plotzonmean and plotseacyc are mutually exclusive
 plotseacyc=0 # plotzonmean and plotseacyc are mutually exclusive
 withlat=0 # plot the seasonal cycle with latitude dimension too (only for plotseacyc=1)
 pattcorrwithtime=1 # plot pattern correlation with time for each ens member
-pattcorryr=1 # if 1, do a yearly anomaly pattern rather than time-integrated 
+pattcorryr=0 # if 1, do a yearly anomaly pattern rather than time-integrated 
 
 testhadisst=0 # check which ens member most similar to hadisst
 normbystd=0
@@ -78,7 +78,7 @@ timstr2='001-111'
 # # # ######## set Field info ###################
 # gz, t, u, v, q (3D !)
 # st, sic, sicn (sia), gt, pmsl, pcp, hfl, hfs, turb, flg, fsg, fn, pcpn, zn, su, sv (@@later ufs,vfs)
-field = 'pmsl'
+field = 'gz'
 print field
 timeavg = 'DJF'
 
@@ -356,14 +356,9 @@ else:
 
 
 # # # ########## Read NC data ###############
-plat = platform.system()
 
-if plat == 'Darwin':  # means I'm on my mac
-    basepath = '/Volumes/MyPassport1TB/DATA/CanSISE/' + model + '/'
-    subdir = '/'
-else:  # on linux workstation in Vic
-    basepath = '/home/rkm/work/DATA/' + model + '/'
-    subdir = '/ts/'
+bp=con.get_basepath()
+basepath=bp['basepath'] + model + '/'; subdir=bp['subdir']
 
 
 # set filename for getting lat,lon
