@@ -57,7 +57,7 @@ def getNCvar(filename,field,timesel=None,levsel=None,monsel=None,seas=None,calc=
         else:
             level=None        
 
-        if timesel == '0002-01-01,0111-12-31' or timesel == '0002-01-01,0061-12-31':
+        if timesel == '0002-01-01,0111-12-31' or timesel == '0002-01-01,0061-12-31' or timesel=='0002-01-01,0121-12-31':
             print 'hard-coded skipping of first year @@'
             fld = getNCvar_old(filename,field,seas=seas, monsel=monsel,timechunk=(12,),level=level,calc=calc)
         else:
@@ -162,6 +162,7 @@ def getNCvar(filename,field,timesel=None,levsel=None,monsel=None,seas=None,calc=
                                   returnArray = field)
             else: # levsel and monsel are both None
                 fld = cdo.seldate(timesel,input = filename, returnArray = field)
+                
             os.system('rm -rf /tmp/cdoPy*')
             
         elif calc == 'zm': # and timesel must be None
