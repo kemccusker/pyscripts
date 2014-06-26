@@ -39,9 +39,9 @@ plotann=0    # seasonal avg map, comparing ens runs and meanBC
 plotallmos=0 # monthly maps (@@ not implemented)
 seasonal=0 # seasonal maps (DJF, MAM, JJA, SON)
 plotzonmean=0 # plotzonmean and plotseacyc are mutually exclusive
-plotseacyc=0 # plotzonmean and plotseacyc are mutually exclusive
+plotseacyc=1 # plotzonmean and plotseacyc are mutually exclusive
 withlat=0 # plot the seasonal cycle with latitude dimension too (only for plotseacyc=1)
-pattcorrwithtime=1 # plot pattern correlation with time for each ens member
+pattcorrwithtime=0 # plot pattern correlation with time for each ens member
 pattcorryr=0 # if 1, do a yearly anomaly pattern rather than time-integrated 
 
 testhadisst=0 # check which ens member most similar to hadisst
@@ -442,11 +442,11 @@ if plotann:
 
             fldc2 = np.append(cnc.getNCvar(frootc2+'001-061_ts.nc',ncfield,
                                           timesel='0002-01-01,061-12-31',levsel=level)*conv,
-                             cnc.getNCvar(frootc2+'062-111_ts.nc',ncfield,levsel=level)*conv,
+                             cnc.getNCvar(frootc2+'062-121_ts.nc',ncfield,levsel=level)*conv,
                              axis=0)
             fldp2 = np.append(cnc.getNCvar(frootp2+'001-061_ts.nc',ncfield,
                                           timesel='0002-01-01,061-12-31',levsel=level)*conv,
-                             cnc.getNCvar(frootp2+'062-111_ts.nc',ncfield,levsel=level)*conv,
+                             cnc.getNCvar(frootp2+'062-121_ts.nc',ncfield,levsel=level)*conv,
                              axis=0)
 
 
@@ -763,9 +763,9 @@ if seasonal:
                 fnamep = frootp + timstr2 + '_ts.nc'
             else:
                 fnamec = frootc + '001-061_ts.nc'
-                fnamec2 = frootc + '062-111_ts.nc'
+                fnamec2 = frootc + '062-121_ts.nc'
                 fnamep = frootp + '001-061_ts.nc'
-                fnamep2 = frootp + '062-111_ts.nc'
+                fnamep2 = frootp + '062-121_ts.nc'
             
             rowl = 'meanBC'
 
@@ -928,9 +928,9 @@ if plotzonmean==1 or plotseacyc==1 or pattcorrwithtime==1:
                 fnamep = frootp + timstr2 + '_ts.nc'
             else:
                 fnamec = frootc + '001-061_ts.nc'
-                fnamec2 = frootc + '062-111_ts.nc'
+                fnamec2 = frootc + '062-121_ts.nc'
                 fnamep = frootp + '001-061_ts.nc'
-                fnamep2 = frootp + '062-111_ts.nc'
+                fnamep2 = frootp + '062-121_ts.nc'
 
             sim = bcasename
         elif ridx==7: # observation simulation
@@ -1639,8 +1639,8 @@ if testhadisst:
                      '_' + field + '_'
             frootp = basepath + bcasenamep + subdir + bcasenamep +\
                      '_' + field + '_'
-            fnamec = frootc + '001-111_ts.nc'
-            fnamep = frootp + '001-111_ts.nc'
+            fnamec = frootc + timstr + '_ts.nc'
+            fnamep = frootp + timstrp + '_ts.nc'
             sim = bcasename
 
         else:
