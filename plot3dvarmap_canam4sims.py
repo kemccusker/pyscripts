@@ -47,7 +47,7 @@ allmos=1 # make monthly figures
 bimos=0  # bi-monthly figures. not implemented yet 4/29/14
 seasonal=1 # seasonal figures
 singleplots=1  # seasonal climo and mean diff
-obssims=1    # this will overrule the simulation settings and set to kemhad*
+obssims=0    # this will overrule the simulation settings and set to kemhad*
 thickness=0; level2=70000 # calc thickness between level and level2 for GZ only, typically 1000-700hPa
 #level = 100000 # for thickness calc
 
@@ -63,7 +63,8 @@ sigtype = 'cont' # significance: 'cont' or 'hatch' which is default
     90000, 92500, 95000, 97500, 100000 ;
 """
 
-seasons = 'DJF','MAM','JJA','SON'
+#seasons = 'DJF','MAM','JJA','SON'
+seasons = 'SON','DJF','MAM','JJA'
 
 model = 'CanAM4'
 ftype = 'ts'    # timeseries
@@ -74,18 +75,18 @@ season = 'ANN'
 # Control run
 casename = 'kemctl1'
 timstr = '001-061'
-timstr2 = '062-111'
+timstr2 = '062-121'
 
 # Pert run
 casenamep1 = 'kem1pert1'  # 2002-2012 sic and sit
 casenamep2 = 'kem1pert2'  # 2002-2012 sic, sit, adjusted sst
 casenamep3 = 'kem1pert3'  # 2002-2012 sic, adjusted sst. control sit
 timstrp = '001-061'
-timstrp2 = '062-111'
+timstrp2 = '062-121'
 casenamepra = 'kem1rcp85a' # 2022-2032 sic, adjusted sst, sit from RCP8.5
 
 ######## set pert run ############
-casenamep = casenamep1
+casenamep = casenamepra
 
 ########### OR SET OTHER RUNS ##############
 if obssims:
@@ -102,7 +103,7 @@ cmapclimo = 'Spectral_r'
 conv = 1   # conversion factor to convert units, etc
 
 # # # ######## set Field info ###############
-field = 'gz'  # t, u, gz
+field = 'u'  # t, u, gz
 
 
 if sigtype=='cont':
