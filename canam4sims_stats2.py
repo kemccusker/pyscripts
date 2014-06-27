@@ -51,8 +51,8 @@ model = 'CanAM4'
 # # # ########### set Simulations #############
 # Control run
 casename = 'kemctl1'
-timstr = '001-111'
-timesel = '0002-01-01,0111-12-31'
+timstr = '001-121'
+timesel = '0002-01-01,0121-12-31'
 
 # Pert run
 #casenamep1 = 'kem1pert1'  # 2002-2012 sic and sit
@@ -60,7 +60,7 @@ casenamep1 = 'kem1pert1b'  # 2002-2012 sic and sit
 
 casenamep2 = 'kem1pert2'  # 2002-2012 sic, sit, adjusted sst
 casenamep3 = 'kem1pert3'  # 2002-2012 sic, adjusted sst. control sit
-timstrp = '001-111'
+timstrp = '001-121'
 casenamepra = 'kem1rcp85a' # 2022-2032 sic, adjusted sst, sit from RCP8.5
 
 
@@ -274,8 +274,8 @@ if field=='turb':
            cnc.getNCvar(fnamecb,fieldb.upper(),timesel=timesel)*conv
     fldp = cnc.getNCvar(fnamep,field.upper(),timesel=timesel)*conv+ \
            cnc.getNCvar(fnamepb,fieldb.upper(),timesel=timesel)*conv
-    ## fldp2 = cnc.getNCvar(fnamep2,field.upper(),timesel='0002-01-01,0111-12-31')*conv+cnc.getNCvar(fnamep2b,fieldb.upper(),timesel='0002-01-01,0111-12-31')*conv
-    ## fldp3 = cnc.getNCvar(fnamep3,field.upper(),timesel='0002-01-01,0111-12-31')*conv+cnc.getNCvar(fnamep3b,fieldb.upper(),timesel='0002-01-01,0111-12-31')*conv
+    ## fldp2 = cnc.getNCvar(fnamep2,field.upper(),timesel='0002-01-01,0121-12-31')*conv+cnc.getNCvar(fnamep2b,fieldb.upper(),timesel='0002-01-01,0121-12-31')*conv
+    ## fldp3 = cnc.getNCvar(fnamep3,field.upper(),timesel='0002-01-01,0121-12-31')*conv+cnc.getNCvar(fnamep3b,fieldb.upper(),timesel='0002-01-01,0121-12-31')*conv
     field='turb'
 else:
     fnamec = basepath + casename + subdir + casename + '_' + field + '_' + timstr + '_ts.nc'
@@ -285,8 +285,8 @@ else:
 
     fldc = cnc.getNCvar(fnamec,field.upper(),timesel=timesel)*conv
     fldp = cnc.getNCvar(fnamep,field.upper(),timesel=timesel)*conv
-    ## fldp2 = cnc.getNCvar(fnamep2,field.upper(),timesel='0002-01-01,0111-12-31')*conv
-    ## fldp3 = cnc.getNCvar(fnamep3,field.upper(),timesel='0002-01-01,0111-12-31')*conv
+    ## fldp2 = cnc.getNCvar(fnamep2,field.upper(),timesel='0002-01-01,0121-12-31')*conv
+    ## fldp3 = cnc.getNCvar(fnamep3,field.upper(),timesel='0002-01-01,0121-12-31')*conv
 
 # Get the data
 ## ncfilec = Dataset(fnamec,'r') # control
@@ -518,17 +518,17 @@ if seasonal:
         
         if field=='turb':
             field='hfl'; fieldb='hfs'
-            fldcsea = cnc.getNCvar(fnamec,field.upper(),timesel='0002-01-01,0111-12-31',
+            fldcsea = cnc.getNCvar(fnamec,field.upper(),timesel='0002-01-01,0121-12-31',
                                            seas=seasons[midx])*conv + cnc.getNCvar(fnamecb,fieldb.upper(),
-                                           timesel='0002-01-01,0111-12-31',seas=seasons[midx])*conv
-            fldpsea = cnc.getNCvar(fnamep,field.upper(),timesel='0002-01-01,0111-12-31',
+                                           timesel='0002-01-01,0121-12-31',seas=seasons[midx])*conv
+            fldpsea = cnc.getNCvar(fnamep,field.upper(),timesel='0002-01-01,0121-12-31',
                                            seas=seasons[midx])*conv + cnc.getNCvar(fnamepb,fieldb.upper(),
-                                           timesel='0002-01-01,0111-12-31',seas=seasons[midx])*conv 
+                                           timesel='0002-01-01,0121-12-31',seas=seasons[midx])*conv 
             field='turb'
         else:
-            fldcsea = cnc.getNCvar(fnamec,field.upper(),timesel='0002-01-01,0111-12-31',
+            fldcsea = cnc.getNCvar(fnamec,field.upper(),timesel='0002-01-01,0121-12-31',
                                            seas=seasons[midx])*conv # @@ returns only 109 indices?, oh prob for winter...
-            fldpsea = cnc.getNCvar(fnamep,field.upper(),timesel='0002-01-01,0111-12-31',
+            fldpsea = cnc.getNCvar(fnamep,field.upper(),timesel='0002-01-01,0121-12-31',
                                            seas=seasons[midx])*conv
 
         tstat[midx,:,:],pval[midx,:,:] = sp.stats.ttest_ind(fldpsea,fldcsea,axis=0)
