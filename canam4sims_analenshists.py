@@ -18,6 +18,7 @@ import matplotlib.colors as col
 import platform as platform
 import constants as con      # my module
 import cccmautils as cutl    # my module
+import cccmacmaps as ccm
 import matplotlib.font_manager as fm
 import copy
 
@@ -25,7 +26,7 @@ import copy
 cplt = reload(cplt)
 con = reload(con)
 cutl = reload(cutl)
-#ccm = reload(ccm)
+ccm = reload(ccm)
 cnc = reload(cnc)
 
 plt.close("all")
@@ -36,18 +37,21 @@ printtofile=1
 
 seasonal=0 # seasonal maps (DJF, MAM, JJA, SON)
 addobs=1 # add mean of kemhad* runs to line plots, seasonal maps (so far@@)
-latlim = 45 # lat limit for NH plots. Set to None otherwise.
-maskland=False
+latlim = 60 # lat limit for NH plots. Set to None otherwise.
+
+maskland=False # To get ocean-lake-only hist: mutually exclusive
+maskocean=False # To get land-only hist: mutually exclusive
 
 seasonal=1 # mutually exclusive
 monthly=0  # mutually exclusive
 
-seasons = 'DJF','MAM','JJA','SON'
+#seasons = 'DJF','MAM','JJA','SON'
+seasons = 'SON','DJF','MAM','JJA'
 
 model = 'CanAM4'
 threed=0
 sia=0 # is the requested field sea ice area
-
+mtype=''
 
 # # # ########### set Simulations #############
 # Control run
@@ -62,13 +66,13 @@ timstrp = '001-121'
 # ######### set second set of sims (mean BC) ##########
 casename2 = 'kemctl1'
 casenamep2 = 'kem1pert2'
-timstr2='001-111'
+timstr2='001-121'
 
 
 # # # ######## set Field info ###################
 # gz, t, u, v, q (3D !)
 # st, sic, sicn (sia), gt, pmsl, pcp, hfl, hfs, turb, flg, fsg, fn, pcpn, zn, su, sv (@@later ufs,vfs)
-field = 'pcp'
+field = 'pmsl'
 print field
 
 # only for threed vars
@@ -148,6 +152,8 @@ elif field == 'pmsl':
     cmap = 'blue2red_20'
     cminn = -1; cmaxn = 1 # for norm by std
     leglocs = 'lower left', 'upper left', 'upper center', 'upper left'
+
+    xlims = -25,25; ylims = 0,0.2; ylims2=0,6 
 elif field == 'pcp':
     units = 'mm/day' # original: kg m-2 s-1
     
@@ -341,14 +347,17 @@ else:
 
 
 # # # ########## Read NC data ###############
-plat = platform.system()
+bp=con.get_basepath()
+basepath=bp['basepath'] + model + '/'; subdir=bp['subdir']
 
-if plat == 'Darwin':  # means I'm on my mac
-    basepath = '/Volumes/MyPassport1TB/DATA/CanSISE/' + model + '/'
-    subdir = '/'
-else:  # on linux workstation in Vic
-    basepath = '/home/rkm/work/DATA/' + model + '/'
-    subdir = '/ts/'
+## plat = platform.system()
+
+## if plat == 'Darwin':  # means I'm on my mac
+##     basepath = '/Volumes/MyPassport1TB/DATA/CanSISE/' + model + '/'
+##     subdir = '/'
+## else:  # on linux workstation in Vic
+##     basepath = '/home/rkm/work/DATA/' + model + '/'
+##     subdir = '/ts/'
 
 # prob don't need this next chunk if looping down below @@@
 if field=='turb':
@@ -406,11 +415,11 @@ else:
 
         fldc2 = np.append(cnc.getNCvar(frootc2+'001-061_ts.nc',ncfield,
                                       timesel='0002-01-01,061-12-31',levsel=level)*conv,
-                         cnc.getNCvar(frootc2+'062-111_ts.nc',ncfield,levsel=level)*conv,
+                         cnc.getNCvar(frootc2+'062-121_ts.nc',ncfield,levsel=level)*conv,
                          axis=0)
         fldp2 = np.append(cnc.getNCvar(frootp2+'001-061_ts.nc',ncfield,
                                       timesel='0002-01-01,061-12-31',levsel=level)*conv,
-                         cnc.getNCvar(frootp2+'062-111_ts.nc',ncfield,levsel=level)*conv,
+                         cnc.getNCvar(frootp2+'062-121_ts.nc',ncfield,levsel=level)*conv,
                          axis=0)
         
 
@@ -430,113 +439,146 @@ else:
 
 months=con.get_mon()
 
-darkolivegreen1 = np.array([202, 255, 112])/255 # terrible
-darkolivegreen3 = np.array([162, 205, 90])/255.
-darkseagreen = np.array([143, 188, 143])/255.
-darkseagreen4 = np.array([105, 139, 105])/255.
-dodgerblue = np.array([30, 144, 255])/255. 
-orangered4 = np.array([139, 37, 0])/255.
-lightsteelblue3 = np.array([162, 181, 205])/255. # more grey looking
-lightsteelblue4 = np.array([110, 123, 139])/255. # more grey looking
-steelblue3 = np.array([79, 148, 205])/255.  # more blue looking
-steelblue4 = np.array([54, 100, 139])/255.  # more blue looking
-
-colors = darkseagreen,darkseagreen4,lightsteelblue3,lightsteelblue4,steelblue4,dodgerblue,orangered4,darkolivegreen3
-colordict = {'kemctl1r1': darkseagreen, 'kemctl1r2': darkseagreen4, 'kemctl1r3': lightsteelblue3,
-             'kemctl1r4': lightsteelblue4, 'kemctl1r5': steelblue4, 'kemctl1ens': dodgerblue,
-             'kemctl1': orangered4, 'kemhadctl': darkolivegreen3 }
+## darkolivegreen1 = np.array([202, 255, 112])/255 # terrible
+## darkolivegreen3 = np.array([162, 205, 90])/255.
+## darkseagreen = np.array([143, 188, 143])/255.
+## darkseagreen4 = np.array([105, 139, 105])/255.
+## dodgerblue = np.array([30, 144, 255])/255. 
+## orangered4 = np.array([139, 37, 0])/255.
+## lightsteelblue3 = np.array([162, 181, 205])/255. # more grey looking
+## lightsteelblue4 = np.array([110, 123, 139])/255. # more grey looking
+## steelblue3 = np.array([79, 148, 205])/255.  # more blue looking
+## steelblue4 = np.array([54, 100, 139])/255.  # more blue looking
 
 
+## colordict = {'kemctl1r1': darkseagreen, 'kemctl1r2': darkseagreen4, 'kemctl1r3': lightsteelblue3,
+##              'kemctl1r4': lightsteelblue4, 'kemctl1r5': steelblue4, 'kemctl1ens': dodgerblue,
+##              'kemctl1': orangered4, 'kemhadctl': darkolivegreen3 }
+
+colordict = {'r1': ccm.get_linecolor('warm1'), #'firebrick'),
+             'r4': ccm.get_linecolor('warm2'), #'firebrick1'),
+             'r3': ccm.get_linecolor('warm3'), #'yelloworange'),#'chocolate1'),
+             'r5': ccm.get_linecolor('warm4'), #'darkyellow') #'skyblue'), #yelloworange'),
+             'r2': ccm.get_linecolor('warm5'), #'steelblue3'), #'darkgoldenrod1'),
+             'ens': ccm.get_linecolor('magenta'),
+             '': ccm.get_linecolor('mediumblue'), #'mediumpurple1'), #darkyellow'), # @@ empty key?
+             'kemhad': ccm.get_linecolor('deepskyblue')}
 
 
 # Load data into dicts
 
+# order ens simulations in order of most ice loss in melt season to least. Then ens mean, PERT2, observations if requested
+## sims = bcasename+'r1', bcasename+'r4', bcasename+'r3', bcasename+'r5', bcasename+'r2', bcasename+'ens',bcasename
+## if addobs:
+##     sims = sims + ('kemhadctl',)
+
+sims = 'r1', 'r4','r3','r5','r2','ens','' # suffixes to bcasename and bcasenamep
 if addobs:
-    sims = bcasename + 'r1', bcasename+'r2',bcasename+'r3',bcasename+'r4', bcasename+'r5',bcasename+'ens',bcasename,'kemhadctl'
-else:
-    sims = bcasename + 'r1', bcasename+'r2',bcasename+'r3',bcasename+'r4', bcasename+'r5',bcasename+'ens',bcasename
+    sims = sims + ('kemhad',)
+
+
 
 if sia==1:
     field = 'sicn' # while getting the data...
 
-## tstatdict = dict.fromkeys(sims,{}); pvaldict = dict.fromkeys(sims,{})
-## fldcdict = dict.fromkeys(sims,{}); fldpdict = dict.fromkeys(sims,{})
-## fldcstddict = dict.fromkeys(sims,{}); fldpstddict = dict.fromkeys(sims,{})
-## flddiffdict = dict.fromkeys(sims,{}); flddmaskdict = dict.fromkeys(sims,{})
 flddiffhistdict = dict.fromkeys(sims,{})
 binedgedict = dict.fromkeys(sims,{})
 
-for ridx in range(0,len(sims)): # # of simulations
-    ## seatstatdict=dict.fromkeys(seasons); seapvaldict=dict.fromkeys(seasons)
-    ## seafldcdict=dict.fromkeys(seasons); seafldpdict=dict.fromkeys(seasons)
-    ## seafldcstddict=dict.fromkeys(seasons); seafldpstddict=dict.fromkeys(seasons)
-    ## seadiffdict=dict.fromkeys(seasons); seadmaskdict=dict.fromkeys(seasons)
+#for ridx in range(0,len(sims)): # # of simulations
+for ridx,sim in enumerate(sims):
+    print sim
     seadiffhistdict=dict.fromkeys(seasons)
     seabinedgedict=dict.fromkeys(seasons)
-    
-    if ridx==5: # 2nd to last sim is the ens mean
-        frootc = basepath + bcasename + 'ens' + subdir + bcasename +\
-                 'ens' + '_' + field + '_'
-        frootp = basepath + bcasenamep + 'ens' + subdir + bcasenamep +\
-                 'ens' + '_' + field + '_'
-        if threed==0:
-            fnamec =  frootc + timstr + '_ts.nc'
-            fnamep =  frootp + timstrp + '_ts.nc'
-        else:
-            fnamec = frootc + '001-061_ts.nc'
-            fnamec2 = frootc + '062-121_ts.nc'
-            fnamep = frootp + '001-061_ts.nc'
-            fnamep2 = frootp + '062-121_ts.nc'
 
-        sim = bcasename + 'ens'
-
-    elif ridx==6: # last sim is meanBC
-        frootc = basepath + bcasename + subdir + bcasename +\
-                 '_' + field + '_'
-        frootp = basepath + bcasenamep + subdir + bcasenamep +\
-                 '_' + field + '_'
-        if threed==0:
-            fnamec = frootc + timstr2 + '_ts.nc'
-            fnamep = frootp + timstr2 + '_ts.nc'
-        else:
-            fnamec = frootc + '001-061_ts.nc'
-            fnamec2 = frootc + '062-111_ts.nc'
-            fnamep = frootp + '001-061_ts.nc'
-            fnamep2 = frootp + '062-111_ts.nc'
-
-        sim = bcasename
-    elif ridx==7: # observation simulation
-        frootc = basepath + 'kemhadctl' + subdir + 'kemhadctl' + '_' + field + '_'
-        frootp = basepath + 'kemhadpert' + subdir + 'kemhadpert' + '_' + field + '_'
-        if threed==0:
-            fnamec =  frootc + timstr + '_ts.nc'
-            fnamep =  frootp + timstrp + '_ts.nc'
-        else:
-            fnamec = frootc + '001-061_ts.nc'
-            fnamec2 = frootc + '062-121_ts.nc'
-            fnamep = frootp + '001-061_ts.nc'
-            fnamep2 = frootp + '062-121_ts.nc'
-
-        sim = 'kemhadctl'
-
+    if sim == 'kemhad':
+        frootc = basepath + sim + 'ctl' + subdir + sim + 'ctl' + '_' + field + '_'
+        frootp = basepath + sim + 'pert' + subdir + sim + 'pert' + '_' + field + '_'
     else:
-        frootc =  basepath + bcasename + 'r' + str(ridx+1) + subdir + bcasename +\
-                 'r' + str(ridx+1) + '_' + field + '_'
-        frootp = basepath + bcasenamep + 'r' + str(ridx+1) + subdir + bcasenamep +\
-                 'r' + str(ridx+1) + '_' + field + '_'
-        if threed==0:
-            fnamec = frootc + timstr + '_ts.nc'
-            fnamep = frootp + timstrp + '_ts.nc'
-        else:
-            fnamec = frootc + '001-061_ts.nc'
-            fnamec2 = frootc + '062-121_ts.nc'
-            fnamep = frootp + '001-061_ts.nc'
-            fnamep2 = frootp + '062-121_ts.nc'
+        frootc =  basepath + bcasename + sim + subdir + bcasename + sim + '_' + field + '_'
+        frootp = basepath + bcasenamep + sim + subdir + bcasenamep + sim + '_' + field + '_'
+    
+    if threed==0:
+        fnamec =  frootc + timstr + '_ts.nc'
+        fnamep =  frootp + timstrp + '_ts.nc'
+    else:
+        fnamec = frootc + '001-061_ts.nc'
+        fnamec2 = frootc + '062-121_ts.nc'
+        fnamep = frootp + '001-061_ts.nc'
+        fnamep2 = frootp + '062-121_ts.nc'
 
-        sim = bcasename + 'r' + str(ridx+1)
+    print fnamec
+    print fnamep
+
+    ## I think can get rid of all this now, with all runs having
+        # same timeseries length and organizing simulation names this way
+    ## #if ridx==5: # 2nd to last sim is the ens mean
+    ## if sim == bcasename+'ens':
+    ##     frootc = basepath + bcasename + 'ens' + subdir + bcasename +\
+    ##              'ens' + '_' + field + '_'
+    ##     frootp = basepath + bcasenamep + 'ens' + subdir + bcasenamep +\
+    ##              'ens' + '_' + field + '_'
+    ##     if threed==0:
+    ##         fnamec =  frootc + timstr + '_ts.nc'
+    ##         fnamep =  frootp + timstrp + '_ts.nc'
+    ##     else:
+    ##         fnamec = frootc + '001-061_ts.nc'
+    ##         fnamec2 = frootc + '062-121_ts.nc'
+    ##         fnamep = frootp + '001-061_ts.nc'
+    ##         fnamep2 = frootp + '062-121_ts.nc'
+
+    ##     #sim = bcasename + 'ens'
+
+    ## #elif ridx==6: # last sim is meanBC
+    ## elif sim = bcasename:
+    ##     frootc = basepath + bcasename + subdir + bcasename +\
+    ##              '_' + field + '_'
+    ##     frootp = basepath + bcasenamep + subdir + bcasenamep +\
+    ##              '_' + field + '_'
+    ##     if threed==0:
+    ##         fnamec = frootc + timstr2 + '_ts.nc'
+    ##         fnamep = frootp + timstr2 + '_ts.nc'
+    ##     else:
+    ##         fnamec = frootc + '001-061_ts.nc'
+    ##         fnamec2 = frootc + '062-121_ts.nc'
+    ##         fnamep = frootp + '001-061_ts.nc'
+    ##         fnamep2 = frootp + '062-121_ts.nc'
+
+    ##     #sim = bcasename
+    ## #elif ridx==7: # observation simulation
+    ## elif sim = 'kemhadctl':
+    ##     frootc = basepath + 'kemhadctl' + subdir + 'kemhadctl' + '_' + field + '_'
+    ##     frootp = basepath + 'kemhadpert' + subdir + 'kemhadpert' + '_' + field + '_'
+    ##     if threed==0:
+    ##         fnamec =  frootc + timstr + '_ts.nc'
+    ##         fnamep =  frootp + timstrp + '_ts.nc'
+    ##     else:
+    ##         fnamec = frootc + '001-061_ts.nc'
+    ##         fnamec2 = frootc + '062-121_ts.nc'
+    ##         fnamep = frootp + '001-061_ts.nc'
+    ##         fnamep2 = frootp + '062-121_ts.nc'
+
+    ##     #sim = 'kemhadctl'
+
+    ## else:
+    ##     frootc =  basepath + sim + subdir + sim + '_' + field + '_'
+    ##     # have to figure out per casename@@
+    ##     frootp = basepath + bcasenamep + 'r' + str(ridx+1) + subdir + bcasenamep +\
+    ##              'r' + str(ridx+1) + '_' + field + '_'
+        
+    ##     if threed==0:
+    ##         fnamec = frootc + timstr + '_ts.nc'
+    ##         fnamep = frootp + timstrp + '_ts.nc'
+    ##     else:
+    ##         fnamec = frootc + '001-061_ts.nc'
+    ##         fnamec2 = frootc + '062-121_ts.nc'
+    ##         fnamep = frootp + '001-061_ts.nc'
+    ##         fnamep2 = frootp + '062-121_ts.nc'
+
+    ##     #sim = bcasename + 'r' + str(ridx+1)
 
     for sii,sea in enumerate(seasons):
-
+        print sea
+        
         if seasonal:# @@ fix
             ncparams = {'seas': sea}
         elif monthly: # @@fix
@@ -577,12 +619,22 @@ for ridx in range(0,len(sims)): # # of simulations
         #  @@ from hists script:
         areas = cutl.calc_cellareas(lat,lon,repeat=fldc.shape)
         areas = areas[:,lat>latlim,:]
+        fldcorig=copy.copy(fldc)
+        fldporig=copy.copy(fldp)
         fldc = fldc[:,lat>latlim,:]
         fldp = fldp[:,lat>latlim,:]
         if maskland:
+            lmask = con.get_t63landmask(repeat=fldc.shape)
             areas = ma.masked_where(lmask[:,lat>latlim,:]==-1,areas)
             fldc = ma.masked_where(lmask[:,lat>latlim,:]==-1,fldc)
             fldp = ma.masked_where(lmask[:,lat>latlim,:]==-1,fldp)
+            mtype='ocn'
+        elif maskocean:
+            lmask = con.get_t63landmask(repeat=fldc.shape)
+            areas = ma.masked_where(lmask[:,lat>latlim,:]!=-1,areas)
+            fldc = ma.masked_where(lmask[:,lat>latlim,:]!=-1,fldc)
+            fldp = ma.masked_where(lmask[:,lat>latlim,:]!=-1,fldp)
+            mtype='lnd'
 
         totarea = np.sum(np.sum(areas,axis=2),axis=1)
         totarea = np.tile(totarea,(fldc.shape[1],fldc.shape[2],1))
@@ -593,9 +645,16 @@ for ridx in range(0,len(sims)): # # of simulations
                           
 
         histfld = fldp-fldc
-        (seadiffhistdict[sea],seabinedgedict[sea]) = np.histogram(histfld.flatten(),
-                                                       bins=100,weights=weights.flatten(),
-                                                       density=True)
+        print 'max val: ' + str(np.max(np.max(histfld)))
+        print 'min val: ' + str(np.min(np.min(histfld)))
+        if maskocean or maskland: # pass only the non-masked data to histogram
+            (seadiffhistdict[sea],seabinedgedict[sea]) = np.histogram(histfld.compressed(),
+                                                                      bins=100,weights=weights.compressed(),
+                                                                      density=True)
+        else:
+            (seadiffhistdict[sea],seabinedgedict[sea]) = np.histogram(histfld.flatten(),
+                                                                      bins=100,weights=weights.flatten(),
+                                                                      density=True)
         #widths = np.diff(binedges)
         
         ## seafldcstddict[sea] = np.std(fldc,axis=0)
@@ -653,7 +712,7 @@ plt.grid()
 plt.ylabel('% of total')
 plt.title(sea + ' ' + fieldstr + '>' + str(latlim) + 'N')
 if printtofile:
-    fig.savefig(fieldstr + 'diffpcthist_' + str(latlim) + 'N' + '_' + sea + '.pdf')
+    fig.savefig(fieldstr + 'diffpcthist_' + str(latlim) + 'N' + mtype + '_' + sea + '.pdf')
 
 
 #xlims = -15,15; ylims = 0,0.6; ylims2=0,11 # ST DJF @@
@@ -670,7 +729,7 @@ for sii,ax in enumerate(axs.flat):
     ax.set_title(sim)
     ax.grid()
 if printtofile:
-    fig2.savefig(fieldstr + 'diffhist_' + str(latlim) + 'N' + '_' + sea + '_subplt.pdf')
+    fig2.savefig(fieldstr + 'diffhist_' + str(latlim) + 'N' + mtype + '_' + sea + '_subplt.pdf')
 
 
 fig2,axs = plt.subplots(2,4)
@@ -689,7 +748,7 @@ for sii,ax in enumerate(axs.flat):
         ax.set_ylabel('% of total')
     ax.grid()
 if printtofile:
-    fig2.savefig(fieldstr + 'diffpcthist_' + str(latlim) + 'N' + '_' + sea + '_subplt.pdf')
+    fig2.savefig(fieldstr + 'diffpcthist_' + str(latlim) + 'N' + mtype + '_' + sea + '_subplt.pdf')
 
 
 # # Cumulative PDF
@@ -714,7 +773,7 @@ plt.grid()
 plt.ylabel('Fraction of total')
 plt.title(sea + ' ' + fieldstr + '>' + str(latlim) + 'N')
 if printtofile:
-    fig.savefig(fieldstr + 'difffracCDD_' + str(latlim) + 'N' + '_' + sea + '.pdf')
+    fig.savefig(fieldstr + 'difffracCDD_' + str(latlim) + 'N' + mtype + '_' + sea + '.pdf')
 
     
 
@@ -782,9 +841,9 @@ if seasonal:
                 fnamep = frootp + timstr2 + '_ts.nc'
             else:
                 fnamec = frootc + '001-061_ts.nc'
-                fnamec2 = frootc + '062-111_ts.nc'
+                fnamec2 = frootc + '062-121_ts.nc'
                 fnamep = frootp + '001-061_ts.nc'
-                fnamep2 = frootp + '062-111_ts.nc'
+                fnamep2 = frootp + '062-121_ts.nc'
             
             rowl = 'meanBC'
 
