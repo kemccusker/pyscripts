@@ -37,14 +37,14 @@ printtofile=1
 
 plotann=0    # seasonal avg map, comparing ens runs and meanBC
 plotallmos=0 # monthly maps (@@ not implemented)
-seasonal=1 # seasonal maps (DJF, MAM, JJA, SON)
+seasonal=0 # seasonal maps (DJF, MAM, JJA, SON)
 plotzonmean=0 # plotzonmean and plotseacyc are mutually exclusive
 plotseacyc=0 # plotzonmean and plotseacyc are mutually exclusive
 withlat=0 # plot the seasonal cycle with latitude dimension too (only for plotseacyc=1)
 pattcorrwithtime=0 # plot pattern correlation with time for each ens member
 pattcorryr=0 # if 1, do a yearly anomaly pattern rather than time-integrated 
 
-testhadisst=0 # check which ens member most similar to hadisst
+testhadisst=1 # check which ens member most similar to hadisst
 normbystd=0
 addobs=1 # add mean of kemhad* runs to line plots, seasonal maps (so far@@)
 latlim = None #45 # lat limit for NH plots. Set to None otherwise.
@@ -73,7 +73,7 @@ timstrp = '001-121'
 # ######### set second set of sims (mean BC) ##########
 casename2 = 'kemctl1'
 casenamep2 = 'kem1pert2'
-timstr2='001-111'
+timstr2='001-121'
 
 
 # # # ######## set Field info ###################
@@ -518,7 +518,7 @@ if plotann:
         if normbystd:
             plotfld = (np.mean(seastsp,0)-np.mean(seastsc,0))/seastdc
             plotfld2 = (np.mean(seastsp2,0)-np.mean(seastsc2,0))/seastdc2
-            cmin=cminn; cmax=cmaxn # @@@ guessing
+            cmin=cminn; cmax=cmaxn 
             sigoff=1
         else:
             plotfld = np.mean(seastsp,0)-np.mean(seastsc,0)
@@ -627,7 +627,7 @@ if plotann:
         plotfld = np.mean(seasfldp,axis=0)-np.mean(seasfldc,axis=0)
         if normbystd:
             plotfld = plotfld/seastdc
-            cmin=cminn; cmax=cmaxn # @@@ guessing
+            cmin=cminn; cmax=cmaxn
             sigoff=1
 
         bm,pc = cplt.kemmap(plotfld,lat,lon,cmin=cmin,cmax=cmax,cmap=cmap,type='nh',\
@@ -1332,7 +1332,6 @@ if plotzonmean:
 
 if plotseacyc:
 
-    print '@@ Use pandas and DataFrame!'
     # http://pandas.pydata.org/pandas-docs/stable/indexing.html#indexing
     
     ## Operation 	Syntax 	Result
@@ -1357,120 +1356,10 @@ if plotseacyc:
 
     mol = list(months) # use this list of strings for indexing the dataframe
 
-    """if withlat:
-        fldcestd = np.zeros((len(seasons),len(lat))) # ensemble std dev
-        fldpestd = np.zeros((len(seasons),len(lat)))
-    else:
-        fldcestd = np.zeros((len(seasons))) # ensemble std dev
-        fldpestd = np.zeros((len(seasons)))
-
-    fldcestddict = dict.fromkeys(seasons)
-    fldpestddict = dict.fromkeys(seasons)
-    
-    # take standard deviation over ensemble members:
-    for sii,enssea in enumerate(seasons):
-
-        if withlat:
-            tmpc = np.zeros((5,len(lat)))
-            tmpp = np.zeros((5,len(lat)))                          
-        else:
-            tmpc = np.zeros(5) # 5 sims
-            tmpp = np.zeros(5)
-        for eii,enssim in enumerate(sims[0:skip]): # skip last 2 sims
-            tmpc[eii] = fldcdict[enssim][enssea] # gather all ens members for calc
-            tmpp[eii] = fldpdict[enssim][enssea]
-
-        fldcestddict[enssea] = np.std(tmpc,axis=0) # for each season, what is sigma
-        fldpestddict[enssea] = np.std(tmpp,axis=0) """
-
-    #print fldcestd.shape
-
-
     fontP = fm.FontProperties()
     fontP.set_size('small')
 
-    """    
-    seacycddict = dict.fromkeys(sims)
-    seacyccdict = dict.fromkeys(sims)
-    seacycpdict = dict.fromkeys(sims)
-    seacycmaskdict = dict.fromkeys(sims)
-    seacycdstddict = dict.fromkeys(sims)
-    seacyccstddict = dict.fromkeys(sims)
-    seacycpstddict = dict.fromkeys(sims)
-    
-    # first, reorganize the data: put all months into an array
-    for skey,simval in flddiffdict.iteritems():
-        cfld = fldcdict[skey]
-        pfld = fldpdict[skey]
-
-        if withlat:
-            seacycd = np.zeros((12,len(lat)))
-            seacycc = np.zeros((12,len(lat)))
-            seacycp = np.zeros((12,len(lat)))
-        else:
-            seacycd = np.zeros(12)
-            seacycc = np.zeros(12)
-            seacycp = np.zeros(12)
-        #print skey
-        #sii=0
-        #for seakey,seaval in simval.iteritems():
-        for sii,seakey in enumerate(seasons): # have to do it this way to get in right order
-            
-            seacycd[sii,...] = simval[seakey]
-            seacycc[sii,...] = cfld[seakey]
-            seacycp[sii,...] = pfld[seakey]
-            #sii=sii+1
-            
-        seacycddict[skey] = seacycd
-        seacyccdict[skey] = seacycc
-        seacycpdict[skey] = seacycp
-        
-    for skey,simval in flddmaskdict.iteritems():
-        if withlat:
-            seacyc = np.zeros((12,len(lat)))
-        else:
-            seacyc = np.zeros(12)
-        #print skey
-        #sii=0
-        #for seakey,seaval in simval.iteritems():
-        for sii,seakey in enumerate(seasons): # have to do it this way to get in right order
-            seacyc[sii,...] = simval[seakey]
-            #sii=sii+1
-            
-        seacycmaskdict[skey] = seacyc
-
-    # standard deviation
-    for skey,simval in fldcstddict.iteritems():
-        pstd = fldpstddict[skey]
-
-        if withlat:
-            seacycd = np.zeros((12,len(lat)))
-            seacycc = np.zeros((12,len(lat)))
-            seacycp = np.zeros((12,len(lat)))
-        else:
-            seacycd = np.zeros(12)
-            seacycc = np.zeros(12)
-            seacycp = np.zeros(12)
-        #print skey
-        #sii=0
-        #for seakey,seaval in simval.iteritems():
-        for sii,seakey in enumerate(seasons): # have to do it this way to get in right order
-            pstdval = pstd[seakey]
-            
-            seacycd[sii,...] = pstdval - simval[seakey]
-            seacycc[sii,...] = simval[seakey]
-            seacycp[sii,...] = pstdval
-            #sii=sii+1
-            
-        seacycdstddict[skey] = seacycd
-        seacyccstddict[skey] = seacycc
-        seacycpstddict[skey] = seacycp
-
-    for sii,seakey in enumerate(seasons):
-        fldcestd[sii,...] = fldcestddict[seakey]
-        fldpestd[sii,...] = fldpestddict[seakey]
-    """
-    # Now can plot the seasonal cycle
+    # Now plot seasonal cycle
     moidxs=np.arange(1,13)
 
     if withlat:
@@ -1662,9 +1551,14 @@ if pattcorrwithtime==1:
     
 if testhadisst:
     # here want to check which ensemble run is most similar to hadisst in terms of SICN
-    # can use fldc2 and fldp2 for hadisst data
-    # need to get all the r* runs
 
+    # get HadISST runs
+    fnamec2 = basepath + casename2 + subdir + casename2 + '_' + field + '_' + timstr2 + '_ts.nc'
+    fnamep2 = basepath + casenamep2 + subdir + casenamep2 + '_' + field + '_' + timstr2 + '_ts.nc'
+
+    fldc2 = cnc.getNCvar(fnamec2,field.upper(),timesel=timesel)*conv
+    fldp2 = cnc.getNCvar(fnamep2,field.upper(),timesel=timesel)*conv
+            
     corrlim=40 # the latitude north of which to consider the pattern correlation
     lmask = con.get_t63landmask()
     
@@ -1672,38 +1566,23 @@ if testhadisst:
     diffdict = {}
     pcorrdict = {}
 
-    print '@@ needs to be updated to not depends on ridx into sims. ' +\
-          'will be wrong now. need to incorporate new keys etc'
-    for ridx in range(0,7): # # of simulations
-
-        if ridx==5: # 2nd to last sim is the ens mean
-            frootc = basepath + bcasename + 'ens' + subdir + bcasename +\
-                     'ens' + '_' + field + '_'
-            frootp = basepath + bcasenamep + 'ens' + subdir + bcasenamep +\
-                     'ens' + '_' + field + '_'
-
-            fnamec =  frootc + timstr + '_ts.nc'
-            fnamep =  frootp + timstrp + '_ts.nc'
-            sim = bcasename + 'ens'
-
-        elif ridx==6: # last sim is meanBC
-            frootc = basepath + bcasename + subdir + bcasename +\
-                     '_' + field + '_'
-            frootp = basepath + bcasenamep + subdir + bcasenamep +\
-                     '_' + field + '_'
-            fnamec = frootc + timstr + '_ts.nc'
-            fnamep = frootp + timstrp + '_ts.nc'
-            sim = bcasename
-
+    # for weighting the pattern corr by area
+    areas = cutl.calc_cellareas(lat,lon)
+    areas = areas[lat>corrlim,:]
+    areas = ma.masked_where(lmask[lat>corrlim,:]==-1,areas)
+    weights = areas / np.sum(np.sum(areas,axis=1),axis=0)
+    
+    for ridx,sim in enumerate(sims):
+        
+        if sim=='kemhad':
+            break
         else:
-            frootc =  basepath + bcasename + 'r' + str(ridx+1) + subdir + bcasename +\
-                     'r' + str(ridx+1) + '_' + field + '_'
-            frootp = basepath + bcasenamep + 'r' + str(ridx+1) + subdir + bcasenamep +\
-                     'r' + str(ridx+1) + '_' + field + '_'
+            frootc =  basepath + bcasename + sim + subdir + bcasename + sim + '_' + field + '_'
+            frootp = basepath + bcasenamep + sim + subdir + bcasenamep + sim + '_' + field + '_'
 
-            fnamec = frootc + timstr + '_ts.nc'
-            fnamep = frootp + timstrp + '_ts.nc'
-            sim = bcasename + 'r' + str(ridx+1)
+        print sim
+        fnamec = frootc + timstr + '_ts.nc'
+        fnamep = frootp + timstrp + '_ts.nc'
 
         fldcdict[sim] = cnc.getNCvar(fnamec,field.upper(),timesel=timesel)*conv
         fldpdict[sim] = cnc.getNCvar(fnamep,field.upper(),timesel=timesel)*conv
@@ -1727,13 +1606,7 @@ if testhadisst:
         pcorr = np.zeros((12))
         for moidx in range(0,12):
             ensmem = fldpdict[sim][moidx,lat>corrlim,...] - fldcdict[sim][moidx,lat>corrlim,...]
-            obsbc = fldp2[moidx,lat>corrlim,...] - fldc2[moidx,lat>corrlim,...]
-
-            # weight the fields by area
-            areas = cutl.calc_cellareas(lat,lon)
-            areas = areas[lat>corrlim,:]
-            areas = ma.masked_where(lmask[lat>corrlim,:]==-1,areas)
-            weights = areas / np.sum(np.sum(areas,axis=1),axis=0)
+            obsbc = fldp2[moidx,lat>corrlim,...] - fldc2[moidx,lat>corrlim,...] # @@where do these flds get set?
 
             ensmem = ma.masked_where(lmask[lat>corrlim,:]==-1,ensmem) # mask out land
             obsbc = ma.masked_where(lmask[lat>corrlim,:]==-1,obsbc) # mask out land
@@ -1751,14 +1624,14 @@ if testhadisst:
     fontP = fm.FontProperties()
     fontP.set_size('small')
     
-    plt.figure();
-    plt.plot(moidxs,diffdict['kemctl1r1'],color=colordict['kemctl1r1'],linewidth=2)
-    plt.plot(moidxs,diffdict['kemctl1r2'],color=colordict['kemctl1r2'],linewidth=2)
-    plt.plot(moidxs,diffdict['kemctl1r3'],color=colordict['kemctl1r3'],linewidth=2)
-    plt.plot(moidxs,diffdict['kemctl1r4'],color=colordict['kemctl1r4'],linewidth=2)
-    plt.plot(moidxs,diffdict['kemctl1r5'],color=colordict['kemctl1r5'],linewidth=2)
-    plt.plot(moidxs,diffdict['kemctl1ens'],color=colordict['kemctl1ens'],linewidth=3)
-    plt.plot(moidxs,diffdict['kemctl1'],color=colordict['kemctl1'],linewidth=3)
+    plt.figure(); # @@ could also just loop sim keys here
+    plt.plot(moidxs,diffdict['r1'],color=colordict['r1'],linewidth=2)
+    plt.plot(moidxs,diffdict['r2'],color=colordict['r2'],linewidth=2)
+    plt.plot(moidxs,diffdict['r3'],color=colordict['r3'],linewidth=2)
+    plt.plot(moidxs,diffdict['r4'],color=colordict['r4'],linewidth=2)
+    plt.plot(moidxs,diffdict['r5'],color=colordict['r5'],linewidth=2)
+    plt.plot(moidxs,diffdict['ens'],color=colordict['ens'],linewidth=3)
+    plt.plot(moidxs,diffdict[''],color=colordict[''],linewidth=3)
     plt.legend(('r1','r2','r3','r4','r5','ens','meanBC'),prop=fontP)
     plt.xlim((1,12))
     plt.title('RMSE compared to HadISST')
@@ -1766,13 +1639,13 @@ if testhadisst:
         plt.savefig('sicnRMSE_ens_v_hadisst_seacycle.pdf')
 
     plt.figure();
-    plt.plot(moidxs,pcorrdict['kemctl1r1'],color=colordict['kemctl1r1'],linewidth=2)
-    plt.plot(moidxs,pcorrdict['kemctl1r2'],color=colordict['kemctl1r2'],linewidth=2)
-    plt.plot(moidxs,pcorrdict['kemctl1r3'],color=colordict['kemctl1r3'],linewidth=2)
-    plt.plot(moidxs,pcorrdict['kemctl1r4'],color=colordict['kemctl1r4'],linewidth=2)
-    plt.plot(moidxs,pcorrdict['kemctl1r5'],color=colordict['kemctl1r5'],linewidth=2)
-    plt.plot(moidxs,pcorrdict['kemctl1ens'],color=colordict['kemctl1ens'],linewidth=3)
-    plt.plot(moidxs,pcorrdict['kemctl1'],color=colordict['kemctl1'],linewidth=3)
+    plt.plot(moidxs,pcorrdict['r1'],color=colordict['r1'],linewidth=2)
+    plt.plot(moidxs,pcorrdict['r2'],color=colordict['r2'],linewidth=2)
+    plt.plot(moidxs,pcorrdict['r3'],color=colordict['r3'],linewidth=2)
+    plt.plot(moidxs,pcorrdict['r4'],color=colordict['r4'],linewidth=2)
+    plt.plot(moidxs,pcorrdict['r5'],color=colordict['r5'],linewidth=2)
+    plt.plot(moidxs,pcorrdict['ens'],color=colordict['ens'],linewidth=3)
+    plt.plot(moidxs,pcorrdict[''],color=colordict[''],linewidth=3)
     plt.legend(('r1','r2','r3','r4','r5','ens','meanBC'),'upper left',prop=fontP)
     plt.xlim((1,12))
     plt.title('pattern correlation with HadISST')
@@ -1780,22 +1653,22 @@ if testhadisst:
         plt.savefig('sicnPatternCorr_ens_v_hadisst_seacycle.pdf')
 
     wgts = con.get_monweights()
-    print 'r1: ' + str(np.average(diffdict['kemctl1r1'],weights=wgts))
-    print 'r2: ' + str(np.average(diffdict['kemctl1r2'],weights=wgts))
-    print 'r3: ' + str(np.average(diffdict['kemctl1r3'],weights=wgts))
-    print 'r4: ' + str(np.average(diffdict['kemctl1r4'],weights=wgts))
-    print 'r5: ' + str(np.average(diffdict['kemctl1r5'],weights=wgts))
-    print 'ens: ' + str(np.average(diffdict['kemctl1ens'],weights=wgts))
-    print 'meanBC: ' + str(np.average(diffdict['kemctl1'],weights=wgts))
+    print 'r1: ' + str(np.average(diffdict['r1'],weights=wgts))
+    print 'r2: ' + str(np.average(diffdict['r2'],weights=wgts))
+    print 'r3: ' + str(np.average(diffdict['r3'],weights=wgts))
+    print 'r4: ' + str(np.average(diffdict['r4'],weights=wgts))
+    print 'r5: ' + str(np.average(diffdict['r5'],weights=wgts))
+    print 'ens: ' + str(np.average(diffdict['ens'],weights=wgts))
+    print 'meanBC: ' + str(np.average(diffdict[''],weights=wgts))
 
     print '===== PATTERN CORR ====='
-    print 'r1: ' + str(np.average(pcorrdict['kemctl1r1'],weights=wgts))
-    print 'r2: ' + str(np.average(pcorrdict['kemctl1r2'],weights=wgts))
-    print 'r3: ' + str(np.average(pcorrdict['kemctl1r3'],weights=wgts))
-    print 'r4: ' + str(np.average(pcorrdict['kemctl1r4'],weights=wgts))
-    print 'r5: ' + str(np.average(pcorrdict['kemctl1r5'],weights=wgts))
-    print 'ens: ' + str(np.average(pcorrdict['kemctl1ens'],weights=wgts))
-    print 'meanBC: ' + str(np.average(pcorrdict['kemctl1'],weights=wgts))
+    print 'r1: ' + str(np.average(pcorrdict['r1'],weights=wgts))
+    print 'r2: ' + str(np.average(pcorrdict['r2'],weights=wgts))
+    print 'r3: ' + str(np.average(pcorrdict['r3'],weights=wgts))
+    print 'r4: ' + str(np.average(pcorrdict['r4'],weights=wgts))
+    print 'r5: ' + str(np.average(pcorrdict['r5'],weights=wgts))
+    print 'ens: ' + str(np.average(pcorrdict['ens'],weights=wgts))
+    print 'meanBC: ' + str(np.average(pcorrdict[''],weights=wgts))
 
     # @@ ens/meanBC wins for both of these measures when considering all cells
     #        north of 0 (corr=0.419) or 40N (corr=0.404) (no masking, unweighted).
