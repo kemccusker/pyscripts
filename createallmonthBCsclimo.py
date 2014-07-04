@@ -220,6 +220,7 @@ elif field == 'sit' and controlsit:
         sicp = cnc.getNCvar(filename,'sic')
 
         fldtmp = copy.copy(fldc) # start with control thickness
+        # @@@ should this actually be, anywhere pert sic is <0.15? since the model apparently considers it open water if conc<0.15
         fldtmp[sicp<0.01] = 0 # anywhere pert sic (concentration) is 0, make thickness 0
         fldsave=copy.copy(fldp) # dummy, save orig pert
         fldp = copy.copy(fldtmp)
