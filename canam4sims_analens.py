@@ -37,9 +37,9 @@ printtofile=1
 
 plotann=0    # seasonal avg map, comparing ens runs and meanBC
 plotallmos=0 # monthly maps (@@ not implemented)
-seasonal=0 # seasonal maps (DJF, MAM, JJA, SON)
+seasonal=1 # seasonal maps (DJF, MAM, JJA, SON)
 
-plotzonmean=1 # plotzonmean,plotseacyc,pattcorrwithtime are mutually exclusive
+plotzonmean=0 # plotzonmean,plotseacyc,pattcorrwithtime are mutually exclusive
 plotseacyc=0 # plotzonmean,plotseacyc,pattcorrwithtime are mutually exclusive
 withlat=0 # plot the seasonal cycle with latitude dimension too (only for plotseacyc=1)@@for now just std over ens
 pattcorrwithtime=0 # plot pattern correlation with time for each ens member
@@ -50,7 +50,7 @@ normbystd=0
 addobs=1 # add mean of kemhad* runs to line plots, seasonal maps (so far@@)
 addr4ct=1 # add kem1pert2r4ct (constant thickness version of ens4)
 
-latlim = None #45 # lat limit for NH plots. Set to None otherwise.
+latlim = 45 # None #45 # lat limit for NH plots. Set to None otherwise.
 
 sigtype = 'cont' # significance: 'cont' or 'hatch' which is default
 sigoff=0 # if 1, don't add significance
@@ -82,14 +82,14 @@ timstr2='001-121'
 # # # ######## set Field info ###################
 # gz, t, u, v, q (3D !)
 # st, sic, sicn (sia), gt, pmsl, pcp, hfl, hfs, turb, flg, fsg, fn, pcpn, zn, su, sv (@@later ufs,vfs)
-field = 'sia'
+field = 'sic'
 print field
 timeavg = 'DJF'
 
 # only for threed vars
-#level = 30000
+level = 30000
 #level = 50000 # 500hPa
-level = 70000
+#level = 70000
 
 
 
@@ -166,6 +166,10 @@ elif field == 'pmsl':
     cminp=cmin; cmaxp=cmax # for when pert is 'ctl'
     cminmp=cminm; cmaxmp=cmaxm
     cmap = 'blue2red_20'
+    ## print 'new cmap and small clim! @@ '
+    ## cmap = 'blue2red_w20'
+    ## cminm=-1; cmaxm=1  for monthly maps, small clim
+    
     cminn = -1; cmaxn = 1 # for norm by std
 
     if plotseacyc==1  and withlat==1:
@@ -729,7 +733,7 @@ if seasonal:
     incr = (cmaxm-cminm) / (cmlen)
     conts = np.arange(cminm,cmaxm+incr,incr)
 
-    fig6,ax6 = plt.subplots(4,len(sims)) # 1 row for e/ of 5 ens members, plus mean, plus meanBC
+    fig6,ax6 = plt.subplots(len(seasons),len(sims)) # 1 row for e/ of 5 ens members, plus mean, plus meanBC
     fig6.set_size_inches(12,8)  
     fig6.subplots_adjust(hspace=.15,wspace=.05)
         
@@ -823,10 +827,10 @@ if seasonal:
             latstr=''
             
         if pct: # version 2 has new season order, new filename/key org
-            fig6.savefig(fieldstr + 'pctdiff' + sigstr + '_enssubplot' + obsstr +
+            fig6.savefig(fieldstr + 'pctdiff' + sigstr + '_enssubplot' + obsstr + ctstr +
                          '_seas_nh' + latstr + '2.' + suff)
         else:
-            fig6.savefig(fieldstr + 'diff' + sigstr + '_enssubplot' + obsstr + '_seas_nh'
+            fig6.savefig(fieldstr + 'diff' + sigstr + '_enssubplot' + obsstr + ctstr + '_seas_nh'
                          + latstr + '2.' + suff)
 
 
