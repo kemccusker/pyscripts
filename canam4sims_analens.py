@@ -38,15 +38,18 @@ printtofile=1
 plotann=0    # seasonal avg map, comparing ens runs and meanBC
 plotallmos=0 # monthly maps (@@ not implemented)
 seasonal=0 # seasonal maps (DJF, MAM, JJA, SON)
-plotzonmean=0 # plotzonmean and plotseacyc are mutually exclusive
-plotseacyc=1 # plotzonmean and plotseacyc are mutually exclusive
-withlat=1 # plot the seasonal cycle with latitude dimension too (only for plotseacyc=1)
+
+plotzonmean=1 # plotzonmean,plotseacyc,pattcorrwithtime are mutually exclusive
+plotseacyc=0 # plotzonmean,plotseacyc,pattcorrwithtime are mutually exclusive
+withlat=0 # plot the seasonal cycle with latitude dimension too (only for plotseacyc=1)@@for now just std over ens
 pattcorrwithtime=0 # plot pattern correlation with time for each ens member
 pattcorryr=0 # if 1, do a yearly anomaly pattern rather than time-integrated 
 
 testhadisst=0 # check which ens member most similar to hadisst
 normbystd=0
 addobs=1 # add mean of kemhad* runs to line plots, seasonal maps (so far@@)
+addr4ct=1 # add kem1pert2r4ct (constant thickness version of ens4)
+
 latlim = None #45 # lat limit for NH plots. Set to None otherwise.
 
 sigtype = 'cont' # significance: 'cont' or 'hatch' which is default
@@ -79,14 +82,17 @@ timstr2='001-121'
 # # # ######## set Field info ###################
 # gz, t, u, v, q (3D !)
 # st, sic, sicn (sia), gt, pmsl, pcp, hfl, hfs, turb, flg, fsg, fn, pcpn, zn, su, sv (@@later ufs,vfs)
-field = 'st'
+field = 'sia'
 print field
 timeavg = 'DJF'
 
 # only for threed vars
-level = 30000
+#level = 30000
 #level = 50000 # 500hPa
-#level = 70000
+level = 70000
+
+
+
 
 # HERE THE SECOND SET OF RUNS IS HadISST BC's
 if testhadisst:
@@ -388,12 +394,13 @@ else:
     suff='png'
 
 # order ens simulations in order of most ice loss in melt season to least. Then ens mean, PERT2, observations if requested
-## sims = bcasename+'r1', bcasename+'r4', bcasename+'r3', bcasename+'r5', bcasename+'r2', bcasename+'ens',bcasename
-## if addobs:
-##     sims = sims + ('kemhadctl',)
-sims = 'r1', 'r4','r3','r5','r2','ens','' # suffixes to bcasename and bcasenamep
+sims = 'r1','r4','r3','r5','r2','ens','' # suffixes to bcasename and bcasenamep
 if addobs:
     sims = sims + ('kemhad',)
+if addr4ct:
+    sims = sims + ('r4ct',)
+    ctstr = '_r4ct' # for figure filenames
+    
 #ensmems=np.arange(0,5)
 
 if plotann:
@@ -464,15 +471,9 @@ if plotann:
                              cnc.getNCvar(frootp2+'062-121_ts.nc',ncfield,levsel=level)*conv,
                              axis=0)
 
-
-    ## lat = cnc.getNCvar(fnamec,'lat')
-    ## lon = cnc.getNCvar(fnamec,'lon')
-
     # annual time-series (3d)
     seastsc = cutl.seasonalize_monthlyts(fldc,timeavg)
     seastsp = cutl.seasonalize_monthlyts(fldp,timeavg)
-    #anntsc = cutl.annualize_monthlyts(fldc)
-    #anntsp = cutl.annualize_monthlyts(fldp)
 
     nt,nlev,nlat = seastsc.shape # @@the var names are "wrong" but work fine in the script as written
 
@@ -728,21 +729,10 @@ if seasonal:
     incr = (cmaxm-cminm) / (cmlen)
     conts = np.arange(cminm,cmaxm+incr,incr)
 
-
-#    if addobs:
-#        sims = bcasename + 'r1', bcasename+'r2',bcasename+'r3',bcasename+'r4', bcasename+'r5',bcasename+'ens',bcasename,'kemhadctl'
-#    else:
-#        sims = bcasename + 'r1', bcasename+'r2',bcasename+'r3',bcasename+'r4', bcasename+'r5',bcasename+'ens',bcasename
-
-#    cidx=0 # traverse cols (seasons)
-#    ridx=0 # traverse rows
-#    fig6,ax6 = plt.subplots(7,4) # 1 row for e/ of 5 ens members, plus mean, plus meanBC
-#    fig6.set_size_inches(8,12)
     fig6,ax6 = plt.subplots(4,len(sims)) # 1 row for e/ of 5 ens members, plus mean, plus meanBC
     fig6.set_size_inches(12,8)  
     fig6.subplots_adjust(hspace=.15,wspace=.05)
         
-    #for ridx in range(0,len(sims)): # traverse rows
     for ridx,sim in enumerate(sims): # traverse cols
 
         cidx=0
@@ -763,69 +753,7 @@ if seasonal:
             fnamec2 = frootc + '062-121_ts.nc'
             fnamep = frootp + '001-061_ts.nc'
             fnamep2 = frootp + '062-121_ts.nc'
-        
-        ## if ridx==5: # 2nd to last row is for the ens mean
-        ##     frootc = basepath + bcasename + 'ens' + subdir + bcasename +\
-        ##              'ens' + '_' + field + '_'
-        ##     frootp = basepath + bcasenamep + 'ens' + subdir + bcasenamep +\
-        ##              'ens' + '_' + field + '_'
-        ##     if threed==0:
-        ##         fnamec =  frootc + timstr + '_ts.nc'
-        ##         fnamep =  frootp + timstrp + '_ts.nc'
-        ##     else:
-        ##         fnamec = frootc + '001-061_ts.nc'
-        ##         fnamec2 = frootc + '062-121_ts.nc'
-        ##         fnamep = frootp + '001-061_ts.nc'
-        ##         fnamep2 = frootp + '062-121_ts.nc'
-            
-        ##     rowl = 'r mean' # row label
-            
-        ## elif ridx==6: # last row is for meanBC
-        ##     frootc = basepath + bcasename + subdir + bcasename +\
-        ##              '_' + field + '_'
-        ##     frootp = basepath + bcasenamep + subdir + bcasenamep +\
-        ##              '_' + field + '_'
-        ##     if threed==0:
-        ##         fnamec = frootc + timstr2 + '_ts.nc'
-        ##         fnamep = frootp + timstr2 + '_ts.nc'
-        ##     else:
-        ##         fnamec = frootc + '001-061_ts.nc'
-        ##         fnamec2 = frootc + '062-121_ts.nc'
-        ##         fnamep = frootp + '001-061_ts.nc'
-        ##         fnamep2 = frootp + '062-121_ts.nc'
-            
-        ##     rowl = 'meanBC'
-
-        ## elif ridx==7: # observation simulation
-        ##     frootc = basepath + 'kemhadctl' + subdir + 'kemhadctl' + '_' + field + '_'
-        ##     frootp = basepath + 'kemhadpert' + subdir + 'kemhadpert' + '_' + field + '_'
-        ##     if threed==0:
-        ##         fnamec =  frootc + timstr + '_ts.nc'
-        ##         fnamep =  frootp + timstrp + '_ts.nc'
-        ##     else:
-        ##         fnamec = frootc + '001-061_ts.nc'
-        ##         fnamec2 = frootc + '062-121_ts.nc'
-        ##         fnamep = frootp + '001-061_ts.nc'
-        ##         fnamep2 = frootp + '062-121_ts.nc'
-
-        ##     rowl = 'had'
-            
-        ## else:
-        ##     frootc =  basepath + bcasename + 'r' + str(ridx+1) + subdir + bcasename +\
-        ##              'r' + str(ridx+1) + '_' + field + '_'
-        ##     frootp = basepath + bcasenamep + 'r' + str(ridx+1) + subdir + bcasenamep +\
-        ##              'r' + str(ridx+1) + '_' + field + '_'
-        ##     if threed==0:
-        ##         fnamec = frootc + timstr + '_ts.nc'
-        ##         fnamep = frootp + timstrp + '_ts.nc'
-        ##     else:
-        ##         fnamec = frootc + '001-061_ts.nc'
-        ##         fnamec2 = frootc + '062-121_ts.nc'
-        ##         fnamep = frootp + '001-061_ts.nc'
-        ##         fnamep2 = frootp + '062-121_ts.nc'
-            
-        ##     rowl = 'r' + str(ridx+1)
-        
+                
         for sea in seasons: # traverse rows
             #ax = ax6[ridx][cidx]
             ax = ax6[cidx][ridx] # swapped row and col index positions in subplot
@@ -1103,7 +1031,8 @@ colordict = {'r1': ccm.get_linecolor('warm1'), #'firebrick'),
              'r2': ccm.get_linecolor('warm5'), #'steelblue3'), #'darkgoldenrod1'),
              'ens': ccm.get_linecolor('magenta'),
              '': ccm.get_linecolor('mediumblue'), #'mediumpurple1'), #darkyellow'),
-             'kemhad': ccm.get_linecolor('deepskyblue')}
+             'kemhad': ccm.get_linecolor('deepskyblue'),
+             'r4ct': ccm.get_linecolor('darkseagreen4')}
              
 
 
@@ -1124,16 +1053,31 @@ if plotzonmean:
 
     cestd = np.zeros((4,len(lat)))
     pestd = np.zeros((4,len(lat)))
+    cemin = np.zeros((4,len(lat))) # ctl ens min/max
+    cemax = np.zeros((4,len(lat)))
+    pemin = np.zeros((4,len(lat))) # pert ens min/max
+    pemax = np.zeros((4,len(lat)))
+    demin = np.zeros((4,len(lat))) # difference min/max
+    demax = np.zeros((4,len(lat)))
     # have to do these loops b/c np.array(tmpcdf) comes out as an object of
     # size (seasons x sims) with inner arrays of length lat, and can't take std of that
+    # also construct a min and max line of ens, for fill_between spread
     for sii,sea in enumerate(seasons):
         tmpc = np.zeros((5,len(lat)))
         tmpp = np.zeros((5,len(lat)))
         for simii,sim in enumerate(sims[0:5]):
+            # here we just accumulate all ens sims into one matrix
             tmpc[simii,:] = tmpcdf[sim][sea].values
             tmpp[simii,:] = tmppdf[sim][sea].values
+        # now do calcs: standard dev, min, max
         cestd[sii,:] = np.std(tmpc,axis=0)
         pestd[sii,:] = np.std(tmpp,axis=0)
+        cemax[sii,:] = np.max(tmpc,axis=0)
+        cemin[sii,:] = np.min(tmpc,axis=0)
+        pemax[sii,:] = np.max(tmpp,axis=0)
+        pemin[sii,:] = np.min(tmpp,axis=0)
+        demax[sii,:] = np.max(tmpp-tmpc,axis=0)
+        demin[sii,:] = np.min(tmpp-tmpc,axis=0)
         
     # climo
     fig,axs = plt.subplots(4,1)
@@ -1160,7 +1104,7 @@ if plotzonmean:
         
     ax.set_xlabel('lat')
     if printtofile: # version 2 has new colors and seasons and sims are reordered
-        fig.savefig(fieldstr + '_ens_meanBC_allseassp_zonmean2.pdf')
+        fig.savefig(fieldstr + '_ens_meanBC'  + ctstr + '_allseassp_zonmean2.pdf')
 
     # standard deviation
     fig,axs = plt.subplots(4,1)
@@ -1188,7 +1132,7 @@ if plotzonmean:
         
     ax.set_xlabel('lat')
     if printtofile:
-        fig.savefig(fieldstr + 'STD_ens_meanBC_allseassp_zonmean2.pdf')
+        fig.savefig(fieldstr + 'STD_ens_meanBC'  + ctstr + '_allseassp_zonmean2.pdf')
 
     # differences
     fig,axs = plt.subplots(4,1)
@@ -1215,7 +1159,35 @@ if plotzonmean:
     ax.set_xlabel('lat')
     ax.legend(sims,'upper left', prop=fontP,ncol=2)
     if printtofile:
-        fig.savefig(fieldstr + 'diff_ens_meanBC_allseassp_zonmean_nh2.pdf')
+        fig.savefig(fieldstr + 'diff_ens_meanBC' + ctstr + '_allseassp_zonmean_nh2.pdf')
+
+    # differences SHADED
+    fig,axs = plt.subplots(4,1)
+    fig.set_size_inches(6,12)
+    fig.subplots_adjust(hspace=.2,wspace=.2)
+    for sii,sea in enumerate(seasons):
+        ax=axs[sii]
+
+        ax.fill_between(lat,demin[sii,...],demax[sii,...],facecolor='0.7',alpha=0.2)
+        for skey in sims[5:-1]: # skip the r4ct sim here
+            if skey == '' or skey == 'ens' or skey=='kemhad':
+                ax.plot(lat,flddiffdf[skey][sea],color=colordict[skey],linewidth=3)
+            else:
+                ax.plot(lat,flddiffdf[skey][sea],color=colordict[skey],linewidth=2)
+
+        for skey in sims[5:-1]:
+            if skey == '' or skey == 'ens' or skey=='kemhad':
+                ax.plot(lat,fldmaskdf[skey][sea],color=colordict[skey],linestyle='none',marker='s')
+            else:
+                ax.plot(lat,fldmaskdf[skey][sea],color=colordict[skey],linestyle='none',marker='s')
+
+        ax.set_xlim(0,90)
+        ax.set_title(field + ': ' + sea)
+        
+    ax.set_xlabel('lat')
+    ax.legend(sims[5:-1],'upper left', prop=fontP,ncol=2)
+    if printtofile:
+        fig.savefig(fieldstr + 'diff_ens_meanBC_allseassp_zonmean_nh2shade.pdf')
 
     # standard deviation differences
     fig,axs = plt.subplots(4,1)
@@ -1237,7 +1209,7 @@ if plotzonmean:
     ax.set_xlabel('lat')
     
     if printtofile:
-        fig.savefig(fieldstr + 'STDdiff_ens_meanBC_allseassp_zonmean_nh2.pdf')
+        fig.savefig(fieldstr + 'STDdiff_ens_meanBC'  + ctstr + '_allseassp_zonmean_nh2.pdf')
 
 if plotseacyc:
 
@@ -1349,7 +1321,7 @@ if plotseacyc:
         plt.title('Climos')
 
         if printtofile:
-            fig.savefig(fieldstr + '_ens_meanBC_seacyc_pol' + str(latlim) + 'N2.pdf')
+            fig.savefig(fieldstr + '_ens_meanBC'  + ctstr + '_seacyc_pol' + str(latlim) + 'N2.pdf')
 
 
         # differences
@@ -1369,7 +1341,43 @@ if plotseacyc:
         plt.title('Anomalies')
 
         if printtofile: # version 2 loops through sims in order of melt
-            fig.savefig(fieldstr + 'diff_ens_meanBC_seacyc_pol' + str(latlim) + 'N2.pdf')
+            fig.savefig(fieldstr + 'diff_ens_meanBC'  + ctstr + '_seacyc_pol' + str(latlim) + 'N2.pdf')
+
+        # calc stddev over ensemble, and min/max for shading
+        tmpcdf = fldcdf.loc[mol]
+        tmppdf = fldpdf.loc[mol]
+        ce = np.array(tmpcdf.loc[:,sims[0:5]]) # gives array of month x simulation in correct order
+        pe = np.array(tmppdf.loc[:,sims[0:5]])
+        #ce = np.array(tmpcdf.loc[:,sims[ensmems]]) # index as is (np array) doesn't work
+        #pe = np.array(tmppdf.loc[:,sims[ensmems]])
+        cestd = np.std(ce,axis=1) # std dev over ensemble, 1st 5 simulations
+        pestd = np.std(pe,axis=1)
+        cemax = np.max(ce,axis=1) # ens ctl max/min
+        cemin = np.min(ce,axis=1)
+        pemax = np.max(pe,axis=1) # ens pert max/min
+        pemin = np.min(pe,axis=1)
+        demax = np.max(pe-ce,axis=1) # ens diff max/min
+        demin = np.min(pe-ce,axis=1)
+
+        # differences SHADED
+        fig,axs = plt.subplots()
+        for skey in sims[5:-1]:
+            axs.fill_between(moidxs,demin,demax,facecolor='0.7',alpha=0.2)
+            if skey == '' or skey == 'ens' or skey=='kemhad':
+                axs.plot(moidxs,flddiffdf[skey][mol],color=colordict[skey],linewidth=3)
+            else:
+                axs.plot(moidxs,flddiffdf[skey][mol],color=colordict[skey],linewidth=2)
+        for skey in sims[5:-1]:
+            axs.plot(moidxs,fldmaskdf[skey][mol],linestyle='none',color=colordict[skey],marker='s')
+
+        plt.legend(sims[5:-1],leglocs[1], prop=fontP,ncol=2)
+        plt.xlim((1,12))
+        plt.xlabel('Month')
+        plt.ylabel(fieldstr)
+        plt.title('Anomalies')
+
+        if printtofile: # version 2 loops through sims in order of melt
+            fig.savefig(fieldstr + 'diff_ens_meanBC_seacyc_pol' + str(latlim) + 'N2shade.pdf')
 
 
         # Standard deviation climos
@@ -1386,15 +1394,6 @@ if plotseacyc:
                 axs.plot(moidxs,fldpstddf[skey][mol],color=colordict[skey],linestyle='--',linewidth=3)
             else:
                 axs.plot(moidxs,fldpstddf[skey][mol],color=colordict[skey],linestyle='--',linewidth=2)
-        
-        tmpcdf = fldcdf.loc[mol]
-        tmppdf = fldpdf.loc[mol]
-        ce = np.array(tmpcdf.loc[:,sims[0:5]]) # gives array of month x simulation in correct order
-        pe = np.array(tmppdf.loc[:,sims[0:5]])
-        #ce = np.array(tmpcdf.loc[:,sims[ensmems]]) # index as is (np array) doesn't work
-        #pe = np.array(tmppdf.loc[:,sims[ensmems]])
-        cestd = np.std(ce,axis=1) # std dev over ensemble, 1st 5 simulations
-        pestd = np.std(pe,axis=1)
 
         axs.plot(range(1,13),cestd,color='k',linewidth=3)
         axs.plot(range(1,13),pestd,color='k',linewidth=3,linestyle='--')
@@ -1406,7 +1405,7 @@ if plotseacyc:
         plt.title('Sigma')
 
         if printtofile:
-            fig.savefig(fieldstr + 'STD_ens_meanBC_seacyc_pol' + str(latlim) + 'N2.pdf')
+            fig.savefig(fieldstr + 'STD_ens_meanBC' + ctstr + '_seacyc_pol' + str(latlim) + 'N2.pdf')
 
 
         # Difference in standard deviation
@@ -1425,11 +1424,42 @@ if plotseacyc:
         plt.title('Sigma anomalies')
 
         if printtofile:
-            fig.savefig(fieldstr + 'STDdiff_ens_meanBC_seacyc_pol' + str(latlim) + 'N2.pdf')
+            fig.savefig(fieldstr + 'STDdiff_ens_meanBC'  + ctstr + '_seacyc_pol' + str(latlim) + 'N2.pdf')
 
 
 if pattcorrwithtime==1:
 
+
+    fldpcorrdf = pd.DataFrame(fldpcorrdict)
+    tmppcdf = fldpcorrdf.loc[seal] # put seasons in order
+
+
+    pcemax = np.zeros((4,len(tmppcdf['r1']['DJF'])))# get any element to get time
+    pcemin = np.zeros((4,len(tmppcdf['r1']['DJF'])))
+    # have to do these loops b/c np.array(tmppcdf) comes out as an object of
+    # size (seasons x sims) with inner arrays of length time, and can't take max/min of that
+    for sii,sea in enumerate(seasons):
+        tmppc = np.zeros( (5,len(tmppcdf['r1']['DJF'])) )
+        for simii,sim in enumerate(sims[0:5]):
+            # here we just accumulate all ens sims into one matrix
+            tmpsorted = tmppcdf[sim][sea].values
+            if sea in ('JJA','MAM','SON'):
+                if threed==1:
+                    tmpsorted=tmpsorted[:-2]
+                else:
+                    tmpsorted=tmpsorted[:-1] # all timeseries have to be same length
+                
+            if pattcorryr:
+                # sort
+                tmpsorted.sort()
+                
+            tmppc[simii,:] = tmpsorted
+
+        # now do calcs: min, max            
+        pcemax[sii,:] = np.max(tmppc,axis=0)
+        pcemin[sii,:] = np.min(tmppc,axis=0)
+        
+    
     ylims = 0,1
     if pattcorryr:
         ylims = -1,1
@@ -1456,9 +1486,36 @@ if pattcorrwithtime==1:
     
     if printtofile:
         if pattcorryr:
-            fig.savefig(fieldstr + 'diffpattcorryrly_ens_meanBC_allseassp_nh.pdf')
+            fig.savefig(fieldstr + 'diffpattcorryrly_ens_meanBC' + ctstr + '_allseassp_nh.pdf')
         else:
-            fig.savefig(fieldstr + 'diffpattcorr_ens_meanBC_allseassp_nh.pdf')
+            fig.savefig(fieldstr + 'diffpattcorr_ens_meanBC' + ctstr + '_allseassp_nh.pdf')
+
+    # with SHADING
+    fig,axs = plt.subplots(4,1)
+    fig.set_size_inches(6,12)
+    fig.subplots_adjust(hspace=.2,wspace=.2)
+    for ii,ax in enumerate(axs.flat):
+        sea = seasons[ii]
+        ax.fill_between(np.arange(0,pcemin.shape[1]),pcemin[ii,...],pcemax[ii,...],facecolor='0.7',alpha=0.2)
+        for simii,sim in enumerate(sims[5:-1]):
+            
+            if pattcorryr:
+                sortfld = fldpcorrdict[sim][sea]
+                sortfld.sort() # sort from smallest to largest patt corr
+                ax.plot(sortfld,color=colordict[sim],linewidth=2)
+            else:
+                ax.plot(fldpcorrdict[sim][sea],color=colordict[sim],linewidth=2)
+        ax.set_ylim(ylims)    
+        ax.set_title(fieldstr + ': ' + sea)
+        
+    ax.set_xlabel('lat')
+    ax.legend(sims[5:-1],'lower right', prop=fontP,ncol=2)
+    
+    if printtofile:
+        if pattcorryr:
+            fig.savefig(fieldstr + 'diffpattcorryrly_ens_meanBC_allseassp_nhshade.pdf')
+        else:
+            fig.savefig(fieldstr + 'diffpattcorr_ens_meanBC_allseassp_nhshade.pdf')
 
     
 if testhadisst:
