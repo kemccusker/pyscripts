@@ -36,15 +36,15 @@ plt.close("all")
 plt.ion()
 
 printtofile=1
-plotann=1    # annual average
-plotallmos=1 # each month separately
+plotann=0    # annual average
+plotallmos=0 # each month separately
 bimos=0 # averages every 2 mos (JF, MA, MJ, JA, SO, ND) @@ add
 seasonal=1 # averages seasons (DJF, MAM, JJA, SON)
 obssims=0  # override settings to do observed runs (kemhad*)
 
 sigtype = 'cont' # significance: 'cont' or 'hatch' which is default
 
-seasons = 'DJF','MAM','JJA','SON'
+seasons = 'SON','DJF','MAM','JJA'
 
 model = 'CanAM4'
 
@@ -66,7 +66,7 @@ casenamepra = 'kem1rcp85a' # 2022-2032 sic, adjusted sst, sit from RCP8.5
 
 
 ####### SET PERT RUN ############
-casenamep = casenamepra
+casenamep = casenamep3
 ####### SET NEW CTL RUN #########
 #casename = casenamep3
 
@@ -78,17 +78,14 @@ if obssims==1:
     timstrp = timstr
     timesel = '0002-01-01,0121-12-31'
 
-if casenamep == casenamepra or casenamep == 'kem1pert1b':
-    timstrp = '001-121'
-    timesel = '0002-01-01,0121-12-31'
     
 print 'CONTROL IS ' + casename
 print 'PERT IS ' + casenamep
 
 
 # # # ######## set Field info ###################
-# st, sic, gt, pmsl, pcp, hfl, hfs, turb, flg, fsg, fn, pcpn, zn, su, sv (@@later ufs,vfs)
-field = 'su'
+# st, sicn, sic, gt, pmsl, pcp, hfl, hfs, turb, flg, fsg, fn, pcpn, zn, su, sv (@@later ufs,vfs)
+field = 'st'
 
 cmap = 'blue2red_w20' # default cmap
 cmapclimo = 'Spectral_r'
@@ -113,6 +110,15 @@ if field == 'st':
     
     cminmp = -1; cmaxmp = 1 # for when pert is 'ctl'
     cmap = 'blue2red_w20'
+
+elif field == 'sicn':
+    units = 'frac'
+    conv=1
+    cmin=-.15; cmax=.15
+    cminp=-.15; cmaxp=.15
+    cminm=-.15; cmaxm=.15
+    cminmp=-.15; cmaxmp=.15
+    cmap = 'red2blue_w20'
 elif field == 'sic':
     units='m'
     conv=1/913.
@@ -553,10 +559,10 @@ if seasonal:
     fig6.colorbar(pc,cax=cbar_ax) # or do bm.colorbar....
     #plt.suptitle(title)
     if printtofile:
-        if pct:
+        if pct: # version 2 has seasons in new order
             fig6.savefig(field + 'pctdiffsig' + sigtype + '_' + casenamep +\
-                        '_v_' + casename + '_seas_nh.' + suff)
+                        '_v_' + casename + '_seas_nh2.' + suff)
         else:
             fig6.savefig(field + 'diffsig' + sigtype + '_' + casenamep +\
-                    '_v_' + casename + '_seas_nh.' + suff)
+                    '_v_' + casename + '_seas_nh2.' + suff)
 
