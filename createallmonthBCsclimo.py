@@ -32,9 +32,8 @@ months = con.get_mon()
 writefiles = 1
 skipcontrolwrite=0 # skip writing control BC files
 testplots = 1
-
-model = 'CanESM2'
-timeres = 'Amon'
+doobs=True # 7/8/2014. if True, do obs data
+dset='NSIDC' # or HadISST
 
 field = 'sit' # 'ts', 'sic', 'sit' # these are the model output CMIP names
 adjustsst=1 # for field='ts'
@@ -77,7 +76,7 @@ elif field == 'sic': # Sea Ice Fraction (%)
     cmapclimo='Spectral' #'sicclimo_12' # @@ don't think i have in python yet
     bcfield='SICN'
     bcdescrip='sea ice fraction'
-    bcunits='%'
+    bcunits='frac'# '%' # I think this is an error, should be frac. changed 7/8/2014 but not in bc files up through kem1pert2r4ct
         
 elif field == 'sit':
     timeres='OImon'
@@ -93,31 +92,141 @@ elif field == 'sit':
 else:
     'No such field: ' + field
 
+# set up filenames
+if doobs:
+    # do observational data
+    if plat == 'Darwin':  # means I'm on my mac
+        basepath = '/Volumes/MyPassport1TB/DATA/CanSISE/'
+        basepath2 = '/Users/kelly/CCCma/CanSISE/BoundaryConditionFiles/'
+    else:  # on linux workstation in Vic
+        basepath = '/home/rkm/work/DATA/'
+        basepath2 = '/home/rkm/work/BCs/'
 
-# Read in CanESM2 data, "pert" first
 
-if plat == 'Darwin':  # means I'm on my mac
-    #basepath = '/Users/kelly/CCCma/CanSISE/DATA/' # @@@
-    basepath = '/Volumes/MyPassport1TB/DATA/CanSISE/'
-    basepath2 = '/Users/kelly/CCCma/CanSISE/BoundaryConditionFiles/'
-    temppath = '/Users/kelly/CCCma/CanSISE/matlab/'
+    # ########### from matlab
+    if strcmp(dset,'HadISST'): # grid 64 x 129
+        if field=='ts':
+            field='gt' 
+            #ncfield='GT'
+            bcfield='GT'
+            bcdescrip='ground temperature (K)'
+            bcunits='K'
+            units='K' 
+            #climsdiff=[-1, 1]
+            climsdiff=[-2, 2]
+            clims=[236.2, 306.2]
+            lmaskflag='lmaskon'
+            #conv=1
+            cmap='kem_w20'; cmapclimo='blue2red_20'; # actually only 18 colors...
+            
+        elif field=='sic':
+            field='sicn'
+            #ncfield='SICN'
+            bcfield='SICN'
+            bcdescrip='sea ice fraction (frac)'
+            bcunits='frac'
+            units='frac'
+            climsdiff=[-.15, .15]
+            clims=[0, 1]
+            lmaskflag='lmaskon'
+            #conv=1
+            cmap='red2blue_w20'
+            cmapclimo='Spectral' #'sicclimo_12' # @@ don't think i have in python yet
+        elif field=='sit':
+            field='sic'
+            print '@@ sic (SIT) not done here'
+
+        filename = basepath + dset + '/hadisst1.1_bc_128_64_1870_2013m03_' + field + '_' + timeper + 'climo.nc'
+        filenamec = basepath + dset + '/hadisst1.1_bc_128_64_1870_2013m03_' + field + '_' + timeperc + 'climo.nc'
+        sicfnamep = basepath + dset + '/hadisst1.1_bc_128_64_1870_2013m03_sicn_' + timeper + 'climo.nc'
+        sicfnamec = basepath + dset + '/hadisst1.1_bc_128_64_1870_2013m03_sicn_' + timeperc + 'climo.nc'
+
+    elif strcmp(dset,'NSIDC'): # grid 64 x 129
+
+        if field=='ts':
+            # @@ READ HadISST sst
+            field='gt' 
+            #ncfield='GT'
+            bcfield='GT'
+            bcdescrip='ground temperature (K)'
+            bcunits='K'
+            units='K' 
+            #climsdiff=[-1, 1]
+            climsdiff=[-2, 2]
+            clims=[236.2, 306.2]
+            lmaskflag='lmaskon'
+            #conv=1
+            cmap='kem_w20'; cmapclimo='blue2red_20'; # actually only 18 colors...
+            fbase='hadisst1.1_bc_128_64_1870_2013m03'
+            
+        elif field=='sic':
+            field='sicn'
+            #ncfield='SICN'
+            bcfield='SICN'
+            bcdescrip='sea ice fraction (frac)'
+            bcunits='frac'
+            units='frac'
+            climsdiff=[-.15, .15]
+            clims=[0, 1]
+            lmaskflag='lmaskon'
+            #conv=1
+            cmap='red2blue_w20'
+            cmapclimo='Spectral' #'sicclimo_12' # @@ don't think i have in python yet
+            fbase='nsidc_bt_128x64_1978m11_2011m12'
+            
+        elif field=='sit':
+            # @@ read HadISST thickness too (really from old canadian model)
+            field='sic'
+            lmaskflag='lmaskon'
+            units = 'm'
+            clims=[-2.5*deni, 2.5*deni] 
+            climsdiff=[-.5*deni, .5*deni]
+            cmap='red2blue_w20'
+            cmapclimo= 'Spectral'# @@ don't have yet? 'sitclimo_12'
+            bcfield='SIC'
+            bcdescrip='sea ice thickness*density' 
+            bcunits='kg/m2'
+            fbase='hadisst1.1_bc_128_64_1870_2013m03'
+            #print '@@ sic (SIT) not done'
+
+        filename = basepath + dset + '/' + fbase + '_' + field + '_' + timeper + 'climo.nc'
+        filenamec = basepath + dset + '/' + fbase + '_' + field + '_' + timeperc + 'climo.nc'
+        sicfnamep = basepath + dset + '/nsidc_bt_128x64_1978m11_2011m12_sicn_' + timeper + 'climo.nc'
+        sicfnamec = basepath + dset + '/nsidc_bt_128x64_1978m11_2011m12_sicn_' + timeperc + 'climo.nc'
+
+    # ############ end from matlab
+# end if doobs
+else:
+    model = 'CanESM2'
+    timeres = 'Amon'
+
+    # Read in CanESM2 data, "pert" first
     
-else:  # on linux workstation in Vic
-    basepath = '/home/rkm/work/DATA/'
-    basepath2 = '/home/rkm/work/BCs/'
-    temppath = basepath
+    if plat == 'Darwin':  # means I'm on my mac
+        #basepath = '/Users/kelly/CCCma/CanSISE/DATA/' # @@@
+        basepath = '/Volumes/MyPassport1TB/DATA/CanSISE/'
+        basepath2 = '/Users/kelly/CCCma/CanSISE/BoundaryConditionFiles/'
+
+    else:  # on linux workstation in Vic
+        basepath = '/home/rkm/work/DATA/'
+        basepath2 = '/home/rkm/work/BCs/'
+
+    enstype = 'ens'
+    if ensmembers:
+        enstype = 'r' + str(eindex) + 'i1p1'
+
+    filename = basepath + model + '/' + casename + '/' + field + '/' + \
+               field + '_' + timeres + '_' + model + '_' + casename + \
+               '_' + enstype + '_' + timeper + 'climo.nc'
+    # control time period is in the historical run
+    filenamec = basepath + model + '/' + casenamec + '/' + field + '/' + \
+                field + '_' + timeres + '_' + model + '_' + casenamec + \
+                '_' + enstype + '_' + timeperc + 'climo.nc'
 
 landmask = con.get_t63landmask()
 landmask=landmask[...,:-1]
 landmask = np.tile(landmask,(12,1,1))
-
-enstype = 'ens'
-if ensmembers:
-    enstype = 'r' + str(eindex) + 'i1p1'
     
-filename = basepath + model + '/' + casename + '/' + field + '/' + \
-           field + '_' + timeres + '_' + model + '_' + casename + \
-           '_' + enstype + '_' + timeper + 'climo.nc'
 print filename
 
 timefldp = cnc.getNCvar(filename,'time')
@@ -126,10 +235,6 @@ lon = cnc.getNCvar(filename,'lon')
 
 fldp = cnc.getNCvar(filename,field)
 
-# control time period is in the historical run
-filenamec =  basepath + model + '/' + casenamec + '/' + field + '/' + \
-            field + '_' + timeres + '_' + model + '_' + casenamec + \
-            '_' + enstype + '_' + timeperc + 'climo.nc'
 print filenamec
 
 fldc = cnc.getNCvar(filenamec,field) # we should only need this to set SSTs in near-future BCs
@@ -139,18 +244,26 @@ if field == 'ts' and adjustsst:
     print 'TS and adjustsst'
 
     # also need to get sea-ice concentration to know where to set pert SSTs
-    filename = basepath + model + '/' + casename + '/sic/' + \
-               'sic_OImon_' + model + '_' + casename + \
-               '_' + enstype + '_' + timeper + 'climo.nc'
-    sicp = cnc.getNCvar(filename,'sic')
-    print filename
+    if doobs:
+        # make fraction into percent to match the model output
+        sicp = cnc.getNCvar(sicfnamep,'SICN')*100 # field is SICN for HadISST and NSIDC
+        sicc = cnc.getNCvar(sicfnamec,'SICN')*100
+    else:        
+        filename = basepath + model + '/' + casename + '/sic/' + \
+                   'sic_OImon_' + model + '_' + casename + \
+                   '_' + enstype + '_' + timeper + 'climo.nc'
+        sicp = cnc.getNCvar(filename,'sic')
+        print filename
+
+        filename = basepath + model + '/' + casenamec + '/sic/' + \
+                   'sic_OImon_' + model + '_' + casenamec + \
+                   '_' + enstype + '_' + timeperc + 'climo.nc'
+        print filename
+
+        sicc = cnc.getNCvar(filename,'sic')
+
+    # @@@@@@@@@@@@@@@@@ basically stopped here when adding ability to do obs data.
     
-    filename = basepath + model + '/' + casenamec + '/sic/' + \
-               'sic_OImon_' + model + '_' + casenamec + \
-               '_' + enstype + '_' + timeperc + 'climo.nc'
-    print filename
-    
-    sicc = cnc.getNCvar(filename,'sic')
     sicd = sicp - sicc
     sicpctd = (sicp-sicc)/sicc*100
 
