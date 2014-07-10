@@ -139,11 +139,11 @@ def getNCvar(filename,field,timesel=None,levsel=None,monsel=None,seas=None,calc=
                                              cdo.selmon(monsel,input = filename)),
                                 returnArray = field))
             elif levsel == None and monsel != None:
-                fld = cdo.seldate(timesel,input =
+                fld = np.squeeze(cdo.seldate(timesel,input =
                                   cdo.selmon(monsel,input = filename),
-                                  returnArray = field)
+                                  returnArray = field))
             else: # levsel and monsel are both None
-                fld = cdo.seldate(timesel,input = filename, returnArray = field)
+                fld = np.squeeze(cdo.seldate(timesel,input = filename, returnArray = field))
             os.system('rm -rf /tmp/cdoPy*')
             print "only calc='zm' is implemented now. Returning only selected date range/level/month."
 
@@ -157,11 +157,11 @@ def getNCvar(filename,field,timesel=None,levsel=None,monsel=None,seas=None,calc=
                                              cdo.selmon(monsel,input = filename)),
                                 returnArray = field))
             elif levsel == None and monsel != None:
-                fld = cdo.seldate(timesel,input =
+                fld = np.squeeze(cdo.seldate(timesel,input =
                                   cdo.selmon(monsel,input = filename),
-                                  returnArray = field)
+                                  returnArray = field))
             else: # levsel and monsel are both None
-                fld = cdo.seldate(timesel,input = filename, returnArray = field)
+                fld = np.squeeze(cdo.seldate(timesel,input = filename, returnArray = field))
                 
             os.system('rm -rf /tmp/cdoPy*')
             
