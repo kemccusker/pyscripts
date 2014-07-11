@@ -201,7 +201,7 @@ def addtsig(ploth, pvals, dim1, dim2, siglevel=0.05,color='k',type='hatch',cmap=
 
 def map_allmonths(fld, lat, lon,title='',units='',cmap='blue2red_w20',type='sq',
            cmin='',cmax='',axis=None, suppcb=0,lmask=0,climo=0,flipmask=0,
-                  pvals = None,sigtype='hatch',conts=None):
+                  pvals = None,sigtype='hatch',conts=None,latlim=None):
 
     months = con.get_mon()
 
@@ -222,7 +222,7 @@ def map_allmonths(fld, lat, lon,title='',units='',cmap='blue2red_w20',type='sq',
 
         
         bm,pc = kemmap(plotfld,lat,lon,cmin=cmin,cmax=cmax,cmap=cmap,type=type,\
-                     axis=ax,suppcb=1,lmask=lmask,flipmask=flipmask,units=units)
+                     axis=ax,suppcb=1,lmask=lmask,flipmask=flipmask,units=units,latlim=latlim)
         ax.set_title(months[midx])
         if pvals != None:
             cplt.addtsigm(bm,pvals,lat,lon,type=sigtype)
