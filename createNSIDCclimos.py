@@ -20,7 +20,7 @@ plt.ion()
 
 testplots=True
 testsicplots=False # just the sea-ice concentration plots
-writefiles=False
+writefiles=True
 dossts=False # else do SIT
 
 # # # ########## Read NC data ###############
@@ -131,11 +131,38 @@ else: # do sea ice thickness
     lon = cnc.getNCvar(sitfnamec,'lon')
     timefld = cnc.getNCvar(sitfnamec,'time')
 
+    """ Email from Mike Lazare 6/24/2014 entitled Re: sea ice thickness boundary condition
+    
+           In general, a point is considered water only the sea-ice 
+    concentration reaches 0.15 (15%). For concentrations less than this, any 
+    sea-ice mass
+    is ignored essentially, even if it is non-zero. Typically, a 
+    concentration of 0.15 maps to a sea-ice mass of 45 Kg/m2 (5 cms of ice), 
+    so it is likely
+    that there will be non-zero mass present. The BC forcing data typically 
+    tries to do consistency checks for mass vs concentration, so when
+    the concentration exceeds 0.15 the associated mass will typically be > 
+    45 Kg/m2, and the model will interpolate between the previous value
+    (less than 45 Kg/m2) and the target (value >45 Kg/m2).
+
+       All this is a roundabout (and somewhat rambling) confirmation of your 
+    hypothesis that it ignores the sea ice thickness. The ice present does
+    not contribute to albedo until the concentration exceeds 0.15; 
+    thereafter both snow/ice and open water (ie leads) factor in.
+
+    """
 
     #    basically take these hadisst thickness and mod for NSIDC
+    
+    #    Based on Mike Lazare's email, probably don't have to care too much about the
+    #      tolerance for checking SIC b/c the model considers the grid cell to
+    #      be open water only if <0.15 (and it doesn't count for albedo either)
+    #    So actually just switch to 0.15, similar to SST tests above.
 
     # 1. if NSIDC SIC >0 (ice) and HadISST SIC = 0 (no ice)
-    #      SIT should be what?? 2m? @@
+    #      SIT should be what?? 2m? No, 45kg/m3 (~5cm thick) based on the original
+    #        way the hadisst thickness was created from some model climatology
+    #        script is: to_gt_sic_sicn_job
     # 2. if NSIDC SIC >0 (ice) and HadISST SIC > 0 (ice)
     #      use HadISST SIT as is
     # 3. if NSIDC SIC = 0 (no ice) and HadISST SIC > 0 (ice)
@@ -150,13 +177,12 @@ else: # do sea ice thickness
     nsitc = cp.copy(hsitc)
 
     # case 1.
-    tol=.025 # @@
-    nsitp[np.logical_and(nsicp>tol, np.isclose(hsicp,0))] = 2*deni # @@ 2 meters?
-    nsitc[np.logical_and(nsicc>tol, np.isclose(hsicc,0))] = 2*deni # @@ 2 meters?
+    nsitp[np.logical_and(nsicp>=0.15, hsicp<0.15)] = 45 # ~5cm thickness
+    nsitc[np.logical_and(nsicc>=0.15, hsicc<0.15)] = 45 # ~5cm thickness
     
     # case 3.
-    nsitp[np.logical_and(np.isclose(nsicp,0), hsicp>0)] = 0
-    nsitc[np.logical_and(np.isclose(nsicc,0), hsicc>0)] = 0
+    nsitp[np.logical_and(nsicp<0.15, hsicp>=0.15)] = 0
+    nsitc[np.logical_and(nsicc<0.15, hsicc>=0.15)] = 0
 
     if testplots:
 
