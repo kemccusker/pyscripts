@@ -29,20 +29,21 @@ plat = platform.system()
 
 months = con.get_mon()
 
-writefiles = 1
-skipcontrolwrite=0 # skip writing control BC files
-testplots = 1
+writefiles = True
+skipcontrolwrite=False # skip writing control BC files
+testplots = True
 doobs=True # 7/8/2014. if True, do obs data
-dset='NSIDC' # or HadISST
+dset='NSIDC'; dtype='bootstrap' # or HadISST,''
 
 field = 'sit' # 'ts', 'sic', 'sit' # these are the model output CMIP names
-adjustsst=1 # for field='ts'
-threshtype = 'abs' # for field='sic'. absolute or relative threshold for sea ice conc change
-thresh = 10  #for field='sic'. threshold for where to change SST
 
-controlsit=1 # for field='sit'. set to 1 if want to keep the control sit.
+adjustsst=True # for field='ts'
+threshtype = 'abs' # when field='ts' and adjustsst=1. absolute or relative threshold for sea ice conc change
+thresh = 10  #when field='ts' and adjustsst=1. threshold for where to change SST
+
+controlsit=0 # for field='sit'. set to 1 if want to keep the control sit.
 usesictest=1 # for field='sit' and controlsit=1. use pert sea ice conc to check where sit=0
-ensmembers = 1; eindex=4 # make BC files for specified CanESM ensemble member
+ensmembers = 0; eindex=4 # make BC files for specified CanESM ensemble member
 
 casenamec = 'historical'; timeperc = '1979-1989'
 #casename = 'rcp85';
@@ -99,14 +100,14 @@ if doobs:
         basepath = '/Volumes/MyPassport1TB/DATA/CanSISE/'
         basepath2 = '/Users/kelly/CCCma/CanSISE/BoundaryConditionFiles/'
     else:  # on linux workstation in Vic
-        basepath = '/home/rkm/work/DATA/'
+        basepath = '/home/rkm/work/BCs/'
         basepath2 = '/home/rkm/work/BCs/'
 
-
+    timeper = '2002-2011'
     # ########### from matlab
-    if strcmp(dset,'HadISST'): # grid 64 x 129
+    if dset=='HadISST': # grid 64 x 129
         if field=='ts':
-            field='gt' 
+            prfield='gt' 
             #ncfield='GT'
             bcfield='GT'
             bcdescrip='ground temperature (K)'
@@ -120,7 +121,7 @@ if doobs:
             cmap='kem_w20'; cmapclimo='blue2red_20'; # actually only 18 colors...
             
         elif field=='sic':
-            field='sicn'
+            prfield='sicn'
             #ncfield='SICN'
             bcfield='SICN'
             bcdescrip='sea ice fraction (frac)'
@@ -133,19 +134,27 @@ if doobs:
             cmap='red2blue_w20'
             cmapclimo='Spectral' #'sicclimo_12' # @@ don't think i have in python yet
         elif field=='sit':
-            field='sic'
-            print '@@ sic (SIT) not done here'
+            prfield='sic'
+            lmaskflag='lmaskon'
+            units = 'm'
+            clims=[-2.5*deni, 2.5*deni] 
+            climsdiff=[-.5*deni, .5*deni]
+            cmap='red2blue_w20'
+            cmapclimo= 'Spectral'# @@ don't have yet? 'sitclimo_12'
+            bcfield='SIC'
+            bcdescrip='sea ice thickness*density' 
+            bcunits='kg/m2'
 
-        filename = basepath + dset + '/hadisst1.1_bc_128_64_1870_2013m03_' + field + '_' + timeper + 'climo.nc'
-        filenamec = basepath + dset + '/hadisst1.1_bc_128_64_1870_2013m03_' + field + '_' + timeperc + 'climo.nc'
+        filename = basepath + dset + '/hadisst1.1_bc_128_64_1870_2013m03_' + prfield + '_' + timeper + 'climo.nc'
+        filenamec = basepath + dset + '/hadisst1.1_bc_128_64_1870_2013m03_' + prfield + '_' + timeperc + 'climo.nc'
         sicfnamep = basepath + dset + '/hadisst1.1_bc_128_64_1870_2013m03_sicn_' + timeper + 'climo.nc'
         sicfnamec = basepath + dset + '/hadisst1.1_bc_128_64_1870_2013m03_sicn_' + timeperc + 'climo.nc'
 
-    elif strcmp(dset,'NSIDC'): # grid 64 x 129
+    elif dset == 'NSIDC': # grid 64 x 129
 
         if field=='ts':
             # @@ READ HadISST sst
-            field='gt' 
+            prfield='gt' 
             #ncfield='GT'
             bcfield='GT'
             bcdescrip='ground temperature (K)'
@@ -157,10 +166,9 @@ if doobs:
             lmaskflag='lmaskon'
             #conv=1
             cmap='kem_w20'; cmapclimo='blue2red_20'; # actually only 18 colors...
-            fbase='hadisst1.1_bc_128_64_1870_2013m03'
             
         elif field=='sic':
-            field='sicn'
+            prfield='sicn'
             #ncfield='SICN'
             bcfield='SICN'
             bcdescrip='sea ice fraction (frac)'
@@ -175,8 +183,7 @@ if doobs:
             fbase='nsidc_bt_128x64_1978m11_2011m12'
             
         elif field=='sit':
-            # @@ read HadISST thickness too (really from old canadian model)
-            field='sic'
+            prfield='sic'
             lmaskflag='lmaskon'
             units = 'm'
             clims=[-2.5*deni, 2.5*deni] 
@@ -186,11 +193,9 @@ if doobs:
             bcfield='SIC'
             bcdescrip='sea ice thickness*density' 
             bcunits='kg/m2'
-            fbase='hadisst1.1_bc_128_64_1870_2013m03'
-            #print '@@ sic (SIT) not done'
 
-        filename = basepath + dset + '/' + fbase + '_' + field + '_' + timeper + 'climo.nc'
-        filenamec = basepath + dset + '/' + fbase + '_' + field + '_' + timeperc + 'climo.nc'
+        filename = basepath + dset + '/nsidc_bt_128x64_1978m11_2011m12_' + prfield + '_' + timeper + 'climo.nc'
+        filenamec = basepath + dset + '/nsidc_bt_128x64_1978m11_2011m12_' + prfield + '_' + timeperc + 'climo.nc'
         sicfnamep = basepath + dset + '/nsidc_bt_128x64_1978m11_2011m12_sicn_' + timeper + 'climo.nc'
         sicfnamec = basepath + dset + '/nsidc_bt_128x64_1978m11_2011m12_sicn_' + timeperc + 'climo.nc'
 
@@ -223,8 +228,12 @@ else:
                 field + '_' + timeres + '_' + model + '_' + casenamec + \
                 '_' + enstype + '_' + timeperc + 'climo.nc'
 
+
 landmask = con.get_t63landmask()
-landmask=landmask[...,:-1]
+if doobs:
+    pass # do not remove wraparound lon
+else:
+    landmask=landmask[...,:-1]
 landmask = np.tile(landmask,(12,1,1))
     
 print filename
@@ -233,11 +242,15 @@ timefldp = cnc.getNCvar(filename,'time')
 lat = cnc.getNCvar(filename,'lat')
 lon = cnc.getNCvar(filename,'lon')
 
-fldp = cnc.getNCvar(filename,field)
+if doobs:
+    fldp = cnc.getNCvar(filename,bcfield)
+    fldc = cnc.getNCvar(filenamec,bcfield)
+else:
+    fldp = cnc.getNCvar(filename,field)
+    fldc = cnc.getNCvar(filenamec,field) # we should only need this to set SSTs in near-future BCs
 
 print filenamec
 
-fldc = cnc.getNCvar(filenamec,field) # we should only need this to set SSTs in near-future BCs
 
 if field == 'ts' and adjustsst:
     # assume adjustsst will always be true now
@@ -262,7 +275,6 @@ if field == 'ts' and adjustsst:
 
         sicc = cnc.getNCvar(filename,'sic')
 
-    # @@@@@@@@@@@@@@@@@ basically stopped here when adding ability to do obs data.
     
     sicd = sicp - sicc
     sicpctd = (sicp-sicc)/sicc*100
@@ -291,12 +303,16 @@ elif field == 'ts' and ~adjustsst:
     
     fldp = copy.copy(fldc)
 
-    # also need to get pert sea-ice concentration to check open water temp against SIConc
-    filename = basepath + model + '/' + casename + '/sic/' + \
-               'sic_OImon_' + model + '_' + casename + \
-               '_' + enstype + '_' + timeper + 'climo.nc'
-    print filename
-    sicp = cnc.getNCvar(filename,'sic')
+    if doobs:
+        # make fraction into percent to match the model output
+        sicp = cnc.getNCvar(sicfnamep,'SICN')*100 # field is SICN for HadISST and NSIDC
+    else:
+        # also need to get pert sea-ice concentration to check open water temp against SIConc
+        filename = basepath + model + '/' + casename + '/sic/' + \
+                   'sic_OImon_' + model + '_' + casename + \
+                   '_' + enstype + '_' + timeper + 'climo.nc'
+        print filename
+        sicp = cnc.getNCvar(filename,'sic')
     
     #print "Not done: check no open water is < 271.2"
     fldptmp=copy.copy(fldp)
@@ -311,26 +327,36 @@ elif field == 'ts' and ~adjustsst:
     fldsave=copy.copy(fldc)
     
 elif field == 'sic':
-    
-    fldc = fldc/100 # should be fractional
-    fldp = fldp/100
+
+    if doobs:
+        pass # already fractional
+    else:
+        fldc = fldc/100 # should be fractional
+        fldp = fldp/100
     fldsave=copy.copy(fldp) # dummy
 
 elif field == 'sit' and controlsit:
     # keep control sit
-    
-    fldc = fldc*deni
-    fldp = fldp*deni
+
+    if doobs:
+        pass # already a mass
+    else:
+        fldc = fldc*deni
+        fldp = fldp*deni
     
     if usesictest==1: #use pert sea ice concentration as the check
         # this is the one we use for kem1pert3
         
         # need to get pert sea-ice concentration to check thickness against SIConc
-        filename = basepath + model + '/' + casename + '/sic/' + \
-                   'sic_OImon_' + model + '_' + casename + \
-                   '_' + enstype + '_' + timeper + 'climo.nc'
-        print filename
-        sicp = cnc.getNCvar(filename,'sic')
+        if doobs:
+            # make fraction into percent to match the model output
+            sicp = cnc.getNCvar(sicfnamep,'SICN')*100 # field is SICN for HadISST and NSIDC
+        else:        
+            filename = basepath + model + '/' + casename + '/sic/' + \
+                       'sic_OImon_' + model + '_' + casename + \
+                       '_' + enstype + '_' + timeper + 'climo.nc'
+            print filename
+            sicp = cnc.getNCvar(filename,'sic')
 
         fldtmp = copy.copy(fldc) # start with control thickness
         # @@@ should this actually be, anywhere pert sic is <0.15? since the model apparently considers it open water if conc<0.15
@@ -343,16 +369,22 @@ elif field == 'sit' and controlsit:
         print 'Keep control SIT with usesittest is not implemented. Do not need it anymore?' #@@
     
 elif field == 'sit':
-    fldc = fldc*deni
-    fldp = fldp*deni
+    if doobs:
+        pass # already a mass
+    else:
+        fldc = fldc*deni
+        fldp = fldp*deni
     fldsave = copy.copy(fldp) # dummy
 
 # put SH back to control since only want to mod NH!
 fldp[:,lat<=0,:] = fldc[:,lat<=0,:] # not even sure I need to do this, already started w/ control
 # add wraparound lon @@
-fldc = np.dstack((fldc,fldc[...,0]))
-fldp = np.dstack((fldp,fldp[...,0]))
-fldsave = np.dstack((fldsave,fldsave[...,0]))
+if doobs:
+    pass # already has wraparound lon
+else:
+    fldc = np.dstack((fldc,fldc[...,0]))
+    fldp = np.dstack((fldp,fldp[...,0]))
+    fldsave = np.dstack((fldsave,fldsave[...,0]))
 
 
 # # end setting up the BC data itself ####
@@ -443,17 +475,43 @@ if writefiles:
 
             # note that timeper is the perturbed time period
             # casenameout is the current casenames element
-            if thetimeper==timeper and field == 'ts' and adjustsst: 
-                outfile= bcfield + 'adjusted_BC_CanESM2_' + casenameout + '_' + thetimeper + '_' +\
+            
+            # If pert time period and adjusted SST:
+            if thetimeper==timeper and field == 'ts' and adjustsst:
+                if doobs:
+                    outfile=bcfield + 'adjusted_BC_' + dset + dtype + '_' + thetimeper + '_' +\
+                             datestr + '_' + threshtype + str(thresh) + 'thresh.nc'
+                    nctitle = 'Boundary condition dataset generated from ' + dset + dtype +\
+                              ' ' + thetimeper + ' adjusted with ' +  outflds.keys()[1] +\
+                              ' where SIC ' + threshtype + ' change is >=10%'
+                    if dset=='NSIDC':
+                        nctitle = nctitle + '. Original SSTs from HadISST1.1'
+                else:
+                    outfile= bcfield + 'adjusted_BC_CanESM2_' + casenameout + '_' + thetimeper + '_' +\
                          datestr + '_' + threshtype + str(thresh) + 'thresh.nc'
+                    
+                    nctitle = 'Boundary condition dataset generated from CanESM2 ' +\
+                                  casenamec + ' ' + outflds.keys()[0] + ', adjusted with ' +\
+                              casename + ' ' + outflds.keys()[1] + ' where SIC ' + threshtype + ' change is >=10%'
+                
+            # If pert time period and unadjusted SST:
             elif thetimeper==timeper and field == 'ts' and ~adjustsst:
                 if ensmembers:
                     outfile = bcfield + 'frzchk' + casename + 'r' + str(eindex) + timeper + '_BC_CanESM2_' +\
                               casenamec + 'r' + str(eindex) + '_' + timeperc + '_' + datestr + '.nc'
                 else:
-                    outfile = bcfield + 'frzchk' + casename + timeper + '_BC_CanESM2_' +\
-                              casenamec + '_' + timeperc + '_' + datestr + '.nc'           
+                    if doobs:
+                        print 'not planning on needing to make these! @@ No filename'
+                        # really should throw exception or something @@
+                    else:
+                        outfile = bcfield + 'frzchk' + casename + timeper + '_BC_CanESM2_' +\
+                              casenamec + '_' + timeperc + '_' + datestr + '.nc'
                 # the data is the control, but open water temps are checked for below freezing where no pert ice
+
+                nctitle = 'Boundary condition dataset generated from CanESM2 ' +\
+                              casenamec + ' ' + outflds.keys()[0] + ', but open water <271.2K in ' +\
+                              casename + ' ' + outflds.keys()[1] + ' is set to 271.2 (where SIC<15)'
+            # If pert time period and control SIT:
             elif thetimeper==timeper and field == 'sit' and controlsit:
                 
                 if usesictest:
@@ -465,10 +523,29 @@ if writefiles:
                     outfile=bcfield + '_BC_CanESM2_' + casenamec + 'r' + str(eindex) + '_' + timeperc + 'forpert_' +\
                              datestr + '_' + teststr + '.nc'
                 else:
-                    outfile=bcfield + '_BC_CanESM2_' + casenamec + '_' + timeperc + 'forpert_' +\
+                    if doobs:
+                        print 'not planning on needing to make these! @@ No filename!'
+                        # really should throw exception or something @@
+                    else:
+                        outfile=bcfield + '_BC_CanESM2_' + casenamec + '_' + timeperc + 'forpert_' +\
                              datestr + '_' + teststr + '.nc'
+
+                nctitle = 'Boundary condition dataset generated from CanESM2 ' +\
+                              casenamec + ' ' + outflds.keys()[0] +\
+                              ', except set to zero where no ice in ' + casename + ' ' + outflds.keys()[1]
+                
+            # All other cases have a "regular" outfile name
             else:
-                outfile=bcfield + '_BC_CanESM2_' + casenameout + '_' + thetimeper + '_' + datestr + '.nc'
+                if doobs:
+                    outfile = bcfield + '_BC_' + dset + dtype + '_' + thetimeper + '_' + datestr + '.nc'
+                    nctitle = 'Boundary condition dataset generated from ' + dset + dtype +\
+                              ' ' + thetimeper + ' climo'
+                    if dset == 'NSIDC' and bcfield=='SIC':
+                        nctitle = nctitle + '. Original data from HadISST thickness (originally from old Can model output)'
+                else:
+                    outfile=bcfield + '_BC_CanESM2_' + casenameout + '_' + thetimeper + '_' + datestr + '.nc'
+                    nctitle = 'Boundary condition dataset generated from CanESM2 ' +\
+                              casenameout + ' ' + thetimeper + ' climo'
 
 
             outnc = Dataset(outfile,'w')
@@ -505,21 +582,9 @@ if writefiles:
 
             # global attributes
             import time
-            if thetimeper == timeper and field == 'ts' and adjustsst:
-                outnc.title = 'Boundary condition dataset generated from CanESM2 ' +\
-                              casenamec + ' ' + outflds.keys()[0] + ', adjusted with ' +\
-                              casename + ' ' + outflds.keys()[1] + ' where SIC ' + threshtype + ' change is >=10%'
-            elif thetimeper == timeper and field == 'ts' and ~adjustsst:
-                outnc.title = 'Boundary condition dataset generated from CanESM2 ' +\
-                              casenamec + ' ' + outflds.keys()[0] + ', but open water <271.2K in ' +\
-                              casename + ' ' + outflds.keys()[1] + ' is set to 271.2 (where SIC<15)'
-            elif thetimeper == timeper and field == 'sit' and controlsit:
-                outnc.title = 'Boundary condition dataset generated from CanESM2 ' +\
-                              casenamec + ' ' + outflds.keys()[0] +\
-                              ', except set to zero where no ice in ' + casename + ' ' + outflds.keys()[1]
-            else:
-                outnc.title = 'Boundary condition dataset generated from CanESM2 ' +\
-                              casenameout + ' ' + thetimeper + ' climo'
+
+            outnc.title = nctitle
+                
             if ensmembers:
                 outnc.title = outnc.title + '. Ensemble member r' + str(eindex) + 'i1p1'
                 
