@@ -46,7 +46,7 @@ kemmap(fld, lat, lon, title='', units='', cmap='blue2red_w20', type='sq', cmin='
 def kemmap(fld, lat, lon,title='',units='',cmap='blue2red_w20',type='sq',
            cmin='',cmax='',axis=None, suppcb=0,lmask=0,flipmask=0,latlim=None):
 
-    if cmap =='':
+    if cmap =='' or cmap==None:
         cmap='blue2red_w20'
         
     incmap = plt.cm.get_cmap(cmap)
@@ -84,6 +84,7 @@ def kemmap(fld, lat, lon,title='',units='',cmap='blue2red_w20',type='sq',
 
         if cmlen>200:
             cmlen = float(20) # ie. if using a built in colormap that is continuous, want smaller # of colors
+        
         incr = (cmax-cmin) /cmlen
         conts = np.arange(cmin,cmax+incr,incr)
 
