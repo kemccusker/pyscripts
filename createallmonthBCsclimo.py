@@ -31,7 +31,7 @@ months = con.get_mon()
 
 writefiles = True
 skipcontrolwrite=False # skip writing control BC files
-testplots = True
+testplots = False
 doobs=True # 7/8/2014. if True, do obs data
 dset='NSIDC'; dtype='bootstrap' # or HadISST,''
 
@@ -480,7 +480,7 @@ if writefiles:
             if thetimeper==timeper and field == 'ts' and adjustsst:
                 if doobs:
                     outfile=bcfield + 'adjusted_BC_' + dset + dtype + '_' + thetimeper + '_' +\
-                             datestr + '_' + threshtype + str(thresh) + 'thresh.nc'
+                             datestr + '_' + threshtype + str(thresh) + 'threshnc3.nc'
                     nctitle = 'Boundary condition dataset generated from ' + dset + dtype +\
                               ' ' + thetimeper + ' adjusted with ' +  outflds.keys()[1] +\
                               ' where SIC ' + threshtype + ' change is >=10%'
@@ -488,7 +488,7 @@ if writefiles:
                         nctitle = nctitle + '. Original SSTs from HadISST1.1'
                 else:
                     outfile= bcfield + 'adjusted_BC_CanESM2_' + casenameout + '_' + thetimeper + '_' +\
-                         datestr + '_' + threshtype + str(thresh) + 'thresh.nc'
+                         datestr + '_' + threshtype + str(thresh) + 'threshnc3.nc'
                     
                     nctitle = 'Boundary condition dataset generated from CanESM2 ' +\
                                   casenamec + ' ' + outflds.keys()[0] + ', adjusted with ' +\
@@ -498,14 +498,14 @@ if writefiles:
             elif thetimeper==timeper and field == 'ts' and ~adjustsst:
                 if ensmembers:
                     outfile = bcfield + 'frzchk' + casename + 'r' + str(eindex) + timeper + '_BC_CanESM2_' +\
-                              casenamec + 'r' + str(eindex) + '_' + timeperc + '_' + datestr + '.nc'
+                              casenamec + 'r' + str(eindex) + '_' + timeperc + '_' + datestr + 'nc3.nc'
                 else:
                     if doobs:
                         print 'not planning on needing to make these! @@ No filename'
                         # really should throw exception or something @@
                     else:
                         outfile = bcfield + 'frzchk' + casename + timeper + '_BC_CanESM2_' +\
-                              casenamec + '_' + timeperc + '_' + datestr + '.nc'
+                              casenamec + '_' + timeperc + '_' + datestr + 'nc3.nc'
                 # the data is the control, but open water temps are checked for below freezing where no pert ice
 
                 nctitle = 'Boundary condition dataset generated from CanESM2 ' +\
@@ -521,14 +521,14 @@ if writefiles:
 
                 if ensmembers:
                     outfile=bcfield + '_BC_CanESM2_' + casenamec + 'r' + str(eindex) + '_' + timeperc + 'forpert_' +\
-                             datestr + '_' + teststr + '.nc'
+                             datestr + '_' + teststr + 'nc3.nc'
                 else:
                     if doobs:
                         print 'not planning on needing to make these! @@ No filename!'
                         # really should throw exception or something @@
                     else:
                         outfile=bcfield + '_BC_CanESM2_' + casenamec + '_' + timeperc + 'forpert_' +\
-                             datestr + '_' + teststr + '.nc'
+                             datestr + '_' + teststr + 'nc3.nc'
 
                 nctitle = 'Boundary condition dataset generated from CanESM2 ' +\
                               casenamec + ' ' + outflds.keys()[0] +\
@@ -537,18 +537,18 @@ if writefiles:
             # All other cases have a "regular" outfile name
             else:
                 if doobs:
-                    outfile = bcfield + '_BC_' + dset + dtype + '_' + thetimeper + '_' + datestr + '.nc'
+                    outfile = bcfield + '_BC_' + dset + dtype + '_' + thetimeper + '_' + datestr + 'nc3.nc'
                     nctitle = 'Boundary condition dataset generated from ' + dset + dtype +\
                               ' ' + thetimeper + ' climo'
                     if dset == 'NSIDC' and bcfield=='SIC':
                         nctitle = nctitle + '. Original data from HadISST thickness (originally from old Can model output)'
                 else:
-                    outfile=bcfield + '_BC_CanESM2_' + casenameout + '_' + thetimeper + '_' + datestr + '.nc'
+                    outfile=bcfield + '_BC_CanESM2_' + casenameout + '_' + thetimeper + '_' + datestr + 'nc3.nc'
                     nctitle = 'Boundary condition dataset generated from CanESM2 ' +\
                               casenameout + ' ' + thetimeper + ' climo'
 
 
-            outnc = Dataset(outfile,'w')
+            outnc = Dataset(outfile,'w',format='NETCDF3_CLASSIC')
 
             # create the dimensions
             #    not sure why these need python variables, they are never used@@
