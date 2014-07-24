@@ -37,10 +37,10 @@ printtofile=1
 
 plotann=0    # seasonal avg map, comparing ens runs and meanBC
 plotallmos=0 # monthly maps (@@ not implemented)
-seasonal=1 # seasonal maps (DJF, MAM, JJA, SON)
+seasonal=0 # seasonal maps (DJF, MAM, JJA, SON)
 
 plotzonmean=0 # plotzonmean,plotseacyc,pattcorrwithtime are mutually exclusive
-plotseacyc=0 # plotzonmean,plotseacyc,pattcorrwithtime are mutually exclusive
+plotseacyc=1 # plotzonmean,plotseacyc,pattcorrwithtime are mutually exclusive
 withlat=0 # plot the seasonal cycle with latitude dimension too (only for plotseacyc=1)@@for now just std over ens
 pattcorrwithtime=0 # plot pattern correlation with time for each ens member
 pattcorryr=0 # if 1, do a yearly anomaly pattern rather than time-integrated 
@@ -49,6 +49,7 @@ testhadisst=0 # check which ens member most similar to hadisst
 normbystd=0
 addobs=1 # add mean of kemhad* runs to line plots, seasonal maps (so far@@)
 addr4ct=1 # add kem1pert2r4ct (constant thickness version of ens4)
+addsens=1 # add sensitivity runs (kem1pert1b, kem1pert3)
 
 latlim = 45 # None #45 # lat limit for NH plots. Set to None otherwise.
 
@@ -61,7 +62,7 @@ seasons = 'SON','DJF','MAM','JJA'
 model = 'CanAM4'
 threed=0
 sia=0 # is the requested field sea ice area
-
+ctstr=''
 
 # # # ########### set Simulations #############
 # Control run
@@ -82,7 +83,7 @@ timstr2='001-121'
 # # # ######## set Field info ###################
 # gz, t, u, v, q (3D !)
 # st, sic, sicn (sia), gt, pmsl, pcp, hfl, hfs, turb, flg, fsg, fn, pcpn, zn, su, sv (@@later ufs,vfs)
-field = 'sic'
+field = 'pcpn'
 print field
 timeavg = 'DJF'
 
@@ -404,6 +405,9 @@ if addobs:
 if addr4ct:
     sims = sims + ('r4ct',)
     ctstr = '_r4ct' # for figure filenames
+if addsens:
+    sims = sims + ('kem1pert1b','kem1pert3') # control is kemctl1 (or '' key)
+    ctstr = ctstr + 'sens'
     
 #ensmems=np.arange(0,5)
 
@@ -744,6 +748,9 @@ if seasonal:
             frootc = basepath + sim + 'ctl' + subdir + sim + 'ctl' + '_' + field + '_'
             frootp = basepath + sim + 'pert' + subdir + sim + 'pert' + '_' + field + '_'
             rowl='had'
+        elif sim in ('kem1pert1b','kem1pert3'):
+            frootc = basepath + 'kemctl1' + subdir + 'kemctl1' + '_' + field + '_'
+            frootp = basepath + sim + subdir + sim + '_' + field + '_'
         else:
             frootc =  basepath + bcasename + sim + subdir + bcasename + sim + '_' + field + '_'
             frootp = basepath + bcasenamep + sim + subdir + bcasenamep + sim + '_' + field + '_'
@@ -753,6 +760,7 @@ if seasonal:
             fnamec = frootc + timstr + '_ts.nc'
             fnamep = frootp + timstrp + '_ts.nc'
         else:
+            print '@@ fix to use the level NC files'
             fnamec = frootc + '001-061_ts.nc'
             fnamec2 = frootc + '062-121_ts.nc'
             fnamep = frootp + '001-061_ts.nc'
@@ -863,7 +871,10 @@ if plotzonmean==1 or plotseacyc==1 or pattcorrwithtime==1:
 
         if sim=='kemhad':
             frootc = basepath + sim + 'ctl' + subdir + sim + 'ctl' + '_' + field + '_'
-            frootp = basepath + sim + 'pert' + subdir + sim + 'pert' + '_' + field + '_'            
+            frootp = basepath + sim + 'pert' + subdir + sim + 'pert' + '_' + field + '_'
+        elif sim in ('kem1pert1b','kem1pert3'):
+            frootc = basepath + 'kemctl1' + subdir + 'kemctl1' + '_' + field + '_'
+            frootp = basepath + sim + subdir + sim + '_' + field + '_'
         else:
             frootc =  basepath + bcasename + sim + subdir + bcasename + sim + '_' + field + '_'
             frootp = basepath + bcasenamep + sim + subdir + bcasenamep + sim + '_' + field + '_'
@@ -902,7 +913,9 @@ if plotzonmean==1 or plotseacyc==1 or pattcorrwithtime==1:
                     fldpzm = cnc.getNCvar(fnamep,field.upper(),timesel=timesel,
                                                    **ncparams)*conv
 
-                else:                
+                else:
+                    print '@@ fix to use level NC files'
+                    
                     ncparams['levsel'] = level
                     fldczm = np.append(cnc.getNCvar(fnamec,ncfield,timesel='0002-01-01,061-12-31',**ncparams)*conv,
                                         cnc.getNCvar(fnamec2,ncfield,**ncparams)*conv,
@@ -1036,7 +1049,10 @@ colordict = {'r1': ccm.get_linecolor('warm1'), #'firebrick'),
              'ens': ccm.get_linecolor('magenta'),
              '': ccm.get_linecolor('mediumblue'), #'mediumpurple1'), #darkyellow'),
              'kemhad': ccm.get_linecolor('deepskyblue'),
-             'r4ct': ccm.get_linecolor('darkseagreen4')}
+             'kemnsidc': ccm.get_linecolor('steelblue4'),
+             'r4ct': ccm.get_linecolor('darkseagreen4'),
+             'kem1pert1b': ccm.get_linecolor('darkolivegreen3'),
+             'kem1pert3': ccm.get_linecolor('darkolivegreen1')}
              
 
 
@@ -1173,13 +1189,13 @@ if plotzonmean:
         ax=axs[sii]
 
         ax.fill_between(lat,demin[sii,...],demax[sii,...],facecolor='0.7',alpha=0.2)
-        for skey in sims[5:-1]: # skip the r4ct sim here
+        for skey in sims[5:]:# actually don't skip # skip the r4ct sim here
             if skey == '' or skey == 'ens' or skey=='kemhad':
                 ax.plot(lat,flddiffdf[skey][sea],color=colordict[skey],linewidth=3)
             else:
                 ax.plot(lat,flddiffdf[skey][sea],color=colordict[skey],linewidth=2)
 
-        for skey in sims[5:-1]:
+        for skey in sims[5:]: #-1]:
             if skey == '' or skey == 'ens' or skey=='kemhad':
                 ax.plot(lat,fldmaskdf[skey][sea],color=colordict[skey],linestyle='none',marker='s')
             else:
@@ -1189,9 +1205,9 @@ if plotzonmean:
         ax.set_title(field + ': ' + sea)
         
     ax.set_xlabel('lat')
-    ax.legend(sims[5:-1],'upper left', prop=fontP,ncol=2)
+    ax.legend(sims[5:],'upper left', prop=fontP,ncol=2)
     if printtofile:
-        fig.savefig(fieldstr + 'diff_ens_meanBC_allseassp_zonmean_nh2shade.pdf')
+        fig.savefig(fieldstr + 'diff_ens_meanBC' + ctstr + '_allseassp_zonmean_nh2shade.pdf')
 
     # standard deviation differences
     fig,axs = plt.subplots(4,1)
@@ -1365,23 +1381,23 @@ if plotseacyc:
 
         # differences SHADED
         fig,axs = plt.subplots()
-        for skey in sims[5:-1]:
+        for skey in sims[5:]:  #-1]:
             axs.fill_between(moidxs,demin,demax,facecolor='0.7',alpha=0.2)
             if skey == '' or skey == 'ens' or skey=='kemhad':
                 axs.plot(moidxs,flddiffdf[skey][mol],color=colordict[skey],linewidth=3)
             else:
                 axs.plot(moidxs,flddiffdf[skey][mol],color=colordict[skey],linewidth=2)
-        for skey in sims[5:-1]:
+        for skey in sims[5:]: #-1]:
             axs.plot(moidxs,fldmaskdf[skey][mol],linestyle='none',color=colordict[skey],marker='s')
 
-        plt.legend(sims[5:-1],leglocs[1], prop=fontP,ncol=2)
+        plt.legend(sims[5:],leglocs[1], prop=fontP,ncol=2)
         plt.xlim((1,12))
         plt.xlabel('Month')
         plt.ylabel(fieldstr)
         plt.title('Anomalies')
 
         if printtofile: # version 2 loops through sims in order of melt
-            fig.savefig(fieldstr + 'diff_ens_meanBC_seacyc_pol' + str(latlim) + 'N2shade.pdf')
+            fig.savefig(fieldstr + 'diff_ens_meanBC' + ctstr + '_seacyc_pol' + str(latlim) + 'N2shade.pdf')
 
 
         # Standard deviation climos
@@ -1501,7 +1517,7 @@ if pattcorrwithtime==1:
     for ii,ax in enumerate(axs.flat):
         sea = seasons[ii]
         ax.fill_between(np.arange(0,pcemin.shape[1]),pcemin[ii,...],pcemax[ii,...],facecolor='0.7',alpha=0.2)
-        for simii,sim in enumerate(sims[5:-1]):
+        for simii,sim in enumerate(sims[5:]):
             
             if pattcorryr:
                 sortfld = fldpcorrdict[sim][sea]
@@ -1513,13 +1529,13 @@ if pattcorrwithtime==1:
         ax.set_title(fieldstr + ': ' + sea)
         
     ax.set_xlabel('lat')
-    ax.legend(sims[5:-1],'lower right', prop=fontP,ncol=2)
+    ax.legend(sims[5:],'lower right', prop=fontP,ncol=2)
     
     if printtofile:
         if pattcorryr:
-            fig.savefig(fieldstr + 'diffpattcorryrly_ens_meanBC_allseassp_nhshade.pdf')
+            fig.savefig(fieldstr + 'diffpattcorryrly_ens_meanBC' + ctstr + '_allseassp_nhshade.pdf')
         else:
-            fig.savefig(fieldstr + 'diffpattcorr_ens_meanBC_allseassp_nhshade.pdf')
+            fig.savefig(fieldstr + 'diffpattcorr_ens_meanBC' + ctstr + '_allseassp_nhshade.pdf')
 
     
 if testhadisst:
