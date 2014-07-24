@@ -209,7 +209,10 @@ def map_allmonths(fld, lat, lon,title='',units='',cmap='blue2red_w20',type='sq',
     midx=0
     fig, spax = plt.subplots(2,6)
     fig.set_size_inches(12,4.5) # changed from 12,6 on 4/24/14. see how it saves
-    fig.subplots_adjust(hspace=0,wspace=0)
+    if latlim!=None:
+        fig.subplots_adjust(hspace=0.05,wspace=0.05)
+    else:
+        fig.subplots_adjust(hspace=0,wspace=0)
 
     for ax in spax.flat:
         if climo == 0:
@@ -244,13 +247,13 @@ def map_allmonths(fld, lat, lon,title='',units='',cmap='blue2red_w20',type='sq',
 
 def map_allseas(fld, lat, lon,title='',units='',cmap='blue2red_w20',type='sq',
            cmin='',cmax='',axis=None, suppcb=0,lmask=0,climo=0,flipmask=0,
-                  pvals = None,sigtype='hatch',conts=None):
+                  pvals = None,sigtype='hatch',conts=None,latlim=None):
 
-    """ default seasons = 'DJF','MAM','JJA','SON'
+    """ default seasons = 'SON','DJF','MAM','JJA'
     """
     import cccmautils as cutl
     
-    seasons = 'DJF','MAM','JJA','SON'
+    seasons = 'SON','DJF','MAM','JJA'
 
     midx=0
     fig,axs = plt.subplots(1,4) 
@@ -273,7 +276,7 @@ def map_allseas(fld, lat, lon,title='',units='',cmap='blue2red_w20',type='sq',
         #print plotfld.shape
         
         bm,pc = kemmap(plotfld,lat,lon,cmin=cmin,cmax=cmax,cmap=cmap,type=type,\
-                       axis=ax,suppcb=1,lmask=lmask,flipmask=flipmask,units=units)
+                       axis=ax,suppcb=1,lmask=lmask,flipmask=flipmask,units=units,latlim=latlim)
         ax.set_title(seasons[midx])
         if pvals != None:
             cplt.addtsigm(bm,pvals,lat,lon,type=sigtype)
