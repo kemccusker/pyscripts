@@ -23,12 +23,32 @@ def get_basepath():
     
     plat = platform.system()   
     if plat == 'Darwin':  # means I'm on my mac
-        bp['basepath'] = '/Volumes/MyPassport1TB/DATA/CanSISE/'
+        bp['basepath'] = '/Volumes/MyPassport2TB/DATA/CanSISE/'
         bp['subdir'] = '/'
 
     else:  # on linux workstation in Vic
         bp['basepath'] = '/home/rkm/work/DATA/'
         bp['subdir'] = '/ts/'
+
+    return bp
+
+def get_BCbasepath():
+    """ get_basepath():
+           returns path to data, depending on what machine we're running on
+           output: bp['basepath'|'subdir'] (dictionary with basepath and subdir keys)
+                     typically the pathtodata would be basepath+model+subdir
+    """
+
+    bp={}
+    
+    plat = platform.system()   
+    if plat == 'Darwin':  # means I'm on my mac
+        bp['basepath'] = '/Volumes/MyPassport2TB/BCs/'
+        bp['subdir'] = '/'
+
+    else:  # on linux workstation in Vic
+        bp['basepath'] = '/home/rkm/work/BCs/'
+        bp['subdir'] = '/'
 
     return bp
     
@@ -100,3 +120,34 @@ def casenameph():
     return 'kemhadpert'
 
 
+def getBCfilenames(field,sim=None):
+
+    bp = get_BCbasepath()
+    basepath=bp['basepath']
+    
+    fnames = {'kemctl1': basepath + 'CanESM2/canesm2_kemctl1_128x64_0001_0125_' + field + '.nc',
+              'kem1pert1b': basepath + 'CanESM2/canesm2_kem1pert1b_128x64_0001_0125_' + field + '.nc',
+              'kem1pert2': basepath + 'CanESM2/canesm2_kem1pert2_128x64_0001_0125_' + field + '.nc',
+              'kem1pert3': basepath + 'CanESM2/canesm2_kem1pert3_128x64_0001_0125_' + field + '.nc',
+              'kem1rcp85a': basepath + 'CanESM2/canesm2_kem1rcp85a_128x64_0001_0125_' + field + '.nc',
+              'kemctl1r1':  basepath + 'CanESM2/ENSMEMBERS/canesm2_kemctl1r1_128x64_0001_0125_' + field + '.nc',
+              'kemctl1r2':  basepath + 'CanESM2/ENSMEMBERS/canesm2_kemctl1r2_128x64_0001_0125_' + field + '.nc',
+              'kemctl1r3':  basepath + 'CanESM2/ENSMEMBERS/canesm2_kemctl1r3_128x64_0001_0125_' + field + '.nc',
+              'kemctl1r4':  basepath + 'CanESM2/ENSMEMBERS/canesm2_kemctl1r4_128x64_0001_0125_' + field + '.nc',
+              'kemctl1r5':  basepath + 'CanESM2/ENSMEMBERS/canesm2_kemctl1r5_128x64_0001_0125_' + field + '.nc',
+              'kem1pert2r1':  basepath + 'CanESM2/ENSMEMBERS/canesm2_kem1pert2r1_128x64_0001_0125_' + field + '.nc',
+              'kem1pert2r2':  basepath + 'CanESM2/ENSMEMBERS/canesm2_kem1pert2r2_128x64_0001_0125_' + field + '.nc',
+              'kem1pert2r3':  basepath + 'CanESM2/ENSMEMBERS/canesm2_kem1pert2r3_128x64_0001_0125_' + field + '.nc',
+              'kem1pert2r4':  basepath + 'CanESM2/ENSMEMBERS/canesm2_kem1pert2r4_128x64_0001_0125_' + field + '.nc',
+              'kem1pert2r5':  basepath + 'CanESM2/ENSMEMBERS/canesm2_kem1pert2r5_128x64_0001_0125_' + field + '.nc',
+              'kem1pert2r4ct':  basepath + 'CanESM2/ENSMEMBERS/canesm2_kem1pert2r4ct_128x64_0001_0125_' + field + '.nc',
+              'kemhadctl': basepath + 'HadISST/hadisst_kemhadctl_128x64_0001_0125_' + field + '.nc',
+              'kemhadpert': basepath + 'HadISST/hadisst_kemhadpert_128x64_0001_0125_' + field + '.nc',
+              'kemnsidcctl': basepath + 'NSIDC/nsidcbt_kemnsidcctl_128x64_0001_0125_' + field + '.nc',
+              'kemnsidcpert': basepath + 'NSIDC/nsidcbt_kemnsidcpert_128x64_0001_0125_' + field + '.nc' }
+
+    if sim==None:
+        return fnames
+    else:
+        return fnames[sim]
+    
