@@ -83,6 +83,14 @@ def calc_seaicearea(input,lat,lon):
     
     return sia
 
+def calc_meanseaicethick(input,lat,lon):
+    """ calc_meanseaicethick(input,lat,lon)
+                 input: 2D or greater array of sea ice thickness
+                 
+    """
+    
+    print "Not finished!"
+    
 def global_mean_areawgted3d(input, lat, lon):
 
     earthrad = con.get_earthrad()
