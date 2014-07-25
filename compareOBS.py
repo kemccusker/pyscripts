@@ -50,7 +50,7 @@ latlim=50
 
 flipmask=0 # flip the landmask (for HURRELL)
 
-deni = 913 # density of ice
+deni = 913. # density of ice
 bcstr = ''
 
 if sicn:
@@ -568,12 +568,12 @@ if testsic==0:
             hadtotsiapnh = np.transpose(hadtotsiapnh,(2,0,1))
 
             # average thickness
-            hadsiccnhavg = np.sum(np.sum(hadsiccnh/913*(hadsiacnh/hadtotsiacnh),2),1)
-            hadsicpnhavg = np.sum(np.sum(hadsicpnh/913*(hadsiapnh/hadtotsiapnh),2),1)
+            hadsiccnhavg = np.sum(np.sum(hadsiccnh/deni*(hadsiacnh/hadtotsiacnh),2),1)
+            hadsicpnhavg = np.sum(np.sum(hadsicpnh/deni*(hadsiapnh/hadtotsiapnh),2),1)
 
             # total volume: thickness * SIA
-            hadsivcnh = np.sum(np.sum(hadsiccnh/913 * hadsiacnh,2),1)
-            hadsivpnh = np.sum(np.sum(hadsicpnh/913 * hadsiapnh,2),1)
+            hadsivcnh = np.sum(np.sum(hadsiccnh/deni * hadsiacnh,2),1)
+            hadsivpnh = np.sum(np.sum(hadsicpnh/deni * hadsiapnh,2),1)
 
             # do CanESM
             cansiac = cansicnc*areas
@@ -593,12 +593,12 @@ if testsic==0:
             cantotsiapnh = np.transpose(cantotsiapnh,(2,0,1))
 
             # average thickness
-            cansiccnhavg = np.sum(np.sum(cansiccnh/913*(cansiacnh/cantotsiacnh),2),1)
-            cansicpnhavg = np.sum(np.sum(cansicpnh/913*(cansiapnh/cantotsiapnh),2),1)
+            cansiccnhavg = np.sum(np.sum(cansiccnh/deni*(cansiacnh/cantotsiacnh),2),1)
+            cansicpnhavg = np.sum(np.sum(cansicpnh/deni*(cansiapnh/cantotsiapnh),2),1)
 
             # total volume: thickness * SIA
-            cansivcnh = np.sum(np.sum(cansiccnh/913 * cansiacnh,2),1)
-            cansivpnh = np.sum(np.sum(cansicpnh/913 * cansiapnh,2),1)
+            cansivcnh = np.sum(np.sum(cansiccnh/deni * cansiacnh,2),1)
+            cansivpnh = np.sum(np.sum(cansicpnh/deni * cansiapnh,2),1)
 
             fig = plt.figure()
             plt.plot(hadsiccnhavg,'k'); plt.plot(hadsicpnhavg,'k--')
