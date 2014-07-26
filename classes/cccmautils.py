@@ -108,9 +108,11 @@ def global_mean_areawgted3d(input, lat, lon):
     return gm
    
 
-def polar_mean_areawgted3d(input,lat,lon,latlim=60,hem='nh',cellareas=None):
+def polar_mean_areawgted3d(input,lat,lon,latlim=60,hem='nh',cellareas=None,includenan=False):
     """ Pass in cellareas if you want some of the cells masked, e.g. if masking ocean or land.
         This ONLY works if the mask is the same for each time in timeseries.
+            includenan: whether or not to consider NaN values. if True, a mean of a NaN is NaN.
+                        Default is False
     """
 
     if cellareas == None:
@@ -126,14 +128,19 @@ def polar_mean_areawgted3d(input,lat,lon,latlim=60,hem='nh',cellareas=None):
         polcellareas = cellareas[lat<=latlim,:]
         polinput = input[:,lat<=latlim,:]
 
-    totalarea=np.sum(np.sum(polcellareas))
+    totalarea=float(np.sum(np.sum(polcellareas)))
 
     nt = input.shape[0]
     wgts = polcellareas/totalarea
+    #print wgts #@@
     
     pm = np.zeros(nt)    
     for tidx in range(0,nt):
-        pm[tidx] = np.average(polinput[tidx,:,:],weights=wgts)
+        if includenan:
+            pm[tidx] = np.average(polinput[tidx,:,:],weights=wgts)
+        else:
+            polinput=ma.masked_where(np.logical_or(polinput==np.nan, polinput==np.inf),polinput)
+            pm[tidx] = ma.average(polinput[tidx,:,:],weights=wgts)
         
     return pm
 
