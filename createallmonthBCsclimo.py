@@ -52,7 +52,7 @@ casenamec = 'historical'; timeperc = '1979-1989'
 casename = 'historicalrcp45'; timeper='2002-2012' # test against matlab-generated BCs
 
 
-deni = 913 # kg/m3 density of ice
+deni = 913. # kg/m3 density of ice
 
 
 if field == 'ts': # Surface Temperature (K)
