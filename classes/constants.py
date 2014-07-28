@@ -43,7 +43,7 @@ def get_BCbasepath():
     
     plat = platform.system()   
     if plat == 'Darwin':  # means I'm on my mac
-        bp['basepath'] = '/Volumes/MyPassport2TB/BCs/'
+        bp['basepath'] = '/Volumes/MyPassport2TB/DATA/CanSISE/CanAM4/BCs/'
         bp['subdir'] = '/'
 
     else:  # on linux workstation in Vic
