@@ -47,10 +47,12 @@ pattcorryr=0 # if 1, do a yearly anomaly pattern rather than time-integrated
 
 testhadisst=0 # check which ens member most similar to hadisst
 normbystd=0
-addobs=1 # add mean of kemhad* runs to line plots, seasonal maps (so far@@)
+sensruns=True
+addobs=1 # add mean of kemhad* runs to line plots, seasonal maps. add nsidc if SIA/SIT (@@for now)
 addr4ct=1 # add kem1pert2r4ct (constant thickness version of ens4)
 addsens=1 # add sensitivity runs (kem1pert1b, kem1pert3)
 
+    
 latlim = 45 # None #45 # lat limit for NH plots. Set to None otherwise.
 
 sigtype = 'cont' # significance: 'cont' or 'hatch' which is default
@@ -83,7 +85,7 @@ timstr2='001-121'
 # # # ######## set Field info ###################
 # gz, t, u, v, q (3D !)
 # st, sic, sicn (sia), gt, pmsl, pcp, hfl, hfs, turb, flg, fsg, fn, pcpn, zn, su, sv (@@later ufs,vfs)
-field = 'pcpn'
+field = 'sic'
 print field
 timeavg = 'DJF'
 
@@ -93,6 +95,11 @@ level = 30000
 #level = 70000
 
 
+if sensruns:
+    addobs=0
+    addr4ct=1
+    addsens=1
+    # but don't plot the meanBC or mean of Ens members
 
 
 # HERE THE SECOND SET OF RUNS IS HadISST BC's
@@ -401,13 +408,22 @@ else:
 # order ens simulations in order of most ice loss in melt season to least. Then ens mean, PERT2, observations if requested
 sims = 'r1','r4','r3','r5','r2','ens','' # suffixes to bcasename and bcasenamep
 if addobs:
-    sims = sims + ('kemhad',)
-if addr4ct:
-    sims = sims + ('r4ct',)
-    ctstr = '_r4ct' # for figure filenames
-if addsens:
-    sims = sims + ('kem1pert1b','kem1pert3') # control is kemctl1 (or '' key)
-    ctstr = ctstr + 'sens'
+    if field in ('sia','sicn'): # for now@@
+        sims = sims + ('kemhad','kemnsidc')
+    else:
+        sims = sims + ('kemhad',)
+        print '@@ not adding nsidc yet for field: ' + field
+
+if sensruns: # add sensitivity runs. don't plot meanBC, mean of ens
+    sims = sims[0:5] + ('r4ct','kem1pert1b','kem1pert3')
+    ctstr = '_sensruns'
+else:
+    if addr4ct:
+        sims = sims + ('r4ct',)
+        ctstr = '_r4ct' # for figure filenames
+    if addsens:
+        sims = sims + ('kem1pert1b','kem1pert3') # control is kemctl1 (or '' key)
+        ctstr = ctstr + 'sens'
     
 #ensmems=np.arange(0,5)
 
@@ -669,6 +685,10 @@ if plotann:
 
 #sigs = np.ones((12,fldc.shape[1],fldc.shape[2])) unused
 
+if addobs:
+    obsstr = 'obs' #'had' # for figure file name
+else:
+    obsstr = ''
 
 months=con.get_mon()
 
@@ -744,13 +764,20 @@ if seasonal:
     for ridx,sim in enumerate(sims): # traverse cols
 
         cidx=0
-        if sim=='kemhad':
+        if sim in ('kemhad','kemnsidc'):
             frootc = basepath + sim + 'ctl' + subdir + sim + 'ctl' + '_' + field + '_'
             frootp = basepath + sim + 'pert' + subdir + sim + 'pert' + '_' + field + '_'
-            rowl='had'
+            if sim=='kemhad':
+                rowl='had'
+            else:
+                rowl='nsidc'
         elif sim in ('kem1pert1b','kem1pert3'):
             frootc = basepath + 'kemctl1' + subdir + 'kemctl1' + '_' + field + '_'
             frootp = basepath + sim + subdir + sim + '_' + field + '_'
+            if sim=='kem1pert1b':
+                rowl='nosst'
+            else:
+                rowl='nosit'
         else:
             frootc =  basepath + bcasename + sim + subdir + bcasename + sim + '_' + field + '_'
             frootp = basepath + bcasenamep + sim + subdir + bcasenamep + sim + '_' + field + '_'
@@ -825,10 +852,7 @@ if seasonal:
             sigstr='sig' + sigtype
         else:
             sigstr=''
-        if addobs:
-            obsstr = 'had'
-        else:
-            obsstr = ''
+
         if latlim!= None:
             latstr=str(latlim)
         else:
@@ -869,7 +893,7 @@ if plotzonmean==1 or plotseacyc==1 or pattcorrwithtime==1:
         seadiffdict=dict.fromkeys(seasons); seadmaskdict=dict.fromkeys(seasons)
         seapcorrdict=dict.fromkeys(seasons)
 
-        if sim=='kemhad':
+        if sim=='kemhad': # or sim=='kemnsidc': # @@ move to this when nsidc runs are done
             frootc = basepath + sim + 'ctl' + subdir + sim + 'ctl' + '_' + field + '_'
             frootp = basepath + sim + 'pert' + subdir + sim + 'pert' + '_' + field + '_'
         elif sim in ('kem1pert1b','kem1pert3'):
@@ -880,8 +904,13 @@ if plotzonmean==1 or plotseacyc==1 or pattcorrwithtime==1:
             frootp = basepath + bcasenamep + sim + subdir + bcasenamep + sim + '_' + field + '_'
 
         if threed==0:
-            fnamec = frootc + timstr + '_ts.nc'
-            fnamep = frootp + timstrp + '_ts.nc'
+            if sim=='kemnsidc':
+                print '@@ temporary fix while nsidc runs go'
+                fnamec = con.getBCfilenames('sicn',sim+'ctl')
+                fnamep = con.getBCfilenames('sicn',sim+'pert')
+            else:
+                fnamec = frootc + timstr + '_ts.nc'
+                fnamep = frootp + timstrp + '_ts.nc'
         else:
             fnamec = frootc + '001-061_ts.nc'
             fnamec2 = frootc + '062-121_ts.nc'
@@ -1041,7 +1070,7 @@ colors = darkseagreen,darkseagreen4,lightsteelblue3,lightsteelblue4,steelblue4,d
              'kemctl1': ccm.get_linecolor('dodgerblue'), #'mediumpurple1'), #darkyellow'),
              'kemhadctl': ccm.get_linecolor('darkolivegreen3')}"""
 
-colordict = {'r1': ccm.get_linecolor('warm1'), #'firebrick'),
+"""colordict = {'r1': ccm.get_linecolor('warm1'), #'firebrick'),
              'r4': ccm.get_linecolor('warm2'), #'firebrick1'),
              'r3': ccm.get_linecolor('warm3'), #'yelloworange'),#'chocolate1'),
              'r5': ccm.get_linecolor('warm4'), #'darkyellow') #'skyblue'), #yelloworange'),
@@ -1052,8 +1081,9 @@ colordict = {'r1': ccm.get_linecolor('warm1'), #'firebrick'),
              'kemnsidc': ccm.get_linecolor('steelblue4'),
              'r4ct': ccm.get_linecolor('darkseagreen4'),
              'kem1pert1b': ccm.get_linecolor('darkolivegreen3'),
-             'kem1pert3': ccm.get_linecolor('darkolivegreen1')}
-             
+             'kem1pert3': ccm.get_linecolor('darkolivegreen1')}"""
+
+colordict = ccm.get_colordict()
 
 
 # now make the figures ==============================================
@@ -1108,13 +1138,13 @@ if plotzonmean:
         ax=axs[sii]
         
         for skey in sims:
-            if skey == '' or skey == 'ens' or skey=='kemhad':
+            if skey in ('','ens','kemhad','kemnsidc'): #== '' or skey == 'ens' or skey=='kemhad':
                 ax.plot(lat,fldcdf[skey][sea],color=colordict[skey],linewidth=3)
             else:
                 ax.plot(lat,fldcdf[skey][sea],color=colordict[skey],linewidth=2)
 
         for skey in sims:
-            if skey == '' or skey == 'ens' or skey=='kemhad':
+            if skey in ('','ens','kemhad','kemnsidc'): # == '' or skey == 'ens' or skey=='kemhad':
                 ax.plot(lat,fldpdf[skey][sea],color=colordict[skey],linewidth=3,linestyle='--')
             else:
                 ax.plot(lat,fldpdf[skey][sea],color=colordict[skey],linewidth=2,linestyle='--')
@@ -1124,7 +1154,7 @@ if plotzonmean:
         
     ax.set_xlabel('lat')
     if printtofile: # version 2 has new colors and seasons and sims are reordered
-        fig.savefig(fieldstr + '_ens_meanBC'  + ctstr + '_allseassp_zonmean2.pdf')
+        fig.savefig(fieldstr + '_ens_meanBC' + obsstr + ctstr + '_allseassp_zonmean2.pdf')
 
     # standard deviation
     fig,axs = plt.subplots(4,1)
@@ -1134,14 +1164,14 @@ if plotzonmean:
         ax=axs[sii]
         
         for skey in sims:
-            if skey == '' or skey == 'ens' or skey=='kemhad':
+            if skey in ('','ens','kemhad','kemnsidc'): # == '' or skey == 'ens' or skey=='kemhad':
                 ax.plot(lat,fldcstddf[skey][sea],color=colordict[skey],linewidth=3)
             else:
                 ax.plot(lat,fldcstddf[skey][sea],color=colordict[skey],linewidth=2)
         ax.plot(lat,cestd[sii,...],'k',linewidth=2)
 
         for skey in sims:
-            if skey == '' or skey == 'ens' or skey=='kemhad':
+            if skey in ('','ens','kemhad','kemnsidc'): # == '' or skey == 'ens' or skey=='kemhad':
                 ax.plot(lat,fldpstddf[skey][sea],color=colordict[skey],linewidth=3,linestyle='--')
             else:
                 ax.plot(lat,fldpstddf[skey][sea],color=colordict[skey],linewidth=2,linestyle='--')
@@ -1152,7 +1182,7 @@ if plotzonmean:
         
     ax.set_xlabel('lat')
     if printtofile:
-        fig.savefig(fieldstr + 'STD_ens_meanBC'  + ctstr + '_allseassp_zonmean2.pdf')
+        fig.savefig(fieldstr + 'STD_ens_meanBC' + obsstr + ctstr + '_allseassp_zonmean2.pdf')
 
     # differences
     fig,axs = plt.subplots(4,1)
@@ -1162,13 +1192,13 @@ if plotzonmean:
         ax=axs[sii]
         
         for skey in sims:
-            if skey == '' or skey == 'ens' or skey=='kemhad':
+            if skey in ('','ens','kemhad','kemnsidc'): # == '' or skey == 'ens' or skey=='kemhad':
                 ax.plot(lat,flddiffdf[skey][sea],color=colordict[skey],linewidth=3)
             else:
                 ax.plot(lat,flddiffdf[skey][sea],color=colordict[skey],linewidth=2)
 
         for skey in sims:
-            if skey == '' or skey == 'ens' or skey=='kemhad':
+            if skey in ('','ens','kemhad','kemnsidc'): # == '' or skey == 'ens' or skey=='kemhad':
                 ax.plot(lat,fldmaskdf[skey][sea],color=colordict[skey],linestyle='none',marker='s')
             else:
                 ax.plot(lat,fldmaskdf[skey][sea],color=colordict[skey],linestyle='none',marker='s')
@@ -1179,7 +1209,7 @@ if plotzonmean:
     ax.set_xlabel('lat')
     ax.legend(sims,'upper left', prop=fontP,ncol=2)
     if printtofile:
-        fig.savefig(fieldstr + 'diff_ens_meanBC' + ctstr + '_allseassp_zonmean_nh2.pdf')
+        fig.savefig(fieldstr + 'diff_ens_meanBC' + obsstr + ctstr + '_allseassp_zonmean_nh2.pdf')
 
     # differences SHADED
     fig,axs = plt.subplots(4,1)
@@ -1190,16 +1220,13 @@ if plotzonmean:
 
         ax.fill_between(lat,demin[sii,...],demax[sii,...],facecolor='0.7',alpha=0.2)
         for skey in sims[5:]:# actually don't skip # skip the r4ct sim here
-            if skey == '' or skey == 'ens' or skey=='kemhad':
+            if skey in ('','ens','kemhad','kemnsidc'): # == '' or skey == 'ens' or skey=='kemhad':
                 ax.plot(lat,flddiffdf[skey][sea],color=colordict[skey],linewidth=3)
             else:
                 ax.plot(lat,flddiffdf[skey][sea],color=colordict[skey],linewidth=2)
 
         for skey in sims[5:]: #-1]:
-            if skey == '' or skey == 'ens' or skey=='kemhad':
-                ax.plot(lat,fldmaskdf[skey][sea],color=colordict[skey],linestyle='none',marker='s')
-            else:
-                ax.plot(lat,fldmaskdf[skey][sea],color=colordict[skey],linestyle='none',marker='s')
+            ax.plot(lat,fldmaskdf[skey][sea],color=colordict[skey],linestyle='none',marker='s')
 
         ax.set_xlim(0,90)
         ax.set_title(field + ': ' + sea)
@@ -1207,7 +1234,7 @@ if plotzonmean:
     ax.set_xlabel('lat')
     ax.legend(sims[5:],'upper left', prop=fontP,ncol=2)
     if printtofile:
-        fig.savefig(fieldstr + 'diff_ens_meanBC' + ctstr + '_allseassp_zonmean_nh2shade.pdf')
+        fig.savefig(fieldstr + 'diff_ens_meanBC' + obsstr + ctstr + '_allseassp_zonmean_nh2shade.pdf')
 
     # standard deviation differences
     fig,axs = plt.subplots(4,1)
@@ -1217,7 +1244,7 @@ if plotzonmean:
         ax=axs[sii]
         
         for skey in sims:
-            if skey == '' or skey == 'ens' or skey=='kemhad':
+            if skey in ('','ens','kemhad','kemnsidc'): # == '' or skey == 'ens' or skey=='kemhad':
                 ax.plot(lat,fldpstddf[skey][sea]-fldcstddf[skey][sea],color=colordict[skey],linewidth=3)
             else:
                 ax.plot(lat,fldpstddf[skey][sea]-fldcstddf[skey][sea],color=colordict[skey],linewidth=2)
@@ -1229,7 +1256,7 @@ if plotzonmean:
     ax.set_xlabel('lat')
     
     if printtofile:
-        fig.savefig(fieldstr + 'STDdiff_ens_meanBC'  + ctstr + '_allseassp_zonmean_nh2.pdf')
+        fig.savefig(fieldstr + 'STDdiff_ens_meanBC' + obsstr + ctstr + '_allseassp_zonmean_nh2.pdf')
 
 if plotseacyc:
 
@@ -1323,13 +1350,13 @@ if plotseacyc:
         # climo
         fig,axs = plt.subplots()
         for skey in sims:
-            if skey == '' or skey == 'ens' or skey=='kemhad':
+            if skey in ('','ens','kemhad','kemnsidc'): # == '' or skey == 'ens' or skey=='kemhad':
                 axs.plot(moidxs,fldcdf[skey][mol],color=colordict[skey],linewidth=3)
             else:
                 axs.plot(moidxs,fldcdf[skey][mol],color=colordict[skey],linewidth=2)
 
         for skey in sims:
-            if skey == '' or skey == 'ens' or skey=='kemhad':
+            if skey in ('','ens','kemhad','kemnsidc'): # == '' or skey == 'ens' or skey=='kemhad':
                 axs.plot(moidxs,fldpdf[skey][mol],color=colordict[skey],linewidth=3,linestyle='--')
             else:
                 axs.plot(moidxs,fldpdf[skey][mol],color=colordict[skey],linewidth=2,linestyle='--')
@@ -1341,13 +1368,13 @@ if plotseacyc:
         plt.title('Climos')
 
         if printtofile:
-            fig.savefig(fieldstr + '_ens_meanBC'  + ctstr + '_seacyc_pol' + str(latlim) + 'N2.pdf')
+            fig.savefig(fieldstr + '_ens_meanBC' + obsstr + ctstr + '_seacyc_pol' + str(latlim) + 'N2.pdf')
 
 
         # differences
         fig,axs = plt.subplots()
         for skey in sims:
-            if skey == '' or skey == 'ens' or skey=='kemhad':
+            if skey in ('','ens','kemhad','kemnsidc'): # == '' or skey == 'ens' or skey=='kemhad':
                 axs.plot(moidxs,flddiffdf[skey][mol],color=colordict[skey],linewidth=3)
             else:
                 axs.plot(moidxs,flddiffdf[skey][mol],color=colordict[skey],linewidth=2)
@@ -1361,7 +1388,7 @@ if plotseacyc:
         plt.title('Anomalies')
 
         if printtofile: # version 2 loops through sims in order of melt
-            fig.savefig(fieldstr + 'diff_ens_meanBC'  + ctstr + '_seacyc_pol' + str(latlim) + 'N2.pdf')
+            fig.savefig(fieldstr + 'diff_ens_meanBC' + obsstr + ctstr + '_seacyc_pol' + str(latlim) + 'N2.pdf')
 
         # calc stddev over ensemble, and min/max for shading
         tmpcdf = fldcdf.loc[mol]
@@ -1383,7 +1410,7 @@ if plotseacyc:
         fig,axs = plt.subplots()
         for skey in sims[5:]:  #-1]:
             axs.fill_between(moidxs,demin,demax,facecolor='0.7',alpha=0.2)
-            if skey == '' or skey == 'ens' or skey=='kemhad':
+            if skey in ('','ens','kemhad','kemnsidc'): # == '' or skey == 'ens' or skey=='kemhad':
                 axs.plot(moidxs,flddiffdf[skey][mol],color=colordict[skey],linewidth=3)
             else:
                 axs.plot(moidxs,flddiffdf[skey][mol],color=colordict[skey],linewidth=2)
@@ -1397,20 +1424,20 @@ if plotseacyc:
         plt.title('Anomalies')
 
         if printtofile: # version 2 loops through sims in order of melt
-            fig.savefig(fieldstr + 'diff_ens_meanBC' + ctstr + '_seacyc_pol' + str(latlim) + 'N2shade.pdf')
+            fig.savefig(fieldstr + 'diff_ens_meanBC' + obsstr + ctstr + '_seacyc_pol' + str(latlim) + 'N2shade.pdf')
 
 
         # Standard deviation climos
         fig,axs = plt.subplots()
         for skey in sims:
             
-            if skey == '' or skey == 'ens' or skey=='kemhad':
+            if skey in ('','ens','kemhad','kemnsidc'): # == '' or skey == 'ens' or skey=='kemhad':
                 axs.plot(moidxs,fldcstddf[skey][mol],color=colordict[skey],linewidth=3)
             else:
                 axs.plot(moidxs,fldcstddf[skey][mol],color=colordict[skey],linewidth=2)
 
         for skey in sims:
-            if skey == '' or skey == 'ens' or skey=='kemhad':
+            if skey in ('','ens','kemhad','kemnsidc'): # == '' or skey == 'ens' or skey=='kemhad':
                 axs.plot(moidxs,fldpstddf[skey][mol],color=colordict[skey],linestyle='--',linewidth=3)
             else:
                 axs.plot(moidxs,fldpstddf[skey][mol],color=colordict[skey],linestyle='--',linewidth=2)
@@ -1425,13 +1452,13 @@ if plotseacyc:
         plt.title('Sigma')
 
         if printtofile:
-            fig.savefig(fieldstr + 'STD_ens_meanBC' + ctstr + '_seacyc_pol' + str(latlim) + 'N2.pdf')
+            fig.savefig(fieldstr + 'STD_ens_meanBC' + obsstr + ctstr + '_seacyc_pol' + str(latlim) + 'N2.pdf')
 
 
         # Difference in standard deviation
         fig,axs = plt.subplots()
         for skey in sims:
-            if skey == '' or skey == 'ens' or skey=='kemhad':
+            if skey in ('','ens','kemhad','kemnsidc'): #  == '' or skey == 'ens' or skey=='kemhad':
                 axs.plot(moidxs,fldpstddf[skey][mol]-fldcstddf[skey][mol],color=colordict[skey],linewidth=3)
             else:
                 axs.plot(moidxs,fldpstddf[skey][mol]-fldcstddf[skey][mol],color=colordict[skey],linewidth=2)
@@ -1444,7 +1471,7 @@ if plotseacyc:
         plt.title('Sigma anomalies')
 
         if printtofile:
-            fig.savefig(fieldstr + 'STDdiff_ens_meanBC'  + ctstr + '_seacyc_pol' + str(latlim) + 'N2.pdf')
+            fig.savefig(fieldstr + 'STDdiff_ens_meanBC' + obsstr + ctstr + '_seacyc_pol' + str(latlim) + 'N2.pdf')
 
 
 if pattcorrwithtime==1:
@@ -1506,9 +1533,9 @@ if pattcorrwithtime==1:
     
     if printtofile:
         if pattcorryr:
-            fig.savefig(fieldstr + 'diffpattcorryrly_ens_meanBC' + ctstr + '_allseassp_nh.pdf')
+            fig.savefig(fieldstr + 'diffpattcorryrly_ens_meanBC' + obsstr + ctstr + '_allseassp_nh.pdf')
         else:
-            fig.savefig(fieldstr + 'diffpattcorr_ens_meanBC' + ctstr + '_allseassp_nh.pdf')
+            fig.savefig(fieldstr + 'diffpattcorr_ens_meanBC' + obsstr + ctstr + '_allseassp_nh.pdf')
 
     # with SHADING
     fig,axs = plt.subplots(4,1)
@@ -1533,9 +1560,9 @@ if pattcorrwithtime==1:
     
     if printtofile:
         if pattcorryr:
-            fig.savefig(fieldstr + 'diffpattcorryrly_ens_meanBC' + ctstr + '_allseassp_nhshade.pdf')
+            fig.savefig(fieldstr + 'diffpattcorryrly_ens_meanBC' + obsstr + ctstr + '_allseassp_nhshade.pdf')
         else:
-            fig.savefig(fieldstr + 'diffpattcorr_ens_meanBC' + ctstr + '_allseassp_nhshade.pdf')
+            fig.savefig(fieldstr + 'diffpattcorr_ens_meanBC' + obsstr + ctstr + '_allseassp_nhshade.pdf')
 
     
 if testhadisst:
@@ -1561,13 +1588,10 @@ if testhadisst:
     areas = ma.masked_where(lmask[lat>corrlim,:]==-1,areas)
     weights = areas / np.sum(np.sum(areas,axis=1),axis=0)
     
-    for ridx,sim in enumerate(sims):
+    for ridx,sim in enumerate(sims[0:7]):
         
-        if sim=='kemhad':
-            break
-        else:
-            frootc =  basepath + bcasename + sim + subdir + bcasename + sim + '_' + field + '_'
-            frootp = basepath + bcasenamep + sim + subdir + bcasenamep + sim + '_' + field + '_'
+        frootc =  basepath + bcasename + sim + subdir + bcasename + sim + '_' + field + '_'
+        frootp = basepath + bcasenamep + sim + subdir + bcasenamep + sim + '_' + field + '_'
 
         print sim
         fnamec = frootc + timstr + '_ts.nc'
