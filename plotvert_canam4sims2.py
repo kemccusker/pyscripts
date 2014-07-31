@@ -44,11 +44,11 @@ bimos=0  # bi-monthly figures
 seasonal=1 # seasonal figures
 singleplots=0 # seasonal climo and mean diff
 addcontlines=1 # want contour lines in addition to colors on figs
-obssims=0    # this will overrule the simulation settings and set to kemhad*
+obssims=1    # this will overrule the simulation settings and set to kemhad*
 obssimscomp=0 # compare hadpert to pert2 @@ not ready yet
 
 # # # ######## set Field info ###############
-field = 'u'  # t, u, gz
+field = 't'  # t, u, gz
 
 
  
@@ -64,7 +64,7 @@ casenamep1 = 'kem1pert1b'  # 2002-2012 sic and sit
 casenamep2 = 'kem1pert2'  # 2002-2012 sic, sit, adjusted sst
 casenamep3 = 'kem1pert3'  # 2002-2012 sic, adjusted sst. control sit
 timstrp = '001-061'
-timstrp2 = '062-111'
+timstrp2 = '062-121'
 casenamepra = 'kem1rcp85a' # 2022-2032 sic, adjusted sst, sit from RCP8.5
 
 ######## set pert run ############
@@ -85,11 +85,7 @@ elif obssimscomp: # can't do this yet...need had runs to finish
     casenamep = 'kem1pert2'
 
 
-if casenamep == casenamepra or casenamep == 'kem1pert1b':
-    timstrp2 = '062-121'
-
-
-seasons = 'DJF','MAM','JJA','SON'
+seasons = 'SON','DJF','MAM','JJA'
 
 model = 'CanAM4'
 ftype = 'ts'    # timeseries
@@ -203,11 +199,11 @@ seasfldpzmtm=np.mean(seasfldpzm,0)
 
 lats,levs = np.meshgrid(lat,lev)
 
-
+cmlen=15.
 ############################## SEASONAL MEAN ##########################
 if singleplots:
     #   SEASONAL MEAN CLIMO (CONTROL)
-    cmlen=15
+    cmlen=15.
     incr = (cmaxc-cminc) / (cmlen)
     conts = np.arange(cminc,cmaxc+incr,incr)
 
@@ -489,7 +485,8 @@ if seasonal:
     pval = np.zeros((len(seasons),nlev,nlat))
     fldczmallseas = np.zeros((len(seasons),nlev,nlat))
     fldpzmallseas = np.zeros((len(seasons),nlev,nlat))
-    
+
+    cmlen=float( plt.cm.get_cmap(cmap).N)
     incr = (cmaxsc-cminsc) / (cmlen)
     conts = np.arange(cminsc,cmaxsc+incr,incr)
 
