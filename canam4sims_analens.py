@@ -37,7 +37,7 @@ printtofile=1
 
 plotann=0    # seasonal avg map, comparing ens runs and meanBC
 plotallmos=0 # monthly maps (@@ not implemented)
-seasonal=0 # seasonal maps (DJF, MAM, JJA, SON)
+seasonal=0 # seasonal maps (SON, DJF, MAM, JJA)
 
 plotzonmean=0 # plotzonmean,plotseacyc,pattcorrwithtime are mutually exclusive
 plotseacyc=1 # plotzonmean,plotseacyc,pattcorrwithtime are mutually exclusive
@@ -47,10 +47,10 @@ pattcorryr=0 # if 1, do a yearly anomaly pattern rather than time-integrated
 
 testhadisst=0 # check which ens member most similar to hadisst
 normbystd=0
-sensruns=True
+sensruns=False # sensruns only: addr4ct=1 and addsens=1. no meanBC, r mean, or obs
 addobs=1 # add mean of kemhad* runs to line plots, seasonal maps. add nsidc if SIA/SIT (@@for now)
-addr4ct=1 # add kem1pert2r4ct (constant thickness version of ens4)
-addsens=1 # add sensitivity runs (kem1pert1b, kem1pert3)
+addr4ct=0 # add kem1pert2r4ct (constant thickness version of ens4)
+addsens=0 # add sensitivity runs (kem1pert1b, kem1pert3)
 
     
 latlim = 45 # None #45 # lat limit for NH plots. Set to None otherwise.
@@ -84,8 +84,8 @@ timstr2='001-121'
 
 # # # ######## set Field info ###################
 # gz, t, u, v, q (3D !)
-# st, sic, sicn (sia), gt, pmsl, pcp, hfl, hfs, turb, flg, fsg, fn, pcpn, zn, su, sv (@@later ufs,vfs)
-field = 'sic'
+# st, sic, sicn (sia), gt, pmsl, pcp, hfl, hfs, turb, net, flg, fsg, fn, pcpn, zn, su, sv (@@later ufs,vfs)
+field = 'net'
 print field
 timeavg = 'DJF'
 
@@ -226,16 +226,23 @@ elif field == 'turb': # combine hfl and hfs
     cmap='blue2red_20'
     
 elif field == 'net': # net of all sfc fluxes
-    print " 'net ' not yet implemented! @@"
-    
-elif field == 'flg': # net downward LW at the sfc. Positive down?
+    #print " 'net ' not yet implemented! @@"
     units = 'W/m2'
-    conv = 1
+    conv=1
+    cmin=-10
+    cmax=10
+    cminm = -20
+    cmaxm = 20
+    cmap='blue2red_20'
+    leglocs = 'upper left', 'upper left', 'upper left', 'upper left'
+elif field == 'flg': # net downward LW at the sfc.
+    units = 'W/m2'
+    conv = -1 # so positive heats atmos
     cmin = -5
     cmax = 5
     cminm = -8
     cmaxm = 8
-
+    leglocs = 'upper left', 'lower left', 'upper left', 'upper left'
 elif field == 'fsg': # net (absorbed) solar downard at sfc
     units = 'W/m2'
     conv = 1
@@ -373,6 +380,7 @@ elif field == 'gz':
 else:
     print 'No settings for ' + field
 
+fluxes = 'hfl','hfs','flg' # LH, SH, LWdown
 
 # # # ########## Read NC data ###############
 
@@ -394,6 +402,8 @@ else:
     fnamec = basepath + casename + subdir + casename + '_' + field + '_' + timstr + '_ts.nc'
     if sia==1:
         field='sia'
+    if field in ('turb','net'): # just for lat/lon
+        fnamec = basepath + casename + subdir + casename + '_flg_' + timstr + '_ts.nc'
 
 lat = cnc.getNCvar(fnamec,'lat')
 lon = cnc.getNCvar(fnamec,'lon')
@@ -424,7 +434,8 @@ else:
     if addsens:
         sims = sims + ('kem1pert1b','kem1pert3') # control is kemctl1 (or '' key)
         ctstr = ctstr + 'sens'
-    
+
+print sims
 #ensmems=np.arange(0,5)
 
 if plotann:
@@ -806,6 +817,8 @@ if seasonal:
                                                seas=seas)*conv + cnc.getNCvar(fnamepb,fieldb.upper(),
                                                timesel=timesel,seas=sea)*conv 
                 field='turb'
+            elif field=='net':
+                print '@@ not implemented for seasonal maps'
             else:
                 if threed==0:
                     fldcsea = cnc.getNCvar(fnamec,field.upper(),timesel=timesel,
@@ -894,14 +907,14 @@ if plotzonmean==1 or plotseacyc==1 or pattcorrwithtime==1:
         seapcorrdict=dict.fromkeys(seasons)
 
         if sim=='kemhad': # or sim=='kemnsidc': # @@ move to this when nsidc runs are done
-            frootc = basepath + sim + 'ctl' + subdir + sim + 'ctl' + '_' + field + '_'
-            frootp = basepath + sim + 'pert' + subdir + sim + 'pert' + '_' + field + '_'
+            frootc = basepath + sim + 'ctl' + subdir + sim + 'ctl' + '_' 
+            frootp = basepath + sim + 'pert' + subdir + sim + 'pert' + '_' 
         elif sim in ('kem1pert1b','kem1pert3'):
-            frootc = basepath + 'kemctl1' + subdir + 'kemctl1' + '_' + field + '_'
-            frootp = basepath + sim + subdir + sim + '_' + field + '_'
+            frootc = basepath + 'kemctl1' + subdir + 'kemctl1' + '_' 
+            frootp = basepath + sim + subdir + sim + '_'
         else:
-            frootc =  basepath + bcasename + sim + subdir + bcasename + sim + '_' + field + '_'
-            frootp = basepath + bcasenamep + sim + subdir + bcasenamep + sim + '_' + field + '_'
+            frootc =  basepath + bcasename + sim + subdir + bcasename + sim + '_'
+            frootp = basepath + bcasenamep + sim + subdir + bcasenamep + sim + '_'
 
         if threed==0:
             if sim=='kemnsidc':
@@ -909,13 +922,13 @@ if plotzonmean==1 or plotseacyc==1 or pattcorrwithtime==1:
                 fnamec = con.getBCfilenames('sicn',sim+'ctl')
                 fnamep = con.getBCfilenames('sicn',sim+'pert')
             else:
-                fnamec = frootc + timstr + '_ts.nc'
-                fnamep = frootp + timstrp + '_ts.nc'
+                fnamec = frootc + field + '_' + timstr + '_ts.nc'
+                fnamep = frootp + field + '_' + timstrp + '_ts.nc'
         else:
-            fnamec = frootc + '001-061_ts.nc'
-            fnamec2 = frootc + '062-121_ts.nc'
-            fnamep = frootp + '001-061_ts.nc'
-            fnamep2 = frootp + '062-121_ts.nc'
+            fnamec = frootc + field + '_' + '001-061_ts.nc'
+            fnamec2 = frootc + field + '_' + '062-121_ts.nc'
+            fnamep = frootp + field + '_' + '001-061_ts.nc'
+            fnamep2 = frootp + field + '_' + '062-121_ts.nc'
         
         for sii,sea in enumerate(seasons):
 
@@ -925,16 +938,38 @@ if plotzonmean==1 or plotseacyc==1 or pattcorrwithtime==1:
                 ncparams = {'monsel': sii+1}
 
             # Now get the data
-            if field=='turb':
-                print 'not implemented @@'
-                field='hfl'; fieldb='hfs'
-                fldczm = cnc.getNCvar(fnamec,field.upper(),timesel=timesel,
+            if field in ('turb','net'):
+                #print 'not implemented @@'
+                print 'field is ' + field + '. getting hfl, hfs'
+                fielda='hfl'; fieldb='hfs'
+                fnamec = frootc + fielda + '_' + timstr + '_ts.nc'
+                fnamep = frootp + fielda + '_' + timstrp + '_ts.nc'
+                fnamecb = frootc + fieldb + '_' + timstr + '_ts.nc'
+                fnamepb = frootp + fieldb + '_' + timstrp + '_ts.nc'
+
+                fldczm = cnc.getNCvar(fnamec,fielda.upper(),timesel=timesel,
                                                **ncparams)*conv + cnc.getNCvar(fnamecb,fieldb.upper(),
                                                timesel=timesel,**ncparams)*conv
-                fldpzm = cnc.getNCvar(fnamep,field.upper(),timesel=timesel,
+                fldpzm = cnc.getNCvar(fnamep,fielda.upper(),timesel=timesel,
                                                **ncparams)*conv + cnc.getNCvar(fnamepb,fieldb.upper(),
-                                               timesel=timesel,**ncparams)*conv 
-                field='turb'
+                                               timesel=timesel,**ncparams)*conv
+                if field=='net':
+                    print 'getting flg for net'
+                    fieldb='flg'
+                    conv=-1
+                    fnamecb = frootc + fieldb + '_' + timstr + '_ts.nc'
+                    fnamepb = frootp + fieldb + '_' + timstrp + '_ts.nc'
+                    fldczm = fldczm + cnc.getNCvar(fnamecb,fieldb.upper(),
+                                                   timesel=timesel,**ncparams)*conv
+                    fldpzm = fldpzm + cnc.getNCvar(fnamepb,fieldb.upper(),
+                                                   timesel=timesel,**ncparams)*conv
+                    #print fldpzm-fldczm
+                    field='net'
+                    conv=1
+                else:
+                    field='turb'
+
+                
             else:
                 if threed==0:
                     fldczm = cnc.getNCvar(fnamec,field.upper(),timesel=timesel,
@@ -960,9 +995,15 @@ if plotzonmean==1 or plotseacyc==1 or pattcorrwithtime==1:
                     fldczm = cutl.calc_seaicearea(fldczm,lat,lon)
                     fldpzm = cutl.calc_seaicearea(fldpzm,lat,lon)
                     
-                    
+
+            if field in (fluxes,'fsg','turb','net'):
+                # mask out regions that are not ice in the control (as P&M 2014 JClim)
+                sicnc = cnc.getNCvar(frootc + 'sicn_' + timstr + '_ts.nc','SICN',timesel=timesel,**ncparams)
+                fldczm = ma.masked_where(sicnc<.10,fldczm)
+                fldpzm = ma.masked_where(sicnc<.10,fldpzm)
+                
             if plotzonmean==1:
-                fldczm = np.mean(fldczm[...,:-1],axis=2)
+                fldczm = np.mean(fldczm[...,:-1],axis=2) # actually take zonal mean now
                 fldpzm = np.mean(fldpzm[...,:-1],axis=2)
                 
             elif pattcorrwithtime==1:
@@ -990,7 +1031,7 @@ if plotzonmean==1 or plotseacyc==1 or pattcorrwithtime==1:
                     # leave the latitude dimension intact
                     # dims are time x lat x lon to start
                     # take zonal mean
-                    fldczm = np.mean(fldczm,axis=2)
+                    fldczm = np.mean(fldczm,axis=2) # take zonal mean
                     fldpzm = np.mean(fldpzm,axis=2)
                 else:
                     #print field
@@ -999,10 +1040,10 @@ if plotzonmean==1 or plotseacyc==1 or pattcorrwithtime==1:
                         fldczm = np.sum(np.sum(fldczm[:,lat>0,:],axis=2),axis=1)
                         fldpzm = np.sum(np.sum(fldpzm[:,lat>0,:],axis=2),axis=1)
                     else:
+                        # consider masking out land for sfc fluxes...?
                         fldczm = cutl.polar_mean_areawgted3d(fldczm,lat,lon,latlim=latlim)
                         fldpzm = cutl.polar_mean_areawgted3d(fldpzm,lat,lon,latlim=latlim)
-            #if sea=='Jan' and sim=='kemctl1':
-            #    print fldczm # debugging non-zero standard dev in time for January only 6/21/14
+ 
 
             seafldcstddict[sea] = np.std(fldczm,axis=0)
             seafldpstddict[sea] = np.std(fldpzm,axis=0)
