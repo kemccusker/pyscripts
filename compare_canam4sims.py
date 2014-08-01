@@ -162,6 +162,8 @@ else:
     print 'No settings for ' + field
 
 plat = platform.system()
+timesel = '0002-01-01,0121-12-31'
+
 
 if plat == 'Darwin':  # means I'm on my mac
     basepath = '/Users/kelly/CCCma/CanSISE/RUNS/'
@@ -183,10 +185,14 @@ if field == 'turb':
     fnamep2b = basepath + casenamep2 + subdir + casenamep2 + '_' + fieldb + '_' + timstrp + '_ts.nc'
     fnamep3b = basepath + casenamep3 + subdir + casenamep3 + '_' + fieldb + '_' + timstrp + '_ts.nc'
 
-    fldc = cnc.getNCvar(fnamec,field.upper(),timesel='0002-01-01,0111-12-31')*conv + cnc.getNCvar(fnamecb,fieldb.upper(),timesel='0002-01-01,0111-12-31')*conv
-    fldp1 = cnc.getNCvar(fnamep1,field.upper(),timesel='0002-01-01,0111-12-31')*conv + cnc.getNCvar(fnamep1b,fieldb.upper(),timesel='0002-01-01,0111-12-31')*conv
-    fldp2 = cnc.getNCvar(fnamep2,field.upper(),timesel='0002-01-01,0111-12-31')*conv + cnc.getNCvar(fnamep2b,fieldb.upper(),timesel='0002-01-01,0111-12-31')*conv
-    fldp3 = cnc.getNCvar(fnamep3,field.upper(),timesel='0002-01-01,0111-12-31')*conv + cnc.getNCvar(fnamep3b,fieldb.upper(),timesel='0002-01-01,0111-12-31')*conv
+    fldc = cnc.getNCvar(fnamec,field.upper(),timesel=timesel)*conv +\
+           cnc.getNCvar(fnamecb,fieldb.upper(),timesel=timesel)*conv
+    fldp1 = cnc.getNCvar(fnamep1,field.upper(),timesel=timesel)*conv +\
+            cnc.getNCvar(fnamep1b,fieldb.upper(),timesel=timesel)*conv
+    fldp2 = cnc.getNCvar(fnamep2,field.upper(),timesel=timesel)*conv +\
+            cnc.getNCvar(fnamep2b,fieldb.upper(),timesel=timesel)*conv
+    fldp3 = cnc.getNCvar(fnamep3,field.upper(),timesel=timesel)*conv +\
+            cnc.getNCvar(fnamep3b,fieldb.upper(),timesel=timesel)*conv
 
     field='turb'
 else:
@@ -195,10 +201,10 @@ else:
     fnamep2 = basepath + casenamep2 + subdir + casenamep2 + '_' + field + '_' + timstrp + '_ts.nc'
     fnamep3 = basepath + casenamep3 + subdir + casenamep3 + '_' + field + '_' + timstrp + '_ts.nc'
 
-    fldc = cnc.getNCvar(fnamec,field.upper(),timesel='0002-01-01,0111-12-31')*conv
-    fldp1 = cnc.getNCvar(fnamep1,field.upper(),timesel='0002-01-01,0111-12-31')*conv
-    fldp2 = cnc.getNCvar(fnamep2,field.upper(),timesel='0002-01-01,0111-12-31')*conv
-    fldp3 = cnc.getNCvar(fnamep3,field.upper(),timesel='0002-01-01,0111-12-31')*conv
+    fldc = cnc.getNCvar(fnamec,field.upper(),timesel=timesel)*conv
+    fldp1 = cnc.getNCvar(fnamep1,field.upper(),timesel=timesel)*conv
+    fldp2 = cnc.getNCvar(fnamep2,field.upper(),timesel=timesel)*conv
+    fldp3 = cnc.getNCvar(fnamep3,field.upper(),timesel=timesel)*conv
 
 
 lat = cnc.getNCvar(fnamec,'lat')
@@ -596,10 +602,10 @@ if plotbar:
         fnamep2 = basepath + casenamep2 + subdir + casenamep2 + '_' + field + '_' + timstrp + '_ts.nc'
         fnamep3 = basepath + casenamep3 + subdir + casenamep3 + '_' + field + '_' + timstrp + '_ts.nc'
 
-        fldc = cnc.getNCvar(fnamec,field.upper(),timesel='0002-01-01,0111-12-31')
-        fldp1 = cnc.getNCvar(fnamep1,field.upper(),timesel='0002-01-01,0111-12-31')
-        fldp2 = cnc.getNCvar(fnamep2,field.upper(),timesel='0002-01-01,0111-12-31')
-        fldp3 = cnc.getNCvar(fnamep3,field.upper(),timesel='0002-01-01,0111-12-31')
+        fldc = cnc.getNCvar(fnamec,field.upper(),timesel=timesel)
+        fldp1 = cnc.getNCvar(fnamep1,field.upper(),timesel=timesel)
+        fldp2 = cnc.getNCvar(fnamep2,field.upper(),timesel=timesel)
+        fldp3 = cnc.getNCvar(fnamep3,field.upper(),timesel=timesel)
 
         if avgtype == 'gt' + str(latlim) + 'Nmasked':
             # @@ switch to land mask for fluxes??
