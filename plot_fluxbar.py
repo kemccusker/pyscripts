@@ -23,11 +23,11 @@ casenamec = con.casenamec()
 casenamepb = con.casenameph()
 casenamecb = con.casenamech()
 
-timeselb = '0002-01-01,0121-12-31'
+timeselb = '0002-01-01,0121-12-31' # don't need anymore. timesels are the same.
 timstrb = '001-121'
 timstrpb = timstrb
 
-timesel = '0002-01-01,0111-12-31'
+timesel = '0002-01-01,0121-12-31'
 timstr = '001-111'
 timstrp = timstr
 
@@ -86,7 +86,7 @@ for field in fluxes:
      fldc,cstd = cutl.climatologize(cnc.getNCvar(fnamec,field.upper(),timesel=timesel))
      fldp,pstd = cutl.climatologize(cnc.getNCvar(fnamep,field.upper(),timesel=timesel))
 
-     fldc = ma.masked_where(sicnc<.10,fldc)
+     fldc = ma.masked_where(sicnc<.10,fldc) # masking out non-ice region (as P&M 2014 JClim)
      fldp = ma.masked_where(sicnc<.10,fldp)
 
      
