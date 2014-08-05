@@ -42,6 +42,7 @@ seasonal=0 # seasonal maps (SON, DJF, MAM, JJA)
 plotzonmean=0 # plotzonmean,plotseacyc,pattcorrwithtime are mutually exclusive
 plotseacyc=1 # plotzonmean,plotseacyc,pattcorrwithtime are mutually exclusive
 withlat=0 # plot the seasonal cycle with latitude dimension too (only for plotseacyc=1)@@for now just std over ens
+squatseacyc=1 # plot seacycle figs as shorter than wide
 pattcorrwithtime=0 # plot pattern correlation with time for each ens member
 pattcorryr=0 # if 1, do a yearly anomaly pattern rather than time-integrated 
 
@@ -887,7 +888,10 @@ if plotzonmean==1 or plotseacyc==1 or pattcorrwithtime==1:
         corrlim = 45
     elif plotseacyc==1:
         
-        latlim = 70 # for area averaging
+        if field in (fluxes,'fsg','turb','net'):
+            latlim=40
+        else:
+            latlim = 40 # for area averaging
         seasons = con.get_mon()
 
     if sia==1:
@@ -940,7 +944,7 @@ if plotzonmean==1 or plotseacyc==1 or pattcorrwithtime==1:
             # Now get the data
             if field in ('turb','net'):
                 #print 'not implemented @@'
-                print 'field is ' + field + '. getting hfl, hfs'
+                #print 'field is ' + field + '. getting hfl, hfs'
                 fielda='hfl'; fieldb='hfs'
                 fnamec = frootc + fielda + '_' + timstr + '_ts.nc'
                 fnamep = frootp + fielda + '_' + timstrp + '_ts.nc'
@@ -954,7 +958,7 @@ if plotzonmean==1 or plotseacyc==1 or pattcorrwithtime==1:
                                                **ncparams)*conv + cnc.getNCvar(fnamepb,fieldb.upper(),
                                                timesel=timesel,**ncparams)*conv
                 if field=='net':
-                    print 'getting flg for net'
+                    #print 'getting flg for net'
                     fieldb='flg'
                     conv=-1
                     fnamecb = frootc + fieldb + '_' + timstr + '_ts.nc'
@@ -1390,6 +1394,9 @@ if plotseacyc:
         
         # climo
         fig,axs = plt.subplots()
+        if squatseacyc:
+            fsuff='short'
+            fig.set_size_inches(6,3)
         for skey in sims:
             if skey in ('','ens','kemhad','kemnsidc'): # == '' or skey == 'ens' or skey=='kemhad':
                 axs.plot(moidxs,fldcdf[skey][mol],color=colordict[skey],linewidth=3)
@@ -1409,11 +1416,14 @@ if plotseacyc:
         plt.title('Climos')
 
         if printtofile:
-            fig.savefig(fieldstr + '_ens_meanBC' + obsstr + ctstr + '_seacyc_pol' + str(latlim) + 'N2.pdf')
+            fig.savefig(fieldstr + '_ens_meanBC' + obsstr + ctstr + '_seacyc_pol' + str(latlim) + 'N2' + fsuff + '.pdf')
 
 
         # differences
         fig,axs = plt.subplots()
+        if squatseacyc:
+            fsuff='short'
+            fig.set_size_inches(6,3)
         for skey in sims:
             if skey in ('','ens','kemhad','kemnsidc'): # == '' or skey == 'ens' or skey=='kemhad':
                 axs.plot(moidxs,flddiffdf[skey][mol],color=colordict[skey],linewidth=3)
@@ -1429,7 +1439,7 @@ if plotseacyc:
         plt.title('Anomalies')
 
         if printtofile: # version 2 loops through sims in order of melt
-            fig.savefig(fieldstr + 'diff_ens_meanBC' + obsstr + ctstr + '_seacyc_pol' + str(latlim) + 'N2.pdf')
+            fig.savefig(fieldstr + 'diff_ens_meanBC' + obsstr + ctstr + '_seacyc_pol' + str(latlim) + 'N2' + fsuff + '.pdf')
 
         # calc stddev over ensemble, and min/max for shading
         tmpcdf = fldcdf.loc[mol]
@@ -1449,6 +1459,9 @@ if plotseacyc:
 
         # differences SHADED
         fig,axs = plt.subplots()
+        if squatseacyc:
+            fsuff='short'
+            fig.set_size_inches(6,3)
         for skey in sims[5:]:  #-1]:
             axs.fill_between(moidxs,demin,demax,facecolor='0.7',alpha=0.2)
             if skey in ('','ens','kemhad','kemnsidc'): # == '' or skey == 'ens' or skey=='kemhad':
@@ -1465,11 +1478,14 @@ if plotseacyc:
         plt.title('Anomalies')
 
         if printtofile: # version 2 loops through sims in order of melt
-            fig.savefig(fieldstr + 'diff_ens_meanBC' + obsstr + ctstr + '_seacyc_pol' + str(latlim) + 'N2shade.pdf')
+            fig.savefig(fieldstr + 'diff_ens_meanBC' + obsstr + ctstr + '_seacyc_pol' + str(latlim) + 'N2shade' + fsuff + '.pdf')
 
 
         # Standard deviation climos
         fig,axs = plt.subplots()
+        if squatseacyc:
+            fsuff='short'
+            fig.set_size_inches(6,3)
         for skey in sims:
             
             if skey in ('','ens','kemhad','kemnsidc'): # == '' or skey == 'ens' or skey=='kemhad':
@@ -1493,11 +1509,14 @@ if plotseacyc:
         plt.title('Sigma')
 
         if printtofile:
-            fig.savefig(fieldstr + 'STD_ens_meanBC' + obsstr + ctstr + '_seacyc_pol' + str(latlim) + 'N2.pdf')
+            fig.savefig(fieldstr + 'STD_ens_meanBC' + obsstr + ctstr + '_seacyc_pol' + str(latlim) + 'N2' + fsuff + '.pdf')
 
 
         # Difference in standard deviation
         fig,axs = plt.subplots()
+        if squatseacyc:
+            fsuff='short'
+            fig.set_size_inches(6,3)
         for skey in sims:
             if skey in ('','ens','kemhad','kemnsidc'): #  == '' or skey == 'ens' or skey=='kemhad':
                 axs.plot(moidxs,fldpstddf[skey][mol]-fldcstddf[skey][mol],color=colordict[skey],linewidth=3)
@@ -1512,7 +1531,7 @@ if plotseacyc:
         plt.title('Sigma anomalies')
 
         if printtofile:
-            fig.savefig(fieldstr + 'STDdiff_ens_meanBC' + obsstr + ctstr + '_seacyc_pol' + str(latlim) + 'N2.pdf')
+            fig.savefig(fieldstr + 'STDdiff_ens_meanBC' + obsstr + ctstr + '_seacyc_pol' + str(latlim) + 'N2' + fsuff + '.pdf')
 
 
 if pattcorrwithtime==1:
