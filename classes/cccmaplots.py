@@ -173,8 +173,8 @@ def addtsig(ploth, pvals, dim1, dim2, siglevel=0.05,color='k',type='hatch',cmap=
     type can be 'hatch', 'color', 'cont' (the else case is cont)
     """
 
-    print 'be careful, I am not sure this works properly 4/29/14' #@@ might just be when i screwed w/ dims and tried to plot lat x time?
-    
+    #print 'be careful, I am not sure this works properly 4/29/14' #@@ might just be when i screwed w/ dims and tried to plot lat x time?
+    # I think it's only a potential problem for the stats through time??
     plotfld = copy.copy(pvals) # shallow copy
     plotfld = ma.masked_where(pvals>siglevel,pvals)
     plotfld[pvals<=siglevel] = 1.5 # significant!
@@ -197,8 +197,90 @@ def addtsig(ploth, pvals, dim1, dim2, siglevel=0.05,color='k',type='hatch',cmap=
     return pc
 
 
-#@@def vert_plot(field, lev, lat, title='',units='',cmap='blue2red_w20',cmin='',cmax='',axis=None, suppcb=0):
+def vert_plot(fld, lev, lat, title='',units='',cmap='blue2red_w20',cmin='',cmax='', type=None,
+              axis=None, suppcb=False, latlim=None, levlim=None,addcontlines=False,screen=False,
+              suppylab=False):
+    """ screen=False: this flag tells whether the plot should be after Screen et al. 2013, ClimDyn
+                          1000-300hPa, 20-90N. Ignores latlim/levlim
+        suppylab=False: suppress the y labels
+    """
 
+    lats,levs = np.meshgrid(lat,lev/100.)
+
+    if cmap =='' or cmap==None:
+        cmap='blue2red_w20'
+        
+    incmap = plt.cm.get_cmap(cmap)
+
+    if cmin =='':
+        # parameters for plot
+        pparams = dict(cmap=incmap)
+    else:
+        cmlen=float(incmap.N) # or: from __future__ import division
+
+        if cmlen>200:
+            cmlen = float(15) # ie. if using a built in colormap that is continuous, want smaller # of colors
+        
+        incr = (cmax-cmin) /cmlen
+        conts = np.arange(cmin,cmax+incr,incr)
+        pparams = dict(cmap=incmap,levels=conts,vmin=cmin,vmax=cmax,extend='both')
+
+    if axis != None:
+        # what to do w/ axis?
+        ax=axis
+    else:
+        ax=plt.gca()
+    
+    cf = ax.contourf(lats,levs,fld,**pparams)
+
+    if addcontlines:
+        ax.contour(lats,levs,fld,levels=conts,colors='.3') # may have to make a dict for levels key
+
+    ax.set_ylim(levlim,1000)
+    ax.invert_yaxis()
+
+    if screen==True:
+        ax.set_yticks([900, 700, 500, 300])
+        if suppylab==False:
+            ax.set_yticklabels((900, 700, 500, 300))
+        else:
+            ax.set_yticklabels('')
+        ax.set_xlim(20,90)
+        ax.set_xticks([40, 60, 80])
+        ax.set_xticklabels((40, 60, 80))
+    else:
+        ax.set_yscale('log')
+        ax.set_yticks([1000,800, 500, 300, 100, 10])
+        if type=='nh':
+            ax.set_xlim(latlim,90)
+            ax.set_xticks([20, 45, 70])
+            ax.set_xticklabels((20, 45, 70))
+        elif type=='sh':
+            ax.set_xlim(-90,latlim)
+            ax.set_xticks([-70,-45,-20])
+            ax.set_xticklabels((-70,-45,-20))
+        else:
+            ax.set_xlim(-90,90)
+            ax.set_xticks([-45, 0, 45])
+            ax.set_xticklabels((-45, 0, 45))
+            
+        if suppylab==False:
+            ax.set_yticklabels((1000,800,500,300,100,10))
+        else:
+            ax.set_yticklabels('')
+
+    if suppylab==False:
+        ax.set_ylabel('Pressure (hPa)')
+    ax.set_xlabel('Latitude')
+    ax.set_title(title)
+
+    if suppcb==False:
+        cbar = ax.colorbar(cf)
+        
+        #cbar_ax = fig4.add_axes([.91,.15, .02,.7])
+        #fig4.colorbar(pc,cax=cbar_ax)
+
+    return cf
 
 def map_allmonths(fld, lat, lon,title='',units='',cmap='blue2red_w20',type='sq',
            cmin='',cmax='',axis=None, suppcb=0,lmask=0,climo=0,flipmask=0,
@@ -290,6 +372,64 @@ def map_allseas(fld, lat, lon,title='',units='',cmap='blue2red_w20',type='sq',
 
     cbar_ax = fig.add_axes([.91,.25, .02,.5])
     fig.colorbar(pc,cax=cbar_ax)
+    plt.suptitle(title)
+
+    return fig
+        
+
+def plotvert_allseas(fld, lev, lat,title='',units='',cmap='blue2red_w20',type=None,
+                      cmin='',cmax='',axis=None, suppcb=0,climo=0,
+                      pvals = None,sigtype='hatch',latlim=None,levlim=None,
+                      addcontlines=True,screen=False):
+
+    """ default seasons = 'SON','DJF','MAM','JJA'
+    """
+    import cccmautils as cutl
+    
+    seasons = 'SON','DJF','MAM','JJA'
+
+    midx=0
+    fig,axs = plt.subplots(1,4) 
+    fig.set_size_inches(12,4)
+    fig.subplots_adjust(hspace=.15,wspace=.05)
+
+    for axii,ax in enumerate(axs.flat):
+        
+        #print seasons[midx]
+        tmpfld=np.squeeze(cutl.seasonalize_monthlyts(fld,season=seasons[midx],climo=climo))
+        #print tmpfld.shape # already 2D... only when climo=1?
+        #if seasons[midx]=='DJF':
+        #    print tmpfld
+
+        if climo:
+            plotfld = tmpfld
+        else:
+            plotfld = np.mean(tmpfld,axis=0)
+
+        #print plotfld.shape
+
+        if axii==0:
+            vpparams = dict(cmin=cmin,cmax=cmax,cmap=cmap,type=type,
+                            axis=ax,suppcb=True,units=units,
+                            latlim=latlim,levlim=levlim,
+                            addcontlines=addcontlines,screen=screen)
+        else:
+            vpparams = dict(cmin=cmin,cmax=cmax,cmap=cmap,type=type,
+                            axis=ax,suppcb=True,units=units,
+                            latlim=latlim,levlim=levlim,
+                            addcontlines=addcontlines,screen=screen,
+                            suppylab=True)
+            
+        cf = vert_plot(plotfld,lev,lat,**vpparams)
+        
+        ax.set_title(seasons[midx])
+        if pvals != None:
+            cplt.addtsig(cf,pvals,lat,lon,type=sigtype)
+
+        midx = midx+1
+
+    cbar_ax = fig.add_axes([.91,.25, .02,.5])
+    fig.colorbar(cf,cax=cbar_ax)
     plt.suptitle(title)
 
     return fig
