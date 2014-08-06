@@ -214,11 +214,11 @@ if singleplots:
     ## plt.pcolormesh(lats,levs/100,plotfld,\
     ##                cmap= plt.cm.get_cmap(cmapclimo),shading='gouraud',\
     ##                vmin=cminc,vmax=cmaxc)
-    cf = plt.contourf(lats,levs/100,plotfld,
+    cf = plt.contourf(lats,levs/100.,plotfld,
                  cmap= plt.cm.get_cmap(cmapclimo),levels=conts,
                  vmin=cminc,vmax=cmaxc,extend='both')
     if addcontlines:
-        plt.contour(lats,levs/100,plotfld,levels=conts,colors='.3')
+        plt.contour(lats,levs/100.,plotfld,levels=conts,colors='.3')
     ax1.set_xlim(-90,90)
     ax1.set_ylim(10,1000)
     ax1.invert_yaxis()
@@ -253,11 +253,11 @@ if singleplots:
     ## pc = plt.pcolormesh(lats,levs/100,plotfld,\
     ##                     cmap= plt.cm.get_cmap(cmap),shading='gouraud',\
     ##                     vmin=cmin,vmax=cmax)
-    pc = plt.contourf(lats,levs/100,plotfld,
+    pc = plt.contourf(lats,levs/100.,plotfld,
                       cmap=plt.cm.get_cmap(cmap),levels=conts,
                       vmin=cmin,vmax=cmax,extend='both')
     if addcontlines:
-        plt.contour(lats,levs/100,plotfld,levels=conts,colors='.3')
+        plt.contour(lats,levs/100.,plotfld,levels=conts,colors='.3')
     ax.invert_yaxis()
     ax.set_xlim(-90,90)
     ax.set_yscale('log')
@@ -271,7 +271,7 @@ if singleplots:
     cbar = fig.colorbar(pc)
     if ftype == 'ts':
         # add sig
-        cplt.addtsig(ax,pval,lat,lev/100,type='hatch')
+        cplt.addtsig(ax,pval,lat,lev/100.,type='hatch')
 
     if printtofile:
         if ftype=='ts':
@@ -289,11 +289,11 @@ if singleplots:
     ## plt.pcolormesh(lats,levs/100,plotfld,\
     ##                cmap= plt.cm.get_cmap(cmap),shading='gouraud',\
     ##                vmin=cmin,vmax=cmax)
-    cf = plt.contourf(lats,levs/100,plotfld,
+    cf = plt.contourf(lats,levs/100.,plotfld,
                  cmap=plt.cm.get_cmap(cmap),levels=conts,
                  vmin=cmin,vmax=cmax,extend='both')
     if addcontlines:
-        plt.contour(lats,levs/100,plotfld,levels=conts,colors='.3')
+        plt.contour(lats,levs/100.,plotfld,levels=conts,colors='.3')
     ax2.set_xlim(-90,90)
     ax2.set_ylim(10,1000)
     ax2.invert_yaxis()
@@ -308,7 +308,7 @@ if singleplots:
     cbar = fig2.colorbar(cf)
     if ftype == 'ts':
         # add sig
-        cplt.addtsig(ax2,pval,lat,lev/100,type='hatch')
+        cplt.addtsig(ax2,pval,lat,lev/100.,type='hatch')
 
     if printtofile:
         if ftype=='ts':
@@ -366,14 +366,14 @@ if allmos:
         ## pc = ax.pcolormesh(lats,levs/100,plotfld,\
         ##                    cmap= plt.cm.get_cmap(cmap),shading='gouraud',\
         ##                    vmin=cminm,vmax=cmaxm)
-        pc = ax.contourf(lats,levs/100,plotfld,
+        pc = ax.contourf(lats,levs/100.,plotfld,
                          cmap=plt.cm.get_cmap(cmap),levels=conts,
                          vmin=cminm,vmax=cmaxm,extend='both')
         if addcontlines:
-            ax.contour(lats,levs/100,plotfld,levels=conts,colors='.3')
+            ax.contour(lats,levs/100.,plotfld,levels=conts,colors='.3')
         if ftype == 'ts':
             # add sig
-            cplt.addtsig(ax,pval[midx,:,:],lat,lev/100,type='hatch')
+            cplt.addtsig(ax,pval[midx,:,:],lat,lev/100.,type='hatch')
 
         ax.set_title(months[midx])
         ax.set_xlim(-90,90)
@@ -427,14 +427,14 @@ if allmos:
         ## pc = ax.pcolormesh(lats,levs/100,plotfld,\
         ##                    cmap= plt.cm.get_cmap(cmap),shading='gouraud',\
         ##                    vmin=cminsc,vmax=cmaxsc)
-        pc = ax.contourf(lats,levs/100,plotfld,
+        pc = ax.contourf(lats,levs/100.,plotfld,
                          cmap=plt.cm.get_cmap(cmap),levels=conts,
                          vmin=cminsc,vmax=cmaxsc, extend='both')
         if addcontlines:
-            ax.contour(lats,levs/100,plotfld,levels=conts,colors='.3')
+            ax.contour(lats,levs/100.,plotfld,levels=conts,colors='.3')
         if ftype == 'ts':
             # add sig
-            cplt.addtsig(ax,pval[midx,:,:],lat,lev/100,type='hatch')
+            cplt.addtsig(ax,pval[midx,:,:],lat,lev/100.,type='hatch')
 
         ax.set_title(months[midx])
         ax.set_xlim(20,90)
@@ -512,14 +512,14 @@ if seasonal:
         
         plotfld = fldpzmallseas[midx,:,:] - fldczmallseas[midx,:,:]
 
-        pc = ax.contourf(lats,levs/100,plotfld,
+        pc = ax.contourf(lats,levs/100.,plotfld,
                          cmap=plt.cm.get_cmap(cmap),levels=conts,
                          vmin=cminsc,vmax=cmaxsc, extend='both')
         if addcontlines:
-            ax.contour(lats,levs/100,plotfld,levels=conts,colors='.3')
+            ax.contour(lats,levs/100.,plotfld,levels=conts,colors='.3')
         if ftype == 'ts':
             # add sig
-            cplt.addtsig(ax,pval[midx,:,:],lat,lev/100,type='hatch')
+            cplt.addtsig(ax,pval[midx,:,:],lat,lev/100.,type='hatch')
 
         ax.set_title(seasons[midx])
         ax.set_xlim(20,90)
@@ -579,14 +579,14 @@ if seasonal:
 
         plotfld = fldpzmallseas[midx,:,:] - fldczmallseas[midx,:,:]
 
-        pc = ax.contourf(lats,levs/100,plotfld,
+        pc = ax.contourf(lats,levs/100.,plotfld,
                          cmap=plt.cm.get_cmap(cmap),levels=conts,
                          vmin=cminm,vmax=cmaxm, extend='both')
         if addcontlines:
-            ax.contour(lats,levs/100,plotfld,levels=conts,colors='.3')
+            ax.contour(lats,levs/100.,plotfld,levels=conts,colors='.3')
         if ftype == 'ts':
             # add sig
-            cplt.addtsig(ax,pval[midx,:,:],lat,lev/100,type='hatch')
+            cplt.addtsig(ax,pval[midx,:,:],lat,lev/100.,type='hatch')
 
         ax.set_title(seasons[midx])
         ax.set_xlim(-90,90)
