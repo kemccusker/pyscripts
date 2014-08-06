@@ -38,6 +38,8 @@ printtofile=1
 plotann=0    # seasonal avg map, comparing ens runs and meanBC
 plotallmos=0 # monthly maps (@@ not implemented)
 seasonal=0 # seasonal maps (SON, DJF, MAM, JJA)
+seasvert=0 # seasonal must =1. seasonal vertical zonal means (SON,DJF,MAM,JJA) instead of maps
+screen=True # whether to have screen-style vertical zonal means
 
 plotzonmean=0 # plotzonmean,plotseacyc,pattcorrwithtime are mutually exclusive
 plotseacyc=1 # plotzonmean,plotseacyc,pattcorrwithtime are mutually exclusive
@@ -54,7 +56,8 @@ addr4ct=0 # add kem1pert2r4ct (constant thickness version of ens4)
 addsens=0 # add sensitivity runs (kem1pert1b, kem1pert3)
 
     
-latlim = 45 # None #45 # lat limit for NH plots. Set to None otherwise.
+latlim = None # None #45 # lat limit for NH plots. Set to None otherwise.
+levlim= 100 # level limit for vertical ZM plots (in hPa). ignored if screen=True
 
 sigtype = 'cont' # significance: 'cont' or 'hatch' which is default
 sigoff=0 # if 1, don't add significance
@@ -87,14 +90,15 @@ timstr2='001-121'
 # gz, t, u, v, q (3D !)
 # st, sic, sicn (sia), gt, pmsl, pcp, hfl, hfs, turb, net, flg, fsg, fn, pcpn, zn, su, sv (@@later ufs,vfs)
 field = 'net'
+
 print field
 timeavg = 'DJF'
 
 # only for threed vars
-level = 30000
+#level = 30000
 #level = 50000 # 500hPa
-#level = 70000
-
+level = 70000
+nonstandardlev=False # standards are 700,500,300
 
 if sensruns:
     addobs=0
@@ -114,6 +118,8 @@ if testhadisst:
 cmap = 'blue2red_w20' # default cmap
 cmapclimo = 'Spectral_r'
 pct = 0 # if 1, do calculation as a percent
+
+
 
 
 # # # ###########################################
@@ -183,7 +189,7 @@ elif field == 'pmsl':
 
     if plotseacyc==1  and withlat==1:
         cminm=-1; cmaxm=1 # @@ will have to update this when add subplots
-    leglocs = 'lower left', 'upper left', 'upper center', 'upper left'
+    leglocs = 'lower left', 'lower left', 'upper center', 'lower left'
 elif field == 'pcp':
     units = 'mm/day' # original: kg m-2 s-1
     
@@ -328,6 +334,15 @@ elif field == 't':
         cmin = -.3; cmax = .3
         cminm = -.5; cmaxm = .5  # for monthly
         #cminsea = -.5; cmaxsea = .5
+
+    if seasvert:
+        if screen:
+            cmin=-2.5; cmax=2.5
+            cminm=-2.5; cmaxm=2.5
+        else:
+            cmin = -.5; cmax = .5
+            cminm = -.8; cmaxm = .8 
+        
 elif field == 'u':
     threed = 1
 
@@ -350,6 +365,9 @@ elif field == 'u':
         cminm = -1; cmaxm = 1
         #cminsea = -1; cmaxsea = 1
 
+    if seasvert:
+        cmin=-.5; cmax=.5
+        cminm=-1; cmaxm=1
     #cmapclimo='blue2red_20'
 
 elif field == 'gz':
@@ -378,6 +396,14 @@ elif field == 'gz':
         #cminsea = -15; cmaxsea = 15
         cminm = -15; cmaxm = 15  # for monthly
 
+    if seasvert:
+        if screen:
+            cmin=-10; cmax=10
+            cminm=-25; cmaxm=25
+        else:
+            cmin = -10; cmax = 10
+            cminm = -15; cmaxm = 15 
+
 else:
     print 'No settings for ' + field
 
@@ -390,9 +416,15 @@ basepath=bp['basepath'] + model + '/'; subdir=bp['subdir']
 
 
 # set filename for getting lat,lon
-if threed==1:
-    fieldstr=field+str(level/100)
-    fnamec = basepath + casename + subdir + casename + '_' + field + '_001-061_ts.nc' # for lat,lon
+if threed==1: # either map of a level, or a zonal mean
+    if seasonal==1 and seasvert==1:
+        fieldstr=field+'ZM'
+        field=field+'ZM'
+    else:
+        fieldstr=field+str(level/100) # figure names. want integer for string
+        field=field+str(level) # read in files
+        #fnamec = basepath + casename + subdir + casename + '_' + field + '_001-061_ts.nc' # for lat,lon
+        fnamec = basepath + casename + subdir + casename + '_' + field + '_' + timstr + '_ts.nc' # for lat,lon
 
 else:
     fieldstr=field
@@ -408,6 +440,9 @@ else:
 
 lat = cnc.getNCvar(fnamec,'lat')
 lon = cnc.getNCvar(fnamec,'lon')
+if threed:
+    lev=cnc.getNCvar(fnamec,'plev')
+    nlev=len(lev)
 nlat = len(lat)
 nlon = len(lon)
 
@@ -419,11 +454,12 @@ else:
 # order ens simulations in order of most ice loss in melt season to least. Then ens mean, PERT2, observations if requested
 sims = 'r1','r4','r3','r5','r2','ens','' # suffixes to bcasename and bcasenamep
 if addobs:
-    if field in ('sia','sicn'): # for now@@
-        sims = sims + ('kemhad','kemnsidc')
-    else:
-        sims = sims + ('kemhad',)
-        print '@@ not adding nsidc yet for field: ' + field
+    #if field in ('sia','sicn'): # for now@@
+    sims = sims + ('kemhad','kemnsidc')
+    #print 'adding yrs 1-61 for nsidc for now@@'
+    #else:
+    #    sims = sims + ('kemhad',)
+    #    print '@@ not adding nsidc yet for field: ' + field
 
 if sensruns: # add sensitivity runs. don't plot meanBC, mean of ens
     sims = sims[0:5] + ('r4ct','kem1pert1b','kem1pert3')
@@ -478,34 +514,49 @@ if plotann:
 
             if sia==1:
                 field='sia'
-        else:
+        else: # is threed
             # get ensemble mean
-            # read 3D variables at specified level, 2 timeseries files
-            frootc = basepath + casename + subdir + casename + '_' + field + '_'
-            frootp =  basepath + casenamep + subdir + casenamep + '_' + field + '_'
-            fnamec = frootc + '001-061_ts.nc'
 
-            fldc = np.append(cnc.getNCvar(fnamec,ncfield,
-                                          timesel='0002-01-01,061-12-31',levsel=level)*conv,
-                             cnc.getNCvar(frootc+'062-121_ts.nc',ncfield,levsel=level)*conv,
-                             axis=0)
-            fldp = np.append(cnc.getNCvar(frootp+'001-061_ts.nc',ncfield,
-                                          timesel='0002-01-01,061-12-31',levsel=level)*conv,
-                             cnc.getNCvar(frootp+'062-121_ts.nc',ncfield,levsel=level)*conv,
-                             axis=0)
+            if nonstandardlev: # leave this in in case want a different level, not tested w/ 3D zonal mean
+                # read 3D variables at specified level, 2 timeseries files
+                frootc = basepath + casename + subdir + casename + '_' + field + '_'
+                frootp =  basepath + casenamep + subdir + casenamep + '_' + field + '_'
+                fnamec = frootc + '001-061_ts.nc'
 
-            # get original runs (mean BC)
-            frootc2 = basepath + casename2 + subdir + casename2 + '_' + field + '_'
-            frootp2 =  basepath + casenamep2 + subdir + casenamep2 + '_' + field + '_'
+                fldc = np.append(cnc.getNCvar(fnamec,ncfield,
+                                              timesel='0002-01-01,061-12-31',levsel=level)*conv,
+                                 cnc.getNCvar(frootc+'062-121_ts.nc',ncfield,levsel=level)*conv,
+                                 axis=0)
+                fldp = np.append(cnc.getNCvar(frootp+'001-061_ts.nc',ncfield,
+                                              timesel='0002-01-01,061-12-31',levsel=level)*conv,
+                                 cnc.getNCvar(frootp+'062-121_ts.nc',ncfield,levsel=level)*conv,
+                                 axis=0)
 
-            fldc2 = np.append(cnc.getNCvar(frootc2+'001-061_ts.nc',ncfield,
-                                          timesel='0002-01-01,061-12-31',levsel=level)*conv,
-                             cnc.getNCvar(frootc2+'062-121_ts.nc',ncfield,levsel=level)*conv,
-                             axis=0)
-            fldp2 = np.append(cnc.getNCvar(frootp2+'001-061_ts.nc',ncfield,
-                                          timesel='0002-01-01,061-12-31',levsel=level)*conv,
-                             cnc.getNCvar(frootp2+'062-121_ts.nc',ncfield,levsel=level)*conv,
-                             axis=0)
+                # get original runs (mean BC)
+                frootc2 = basepath + casename2 + subdir + casename2 + '_' + field + '_'
+                frootp2 =  basepath + casenamep2 + subdir + casenamep2 + '_' + field + '_'
+
+                fldc2 = np.append(cnc.getNCvar(frootc2+'001-061_ts.nc',ncfield,
+                                              timesel='0002-01-01,061-12-31',levsel=level)*conv,
+                                 cnc.getNCvar(frootc2+'062-121_ts.nc',ncfield,levsel=level)*conv,
+                                 axis=0)
+                fldp2 = np.append(cnc.getNCvar(frootp2+'001-061_ts.nc',ncfield,
+                                              timesel='0002-01-01,061-12-31',levsel=level)*conv,
+                                 cnc.getNCvar(frootp2+'062-121_ts.nc',ncfield,levsel=level)*conv,
+                                 axis=0)
+            else: # read in a standard level from processed file (default) @@reorg since same as above almost
+                fnamec = basepath + casename + subdir + casename + '_' + field + '_' + timstr + '_ts.nc'
+                fnamep = basepath + casenamep + subdir + casenamep + '_' + field + '_' + timstrp + '_ts.nc'
+
+                fldc = cnc.getNCvar(fnamec,ncfield,timesel=timesel)*conv
+                fldp = cnc.getNCvar(fnamep,ncfield,timesel=timesel)*conv
+
+                # get original runs (mean BC)
+                fnamec2 = basepath + casename2 + subdir + casename2 + '_' + field + '_' + timstr2 + '_ts.nc'
+                fnamep2 = basepath + casenamep2 + subdir + casenamep2 + '_' + field + '_' + timstr2 + '_ts.nc'
+
+                fldc2 = cnc.getNCvar(fnamec2,ncfield,timesel=timesel)*conv
+                fldp2 = cnc.getNCvar(fnamep2,ncfield,timesel=timesel)*conv                
 
     # annual time-series (3d)
     seastsc = cutl.seasonalize_monthlyts(fldc,timeavg)
@@ -616,19 +667,27 @@ if plotann:
                 seasfldp = cnc.getNCvar(fnamep,field.upper(),timesel=timesel,seas=timeavg)*conv
             else:
                 # read 3D variables at specified level, 2 timeseries files
-                frootc = basepath + bcasename + 'ens' + subdir + bcasename + 'ens_' + field + '_'
-                frootp =  basepath + bcasenamep + 'ens' + subdir + bcasenamep + 'ens_' + field + '_'
-                fnamec = frootc + '001-061_ts.nc'
+                if nonstandardlev:
+                    frootc = basepath + bcasename + 'ens' + subdir + bcasename + 'ens_' + field + '_'
+                    frootp =  basepath + bcasenamep + 'ens' + subdir + bcasenamep + 'ens_' + field + '_'
+                    fnamec = frootc + '001-061_ts.nc'
 
-                seasfldc = np.append(cnc.getNCvar(fnamec,ncfield,
-                                              timesel='0002-01-01,061-12-31',levsel=level,seas=timeavg)*conv,
-                                 cnc.getNCvar(frootc+'062-121_ts.nc',ncfield,levsel=level,seas=timeavg)*conv,
-                                 axis=0)
-                seasfldp = np.append(cnc.getNCvar(frootp+'001-061_ts.nc',ncfield,
-                                              timesel='0002-01-01,061-12-31',levsel=level,seas=timeavg)*conv,
-                                 cnc.getNCvar(frootp+'062-121_ts.nc',ncfield,levsel=level,seas=timeavg)*conv,
-                                 axis=0)
-        
+                    seasfldc = np.append(cnc.getNCvar(fnamec,ncfield,
+                                                  timesel='0002-01-01,061-12-31',levsel=level,seas=timeavg)*conv,
+                                     cnc.getNCvar(frootc+'062-121_ts.nc',ncfield,levsel=level,seas=timeavg)*conv,
+                                     axis=0)
+                    seasfldp = np.append(cnc.getNCvar(frootp+'001-061_ts.nc',ncfield,
+                                                  timesel='0002-01-01,061-12-31',levsel=level,seas=timeavg)*conv,
+                                     cnc.getNCvar(frootp+'062-121_ts.nc',ncfield,levsel=level,seas=timeavg)*conv,
+                                     axis=0)
+                else: # read from already processed file (default). @@ should reorg b/c this is almost same as above
+                    fnamec = basepath + bcasename + 'ens' + subdir + bcasename +\
+                         'ens_' + field + '_' + timstr + '_ts.nc'
+                    fnamep = basepath + bcasenamep + 'ens' + subdir + bcasenamep +\
+                             'ens_' + field + '_' + timstrp + '_ts.nc'
+                    seasfldc = cnc.getNCvar(fnamec,ncfield,timesel=timesel,seas=timeavg)*conv
+                    seasfldp = cnc.getNCvar(fnamep,ncfield,timesel=timesel,seas=timeavg)*conv
+
             ttl = 'ens'
             
         else:
@@ -640,20 +699,28 @@ if plotann:
                 seasfldc = cnc.getNCvar(fnamec,field.upper(),timesel=timesel,seas=timeavg)*conv
                 seasfldp = cnc.getNCvar(fnamep,field.upper(),timesel=timesel,seas=timeavg)*conv
             else:
-                frootc = basepath + bcasename + 'r' + str(ridx+1) + subdir + bcasename +\
-                         'r' + str(ridx+1) + '_' + field + '_'
-                frootp =  basepath + bcasenamep + 'r' + str(ridx+1) + subdir + bcasenamep +\
-                         'r' + str(ridx+1) + '_' + field + '_'
-                fnamec = frootc + '001-061_ts.nc'
+                if nonstandardlev:
+                    frootc = basepath + bcasename + 'r' + str(ridx+1) + subdir + bcasename +\
+                             'r' + str(ridx+1) + '_' + field + '_'
+                    frootp =  basepath + bcasenamep + 'r' + str(ridx+1) + subdir + bcasenamep +\
+                             'r' + str(ridx+1) + '_' + field + '_'
+                    fnamec = frootc + '001-061_ts.nc'
 
-                seasfldc = np.append(cnc.getNCvar(fnamec,ncfield,
-                                              timesel='0002-01-01,061-12-31',levsel=level,seas=timeavg)*conv,
-                                 cnc.getNCvar(frootc+'062-121_ts.nc',ncfield,levsel=level,seas=timeavg)*conv,
-                                 axis=0)
-                seasfldp = np.append(cnc.getNCvar(frootp+'001-061_ts.nc',ncfield,
-                                              timesel='0002-01-01,061-12-31',levsel=level,seas=timeavg)*conv,
-                                 cnc.getNCvar(frootp+'062-121_ts.nc',ncfield,levsel=level,seas=timeavg)*conv,
-                                 axis=0)
+                    seasfldc = np.append(cnc.getNCvar(fnamec,ncfield,
+                                                  timesel='0002-01-01,061-12-31',levsel=level,seas=timeavg)*conv,
+                                     cnc.getNCvar(frootc+'062-121_ts.nc',ncfield,levsel=level,seas=timeavg)*conv,
+                                     axis=0)
+                    seasfldp = np.append(cnc.getNCvar(frootp+'001-061_ts.nc',ncfield,
+                                                  timesel='0002-01-01,061-12-31',levsel=level,seas=timeavg)*conv,
+                                     cnc.getNCvar(frootp+'062-121_ts.nc',ncfield,levsel=level,seas=timeavg)*conv,
+                                     axis=0)
+                else:
+                    fnamec = basepath + bcasename + 'r' + str(ridx+1) + subdir + bcasename +\
+                         'r' + str(ridx+1) + '_' + field + '_' + timstr + '_ts.nc'
+                    fnamep = basepath + bcasenamep + 'r' + str(ridx+1) + subdir + bcasenamep +\
+                             'r' + str(ridx+1) + '_' + field + '_' + timstrp + '_ts.nc'
+                    seasfldc = cnc.getNCvar(fnamec,ncfield,timesel=timesel,seas=timeavg)*conv
+                    seasfldp = cnc.getNCvar(fnamep,ncfield,timesel=timesel,seas=timeavg)*conv
             
             ttl = 'r' + str(ridx+1)
 
@@ -760,11 +827,17 @@ if seasonal:
 
     cmlen=float( plt.cm.get_cmap(cmap).N) # or: from __future__ import division
 
-    
-    tstat = np.zeros((len(seasons),nlat,nlon))
-    pval = np.zeros((len(seasons),nlat,nlon))
-    fldcallseas = np.zeros((len(seasons),nlat,nlon)) # @@ dont' need to do this anymore, not saving all
-    fldpallseas = np.zeros((len(seasons),nlat,nlon))
+
+    if seasvert:
+        tstat = np.zeros((len(seasons),nlev,nlat))
+        pval = np.zeros((len(seasons),nlev,nlat))
+        fldcallseas = np.zeros((len(seasons),nlev,nlat))
+        fldpallseas = np.zeros((len(seasons),nlev,nlat))
+    else:
+        tstat = np.zeros((len(seasons),nlat,nlon))
+        pval = np.zeros((len(seasons),nlat,nlon))
+        fldcallseas = np.zeros((len(seasons),nlat,nlon))
+        fldpallseas = np.zeros((len(seasons),nlat,nlon))
     
     incr = (cmaxm-cminm) / (cmlen)
     conts = np.arange(cminm,cmaxm+incr,incr)
@@ -772,7 +845,9 @@ if seasonal:
     fig6,ax6 = plt.subplots(len(seasons),len(sims)) # 1 row for e/ of 5 ens members, plus mean, plus meanBC
     fig6.set_size_inches(12,8)  
     fig6.subplots_adjust(hspace=.15,wspace=.05)
-        
+
+    lastcol=len(sims)-1
+    
     for ridx,sim in enumerate(sims): # traverse cols
 
         cidx=0
@@ -795,17 +870,24 @@ if seasonal:
             frootp = basepath + bcasenamep + sim + subdir + bcasenamep + sim + '_' + field + '_'
             rowl=sim
 
-        if threed==0:
-            fnamec = frootc + timstr + '_ts.nc'
-            fnamep = frootp + timstrp + '_ts.nc'
-        else:
-            print '@@ fix to use the level NC files'
-            fnamec = frootc + '001-061_ts.nc'
-            fnamec2 = frootc + '062-121_ts.nc'
-            fnamep = frootp + '001-061_ts.nc'
-            fnamep2 = frootp + '062-121_ts.nc'
+
+        fnamec = frootc + timstr + '_ts.nc'
+        fnamep = frootp + timstrp + '_ts.nc'
+        # @@@ I *think* I don't need this anymore since processing the 3D files more
+        # @@  although getting a nonstandard lev is not supported
+        if nonstandardlev:
+            print 'not yet supported for seasonal'
+        ## if threed==0:
+        ##     fnamec = frootc + timstr + '_ts.nc'
+        ##     fnamep = frootp + timstrp + '_ts.nc'
+        ## else:
+        ##     print '@@ fix to use the level NC files'
+        ##     fnamec = frootc + '001-061_ts.nc'
+        ##     fnamec2 = frootc + '062-121_ts.nc'
+        ##     fnamep = frootp + '001-061_ts.nc'
+        ##     fnamep2 = frootp + '062-121_ts.nc'
                 
-        for sea in seasons: # traverse rows
+        for sea in seasons: # traverse rows (or use map_allseas() ?? @@)
             #ax = ax6[ridx][cidx]
             ax = ax6[cidx][ridx] # swapped row and col index positions in subplot
             
@@ -821,18 +903,27 @@ if seasonal:
             elif field=='net':
                 print '@@ not implemented for seasonal maps'
             else:
-                if threed==0:
-                    fldcsea = cnc.getNCvar(fnamec,field.upper(),timesel=timesel,
-                                                   seas=sea)*conv
-                    fldpsea = cnc.getNCvar(fnamep,field.upper(),timesel=timesel,
-                                                   seas=sea)*conv
+                if threed:
+                    getfld=ncfield
                 else:
-                    fldcsea = np.append(cnc.getNCvar(fnamec,ncfield,timesel='0002-01-01,061-12-31',levsel=level,
-                                                   seas=sea)*conv,
-                                        cnc.getNCvar(fnamec2,ncfield,levsel=level,seas=sea)*conv,axis=0)
-                    fldpsea = np.append(cnc.getNCvar(fnamep,ncfield,timesel='0002-01-01,061-12-31',levsel=level,
-                                                   seas=sea)*conv,
-                                        cnc.getNCvar(fnamep2,ncfield,levsel=level,seas=sea)*conv,axis=0)
+                    getfld=field.upper()
+                    
+                fldcsea = cnc.getNCvar(fnamec,getfld,timesel=timesel,
+                                               seas=sea)*conv
+                fldpsea = cnc.getNCvar(fnamep,getfld,timesel=timesel,
+                                               seas=sea)*conv
+                ## if threed==0:
+                ##     fldcsea = cnc.getNCvar(fnamec,field.upper(),timesel=timesel,
+                ##                                    seas=sea)*conv
+                ##     fldpsea = cnc.getNCvar(fnamep,field.upper(),timesel=timesel,
+                ##                                    seas=sea)*conv
+                ## else:
+                ##     fldcsea = np.append(cnc.getNCvar(fnamec,ncfield,timesel='0002-01-01,061-12-31',levsel=level,
+                ##                                    seas=sea)*conv,
+                ##                         cnc.getNCvar(fnamec2,ncfield,levsel=level,seas=sea)*conv,axis=0)
+                ##     fldpsea = np.append(cnc.getNCvar(fnamep,ncfield,timesel='0002-01-01,061-12-31',levsel=level,
+                ##                                    seas=sea)*conv,
+                ##                         cnc.getNCvar(fnamep2,ncfield,levsel=level,seas=sea)*conv,axis=0)
                     
             tstat[cidx,:,:],pval[cidx,:,:] = sp.stats.ttest_ind(fldpsea,fldcsea,axis=0)
             fldcallseas[cidx,:,:] = np.mean(fldcsea,axis=0)
@@ -845,16 +936,38 @@ if seasonal:
             else:
                 plotfld = fldpallseas[cidx,:,:] - fldcallseas[cidx,:,:]
 
-            bm,pc = cplt.kemmap(plotfld,lat,lon,cmin=cminm,cmax=cmaxm,cmap=cmap,type='nh',\
-                            axis=ax,suppcb=1,latlim=latlim)#@@
-            if cidx==0: # when row index is 0, set simulation
-                ax.set_title(rowl)
-
-            if sigoff==0:
-                cplt.addtsigm(bm,pval[cidx,:,:],lat,lon,type=sigtype)
+            pparams = dict(cmin=cminm,cmax=cmaxm,cmap=cmap,type='nh',axis=ax,latlim=latlim)
+            
+            if seasvert: # zonal mean with height
+                pparams['suppcb'] = True
+                pparams['levlim'] = levlim
+                pparams['screen'] = screen
+                pparams['addcontlines'] = True
+                if ridx!=0: # if not the first column, suppress y labels
+                    pparams['suppylab'] = True
                 
-            if ridx==0: # when col index is 0, set season
-                ax.set_ylabel(sea)
+                    
+                pc = cplt.vert_plot(plotfld,lev,lat,**pparams)
+                if sigoff==0:
+                     cplt.addtsig(ax,pval[cidx,...],lat,lev/100.,type=sigtype) # @@ dims?
+
+                if ridx==lastcol:
+                    # put season label on right side.
+                    ax.yaxis.set_label_position("right")
+                    ax.set_ylabel(sea)
+                    
+            else: # maps
+                pparams['suppcb'] = 1
+                bm,pc = cplt.kemmap(plotfld,lat,lon,**pparams)#@@
+
+                if sigoff==0:
+                    cplt.addtsigm(bm,pval[cidx,:,:],lat,lon,type=sigtype)
+
+                if ridx==0: # when col index is 0, set season
+                    ax.set_ylabel(sea)
+
+            if cidx==0: # when row index is 0, set simulation
+                ax.set_title(rowl)     
 
             cidx = cidx+1
 
@@ -871,13 +984,26 @@ if seasonal:
             latstr=str(latlim)
         else:
             latstr=''
-            
-        if pct: # version 2 has new season order, new filename/key org
-            fig6.savefig(fieldstr + 'pctdiff' + sigstr + '_enssubplot' + obsstr + ctstr +
-                         '_seas_nh' + latstr + '2.' + suff)
-        else:
-            fig6.savefig(fieldstr + 'diff' + sigstr + '_enssubplot' + obsstr + ctstr + '_seas_nh'
-                         + latstr + '2.' + suff)
+
+        if seasvert:
+            if screen:
+                style = 'screen'
+            else:
+                style = str(latlim) + 'N' + str(levlim) + 'hPa'
+                
+            if pct:
+                fig6.savefig(fieldstr + 'pctdiff' + sigstr + '_enssubplot' + obsstr + ctstr +
+                             '_seas_' + style + '2.' + suff)
+            else:
+                fig6.savefig(fieldstr + 'diff' + sigstr + '_enssubplot' + obsstr + ctstr +
+                             '_seas_' + style + '2.' + suff)
+        else: # maps
+            if pct: # version 2 has new season order, new filename/key org
+                fig6.savefig(fieldstr + 'pctdiff' + sigstr + '_enssubplot' + obsstr + ctstr +
+                             '_seas_nh' + latstr + '2.' + suff)
+            else:
+                fig6.savefig(fieldstr + 'diff' + sigstr + '_enssubplot' + obsstr + ctstr + '_seas_nh'
+                             + latstr + '2.' + suff)
 
 
 
@@ -910,7 +1036,7 @@ if plotzonmean==1 or plotseacyc==1 or pattcorrwithtime==1:
         seadiffdict=dict.fromkeys(seasons); seadmaskdict=dict.fromkeys(seasons)
         seapcorrdict=dict.fromkeys(seasons)
 
-        if sim=='kemhad': # or sim=='kemnsidc': # @@ move to this when nsidc runs are done
+        if sim=='kemhad' or sim=='kemnsidc': # @@ move to this when nsidc runs are done
             frootc = basepath + sim + 'ctl' + subdir + sim + 'ctl' + '_' 
             frootp = basepath + sim + 'pert' + subdir + sim + 'pert' + '_' 
         elif sim in ('kem1pert1b','kem1pert3'):
@@ -921,13 +1047,13 @@ if plotzonmean==1 or plotseacyc==1 or pattcorrwithtime==1:
             frootp = basepath + bcasenamep + sim + subdir + bcasenamep + sim + '_'
 
         if threed==0:
-            if sim=='kemnsidc':
-                print '@@ temporary fix while nsidc runs go'
-                fnamec = con.getBCfilenames('sicn',sim+'ctl')
-                fnamep = con.getBCfilenames('sicn',sim+'pert')
-            else:
-                fnamec = frootc + field + '_' + timstr + '_ts.nc'
-                fnamep = frootp + field + '_' + timstrp + '_ts.nc'
+            #if sim=='kemnsidc':
+            #    print '@@ temporary fix while nsidc runs go'
+            #    fnamec = con.getBCfilenames('sicn',sim+'ctl')
+            #    fnamep = con.getBCfilenames('sicn',sim+'pert')
+            #else:
+            fnamec = frootc + field + '_' + timstr + '_ts.nc'
+            fnamep = frootp + field + '_' + timstrp + '_ts.nc'
         else:
             fnamec = frootc + field + '_' + '001-061_ts.nc'
             fnamec2 = frootc + field + '_' + '062-121_ts.nc'
@@ -1411,12 +1537,14 @@ if plotseacyc:
 
         plt.legend(sims,leglocs[0], prop=fontP,ncol=2)
         plt.xlim((1,12))
-        plt.xlabel('Month')
+        plt.gca().set_xticks(range(1,13))
+        plt.gca().set_xticklabels(months)
+        #plt.xlabel('Month')
         plt.ylabel(fieldstr)
         plt.title('Climos')
 
-        if printtofile:
-            fig.savefig(fieldstr + '_ens_meanBC' + obsstr + ctstr + '_seacyc_pol' + str(latlim) + 'N2' + fsuff + '.pdf')
+        if printtofile: 
+            fig.savefig(fieldstr + '_ens_meanBC' + obsstr + ctstr + '_seacyc_pol' + str(latlim) + 'N3' + fsuff + '.pdf')
 
 
         # differences
@@ -1434,12 +1562,14 @@ if plotseacyc:
 
         plt.legend(sims,leglocs[1], prop=fontP,ncol=2)
         plt.xlim((1,12))
-        plt.xlabel('Month')
+        plt.gca().set_xticks(range(1,13))
+        plt.gca().set_xticklabels(months)
+        #plt.xlabel('Month')
         plt.ylabel(fieldstr)
         plt.title('Anomalies')
 
         if printtofile: # version 2 loops through sims in order of melt
-            fig.savefig(fieldstr + 'diff_ens_meanBC' + obsstr + ctstr + '_seacyc_pol' + str(latlim) + 'N2' + fsuff + '.pdf')
+            fig.savefig(fieldstr + 'diff_ens_meanBC' + obsstr + ctstr + '_seacyc_pol' + str(latlim) + 'N3' + fsuff + '.pdf')
 
         # calc stddev over ensemble, and min/max for shading
         tmpcdf = fldcdf.loc[mol]
@@ -1473,12 +1603,14 @@ if plotseacyc:
 
         plt.legend(sims[5:],leglocs[1], prop=fontP,ncol=2)
         plt.xlim((1,12))
-        plt.xlabel('Month')
+        plt.gca().set_xticks(range(1,13))
+        plt.gca().set_xticklabels(months)
+        #plt.xlabel('Month')
         plt.ylabel(fieldstr)
         plt.title('Anomalies')
 
         if printtofile: # version 2 loops through sims in order of melt
-            fig.savefig(fieldstr + 'diff_ens_meanBC' + obsstr + ctstr + '_seacyc_pol' + str(latlim) + 'N2shade' + fsuff + '.pdf')
+            fig.savefig(fieldstr + 'diff_ens_meanBC' + obsstr + ctstr + '_seacyc_pol' + str(latlim) + 'N3shade' + fsuff + '.pdf')
 
 
         # Standard deviation climos
@@ -1504,12 +1636,14 @@ if plotseacyc:
 
         plt.legend(sims,leglocs[2], prop=fontP,ncol=2)
         plt.xlim((1,12))
-        plt.xlabel('Month')
+        plt.gca().set_xticks(range(1,13))
+        plt.gca().set_xticklabels(months)
+        #plt.xlabel('Month')
         plt.ylabel(fieldstr)
         plt.title('Sigma')
 
         if printtofile:
-            fig.savefig(fieldstr + 'STD_ens_meanBC' + obsstr + ctstr + '_seacyc_pol' + str(latlim) + 'N2' + fsuff + '.pdf')
+            fig.savefig(fieldstr + 'STD_ens_meanBC' + obsstr + ctstr + '_seacyc_pol' + str(latlim) + 'N3' + fsuff + '.pdf')
 
 
         # Difference in standard deviation
@@ -1526,12 +1660,14 @@ if plotseacyc:
 
         plt.legend(sims,leglocs[3], prop=fontP,ncol=2)
         plt.xlim((1,12))
-        plt.xlabel('Month')
+        plt.gca().set_xticks(range(1,13))
+        plt.gca().set_xticklabels(months)
+        #plt.xlabel('Month')
         plt.ylabel(fieldstr)
         plt.title('Sigma anomalies')
 
         if printtofile:
-            fig.savefig(fieldstr + 'STDdiff_ens_meanBC' + obsstr + ctstr + '_seacyc_pol' + str(latlim) + 'N2' + fsuff + '.pdf')
+            fig.savefig(fieldstr + 'STDdiff_ens_meanBC' + obsstr + ctstr + '_seacyc_pol' + str(latlim) + 'N3' + fsuff + '.pdf')
 
 
 if pattcorrwithtime==1:
