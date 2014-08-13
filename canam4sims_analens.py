@@ -50,10 +50,10 @@ pattcorryr=0 # if 1, do a yearly anomaly pattern rather than time-integrated
 
 testhadisst=0 # check which ens member most similar to hadisst
 normbystd=0
-sensruns=False # sensruns only: addr4ct=1 and addsens=1. no meanBC, r mean, or obs
-addobs=1 # add mean of kemhad* runs to line plots, seasonal maps. add nsidc if SIA/SIT (@@for now)
+sensruns=True # sensruns only: addr4ct=1 and addsens=1. no meanBC, r mean, or obs
+addobs=0 # add mean of kemhad* runs to line plots, seasonal maps. add nsidc if SIA/SIT (@@for now)
 addr4ct=0 # add kem1pert2r4ct (constant thickness version of ens4)
-addsens=0 # add sensitivity runs (kem1pert1b, kem1pert3)
+addsens=1 # add sensitivity runs (kem1pert1b, kem1pert3)
 
     
 latlim = None # None #45 # lat limit for NH plots. Set to None otherwise.
@@ -89,7 +89,7 @@ timstr2='001-121'
 # # # ######## set Field info ###################
 # gz, t, u, v, q (3D !)
 # st, sic, sicn (sia), gt, pmsl, pcp, hfl, hfs, turb, net, flg, fsg, fn, pcpn, zn, su, sv (@@later ufs,vfs)
-field = 'net'
+field = 'sia'
 
 print field
 timeavg = 'DJF'
