@@ -44,17 +44,19 @@ screen=True # whether to have screen-style vertical zonal means
 plotzonmean=0 # plotzonmean,plotseacyc,pattcorrwithtime are mutually exclusive
 plotseacyc=1 # plotzonmean,plotseacyc,pattcorrwithtime are mutually exclusive
 withlat=0 # plot the seasonal cycle with latitude dimension too (only for plotseacyc=1)@@for now just std over ens
-squatseacyc=1 # plot seacycle figs as shorter than wide
+squatseacyc=0 # plot seacycle figs as shorter than wide
+squatterseacyc=1 # even shorter, for paper
 pattcorrwithtime=0 # plot pattern correlation with time for each ens member
 pattcorryr=0 # if 1, do a yearly anomaly pattern rather than time-integrated 
 
 testhadisst=0 # check which ens member most similar to hadisst
 normbystd=0
 sensruns=True # sensruns only: addr4ct=1 and addsens=1. no meanBC, r mean, or obs
-addobs=0 # add mean of kemhad* runs to line plots, seasonal maps. add nsidc if SIA/SIT (@@for now)
+addobs=1 # add mean of kemhad* runs to line plots, seasonal maps. add nsidc if SIA/SIT (@@for now)
 addr4ct=0 # add kem1pert2r4ct (constant thickness version of ens4)
-addsens=1 # add sensitivity runs (kem1pert1b, kem1pert3)
+addsens=0 # add sensitivity runs (kem1pert1b, kem1pert3)
 
+simsforpaper=False # meanBC, HAD, NSIDC
     
 latlim = None # None #45 # lat limit for NH plots. Set to None otherwise.
 levlim= 100 # level limit for vertical ZM plots (in hPa). ignored if screen=True
@@ -89,15 +91,15 @@ timstr2='001-121'
 # # # ######## set Field info ###################
 # gz, t, u, v, q (3D !)
 # st, sic, sicn (sia), gt, pmsl, pcp, hfl, hfs, turb, net, flg, fsg, fn, pcpn, zn, su, sv (@@later ufs,vfs)
-field = 'sia'
+field = 'net'
 
 print field
 timeavg = 'DJF'
 
 # only for threed vars
-#level = 30000
+level = 30000
 #level = 50000 # 500hPa
-level = 70000
+#level = 70000
 nonstandardlev=False # standards are 700,500,300
 
 if sensruns:
@@ -138,8 +140,8 @@ if field == 'st':
     cminp=-.5; cmaxp=.5 # for when pert is 'ctl'
     cminm = -3; cmaxm = 3   # monthly
     ## print 'small clim!'
-    ## cmin = -1; cmax = 1  # for anomaly plots
-    ## cminm = -1.5; cmaxm = 1.5   # monthly
+    ## cmin = -1; cmax = 1  for anomaly plots
+    ## cminm = -1.5; cmaxm = 1.5   monthly
     
     cminmp = -1; cmaxmp = 1 # for when pert is 'ctl'
     cminn = -5; cmaxn = 5 # for norm by std
@@ -149,6 +151,7 @@ if field == 'st':
         cminm=-.5; cmaxm=.5 # @@ will have to update this when add subplots
         
     leglocs = 'upper left', 'upper left', 'upper right', 'upper left'
+    seacycylim=(-.2,1.1)
 elif field == 'sic':
     units='m'
     conv=1/913.
@@ -165,6 +168,7 @@ elif field == 'sicn' or field == 'sia':
     cminm=-.15; cmaxm=.15
     cmap = 'red2blue_w20'
     leglocs = 'lower left', 'lower left', 'upper left', 'upper left'
+    seacycylim=(-2e12,0)
 elif field == 'gt':
     units='K'
     conv=1
@@ -190,15 +194,26 @@ elif field == 'pmsl':
     if plotseacyc==1  and withlat==1:
         cminm=-1; cmaxm=1 # @@ will have to update this when add subplots
     leglocs = 'lower left', 'lower left', 'upper center', 'lower left'
+    seacycylim=(-1,0.4)
 elif field == 'pcp':
     units = 'mm/day' # original: kg m-2 s-1
     
-    pct=1; units = '%'
+    #pct=1; units = '%'
     
     conv = 86400  # convert from kg m-2 s-1 to mm/day
     cmin = -.2; cmax = .2  # for anomaly plots
     cminp=-.15; cmaxp=.15
     cminm = -.2; cmaxm = .2
+
+    ## print '@@ big clim!'
+    ## cmin = -.75; cmax = .75 
+    ## cminm = -.75; cmaxm = .75
+
+    ## print '@@ medium clim!'
+    ## cmin = -.5; cmax = .5 
+    ## cminm = -.5; cmaxm = .5
+
+    
     #cmap = 'PuOr'
     cmap = 'brown2blue_16w'
     cminpct=-12; cmaxpct=12
@@ -242,6 +257,7 @@ elif field == 'net': # net of all sfc fluxes
     cmaxm = 20
     cmap='blue2red_20'
     leglocs = 'upper left', 'upper left', 'upper left', 'upper left'
+    seacycylim=(-5,25)
 elif field == 'flg': # net downward LW at the sfc.
     units = 'W/m2'
     conv = -1 # so positive heats atmos
@@ -420,11 +436,12 @@ if threed==1: # either map of a level, or a zonal mean
     if seasonal==1 and seasvert==1:
         fieldstr=field+'ZM'
         field=field+'ZM'
+        #fnamec = basepath + casename + subdir + casename + '_' + field + '_' + timstr + '_ts.nc' # for lat,lon,plev
     else:
         fieldstr=field+str(level/100) # figure names. want integer for string
         field=field+str(level) # read in files
         #fnamec = basepath + casename + subdir + casename + '_' + field + '_001-061_ts.nc' # for lat,lon
-        fnamec = basepath + casename + subdir + casename + '_' + field + '_' + timstr + '_ts.nc' # for lat,lon
+    fnamec = basepath + casename + subdir + casename + '_' + field + '_' + timstr + '_ts.nc' # for lat,lon
 
 else:
     fieldstr=field
@@ -451,26 +468,35 @@ if sigtype=='cont' or sigoff==1:
 else:
     suff='png'
 
-# order ens simulations in order of most ice loss in melt season to least. Then ens mean, PERT2, observations if requested
-sims = 'r1','r4','r3','r5','r2','ens','' # suffixes to bcasename and bcasenamep
-if addobs:
-    #if field in ('sia','sicn'): # for now@@
-    sims = sims + ('kemhad','kemnsidc')
-    #print 'adding yrs 1-61 for nsidc for now@@'
-    #else:
-    #    sims = sims + ('kemhad',)
-    #    print '@@ not adding nsidc yet for field: ' + field
-
-if sensruns: # add sensitivity runs. don't plot meanBC, mean of ens
-    sims = sims[0:5] + ('r4ct','kem1pert1b','kem1pert3')
-    ctstr = '_sensruns'
+if simsforpaper:
+    sims = 'kemhad','kemnsidc',''
+    ctstr = '_forpap'
+    addobs=0
+    addr4ct=0
+    addsens=0
+    seasons = ('SON','DJF')
 else:
-    if addr4ct:
-        sims = sims + ('r4ct',)
-        ctstr = '_r4ct' # for figure filenames
-    if addsens:
-        sims = sims + ('kem1pert1b','kem1pert3') # control is kemctl1 (or '' key)
-        ctstr = ctstr + 'sens'
+
+    # order ens simulations in order of most ice loss in melt season to least. Then ens mean, PERT2, observations if requested
+    sims = 'r1','r4','r3','r5','r2','ens','' # suffixes to bcasename and bcasenamep
+    if addobs:
+        #if field in ('sia','sicn'): # for now@@
+        sims = sims + ('kemhad','kemnsidc')
+        #print 'adding yrs 1-61 for nsidc for now@@'
+        #else:
+        #    sims = sims + ('kemhad',)
+        #    print '@@ not adding nsidc yet for field: ' + field
+
+    if sensruns: # add sensitivity runs. don't plot meanBC, mean of ens
+        sims = sims[0:5] + ('r4ct','kem1pert1b','kem1pert3')
+        ctstr = '_sensruns'
+    else:
+        if addr4ct:
+            sims = sims + ('r4ct',)
+            ctstr = '_r4ct' # for figure filenames
+        if addsens:
+            sims = sims + ('kem1pert1b','kem1pert3') # control is kemctl1 (or '' key)
+            ctstr = ctstr + 'sens'
 
 print sims
 #ensmems=np.arange(0,5)
@@ -1036,7 +1062,7 @@ if plotzonmean==1 or plotseacyc==1 or pattcorrwithtime==1:
         seadiffdict=dict.fromkeys(seasons); seadmaskdict=dict.fromkeys(seasons)
         seapcorrdict=dict.fromkeys(seasons)
 
-        if sim=='kemhad' or sim=='kemnsidc': # @@ move to this when nsidc runs are done
+        if sim=='kemhad' or sim=='kemnsidc': 
             frootc = basepath + sim + 'ctl' + subdir + sim + 'ctl' + '_' 
             frootp = basepath + sim + 'pert' + subdir + sim + 'pert' + '_' 
         elif sim in ('kem1pert1b','kem1pert3'):
@@ -1129,8 +1155,13 @@ if plotzonmean==1 or plotseacyc==1 or pattcorrwithtime==1:
             if field in (fluxes,'fsg','turb','net'):
                 # mask out regions that are not ice in the control (as P&M 2014 JClim)
                 sicnc = cnc.getNCvar(frootc + 'sicn_' + timstr + '_ts.nc','SICN',timesel=timesel,**ncparams)
+                
                 fldczm = ma.masked_where(sicnc<.10,fldczm)
-                fldpzm = ma.masked_where(sicnc<.10,fldpzm)
+                if sim=='kemnsidc': # @@ hack until pert is done too
+                    fldpzm = ma.masked_where(sicnc[:60,...]<.10,fldpzm)
+                    print '@@ fix when kemnsidcpert is done'
+                else:
+                    fldpzm = ma.masked_where(sicnc<.10,fldpzm)
                 
             if plotzonmean==1:
                 fldczm = np.mean(fldczm[...,:-1],axis=2) # actually take zonal mean now
@@ -1509,7 +1540,8 @@ if plotseacyc:
             fig.savefig(fieldstr + 'stddev_overens_monxlat_nh.' + suff)
         
     else: # regular seasonal cycle
-        
+        squatfs=(6,3) # figsize
+        squatterfs=(6,2.5) #figsize
 
         flddiffdf = pd.DataFrame(flddiffdict)
         fldcdf = pd.DataFrame(fldcdict)
@@ -1522,7 +1554,11 @@ if plotseacyc:
         fig,axs = plt.subplots()
         if squatseacyc:
             fsuff='short'
-            fig.set_size_inches(6,3)
+            fig.set_size_inches(squatfs)
+        elif squatterseacyc:
+            fsuff='shorter'
+            fig.set_size_inches(squatterfs)
+                
         for skey in sims:
             if skey in ('','ens','kemhad','kemnsidc'): # == '' or skey == 'ens' or skey=='kemhad':
                 axs.plot(moidxs,fldcdf[skey][mol],color=colordict[skey],linewidth=3)
@@ -1551,7 +1587,11 @@ if plotseacyc:
         fig,axs = plt.subplots()
         if squatseacyc:
             fsuff='short'
-            fig.set_size_inches(6,3)
+            fig.set_size_inches(squatfs)
+        elif squatterseacyc:
+            fsuff='shorter'
+            fig.set_size_inches(squatterfs)
+            
         for skey in sims:
             if skey in ('','ens','kemhad','kemnsidc'): # == '' or skey == 'ens' or skey=='kemhad':
                 axs.plot(moidxs,flddiffdf[skey][mol],color=colordict[skey],linewidth=3)
@@ -1562,6 +1602,7 @@ if plotseacyc:
 
         plt.legend(sims,leglocs[1], prop=fontP,ncol=2)
         plt.xlim((1,12))
+        plt.ylim(seacycylim)
         plt.gca().set_xticks(range(1,13))
         plt.gca().set_xticklabels(months)
         #plt.xlabel('Month')
@@ -1591,7 +1632,11 @@ if plotseacyc:
         fig,axs = plt.subplots()
         if squatseacyc:
             fsuff='short'
-            fig.set_size_inches(6,3)
+            fig.set_size_inches(squatfs)
+        elif squatterseacyc:
+            fsuff='shorter'
+            fig.set_size_inches(squatterfs)
+            
         for skey in sims[5:]:  #-1]:
             axs.fill_between(moidxs,demin,demax,facecolor='0.7',alpha=0.2)
             if skey in ('','ens','kemhad','kemnsidc'): # == '' or skey == 'ens' or skey=='kemhad':
@@ -1603,6 +1648,7 @@ if plotseacyc:
 
         plt.legend(sims[5:],leglocs[1], prop=fontP,ncol=2)
         plt.xlim((1,12))
+        plt.ylim(seacycylim)
         plt.gca().set_xticks(range(1,13))
         plt.gca().set_xticklabels(months)
         #plt.xlabel('Month')
@@ -1617,7 +1663,11 @@ if plotseacyc:
         fig,axs = plt.subplots()
         if squatseacyc:
             fsuff='short'
-            fig.set_size_inches(6,3)
+            fig.set_size_inches(squatfs)
+        elif squatterseacyc:
+            fsuff='shorter'
+            fig.set_size_inches(squatterfs)
+            
         for skey in sims:
             
             if skey in ('','ens','kemhad','kemnsidc'): # == '' or skey == 'ens' or skey=='kemhad':
@@ -1650,7 +1700,11 @@ if plotseacyc:
         fig,axs = plt.subplots()
         if squatseacyc:
             fsuff='short'
-            fig.set_size_inches(6,3)
+            fig.set_size_inches(squatfs)
+        elif squatterseacyc:
+            fsuff='shorter'
+            fig.set_size_inches(squatterfs)
+            
         for skey in sims:
             if skey in ('','ens','kemhad','kemnsidc'): #  == '' or skey == 'ens' or skey=='kemhad':
                 axs.plot(moidxs,fldpstddf[skey][mol]-fldcstddf[skey][mol],color=colordict[skey],linewidth=3)
