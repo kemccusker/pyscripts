@@ -37,12 +37,12 @@ printtofile=1
 
 plotann=0    # seasonal avg map, comparing ens runs and meanBC
 plotallmos=0 # monthly maps (@@ not implemented)
-seasonal=0 # seasonal maps (SON, DJF, MAM, JJA)
-seasvert=0 # seasonal must =1. seasonal vertical zonal means (SON,DJF,MAM,JJA) instead of maps
+seasonal=1 # seasonal maps (SON, DJF, MAM, JJA)
+seasvert=1 # seasonal must =1. seasonal vertical zonal means (SON,DJF,MAM,JJA) instead of maps
 screen=True # whether to have screen-style vertical zonal means
 
 plotzonmean=0 # plotzonmean,plotseacyc,pattcorrwithtime are mutually exclusive
-plotseacyc=1 # plotzonmean,plotseacyc,pattcorrwithtime are mutually exclusive
+plotseacyc=0 # plotzonmean,plotseacyc,pattcorrwithtime are mutually exclusive
 withlat=0 # plot the seasonal cycle with latitude dimension too (only for plotseacyc=1)@@for now just std over ens
 squatseacyc=0 # plot seacycle figs as shorter than wide
 squatterseacyc=1 # even shorter, for paper
@@ -51,12 +51,12 @@ pattcorryr=0 # if 1, do a yearly anomaly pattern rather than time-integrated
 
 testhadisst=0 # check which ens member most similar to hadisst
 normbystd=0
-sensruns=True # sensruns only: addr4ct=1 and addsens=1. no meanBC, r mean, or obs
+
+sensruns=False # sensruns only: addr4ct=1 and addsens=1. no meanBC, r mean, or obs
 addobs=1 # add mean of kemhad* runs to line plots, seasonal maps. add nsidc if SIA/SIT (@@for now)
 addr4ct=0 # add kem1pert2r4ct (constant thickness version of ens4)
 addsens=0 # add sensitivity runs (kem1pert1b, kem1pert3)
-
-simsforpaper=False # meanBC, HAD, NSIDC
+simsforpaper=False # meanBC, HAD, NSIDC only
     
 latlim = None # None #45 # lat limit for NH plots. Set to None otherwise.
 levlim= 100 # level limit for vertical ZM plots (in hPa). ignored if screen=True
@@ -64,6 +64,22 @@ levlim= 100 # level limit for vertical ZM plots (in hPa). ignored if screen=True
 sigtype = 'cont' # significance: 'cont' or 'hatch' which is default
 sigoff=0 # if 1, don't add significance
 siglevel=0.05
+
+# # # ######## set Field info ###################
+# gz, t, u, v, q (3D !)
+# st, sic, sicn (sia), gt, pmsl, pcp, hfl, hfs, turb, net, flg, fsg, fn, pcpn, zn, su, sv (@@later ufs,vfs)
+field = 'u'
+
+print field
+timeavg = 'DJF'
+
+# only for threed vars
+#level = 30000
+#level = 50000 # 500hPa
+level = 70000
+nonstandardlev=False # standards are 700,500,300
+
+
 
 seasons = 'SON','DJF','MAM','JJA'
 
@@ -88,19 +104,6 @@ casenamep2 = 'kem1pert2'
 timstr2='001-121'
 
 
-# # # ######## set Field info ###################
-# gz, t, u, v, q (3D !)
-# st, sic, sicn (sia), gt, pmsl, pcp, hfl, hfs, turb, net, flg, fsg, fn, pcpn, zn, su, sv (@@later ufs,vfs)
-field = 'net'
-
-print field
-timeavg = 'DJF'
-
-# only for threed vars
-level = 30000
-#level = 50000 # 500hPa
-#level = 70000
-nonstandardlev=False # standards are 700,500,300
 
 if sensruns:
     addobs=0
@@ -198,7 +201,7 @@ elif field == 'pmsl':
 elif field == 'pcp':
     units = 'mm/day' # original: kg m-2 s-1
     
-    #pct=1; units = '%'
+    pct=1; units = '%'
     
     conv = 86400  # convert from kg m-2 s-1 to mm/day
     cmin = -.2; cmax = .2  # for anomaly plots
@@ -1158,7 +1161,7 @@ if plotzonmean==1 or plotseacyc==1 or pattcorrwithtime==1:
                 
                 fldczm = ma.masked_where(sicnc<.10,fldczm)
                 if sim=='kemnsidc': # @@ hack until pert is done too
-                    fldpzm = ma.masked_where(sicnc[:60,...]<.10,fldpzm)
+                    fldpzm = ma.masked_where(sicnc[:110,...]<.10,fldpzm)
                     print '@@ fix when kemnsidcpert is done'
                 else:
                     fldpzm = ma.masked_where(sicnc<.10,fldpzm)
