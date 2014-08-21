@@ -38,7 +38,7 @@ printtofile=1
 plotann=0    # seasonal avg map, comparing ens runs and meanBC
 plotallmos=0 # monthly maps (@@ not implemented)
 seasonal=1 # seasonal maps (SON, DJF, MAM, JJA)
-seasvert=1 # seasonal must =1. seasonal vertical zonal means (SON,DJF,MAM,JJA) instead of maps
+seasvert=0 # seasonal must =1. seasonal vertical zonal means (SON,DJF,MAM,JJA) instead of maps
 screen=True # whether to have screen-style vertical zonal means
 
 plotzonmean=0 # plotzonmean,plotseacyc,pattcorrwithtime are mutually exclusive
@@ -56,7 +56,7 @@ sensruns=False # sensruns only: addr4ct=1 and addsens=1. no meanBC, r mean, or o
 addobs=1 # add mean of kemhad* runs to line plots, seasonal maps. add nsidc if SIA/SIT (@@for now)
 addr4ct=0 # add kem1pert2r4ct (constant thickness version of ens4)
 addsens=0 # add sensitivity runs (kem1pert1b, kem1pert3)
-simsforpaper=False # meanBC, HAD, NSIDC only
+simsforpaper=True # meanBC, HAD, NSIDC only. best for maps and zonal mean figs (not line plots)
     
 latlim = None # None #45 # lat limit for NH plots. Set to None otherwise.
 levlim= 100 # level limit for vertical ZM plots (in hPa). ignored if screen=True
@@ -68,15 +68,15 @@ siglevel=0.05
 # # # ######## set Field info ###################
 # gz, t, u, v, q (3D !)
 # st, sic, sicn (sia), gt, pmsl, pcp, hfl, hfs, turb, net, flg, fsg, fn, pcpn, zn, su, sv (@@later ufs,vfs)
-field = 'u'
+field = 't'
 
 print field
 timeavg = 'DJF'
 
 # only for threed vars
-#level = 30000
+level = 30000
 #level = 50000 # 500hPa
-level = 70000
+#level = 70000
 nonstandardlev=False # standards are 700,500,300
 
 
@@ -308,8 +308,7 @@ elif field == 'zn': # snow depth (m)
     cmap = 'brown2blue_16w'
     cmin = -2
     cmax = 2
-    cminm = -3
-    cmaxm = 3
+    cminm = -2.5; cmaxm = 2.5
     cminpct=-10
     cmaxpct=10
     cminmpct=-10
@@ -1160,11 +1159,7 @@ if plotzonmean==1 or plotseacyc==1 or pattcorrwithtime==1:
                 sicnc = cnc.getNCvar(frootc + 'sicn_' + timstr + '_ts.nc','SICN',timesel=timesel,**ncparams)
                 
                 fldczm = ma.masked_where(sicnc<.10,fldczm)
-                if sim=='kemnsidc': # @@ hack until pert is done too
-                    fldpzm = ma.masked_where(sicnc[:110,...]<.10,fldpzm)
-                    print '@@ fix when kemnsidcpert is done'
-                else:
-                    fldpzm = ma.masked_where(sicnc<.10,fldpzm)
+                fldpzm = ma.masked_where(sicnc<.10,fldpzm)
                 
             if plotzonmean==1:
                 fldczm = np.mean(fldczm[...,:-1],axis=2) # actually take zonal mean now
