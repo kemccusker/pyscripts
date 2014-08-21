@@ -31,12 +31,14 @@ cutl = reload(cutl)
 plt.close("all")
 plt.ion()
 
-printtofile=0
-seasonal = 1
-seacycle = 0
-pattcorr=1 # do pattern correlation with time instead
+printtofile=1
+seasonal = 0 # plot all 4 seasons in a subplot
+seacycle = 1
+pattcorr=0 # do pattern correlation with time instead
 pattcorryr=0 # yearly pattern corr with mean instead of time-integrated patt corr
 dostd=0 # plot standard dev with time (just the pert run, not anomaly for now@@)
+addsicn=False # add sicn contours on top (probably just for when field=='st')
+
 
 # version 2 uses control climo as baseline (rather than individual times),
 #   and full timeseries for ttest
@@ -51,16 +53,18 @@ threed = 0
 ############ set simulations #############
 casename = 'kemctl1'
 casenameh = 'kemhadctl'
-timstr = '001-111'
+casenamen = 'kemnsidcctl'
+timstr = '001-121'
 timstr1 = '001-061' # for 3d vars
-timstr2 = '062-111' # "
-timesel = '0002-01-01,0111-12-31'
+timstr2 = '062-121' # "
+timesel = '0002-01-01,0121-12-31'
 
 # Pert run
 casenamep1 = 'kem1pert1'  # 2002-2012 sic and sit
 casenamep2 = 'kem1pert2'  # 2002-2012 sic, sit, adjusted sst
 casenamep3 = 'kem1pert3'  # 2002-2012 sic, adjusted sst. control sit
 casenameph = 'kemhadpert'
+casenamepn = 'kemnsidcpert'
 casenamep21 = 'kem1pert2r1'; 
 casenamep22 = 'kem1pert2r2'
 casenamep23 = 'kem1pert2r3'
@@ -69,21 +73,20 @@ casenamep25 = 'kem1pert2r5'
 ensruns = casenamep21, casenamep22, casenamep23, casenamep24, casenamep25
 casenamep2e = 'kem1pert2ens'
 
-timstrp = '001-111'
-timstrp1 = '001-061' # for 3d vars
-timstrp2 = '062-111' # "
-
-
-casenamep = casenamep2e
+# SET SIMULATION
+casenamep = casenamep2
 rnum=1 # @@ set if casenamep is one of the ens members
 
 
+timstrp = '001-121'
+timstrp1 = '001-061' # for 3d vars
+timstrp2 = '062-121' # "
 
 
 # # # ######## set Field info ###################
 # st, sicn, sic, gt, pmsl, pcp, hfl, hfs, turb, flg, fsg, fn, pcpn, zn, su, sv (@@later ufs,vfs)
 # OR threed: 'gz','t','u'
-field = 'pmsl'
+field = 'st'
 level=30000
 #level = 100000  # only for threed vars
 thickness=0 # do thickness instead: just for gz
@@ -94,25 +97,27 @@ cmapclimo = 'Spectral_r'
 
 if casenamep == casenameph:
     casename = casenameh
-    timstr = '001-121'
-    timstr2 = '062-121'
-    timstrp = '001-121'
-    timstrp2 = '062-121'
-    timesel = '0002-01-01,0121-12-31'
+    ## timstr = '001-121'
+    ## timstr2 = '062-121'
+    ## timstrp = '001-121'
+    ## timstrp2 = '062-121'
+    ## timesel = '0002-01-01,0121-12-31'
 elif casenamep in ensruns:
     casename = casename + 'r' + str(rnum)
-    timstr = '001-121'
-    timstr2 = '062-121'
-    timstrp = '001-121'
-    timstrp2 = '062-121'
-    timesel = '0002-01-01,0121-12-31'
+    ## timstr = '001-121'
+    ## timstr2 = '062-121'
+    ## timstrp = '001-121'
+    ## timstrp2 = '062-121'
+    ## timesel = '0002-01-01,0121-12-31'
 elif casenamep == casenamep2e:
     casename = 'kemctl1ens'
-    timstr = '001-121'
-    timstr2 = '062-121'
-    timstrp = '001-121'
-    timstrp2 = '062-121'
-    timesel = '0002-01-01,0121-12-31'
+    ## timstr = '001-121'
+    ## timstr2 = '062-121'
+    ## timstrp = '001-121'
+    ## timstrp2 = '062-121'
+    ## timesel = '0002-01-01,0121-12-31'
+elif casenamep == casenamepn:
+    casename = casenamen
 
 print 'CONTROL IS ' + casename
 print 'PERT IS ' + casenamep
@@ -410,6 +415,8 @@ else:
         fnamec = basepath + casename + subdir + casename + '_' + field + '_' + timstr + '_ts.nc'
         fnamep = basepath + casenamep + subdir + casenamep + '_' + field + '_' + timstrp + '_ts.nc'
 
+        sicnfnamec = basepath + casename + subdir + casename + '_sicn_' + timstr + '_ts.nc'
+        sicnfnamep = basepath + casenamep + subdir + casenamep + '_sicn_' + timstrp + '_ts.nc'
         ## fldc = cnc.getNCvar(fnamec,field.upper(),timesel=timesel)*conv
         ## fldp = cnc.getNCvar(fnamep,field.upper(),timesel=timesel)*conv
 
@@ -435,7 +442,9 @@ if seasonal: # plot all 4 seasons in a subplot
     fig,axs = plt.subplots(4,1) 
     fig.set_size_inches(6,8)
     fig.subplots_adjust(hspace=.15,wspace=.05)
-
+    if addsicn:
+        print 'addsicn not implemented yet! @@'
+        
     for ax in axs.flat:
 
         if threed:
@@ -668,6 +677,7 @@ if seacycle: # want month x lat (or height)
     months = con.get_mon()
     
     if threed:
+        print 'fix 3D vars to use premade files @@'
         fldc = np.append(cnc.getNCvar(fnamec,ncfield,timesel=timesel,levsel=level)*conv,
                cnc.getNCvar(fnamec2,ncfield,levsel=level)*conv,
                axis=0)
@@ -686,10 +696,17 @@ if seacycle: # want month x lat (or height)
             fldc = cnc.getNCvar(fnamec,field.upper(),timesel=timesel)*conv
             fldp = cnc.getNCvar(fnamep,field.upper(),timesel=timesel)*conv
 
+        if addsicn:
+            sicnc = cnc.getNCvar(sicnfnamec,'SICN',timesel=timesel)
+            sicnp = cnc.getNCvar(sicnfnamep,'SICN',timesel=timesel)
+            monsicnczmclimo = np.zeros((12,sicnc.shape[1]))
+            monsicnpzmclimo = np.zeros((12,sicnc.shape[1]))
+
     tstat = np.zeros((12,fldc.shape[1]))
     pval = np.zeros((12,fldc.shape[1]))
     monfldczmclimo = np.zeros((12,fldc.shape[1]))
     monfldpzmclimo = np.zeros((12,fldc.shape[1]))
+    
         
     # loop through months, calcing mean pert and stat sig
     for midx in np.arange(0,12):
@@ -713,6 +730,14 @@ if seacycle: # want month x lat (or height)
         
             tstat[midx,:],pval[midx,:] = sp.stats.ttest_ind(monfldpzm,monfldczm,axis=0)
 
+            if addsicn:
+                # taken zonal mean
+                monsicnczm = np.mean(sicnc[midx::12,:,:-1],axis=2)
+                monsicnpzm = np.mean(sicnp[midx::12,:,:-1],axis=2)
+                # time mean
+                monsicnczmclimo[midx,:] = np.mean(monsicnczm,axis=0)*100 # percent for ease of reading
+                monsicnpzmclimo[midx,:] = np.mean(monsicnpzm,axis=0)*100
+
     lats,mos = np.meshgrid(lat,np.arange(0,12))
 
  
@@ -732,11 +757,17 @@ if seacycle: # want month x lat (or height)
             ax.contour(mos,lats,pval,levels=[0.05,0.05],colors='k')
         elif sigtype == 'hatch':
             ax.contourf(mos,lats,pval,levels=[0,0.05],colors='none',hatches='.')
-
+    if addsicn:
+        CS = ax.contour(mos,lats,-1*(monsicnpzmclimo - monsicnczmclimo),
+                   levels=[-10,-5,-1, 1,5,10,15],
+                   colors='0.7',linewidths=2)# reverse sign to get solid lines for ice loss
+        ax.clabel(CS,fmt = '%2.0f',inline=True,
+                  inline_spacing=3,fontsize=12,fontweight='bold') # bold doesn't seem to work
+        
     ax.set_xlim(0,11)
     ax.set_xticks(range(0,12))
     ax.set_xticklabels(months)
-    ax.set_ylim(0,90)
+    ax.set_ylim(0,88)
     ax.set_ylabel('Latitude')
     ax.set_xlabel('Month')
 
@@ -768,5 +799,9 @@ if seacycle: # want month x lat (or height)
             fig2.savefig(prfield + 'stddev' + '_' + casenamep +\
                     '_monxlat_nh.' + suff)
         else:
-            fig2.savefig(prfield + 'diffsig' + sigtype + '_' + casenamep +\
-                         '_v_' + casename + '_monxlat_nh.' + suff)
+            if addsicn:
+                fig2.savefig(prfield + 'diffsig' + sigtype + '_SICNcont_' + casenamep +\
+                             '_v_' + casename + '_monxlat_nh.' + suff)
+            else:
+                fig2.savefig(prfield + 'diffsig' + sigtype + '_' + casenamep +\
+                             '_v_' + casename + '_monxlat_nh.' + suff)
