@@ -51,12 +51,14 @@ pattcorryr=0 # if 1, do a yearly anomaly pattern rather than time-integrated
 
 testhadisst=0 # check which ens member most similar to hadisst
 normbystd=0
+halftime=True # get only the first 60yrs. make sure to set the other flag the opp
+halftime2=False # get only the last 60yrs. make sure to set the other flag the opp
 
 sensruns=False # sensruns only: addr4ct=1 and addsens=1. no meanBC, r mean, or obs
 addobs=1 # add mean of kemhad* runs to line plots, seasonal maps. add nsidc if SIA/SIT (@@for now)
 addr4ct=0 # add kem1pert2r4ct (constant thickness version of ens4)
 addsens=0 # add sensitivity runs (kem1pert1b, kem1pert3)
-simsforpaper=True # meanBC, HAD, NSIDC only. best for maps and zonal mean figs (not line plots)
+simsforpaper=False # meanBC, HAD, NSIDC only. best for maps and zonal mean figs (not line plots)
     
 latlim = None # None #45 # lat limit for NH plots. Set to None otherwise.
 levlim= 100 # level limit for vertical ZM plots (in hPa). ignored if screen=True
@@ -68,7 +70,7 @@ siglevel=0.05
 # # # ######## set Field info ###################
 # gz, t, u, v, q (3D !)
 # st, sic, sicn (sia), gt, pmsl, pcp, hfl, hfs, turb, net, flg, fsg, fn, pcpn, zn, su, sv (@@later ufs,vfs)
-field = 't'
+field = 'pmsl'
 
 print field
 timeavg = 'DJF'
@@ -103,7 +105,11 @@ casename2 = 'kemctl1'
 casenamep2 = 'kem1pert2'
 timstr2='001-121'
 
-
+if halftime:
+    timesel= '0002-01-01,0061-12-31'
+elif halftime2:
+    timesel='0062-01-01,0121-12-31'
+        
 
 if sensruns:
     addobs=0
@@ -499,7 +505,11 @@ else:
         if addsens:
             sims = sims + ('kem1pert1b','kem1pert3') # control is kemctl1 (or '' key)
             ctstr = ctstr + 'sens'
-
+if halftime:
+    ctstr = ctstr + '_60yrs' # @@
+elif halftime2:
+    ctstr = ctstr + '_60yrs2' # @@
+    
 print sims
 #ensmems=np.arange(0,5)
 
