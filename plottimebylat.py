@@ -32,10 +32,12 @@ plt.close("all")
 plt.ion()
 
 printtofile=1
-seasonal = 0 # plot all 4 seasons in a subplot
-seacycle = 1
+
+# if seasonal is the only true, will do anomaly plus signif in time.
+seasonal = 1 # plot all 4 seasons in a subplot
+seacycle = 0
 pattcorr=0 # do pattern correlation with time instead
-pattcorryr=0 # yearly pattern corr with mean instead of time-integrated patt corr
+pattcorryr=0# yearly pattern corr with mean instead of time-integrated patt corr
 dostd=0 # plot standard dev with time (just the pert run, not anomaly for now@@)
 addsicn=False # add sicn contours on top (probably just for when field=='st')
 
@@ -74,7 +76,7 @@ ensruns = casenamep21, casenamep22, casenamep23, casenamep24, casenamep25
 casenamep2e = 'kem1pert2ens'
 
 # SET SIMULATION
-casenamep = casenamep2
+casenamep = casenamepn
 rnum=1 # @@ set if casenamep is one of the ens members
 
 
@@ -131,10 +133,11 @@ if field == 'st':
     conv = 1  # no conversion
     cmin = -2; cmax = 2  # for anomaly plots
     cminp=-.5; cmaxp=.5 # for when pert is 'ctl'
-    cminm = -3; cmaxm = 3   # monthly
-    ## print 'small clim!'
-    ## cmin = -1; cmax = 1  # for anomaly plots
     cminm = -2; cmaxm = 2   # monthly
+    
+    ## print 'small clim!'
+    ## cmin = -1; cmax = 1  for anomaly plots
+    ## cminm = -.5; cmaxm = .5   monthly
     
     cminmp = -1; cmaxmp = 1 # for when pert is 'ctl'
     if dostd==1 and casenamep in casenamep2e:
@@ -661,7 +664,7 @@ if seasonal: # plot all 4 seasons in a subplot
                         '_timexlat_seas_nh.' + suff)
         elif v2: 
             fig.savefig(prfield + 'diffsig' + sigtype + '_' + casenamep +\
-                        '_v_' + casename + '_timexlat_seas_nh_v2.' + suff)
+                        '_v_' + casename + '_timexlat_seas_nh_v2smclim.' + suff)
         else:
             fig.savefig(prfield + 'diffsig' + sigtype + '_' + casenamep +\
                         '_v_' + casename + '_timexlat_seas_nh.' + suff)
