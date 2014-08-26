@@ -11,6 +11,8 @@ import numpy as np
 import constants as con
 import collections
 import numpy.ma as ma
+import scipy as sp
+import scipy.stats
  
 con = reload(con)
 
@@ -44,7 +46,8 @@ def pattcorr(x,y):
               x and y must be flattened arrays (of a 2D map)
               
            This function is to test the results from np.corrcoef() and ma.corrcoef()
-              and gives the same result.
+              and gives the same result. @@ what about scipy.stats.pearsonr() @@ ?
+               @@ appears to give same result @@
     """
 
     Cxy = np.cov(x,y)
@@ -54,6 +57,43 @@ def pattcorr(x,y):
     Pxy = Cxy / np.sqrt(Cxx*Cyy)
 
     return Pxy[0,1]
+
+def pattcorr_pearson(x,y):
+    """ pattcorr_pearson(x,y)
+         
+            Return the correlation coefficient and the p-value of the correlation.
+            This function calls scipy.stats.pearsonr(x,y), which removes the mean field
+              before computing the correlation.
+              Doc: http://docs.scipy.org/doc/scipy-0.14.0/reference/generated/scipy.stats.pearsonr.html
+              Source: https://github.com/scipy/scipy/blob/v0.14.0/scipy/stats/stats.py#L2392
+    """
+    r, pval = sp.stats.pearsonr(x,y)
+
+    return r, pval
+
+def calc_mincorr(N):
+    """ calc_mincorr(N):
+              calculate the minimum correlation that would be significant given a sample size, N.
+              ASSUMES significance level of 0.05 (95%)
+    """
+
+    # original formula (http://vassarstats.net/textbook/ch4apx.html): 
+    #    t = corr / np.sqrt((1-corr*corr)/(N-2))
+    
+    # Solve for corr.
+    # trying to figure out what minimum r-value (correlation) is significant
+    # given sample size, N
+    # Tried plugging 1290 into online calc to see when t > 1.9719 and r was 
+    #  about 0.055 (tiny, as expected). http://vassarstats.net/textbook/ch4apx.html
+    #  which matches my own test calc.
+
+    tcrit = 1.9719 # 0.05
+
+    denom = ((N-2)/np.power(tcrit,2)) + 1
+    rmin = np.sqrt( 1/denom)
+
+    return rmin
+
 
 def calc_seaicearea(input,lat,lon):
     """ Calculate sea ice area from sea ice concentration
