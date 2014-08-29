@@ -33,11 +33,11 @@ cnc = reload(cnc)
 plt.close("all")
 plt.ion()
 
-printtofile=1
+printtofile=False
 
 plotann=0    # seasonal avg map, comparing ens runs and meanBC
 plotallmos=0 # monthly maps (@@ not implemented)
-seasonal=1 # seasonal maps (SON, DJF, MAM, JJA)
+seasonal=0 # seasonal maps (SON, DJF, MAM, JJA)
 seasvert=0 # seasonal must =1. seasonal vertical zonal means (SON,DJF,MAM,JJA) instead of maps
 screen=True # whether to have screen-style vertical zonal means
 
@@ -48,17 +48,18 @@ squatseacyc=0 # plot seacycle figs as shorter than wide
 squatterseacyc=1 # even shorter, for paper
 pattcorrwithtime=0 # plot pattern correlation with time for each ens member
 pattcorryr=0 # if 1, do a yearly anomaly pattern rather than time-integrated 
+plotregmean=1
 
 testhadisst=0 # check which ens member most similar to hadisst
 normbystd=0
 halftime=False # get only the first 60yrs. make sure to set the other flag the opp
-halftime2=True # get only the last 60yrs. make sure to set the other flag the opp
+halftime2=False # get only the last 60yrs. make sure to set the other flag the opp
 
 sensruns=False # sensruns only: addr4ct=1 and addsens=1. no meanBC, r mean, or obs
 addobs=1 # add mean of kemhad* runs to line plots, seasonal maps. add nsidc if SIA/SIT (@@for now)
 addr4ct=0 # add kem1pert2r4ct (constant thickness version of ens4)
 addsens=0 # add sensitivity runs (kem1pert1b, kem1pert3)
-simsforpaper=True # meanBC, HAD, NSIDC only. best for maps and zonal mean figs (not line plots)
+simsforpaper=False # meanBC, HAD, NSIDC only. best for maps and zonal mean figs (not line plots)
     
 latlim = None # None #45 # lat limit for NH plots. Set to None otherwise.
 levlim= 100 # level limit for vertical ZM plots (in hPa). ignored if screen=True
@@ -70,7 +71,7 @@ siglevel=0.05
 # # # ######## set Field info ###################
 # gz, t, u, v, q (3D !)
 # st, sic, sicn (sia), gt, pmsl, pcp, hfl, hfs, turb, net, flg, fsg, fn, pcpn, zn, su, sv (@@later ufs,vfs)
-field = 'gz'
+field = 'st'
 
 print field
 timeavg = 'DJF'
@@ -1045,9 +1046,9 @@ if seasonal:
 
 
 
-if plotzonmean==1 or plotseacyc==1 or pattcorrwithtime==1:
+if plotzonmean==1 or plotseacyc==1 or pattcorrwithtime==1 or plotregmean==1:
     # get data for either zonal mean or sea cycle figures
-    if plotzonmean==1 or pattcorrwithtime==1:
+    if plotzonmean==1 or pattcorrwithtime==1 or plotregmean==1:
         # seasons is defined above
         corrlim = 45
     elif plotseacyc==1:
@@ -1055,7 +1056,7 @@ if plotzonmean==1 or plotseacyc==1 or pattcorrwithtime==1:
         if field in (fluxes,'fsg','turb','net'):
             latlim=40
         else:
-            latlim = 40 # for area averaging
+            latlim = 70 # for area averaging
         seasons = con.get_mon()
 
     if sia==1:
@@ -1100,7 +1101,7 @@ if plotzonmean==1 or plotseacyc==1 or pattcorrwithtime==1:
         
         for sii,sea in enumerate(seasons):
 
-            if plotzonmean==1 or pattcorrwithtime==1:
+            if plotzonmean==1 or pattcorrwithtime==1 or plotregmean==1:
                 ncparams = {'seas': sea}
             elif plotseacyc==1:
                 ncparams = {'monsel': sii+1}
@@ -1212,6 +1213,53 @@ if plotzonmean==1 or plotseacyc==1 or pattcorrwithtime==1:
                         # consider masking out land for sfc fluxes...?
                         fldczm = cutl.polar_mean_areawgted3d(fldczm,lat,lon,latlim=latlim)
                         fldpzm = cutl.polar_mean_areawgted3d(fldpzm,lat,lon,latlim=latlim)
+
+            elif plotregmean==1:
+                #latlims=[70,89]; lonlims=[0,359]; region='polcap70' # Polar cap north of 70N
+                latlims=[65,89]; lonlims=[0,359]; region='polcap65' # Polar cap north of 65N for NAM proxy
+                #latlims=[35,60]; lonlims=[40,120]; region='eurasia' # Eurasia 35-60N, 40E-120E
+                #latlims=[35,60]; lonlims=[240,280]; region='ntham' # North America 35-60N, 120W-80W
+                #latlims=[35,60]; lonlims=[300,360]; region='nthatl' # North Atlantic 35-60N, 60W-0
+
+                lons,lats = np.meshgrid(lon,lat)
+                
+                ntime = fldczm.shape[0]
+                
+                reglatsbool = np.logical_and(lat>latlims[0],lat<latlims[1])
+                reglonsbool = np.logical_and(lon>lonlims[0],lon<lonlims[1])
+                regmask = np.logical_or(
+                    np.logical_or(lats<latlims[0],lats>latlims[1]), 
+                    np.logical_or(lons<lonlims[0],lons>lonlims[1]))
+                regmaskt = np.tile(regmask,(ntime,1,1)) # tiled regional mask
+
+                areas = cutl.calc_cellareas(lat,lon)
+                areasm = ma.masked_where(regmask,areas)
+                weightsm = areasm / np.sum(np.sum(areasm,axis=1),axis=0) # weights masked
+                weightsmt = np.tile(weightsm,(ntime,1,1)) # weights masked tiled
+                
+                # regional subset: control
+                ## tmp = fldczm[:,reglatsbool,:] # this swaps the lat and time dims for some reason
+                ## tmp = np.transpose(tmp,(1,0,2))
+                ## tmp = tmp[:,:,reglonsbool]
+                ## tmp = np.transpose(tmp,(1,0,2))
+                ## tmpreg = np.sum(np.sum(tmp*weightsmt,axis=2),axis=1)
+                ## fldczm = tmpreg # should be timeseries of regional mean
+
+                tmp = ma.masked_where(regmaskt,fldczm)
+                tmpreg = np.sum(np.sum(tmp*weightsmt,axis=2),axis=1)
+                fldczm = tmpreg # should be timeseries of regional mean
+
+                # regional subset: pert
+                ## tmp = fldpzm[:,reglatsbool,:] # this swaps the lat and time dims for some reason
+                ## tmp = np.transpose(tmp,(1,0,2))
+                ## tmp = tmp[:,:,reglonsbool]
+                ## tmp = np.transpose(tmp,(1,0,2))
+                ## tmpreg = np.sum(np.sum(tmp*weightsmt,axis=2),axis=1)
+                ## fldpzm = tmpreg # should be timeseries of regional mean
+
+                tmp = ma.masked_where(regmaskt,fldpzm)
+                tmpreg = np.sum(np.sum(tmp*weightsmt,axis=2),axis=1)
+                fldpzm = tmpreg # should be timeseries of regional mean
  
 
             seafldcstddict[sea] = np.std(fldczm,axis=0)
@@ -1731,6 +1779,35 @@ if plotseacyc:
         if printtofile:
             fig.savefig(fieldstr + 'STDdiff_ens_meanBC' + obsstr + ctstr + '_seacyc_pol' + str(latlim) + 'N3' + fsuff + '.pdf')
 
+
+if plotregmean==1:
+
+    flddiffdf = pd.DataFrame(flddiffdict)
+    fldcdf = pd.DataFrame(fldcdict)
+    fldpdf = pd.DataFrame(fldpdict)
+    fldmaskdf = pd.DataFrame(flddmaskdict)
+    fldcstddf = pd.DataFrame(fldcstddict)
+    fldpstddf = pd.DataFrame(fldpstddict)
+
+    fig,axs = plt.subplots(4,1)
+    print '@@ add confidence intervals!'
+    for sii,sea in enumerate(seasons):
+
+        ax=axs[sii]
+        if sii==0:
+            ax.set_title(fieldstr + ' ' + region)
+            
+        for skeyii,skey in enumerate(sims):
+             
+            val=flddiffdf[skey][sea]
+            ax.plot(skeyii,val,color=colordict[skey],marker='s',markersize=8)
+            print sea + ' ' + skey + ' ' + str(val)
+
+        ax.set_xticks(np.arange(0,len(sims)))
+        ax.set_xticklabels(sims)
+        ax.set_ylabel(sea)
+        ax.set_xlim(-.5,len(sims)+.5)
+        ax.grid()
 
 if pattcorrwithtime==1:
 
