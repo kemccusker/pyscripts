@@ -33,11 +33,11 @@ cnc = reload(cnc)
 plt.close("all")
 plt.ion()
 
-printtofile=1
+printtofile=True
 
 plotann=0    # seasonal avg map, comparing ens runs and meanBC
 plotallmos=0 # monthly maps (@@ not implemented)
-seasonal=1 # seasonal maps (SON, DJF, MAM, JJA)
+seasonal=0 # seasonal maps (SON, DJF, MAM, JJA)
 seasvert=0 # seasonal must =1. seasonal vertical zonal means (SON,DJF,MAM,JJA) instead of maps
 screen=True # whether to have screen-style vertical zonal means
 
@@ -47,18 +47,25 @@ withlat=0 # plot the seasonal cycle with latitude dimension too (only for plotse
 squatseacyc=0 # plot seacycle figs as shorter than wide
 squatterseacyc=1 # even shorter, for paper
 pattcorrwithtime=0 # plot pattern correlation with time for each ens member
-pattcorryr=0 # if 1, do a yearly anomaly pattern rather than time-integrated 
+pattcorryr=0 # if 1, do a yearly anomaly pattern rather than time-integrated
+
+plotregmean=1
+#latlims=[70,89]; lonlims=[0,359]; region='polcap70' # Polar cap north of 70N
+#latlims=[65,89]; lonlims=[0,359]; region='polcap65' # Polar cap north of 65N for NAM proxy
+#latlims=[35,60]; lonlims=[40,120]; region='eurasia' # Eurasia 35-60N, 40E-120E
+#latlims=[35,60]; lonlims=[240,280]; region='ntham' # North America 35-60N, 120W-80W
+latlims=[35,60]; lonlims=[300,360]; region='nthatl' # North Atlantic 35-60N, 60W-0
 
 testhadisst=0 # check which ens member most similar to hadisst
 normbystd=0
 halftime=False # get only the first 60yrs. make sure to set the other flag the opp
-halftime2=True # get only the last 60yrs. make sure to set the other flag the opp
+halftime2=False # get only the last 60yrs. make sure to set the other flag the opp
 
 sensruns=False # sensruns only: addr4ct=1 and addsens=1. no meanBC, r mean, or obs
 addobs=1 # add mean of kemhad* runs to line plots, seasonal maps. add nsidc if SIA/SIT (@@for now)
 addr4ct=0 # add kem1pert2r4ct (constant thickness version of ens4)
 addsens=0 # add sensitivity runs (kem1pert1b, kem1pert3)
-simsforpaper=True # meanBC, HAD, NSIDC only. best for maps and zonal mean figs (not line plots)
+simsforpaper=False # meanBC, HAD, NSIDC only. best for maps and zonal mean figs (not line plots)
     
 latlim = None # None #45 # lat limit for NH plots. Set to None otherwise.
 levlim= 100 # level limit for vertical ZM plots (in hPa). ignored if screen=True
@@ -1045,9 +1052,9 @@ if seasonal:
 
 
 
-if plotzonmean==1 or plotseacyc==1 or pattcorrwithtime==1:
+if plotzonmean==1 or plotseacyc==1 or pattcorrwithtime==1 or plotregmean==1:
     # get data for either zonal mean or sea cycle figures
-    if plotzonmean==1 or pattcorrwithtime==1:
+    if plotzonmean==1 or pattcorrwithtime==1 or plotregmean==1:
         # seasons is defined above
         corrlim = 45
     elif plotseacyc==1:
@@ -1055,7 +1062,7 @@ if plotzonmean==1 or plotseacyc==1 or pattcorrwithtime==1:
         if field in (fluxes,'fsg','turb','net'):
             latlim=40
         else:
-            latlim = 40 # for area averaging
+            latlim = 70 # for area averaging
         seasons = con.get_mon()
 
     if sia==1:
@@ -1066,6 +1073,7 @@ if plotzonmean==1 or plotseacyc==1 or pattcorrwithtime==1:
     fldcstddict = dict.fromkeys(sims,{}); fldpstddict = dict.fromkeys(sims,{})
     flddiffdict = dict.fromkeys(sims,{}); flddmaskdict = dict.fromkeys(sims,{})
     fldpcorrdict = dict.fromkeys(sims,{});
+    cidict = dict.fromkeys(sims,{})
 
     for ridx,sim in enumerate(sims):    
         seatstatdict=dict.fromkeys(seasons); seapvaldict=dict.fromkeys(seasons)
@@ -1073,6 +1081,7 @@ if plotzonmean==1 or plotseacyc==1 or pattcorrwithtime==1:
         seafldcstddict=dict.fromkeys(seasons); seafldpstddict=dict.fromkeys(seasons)
         seadiffdict=dict.fromkeys(seasons); seadmaskdict=dict.fromkeys(seasons)
         seapcorrdict=dict.fromkeys(seasons)
+        seacidict=dict.fromkeys(seasons)
 
         if sim=='kemhad' or sim=='kemnsidc': 
             frootc = basepath + sim + 'ctl' + subdir + sim + 'ctl' + '_' 
@@ -1093,14 +1102,18 @@ if plotzonmean==1 or plotseacyc==1 or pattcorrwithtime==1:
             fnamec = frootc + field + '_' + timstr + '_ts.nc'
             fnamep = frootp + field + '_' + timstrp + '_ts.nc'
         else:
-            fnamec = frootc + field + '_' + '001-061_ts.nc'
-            fnamec2 = frootc + field + '_' + '062-121_ts.nc'
-            fnamep = frootp + field + '_' + '001-061_ts.nc'
-            fnamep2 = frootp + field + '_' + '062-121_ts.nc'
+            if nonstandardlev:               
+                fnamec = frootc + field + '_' + '001-061_ts.nc'
+                fnamec2 = frootc + field + '_' + '062-121_ts.nc'
+                fnamep = frootp + field + '_' + '001-061_ts.nc'
+                fnamep2 = frootp + field + '_' + '062-121_ts.nc'
+            else:
+                fnamec = frootc + field + '_' + timstr + '_ts.nc'
+                fnamep = frootp + field + '_' + timstrp + '_ts.nc'
         
         for sii,sea in enumerate(seasons):
 
-            if plotzonmean==1 or pattcorrwithtime==1:
+            if plotzonmean==1 or pattcorrwithtime==1 or plotregmean==1:
                 ncparams = {'seas': sea}
             elif plotseacyc==1:
                 ncparams = {'monsel': sii+1}
@@ -1146,15 +1159,22 @@ if plotzonmean==1 or plotseacyc==1 or pattcorrwithtime==1:
                                                    **ncparams)*conv
 
                 else:
-                    print '@@ fix to use level NC files'
+                    #print '@@ fix to use level NC files'
                     
-                    ncparams['levsel'] = level
-                    fldczm = np.append(cnc.getNCvar(fnamec,ncfield,timesel='0002-01-01,061-12-31',**ncparams)*conv,
-                                        cnc.getNCvar(fnamec2,ncfield,**ncparams)*conv,
-                                        axis=0)
-                    fldpzm = np.append(cnc.getNCvar(fnamep,ncfield,timesel='0002-01-01,061-12-31',**ncparams)*conv,
-                                        cnc.getNCvar(fnamep2,ncfield,**ncparams)*conv,
-                                        axis=0)
+                    if nonstandardlev:
+                        ncparams['levsel'] = level
+                        fldczm = np.append(cnc.getNCvar(fnamec,ncfield,timesel='0002-01-01,061-12-31',**ncparams)*conv,
+                                            cnc.getNCvar(fnamec2,ncfield,**ncparams)*conv,
+                                            axis=0)
+                        fldpzm = np.append(cnc.getNCvar(fnamep,ncfield,timesel='0002-01-01,061-12-31',**ncparams)*conv,
+                                            cnc.getNCvar(fnamep2,ncfield,**ncparams)*conv,
+                                            axis=0)
+                    else:
+                        fldczm = cnc.getNCvar(fnamec,ncfield,timesel=timesel,
+                                              **ncparams)*conv
+                        fldpzm = cnc.getNCvar(fnamep,ncfield,timesel=timesel,
+                                              **ncparams)*conv
+                        
                 if sia==1:
                     #areas = cutl.calc_cellareas(lat,lon,repeat=fldczm.shape)
                     #print areas.shape
@@ -1212,11 +1232,60 @@ if plotzonmean==1 or plotseacyc==1 or pattcorrwithtime==1:
                         # consider masking out land for sfc fluxes...?
                         fldczm = cutl.polar_mean_areawgted3d(fldczm,lat,lon,latlim=latlim)
                         fldpzm = cutl.polar_mean_areawgted3d(fldpzm,lat,lon,latlim=latlim)
+
+            elif plotregmean==1:
+
+                lons,lats = np.meshgrid(lon,lat)
+                
+                ntime = fldczm.shape[0]
+                
+                reglatsbool = np.logical_and(lat>latlims[0],lat<latlims[1])
+                reglonsbool = np.logical_and(lon>lonlims[0],lon<lonlims[1])
+                regmask = np.logical_or(
+                    np.logical_or(lats<latlims[0],lats>latlims[1]), 
+                    np.logical_or(lons<lonlims[0],lons>lonlims[1]))
+                regmaskt = np.tile(regmask,(ntime,1,1)) # tiled regional mask
+
+                areas = cutl.calc_cellareas(lat,lon)
+                areasm = ma.masked_where(regmask,areas)
+                weightsm = areasm / np.sum(np.sum(areasm,axis=1),axis=0) # weights masked
+                weightsmt = np.tile(weightsm,(ntime,1,1)) # weights masked tiled
+                
+                # regional subset: control
+                ## tmp = fldczm[:,reglatsbool,:] # this swaps the lat and time dims for some reason
+                ## tmp = np.transpose(tmp,(1,0,2))
+                ## tmp = tmp[:,:,reglonsbool]
+                ## tmp = np.transpose(tmp,(1,0,2))
+                ## tmpreg = np.sum(np.sum(tmp*weightsmt,axis=2),axis=1)
+                ## fldczm = tmpreg # should be timeseries of regional mean
+
+                tmp = ma.masked_where(regmaskt,fldczm)
+                tmpreg = np.sum(np.sum(tmp*weightsmt,axis=2),axis=1)
+                fldczm = tmpreg # should be timeseries of regional mean
+
+                # regional subset: pert
+                ## tmp = fldpzm[:,reglatsbool,:] # this swaps the lat and time dims for some reason
+                ## tmp = np.transpose(tmp,(1,0,2))
+                ## tmp = tmp[:,:,reglonsbool]
+                ## tmp = np.transpose(tmp,(1,0,2))
+                ## tmpreg = np.sum(np.sum(tmp*weightsmt,axis=2),axis=1)
+                ## fldpzm = tmpreg # should be timeseries of regional mean
+
+                tmp = ma.masked_where(regmaskt,fldpzm)
+                tmpreg = np.sum(np.sum(tmp*weightsmt,axis=2),axis=1)
+                fldpzm = tmpreg # should be timeseries of regional mean
  
 
             seafldcstddict[sea] = np.std(fldczm,axis=0)
             seafldpstddict[sea] = np.std(fldpzm,axis=0)
             ttmp,pvtmp = sp.stats.ttest_ind(fldpzm,fldczm,axis=0)
+            if plotregmean==1:
+                # double-check the scale setting
+                ci = sp.stats.t.interval(1-siglevel,len(fldpzm)-1,loc=np.mean(fldpzm,axis=0)-np.mean(fldczm,axis=0),
+                                         scale=np.std(fldpzm,axis=0)/np.sqrt(len(fldpzm)))
+                seacidict[sea] = ci
+                #print ci # @@@
+                
             seatstatdict[sea] = ttmp
             seapvaldict[sea] = pvtmp
             seafldcdict[sea] =  np.mean(fldczm,axis=0) # time mean
@@ -1228,6 +1297,8 @@ if plotzonmean==1 or plotseacyc==1 or pattcorrwithtime==1:
 
         fldcstddict[sim] = seafldcstddict
         fldpstddict[sim] = seafldpstddict
+        if plotregmean==1:
+            cidict[sim] = seacidict
         tstatdict[sim] = seatstatdict
         pvaldict[sim] = seapvaldict
         fldcdict[sim] = seafldcdict
@@ -1731,6 +1802,47 @@ if plotseacyc:
         if printtofile:
             fig.savefig(fieldstr + 'STDdiff_ens_meanBC' + obsstr + ctstr + '_seacyc_pol' + str(latlim) + 'N3' + fsuff + '.pdf')
 
+
+if plotregmean==1:
+
+    flddiffdf = pd.DataFrame(flddiffdict)
+    fldcdf = pd.DataFrame(fldcdict)
+    fldpdf = pd.DataFrame(fldpdict)
+    fldmaskdf = pd.DataFrame(flddmaskdict)
+    fldcstddf = pd.DataFrame(fldcstddict)
+    fldpstddf = pd.DataFrame(fldpstddict)
+    cidf = pd.DataFrame(cidict)
+
+    fig,axs = plt.subplots(4,1)
+    fig.set_size_inches(10,8)
+    print '@@ add confidence intervals!'
+    for sii,sea in enumerate(seasons):
+
+        ax=axs[sii]
+        if sii==0:
+            ax.set_title(fieldstr + ' ' + region)
+            
+        for skeyii,skey in enumerate(sims):
+             
+            val=flddiffdf[skey][sea]
+            ci=cidf[skey][sea]
+            #print ci
+            
+            ax.plot(skeyii,val,color=colordict[skey],marker='s',markersize=8)
+            ax.plot((skeyii,skeyii),ci,color=colordict[skey],linewidth=2,marker='_',markersize=6)
+            axylims = ax.get_ylim()
+            if axylims[0]<=0 and axylims[1]>=0:
+                ax.axhline(y=0,color='k',linewidth=.5) # @@ figure out how to make it first layer of plot...
+            print sea + ' ' + skey + ' ' + str(val)
+
+        ax.set_xticks(np.arange(0,len(sims)))
+        ax.set_xticklabels(sims)
+        ax.set_ylabel(sea)
+        ax.set_xlim(-.5,len(sims)+.5)
+        ax.grid()
+
+    if printtofile:
+        fig.savefig(fieldstr + 'diffCI_ens_meanBC' + obsstr + ctstr + '_allseassp_' + region + '.pdf')
 
 if pattcorrwithtime==1:
 
