@@ -42,27 +42,29 @@ seasvert=0 # seasonal must =1. seasonal vertical zonal means (SON,DJF,MAM,JJA) i
 screen=True # whether to have screen-style vertical zonal means
 
 plotzonmean=0 # plotzonmean,plotseacyc,pattcorrwithtime are mutually exclusive
-plotseacyc=0 # plotzonmean,plotseacyc,pattcorrwithtime are mutually exclusive
+plotseacyc=1 # plotzonmean,plotseacyc,pattcorrwithtime are mutually exclusive
+seacyclatlim=60 # southern limit for plotting polar mean seasonal cycles (line plot)
 withlat=0 # plot the seasonal cycle with latitude dimension too (only for plotseacyc=1)@@for now just std over ens
 squatseacyc=0 # plot seacycle figs as shorter than wide
 squatterseacyc=1 # even shorter, for paper
 pattcorrwithtime=0 # plot pattern correlation with time for each ens member
 pattcorryr=0 # if 1, do a yearly anomaly pattern rather than time-integrated
 
-plotregmean=1
+plotregmean=0
 #latlims=[70,89]; lonlims=[0,359]; region='polcap70' # Polar cap north of 70N
 #latlims=[65,89]; lonlims=[0,359]; region='polcap65' # Polar cap north of 65N for NAM proxy
+latlims=[60,89]; lonlims=[0,359]; region='polcap60' # Polar cap north of 60N to match pattern corrs
 #latlims=[35,60]; lonlims=[40,120]; region='eurasia' # Eurasia 35-60N, 40E-120E
 #latlims=[35,60]; lonlims=[240,280]; region='ntham' # North America 35-60N, 120W-80W
-latlims=[35,60]; lonlims=[300,360]; region='nthatl' # North Atlantic 35-60N, 60W-0
+#latlims=[35,60]; lonlims=[300,360]; region='nthatl' # North Atlantic 35-60N, 60W-0
 
 testhadisst=0 # check which ens member most similar to hadisst
 normbystd=0
 halftime=False # get only the first 60yrs. make sure to set the other flag the opp
 halftime2=False # get only the last 60yrs. make sure to set the other flag the opp
 
-sensruns=False # sensruns only: addr4ct=1 and addsens=1. no meanBC, r mean, or obs
-addobs=1 # add mean of kemhad* runs to line plots, seasonal maps. add nsidc if SIA/SIT (@@for now)
+sensruns=True # sensruns only: addr4ct=1 and addsens=1. no meanBC, r mean, or obs
+addobs=1 # add mean of kemhad* & kemnsidc* runs to line plots, seasonal maps. 
 addr4ct=0 # add kem1pert2r4ct (constant thickness version of ens4)
 addsens=0 # add sensitivity runs (kem1pert1b, kem1pert3)
 simsforpaper=False # meanBC, HAD, NSIDC only. best for maps and zonal mean figs (not line plots)
@@ -77,7 +79,7 @@ siglevel=0.05
 # # # ######## set Field info ###################
 # gz, t, u, v, q (3D !)
 # st, sic, sicn (sia), gt, pmsl, pcp, hfl, hfs, turb, net, flg, fsg, fn, pcpn, zn, su, sv (@@later ufs,vfs)
-field = 'gz'
+field = 'st'
 
 print field
 timeavg = 'DJF'
@@ -167,7 +169,7 @@ if field == 'st':
         cminm=-.5; cmaxm=.5 # @@ will have to update this when add subplots
         
     leglocs = 'upper left', 'upper left', 'upper right', 'upper left'
-    seacycylim=(-.2,1.1)
+    seacycylim=(-.5,4) # >70N
 elif field == 'sic':
     units='m'
     conv=1/913.
@@ -184,7 +186,7 @@ elif field == 'sicn' or field == 'sia':
     cminm=-.15; cmaxm=.15
     cmap = 'red2blue_w20'
     leglocs = 'lower left', 'lower left', 'upper left', 'upper left'
-    seacycylim=(-2e12,0)
+    seacycylim=(-2e12,0) # for sia
 elif field == 'gt':
     units='K'
     conv=1
@@ -210,7 +212,7 @@ elif field == 'pmsl':
     if plotseacyc==1  and withlat==1:
         cminm=-1; cmaxm=1 # @@ will have to update this when add subplots
     leglocs = 'lower left', 'lower left', 'upper center', 'lower left'
-    seacycylim=(-1,0.4)
+    seacycylim=(-2,1.5) # >70N
 elif field == 'pcp':
     units = 'mm/day' # original: kg m-2 s-1
     
@@ -273,7 +275,7 @@ elif field == 'net': # net of all sfc fluxes
     cmaxm = 20
     cmap='blue2red_20'
     leglocs = 'upper left', 'upper left', 'upper left', 'upper left'
-    seacycylim=(-5,25)
+    seacycylim=(-5,25) # always >40N (where there is ice in CTL)
 elif field == 'flg': # net downward LW at the sfc.
     units = 'W/m2'
     conv = -1 # so positive heats atmos
@@ -426,6 +428,7 @@ elif field == 'gz':
     else:
         #cminsea = -15; cmaxsea = 15
         cminm = -15; cmaxm = 15  # for monthly
+        seacycylim=(-16,20) # >70N, 500hPa
 
     if seasvert:
         if screen:
@@ -1060,9 +1063,8 @@ if plotzonmean==1 or plotseacyc==1 or pattcorrwithtime==1 or plotregmean==1:
     elif plotseacyc==1:
         
         if field in (fluxes,'fsg','turb','net'):
-            latlim=40
-        else:
-            latlim = 70 # for area averaging
+            seacyclatlim=40
+        # else leave seacyclatlim as set at top of script
         seasons = con.get_mon()
 
     if sia==1:
@@ -1230,8 +1232,8 @@ if plotzonmean==1 or plotseacyc==1 or pattcorrwithtime==1 or plotregmean==1:
                         fldpzm = np.sum(np.sum(fldpzm[:,lat>0,:],axis=2),axis=1)
                     else:
                         # consider masking out land for sfc fluxes...?
-                        fldczm = cutl.polar_mean_areawgted3d(fldczm,lat,lon,latlim=latlim)
-                        fldpzm = cutl.polar_mean_areawgted3d(fldpzm,lat,lon,latlim=latlim)
+                        fldczm = cutl.polar_mean_areawgted3d(fldczm,lat,lon,latlim=seacyclatlim)
+                        fldpzm = cutl.polar_mean_areawgted3d(fldpzm,lat,lon,latlim=seacyclatlim)
 
             elif plotregmean==1:
 
@@ -1659,7 +1661,7 @@ if plotseacyc:
         plt.title('Climos')
 
         if printtofile: 
-            fig.savefig(fieldstr + '_ens_meanBC' + obsstr + ctstr + '_seacyc_pol' + str(latlim) + 'N3' + fsuff + '.pdf')
+            fig.savefig(fieldstr + '_ens_meanBC' + obsstr + ctstr + '_seacyc_pol' + str(seacyclatlim) + 'N3' + fsuff + '.pdf')
 
 
         # differences
@@ -1687,9 +1689,12 @@ if plotseacyc:
         #plt.xlabel('Month')
         plt.ylabel(fieldstr)
         plt.title('Anomalies')
-
+        axylims = axs.get_ylim()
+        if axylims[0]<=0 and axylims[1]>=0:
+            axs.axhline(y=0,color='k',linewidth=.5) # @@ figure out how to make it first layer of plot...
+                
         if printtofile: # version 2 loops through sims in order of melt
-            fig.savefig(fieldstr + 'diff_ens_meanBC' + obsstr + ctstr + '_seacyc_pol' + str(latlim) + 'N3' + fsuff + '.pdf')
+            fig.savefig(fieldstr + 'diff_ens_meanBC' + obsstr + ctstr + '_seacyc_pol' + str(seacyclatlim) + 'N3' + fsuff + '.pdf')
 
         # calc stddev over ensemble, and min/max for shading
         tmpcdf = fldcdf.loc[mol]
@@ -1733,9 +1738,12 @@ if plotseacyc:
         #plt.xlabel('Month')
         plt.ylabel(fieldstr)
         plt.title('Anomalies')
+        axylims = axs.get_ylim()
+        if axylims[0]<=0 and axylims[1]>=0:
+            axs.axhline(y=0,color='k',linewidth=.5) # @@ figure out how to make it first layer of plot...
 
         if printtofile: # version 2 loops through sims in order of melt
-            fig.savefig(fieldstr + 'diff_ens_meanBC' + obsstr + ctstr + '_seacyc_pol' + str(latlim) + 'N3shade' + fsuff + '.pdf')
+            fig.savefig(fieldstr + 'diff_ens_meanBC' + obsstr + ctstr + '_seacyc_pol' + str(seacyclatlim) + 'N3shade' + fsuff + '.pdf')
 
 
         # Standard deviation climos
@@ -1772,7 +1780,7 @@ if plotseacyc:
         plt.title('Sigma')
 
         if printtofile:
-            fig.savefig(fieldstr + 'STD_ens_meanBC' + obsstr + ctstr + '_seacyc_pol' + str(latlim) + 'N3' + fsuff + '.pdf')
+            fig.savefig(fieldstr + 'STD_ens_meanBC' + obsstr + ctstr + '_seacyc_pol' + str(seacyclatlim) + 'N3' + fsuff + '.pdf')
 
 
         # Difference in standard deviation
@@ -1800,7 +1808,7 @@ if plotseacyc:
         plt.title('Sigma anomalies')
 
         if printtofile:
-            fig.savefig(fieldstr + 'STDdiff_ens_meanBC' + obsstr + ctstr + '_seacyc_pol' + str(latlim) + 'N3' + fsuff + '.pdf')
+            fig.savefig(fieldstr + 'STDdiff_ens_meanBC' + obsstr + ctstr + '_seacyc_pol' + str(seacyclatlim) + 'N3' + fsuff + '.pdf')
 
 
 if plotregmean==1:
@@ -1981,7 +1989,7 @@ if testhadisst:
         tmpfld = np.sqrt(cutl.polar_mean_areawgted3d(np.square((fldpdict[sim][0:12,...]-
                                                                 fldcdict[sim][0:12,...]) -
                                                                (fldp2[0:12,...]-fldc2[0:12,...])),
-                                                     lat,lon,latlim=40))
+                                                     lat,lon,latlim=corrlim))
                     
         diffdict[sim] = tmpfld
 
