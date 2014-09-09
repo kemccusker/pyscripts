@@ -51,12 +51,7 @@ pattcorrwithtime=0 # plot pattern correlation with time for each ens member
 pattcorryr=0 # if 1, do a yearly anomaly pattern rather than time-integrated
 
 plotregmean=1
-#latlims=[70,89]; lonlims=[0,359]; region='polcap70' # Polar cap north of 70N
-#latlims=[65,89]; lonlims=[0,359]; region='polcap65' # Polar cap north of 65N for NAM proxy
-#latlims=[60,89]; lonlims=[0,359]; region='polcap60' # Polar cap north of 60N to match pattern corrs
-latlims=[35,60]; lonlims=[40,120]; region='eurasia' # Eurasia 35-60N, 40E-120E
-#latlims=[35,60]; lonlims=[240,280]; region='ntham' # North America 35-60N, 120W-80W
-#latlims=[35,60]; lonlims=[300,360]; region='nthatl' # North Atlantic 35-60N, 60W-0
+region = 'polcap60' # polcap60, polcap65, polcap70, eurasia, ntham, nthatl
 
 testhadisst=0 # check which ens member most similar to hadisst
 normbystd=0
@@ -80,7 +75,7 @@ siglevel=0.05
 # # # ######## set Field info ###################
 # gz, t, u, v, q (3D !)
 # st, sic, sicn (sia), gt, pmsl, pcp, hfl, hfs, turb, net, flg, fsg, fn, pcpn, zn, su, sv (@@later ufs,vfs)
-field = 'pcpn'
+field = 'st'
 
 print field
 timeavg = 'DJF'
@@ -1241,52 +1236,16 @@ if plotzonmean==1 or plotseacyc==1 or pattcorrwithtime==1 or plotregmean==1:
                         fldpzm = cutl.polar_mean_areawgted3d(fldpzm,lat,lon,latlim=seacyclatlim)
 
             elif plotregmean==1:
-
-                lons,lats = np.meshgrid(lon,lat)
                 
-                ntime = fldczm.shape[0]
-                
-                reglatsbool = np.logical_and(lat>latlims[0],lat<latlims[1])
-                reglonsbool = np.logical_and(lon>lonlims[0],lon<lonlims[1])
-                regmask = np.logical_or(
-                    np.logical_or(lats<latlims[0],lats>latlims[1]), 
-                    np.logical_or(lons<lonlims[0],lons>lonlims[1]))
-                regmaskt = np.tile(regmask,(ntime,1,1)) # tiled regional mask
-
-                areas = cutl.calc_cellareas(lat,lon)
-                areasm = ma.masked_where(regmask,areas)
-                weightsm = areasm / np.sum(np.sum(areasm,axis=1),axis=0) # weights masked
-                weightsmt = np.tile(weightsm,(ntime,1,1)) # weights masked tiled
-                
-                # regional subset: control
-                ## tmp = fldczm[:,reglatsbool,:] # this swaps the lat and time dims for some reason
-                ## tmp = np.transpose(tmp,(1,0,2))
-                ## tmp = tmp[:,:,reglonsbool]
-                ## tmp = np.transpose(tmp,(1,0,2))
-                ## tmpreg = np.sum(np.sum(tmp*weightsmt,axis=2),axis=1)
-                ## fldczm = tmpreg # should be timeseries of regional mean
-
-                tmp = ma.masked_where(regmaskt,fldczm)
-                tmpreg = np.sum(np.sum(tmp*weightsmt,axis=2),axis=1)
-                fldczm = tmpreg # should be timeseries of regional mean
-
-                # regional subset: pert
-                ## tmp = fldpzm[:,reglatsbool,:] # this swaps the lat and time dims for some reason
-                ## tmp = np.transpose(tmp,(1,0,2))
-                ## tmp = tmp[:,:,reglonsbool]
-                ## tmp = np.transpose(tmp,(1,0,2))
-                ## tmpreg = np.sum(np.sum(tmp*weightsmt,axis=2),axis=1)
-                ## fldpzm = tmpreg # should be timeseries of regional mean
-
-                tmp = ma.masked_where(regmaskt,fldpzm)
-                tmpreg = np.sum(np.sum(tmp*weightsmt,axis=2),axis=1)
-                fldpzm = tmpreg # should be timeseries of regional mean
- 
+                limsdict = con.get_regionlims(region)
+                fldczm = cutl.calc_regmean(fldczm,lat,lon,limsdict)
+                fldpzm = cutl.calc_regmean(fldpzm,lat,lon,limsdict) 
 
             seafldcstddict[sea] = np.std(fldczm,axis=0)
             seafldpstddict[sea] = np.std(fldpzm,axis=0)
             ttmp,pvtmp = sp.stats.ttest_ind(fldpzm,fldczm,axis=0)
             if plotregmean==1:
+                # calculate confidence interval on the regional mean
                 # double-check the scale setting
                 ci = sp.stats.t.interval(1-siglevel,len(fldpzm)-1,loc=np.mean(fldpzm,axis=0)-np.mean(fldczm,axis=0),
                                          scale=np.std(fldpzm,axis=0)/np.sqrt(len(fldpzm)))
@@ -1831,7 +1790,6 @@ if plotregmean==1:
 
     fig,axs = plt.subplots(4,1)
     fig.set_size_inches(10,8)
-    print '@@ add confidence intervals!'
     for sii,sea in enumerate(seasons):
 
         ax=axs[sii]
@@ -1842,7 +1800,6 @@ if plotregmean==1:
              
             val=flddiffdf[skey][sea]
             ci=cidf[skey][sea]
-            #print ci
             
             ax.plot(skeyii,val,color=colordict[skey],marker='s',markersize=8)
             ax.plot((skeyii,skeyii),ci,color=colordict[skey],linewidth=2,marker='_',markersize=6)
