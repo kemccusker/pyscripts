@@ -472,3 +472,82 @@ def calc_Nmin(xx,yy,tcrit=1.9719):
     
     Nmin = 2*(tcrit**2)*(sp/(xbar-ybar))**2
     return Nmin
+
+
+def mask_region(fld,lat,lon,limsdict):
+    """ mask_region(fld, lat,lon,limsdict):
+                 Mask the input data with the given region in limsdict.
+                 The data will be masked everywhere BUT the region!
+
+                 fld: lat x lon array of data
+                      time x lat x lon OR lev x lat x lon also accepted (not tested)
+
+                 lat: array of lats (coordinates)
+                 lon: array of lons (coordinates)
+                 limsdict: a dictionary of 'latlim' array and 'lonlim' array
+                           (ie from a region dictionary)
+
+                 Returns: Tuple of masked field, mask
+    """
+
+    lons,lats = np.meshgrid(lon,lat)
+    
+        
+    # create mask
+    latlims = limsdict['latlims']
+    lonlims = limsdict['lonlims']
+
+    reglatsbool = np.logical_and(lat>latlims[0],lat<latlims[1])
+    reglonsbool = np.logical_and(lon>lonlims[0],lon<lonlims[1])
+
+    # create mask of everything but the region of interest
+    regmask = np.logical_or( 
+                            np.logical_or(lats<latlims[0],lats>latlims[1]), 
+                            np.logical_or(lons<lonlims[0],lons>lonlims[1]))
+    if fld.ndim>2:
+        ndim1 = fld.shape[0]
+        regmaskt = np.tile(regmask,(ndim1,1,1))
+    else:
+        regmaskt = regmask
+
+    fld = ma.masked_where(regmaskt,fld)
+
+    return fld, regmaskt
+
+def calc_regmean(fld,lat,lon,limsdict):
+
+
+    fldm,regmask = mask_region(fld,lat,lon,limsdict)
+    
+    ## lons,lats = np.meshgrid(lon,lat)
+                
+    ##             ntime = fldczm.shape[0]
+                
+    ##             reglatsbool = np.logical_and(lat>latlims[0],lat<latlims[1])
+    ##             reglonsbool = np.logical_and(lon>lonlims[0],lon<lonlims[1])
+    ##             regmask = np.logical_or(
+    ##                 np.logical_or(lats<latlims[0],lats>latlims[1]), 
+    ##                 np.logical_or(lons<lonlims[0],lons>lonlims[1]))
+    ##             regmaskt = np.tile(regmask,(ntime,1,1)) # tiled regional mask
+
+    # calculate area-weights
+    areas = calc_cellareas(lat,lon)
+    if regmask.ndim>2:
+        areasm = ma.masked_where(np.squeeze(regmask[0,...]),areas)
+    else:
+        areasm = ma.masked_where(regmask,areas)
+    weightsm = areasm / np.sum(np.sum(areasm,axis=1),axis=0) # weights masked
+
+    if fld.ndim>2:
+        ndim1 = fld.shape[0]
+        weightsmt = np.tile(weightsm,(ndim1,1,1)) # weights masked tiled
+    else:
+        weightsmt = weightsm
+
+    tmp = ma.masked_where(regmask,fldm)
+    tmpreg = np.sum(np.sum(tmp*weightsmt,axis=2),axis=1)
+    fldreg = tmpreg # should be ndim1 of regional mean (or just one regional mean)
+
+    return fldreg
+
+

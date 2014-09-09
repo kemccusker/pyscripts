@@ -16,7 +16,7 @@ import mpl_toolkits as mpltk
 import copy
 import constants as con
 import cccmacmaps as ccm
-
+import cccmautils as cutl
 
 """
 kemmap(fld, lat, lon, title='', units='', cmap='blue2red_w20', type='sq', cmin='', cmax='',
@@ -434,3 +434,73 @@ def plotvert_allseas(fld, lev, lat,title='',units='',cmap='blue2red_w20',type=No
 
     return fig
         
+
+def plot_region(regname,type='nh'): 
+    """ plot_region(regname,type='nh'):
+                     Given a region name, plot it for reference.
+    """
+
+    reglims = con.get_regionlims(regname)
+    latlims = reglims['latlims']
+    lonlims = reglims['lonlims']
+
+    dummy = con.get_t63landmask()
+    lat = con.get_t63lat()
+    lon = con.get_t63lon()
+
+    lons,lats = np.meshgrid(lon,lat)
+
+    reglatsbool = np.logical_and(lat>latlims[0],lat<latlims[1])
+    reglonsbool = np.logical_and(lon>lonlims[0],lon<lonlims[1])
+
+    # mask everything but the region of interest
+    regmask = np.logical_or( 
+                            np.logical_or(lats<latlims[0],lats>latlims[1]), 
+                            np.logical_or(lons<lonlims[0],lons>lonlims[1]))
+    dummym = ma.masked_where(regmask,dummy)
+
+    plt.figure()
+    kemmap(dummym,lat,lon,type=type,suppcb=1,cmin=-11,cmax=2,cmap='blue2blue_w10')
+
+    
+
+def plot_allregions(type='nh'):
+    """ plot_allregions(type='nh'): plot all defined regions
+    """
+
+    regdict = con.get_regiondict()
+    nreg = len(regdict)
+    rem = np.mod(nreg,2)
+    rows = 2
+    
+    if rem==0:
+        cols = nreg/rows
+    else:
+        cols = nreg/rows + rem # rem will always be 1 if dividing by 2
+
+    if cols>8:
+        rows = 3
+        cols = nreg/rows + np.mod(nreg,rows)/2
+
+    print 'nrows: ' + str(rows) + ' ncols: ' + str(cols) # @@@
+    
+    lat = con.get_t63lat()
+    lon = con.get_t63lon()
+    
+    fig,spax = plt.subplots(rows,cols)
+    
+    for aii,ax in enumerate(spax.flat):
+
+        dummy = con.get_t63landmask() # dummy data
+        
+        regkey = regdict.keys()[aii]
+        limsdict = regdict[regkey]
+        # mask the dummy data
+        dummym,dmask = cutl.mask_region(dummy,lat,lon,limsdict)
+                
+        kemmap(dummym,lat,lon,type=type,axis=ax,suppcb=1,cmin=-11,cmax=2,cmap='blue2blue_w10')        
+        ax.set_title(regkey)
+        
+        if aii==nreg-1: break # get out of loop if done with regions
+        
+    

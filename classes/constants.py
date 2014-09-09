@@ -11,6 +11,8 @@ Use this module to house access to constant data, variables
 import numpy as np
 from netCDF4 import Dataset
 import platform as platform
+import cccmaNC as cnc
+
 
 def get_basepath():
     """ get_basepath():
@@ -81,6 +83,30 @@ def get_t63landmask(repeat=None):
         
     return lmask
         
+def get_t63lat():
+    plat = platform.system()
+
+    if plat == "Linux":
+        basepath = '/home/rkm/work/DATA/CanAM4/constants/'
+    else:
+        basepath = '/Users/kelly/CCCma/CanSISE/DATA/constants/' #@@
+
+    fname = basepath + 't63_landmask.nc'
+
+    return cnc.getNCvar(fname,'lat')
+
+def get_t63lon():
+
+    plat = platform.system()
+
+    if plat == "Linux":
+        basepath = '/home/rkm/work/DATA/CanAM4/constants/'
+    else:
+        basepath = '/Users/kelly/CCCma/CanSISE/DATA/constants/' #@@
+
+    fname = basepath + 't63_landmask.nc'
+    
+    return cnc.getNCvar(fname,'lon')
 
 def get_monweights():
 
@@ -150,4 +176,49 @@ def getBCfilenames(field,sim=None):
         return fnames
     else:
         return fnames[sim]
+    
+
+def get_regiondict():
+    """ get_regiondict(): return a dictionary of all defined regions
+
+                 regiondict:
+                          polcap70: latlims=[70,89]; lonlims=[0,359]
+                          polcap65: latlims=[65,89]; lonlims=[0,359]
+                          polcap60: latlims=[60,89]; lonlims=[0,359]
+                          eurasia: latlims=[35,60]; lonlims=[40,120]
+                          ntham: latlims=[35,60]; lonlims=[240,280]
+                          nthatl: latlims=[35,60]; lonlims=[300,360]
+
+                 @@ should define region dict upon import, not in a func...
+    """
+    regions = ('polcap70', 'polcap65', 'polcap60', 'eurasia',
+               'ntham', 'nthatl')
+    regdict = dict.fromkeys(regions, {})
+
+    regdict['polcap70'] = {'latlims': [70,89], 'lonlims': [0,359]}
+    regdict['polcap65'] = {'latlims': [65,89], 'lonlims': [0,359]}
+    regdict['polcap60'] = {'latlims': [60,89], 'lonlims': [0,359]}
+    regdict['eurasia'] = {'latlims': [35,60], 'lonlims': [40,120]}
+    regdict['ntham'] = {'latlims': [35,60], 'lonlims': [240,280]}
+    regdict['nthatl'] = {'latlims': [35,60], 'lonlims': [300,360]}
+    
+    return regdict
+    
+def get_regionlims(regname):
+    """ get_regionlim(regname): Given a region name, return a dict of latlims and lonlims
+
+                      regname options:
+                          polcap70: latlims=[70,89]; lonlims=[0,359] # Polar cap north of 70N
+                          polcap65: latlims=[65,89]; lonlims=[0,359] # Polar cap north of 65N for NAM proxy
+                          polcap60: latlims=[60,89]; lonlims=[0,359] # Polar cap north of 60N to match pattern corrs
+                          eurasia: latlims=[35,60]; lonlims=[40,120] # Eurasia 35-60N, 40E-120E
+                          ntham: latlims=[35,60]; lonlims=[240,280]  # North America 35-60N, 120W-80W
+                          nthatl: latlims=[35,60]; lonlims=[300,360] # North Atlantic 35-60N, 60W-0
+
+    """
+
+
+    regdict = get_regiondict()
+
+    return regdict[regname]
     
