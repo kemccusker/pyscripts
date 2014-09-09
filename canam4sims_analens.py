@@ -42,7 +42,7 @@ seasvert=0 # seasonal must =1. seasonal vertical zonal means (SON,DJF,MAM,JJA) i
 screen=True # whether to have screen-style vertical zonal means
 
 plotzonmean=0 # plotzonmean,plotseacyc,pattcorrwithtime are mutually exclusive
-plotseacyc=1 # plotzonmean,plotseacyc,pattcorrwithtime are mutually exclusive
+plotseacyc=0 # plotzonmean,plotseacyc,pattcorrwithtime are mutually exclusive
 seacyclatlim=60 # southern limit for plotting polar mean seasonal cycles (line plot)
 withlat=0 # plot the seasonal cycle with latitude dimension too (only for plotseacyc=1)@@for now just std over ens
 squatseacyc=0 # plot seacycle figs as shorter than wide
@@ -50,11 +50,11 @@ squatterseacyc=1 # even shorter, for paper
 pattcorrwithtime=0 # plot pattern correlation with time for each ens member
 pattcorryr=0 # if 1, do a yearly anomaly pattern rather than time-integrated
 
-plotregmean=0
+plotregmean=1
 #latlims=[70,89]; lonlims=[0,359]; region='polcap70' # Polar cap north of 70N
 #latlims=[65,89]; lonlims=[0,359]; region='polcap65' # Polar cap north of 65N for NAM proxy
-latlims=[60,89]; lonlims=[0,359]; region='polcap60' # Polar cap north of 60N to match pattern corrs
-#latlims=[35,60]; lonlims=[40,120]; region='eurasia' # Eurasia 35-60N, 40E-120E
+#latlims=[60,89]; lonlims=[0,359]; region='polcap60' # Polar cap north of 60N to match pattern corrs
+latlims=[35,60]; lonlims=[40,120]; region='eurasia' # Eurasia 35-60N, 40E-120E
 #latlims=[35,60]; lonlims=[240,280]; region='ntham' # North America 35-60N, 120W-80W
 #latlims=[35,60]; lonlims=[300,360]; region='nthatl' # North Atlantic 35-60N, 60W-0
 
@@ -63,10 +63,11 @@ normbystd=0
 halftime=False # get only the first 60yrs. make sure to set the other flag the opp
 halftime2=False # get only the last 60yrs. make sure to set the other flag the opp
 
-sensruns=True # sensruns only: addr4ct=1 and addsens=1. no meanBC, r mean, or obs
+sensruns=False # sensruns only: addr4ct=1,addsens=1. others=0 no meanBC, r mean, or obs
 addobs=1 # add mean of kemhad* & kemnsidc* runs to line plots, seasonal maps. 
 addr4ct=0 # add kem1pert2r4ct (constant thickness version of ens4)
 addsens=0 # add sensitivity runs (kem1pert1b, kem1pert3)
+addrcp=1 # add kem1rcp85a simulation (and others if we do more)
 simsforpaper=False # meanBC, HAD, NSIDC only. best for maps and zonal mean figs (not line plots)
     
 latlim = None # None #45 # lat limit for NH plots. Set to None otherwise.
@@ -79,7 +80,7 @@ siglevel=0.05
 # # # ######## set Field info ###################
 # gz, t, u, v, q (3D !)
 # st, sic, sicn (sia), gt, pmsl, pcp, hfl, hfs, turb, net, flg, fsg, fn, pcpn, zn, su, sv (@@later ufs,vfs)
-field = 'st'
+field = 'pcpn'
 
 print field
 timeavg = 'DJF'
@@ -124,6 +125,7 @@ if sensruns:
     addobs=0
     addr4ct=1
     addsens=1
+    addrcp=0
     # but don't plot the meanBC or mean of Ens members
 
 
@@ -216,7 +218,7 @@ elif field == 'pmsl':
 elif field == 'pcp':
     units = 'mm/day' # original: kg m-2 s-1
     
-    pct=1; units = '%'
+    #pct=1; units = '%'; print 'PCT'
     
     conv = 86400  # convert from kg m-2 s-1 to mm/day
     cmin = -.2; cmax = .2  # for anomaly plots
@@ -492,18 +494,15 @@ if simsforpaper:
     addobs=0
     addr4ct=0
     addsens=0
+    addrcp=0
     seasons = ('SON','DJF')
 else:
 
-    # order ens simulations in order of most ice loss in melt season to least. Then ens mean, PERT2, observations if requested
+    # order ens simulations in order of most ice loss in melt season to least.
+    # Then ens mean, PERT2, observations if requested
     sims = 'r1','r4','r3','r5','r2','ens','' # suffixes to bcasename and bcasenamep
     if addobs:
-        #if field in ('sia','sicn'): # for now@@
         sims = sims + ('kemhad','kemnsidc')
-        #print 'adding yrs 1-61 for nsidc for now@@'
-        #else:
-        #    sims = sims + ('kemhad',)
-        #    print '@@ not adding nsidc yet for field: ' + field
 
     if sensruns: # add sensitivity runs. don't plot meanBC, mean of ens
         sims = sims[0:5] + ('r4ct','kem1pert1b','kem1pert3')
@@ -515,6 +514,10 @@ else:
         if addsens:
             sims = sims + ('kem1pert1b','kem1pert3') # control is kemctl1 (or '' key)
             ctstr = ctstr + 'sens'
+        if addrcp:
+            sims = sims + ('kem1rcp85a',) # control is kemctl1
+            ctstr = ctstr + 'rcpa'
+            
 if halftime:
     ctstr = ctstr + '_60yrs' # @@
 elif halftime2:
@@ -906,13 +909,15 @@ if seasonal:
                 rowl='had'
             else:
                 rowl='nsidc'
-        elif sim in ('kem1pert1b','kem1pert3'):
+        elif sim in ('kem1pert1b','kem1pert3','kemrcp85'):
             frootc = basepath + 'kemctl1' + subdir + 'kemctl1' + '_' + field + '_'
             frootp = basepath + sim + subdir + sim + '_' + field + '_'
             if sim=='kem1pert1b':
                 rowl='nosst'
-            else:
+            elif sim=='kem1pert3':
                 rowl='nosit'
+            else:
+                rowl='rcp85a'
         else:
             frootc =  basepath + bcasename + sim + subdir + bcasename + sim + '_' + field + '_'
             frootp = basepath + bcasenamep + sim + subdir + bcasenamep + sim + '_' + field + '_'
@@ -1088,7 +1093,7 @@ if plotzonmean==1 or plotseacyc==1 or pattcorrwithtime==1 or plotregmean==1:
         if sim=='kemhad' or sim=='kemnsidc': 
             frootc = basepath + sim + 'ctl' + subdir + sim + 'ctl' + '_' 
             frootp = basepath + sim + 'pert' + subdir + sim + 'pert' + '_' 
-        elif sim in ('kem1pert1b','kem1pert3'):
+        elif sim in ('kem1pert1b','kem1pert3','kem1rcp85a'):
             frootc = basepath + 'kemctl1' + subdir + 'kemctl1' + '_' 
             frootp = basepath + sim + subdir + sim + '_'
         else:
@@ -1398,6 +1403,7 @@ if plotzonmean:
     for sii,sea in enumerate(seasons):
         tmpc = np.zeros((5,len(lat)))
         tmpp = np.zeros((5,len(lat)))
+        print '@@ fix this because ens members are hardcoded into sims'
         for simii,sim in enumerate(sims[0:5]):
             # here we just accumulate all ens sims into one matrix
             tmpc[simii,:] = tmpcdf[sim][sea].values
@@ -1421,13 +1427,13 @@ if plotzonmean:
         ax=axs[sii]
         
         for skey in sims:
-            if skey in ('','ens','kemhad','kemnsidc'): #== '' or skey == 'ens' or skey=='kemhad':
+            if skey in ('','ens','kemhad','kemnsidc'): # thicker line (control)
                 ax.plot(lat,fldcdf[skey][sea],color=colordict[skey],linewidth=3)
             else:
                 ax.plot(lat,fldcdf[skey][sea],color=colordict[skey],linewidth=2)
 
         for skey in sims:
-            if skey in ('','ens','kemhad','kemnsidc'): # == '' or skey == 'ens' or skey=='kemhad':
+            if skey in ('','ens','kemhad','kemnsidc'): # thicker line (pert)
                 ax.plot(lat,fldpdf[skey][sea],color=colordict[skey],linewidth=3,linestyle='--')
             else:
                 ax.plot(lat,fldpdf[skey][sea],color=colordict[skey],linewidth=2,linestyle='--')
@@ -1447,14 +1453,14 @@ if plotzonmean:
         ax=axs[sii]
         
         for skey in sims:
-            if skey in ('','ens','kemhad','kemnsidc'): # == '' or skey == 'ens' or skey=='kemhad':
+            if skey in ('','ens','kemhad','kemnsidc'):  # thicker line (control)
                 ax.plot(lat,fldcstddf[skey][sea],color=colordict[skey],linewidth=3)
             else:
                 ax.plot(lat,fldcstddf[skey][sea],color=colordict[skey],linewidth=2)
         ax.plot(lat,cestd[sii,...],'k',linewidth=2)
 
         for skey in sims:
-            if skey in ('','ens','kemhad','kemnsidc'): # == '' or skey == 'ens' or skey=='kemhad':
+            if skey in ('','ens','kemhad','kemnsidc'): # thicker line (pert)
                 ax.plot(lat,fldpstddf[skey][sea],color=colordict[skey],linewidth=3,linestyle='--')
             else:
                 ax.plot(lat,fldpstddf[skey][sea],color=colordict[skey],linewidth=2,linestyle='--')
@@ -1475,13 +1481,13 @@ if plotzonmean:
         ax=axs[sii]
         
         for skey in sims:
-            if skey in ('','ens','kemhad','kemnsidc'): # == '' or skey == 'ens' or skey=='kemhad':
+            if skey in ('','ens','kemhad','kemnsidc'): # thicker line
                 ax.plot(lat,flddiffdf[skey][sea],color=colordict[skey],linewidth=3)
             else:
                 ax.plot(lat,flddiffdf[skey][sea],color=colordict[skey],linewidth=2)
 
         for skey in sims:
-            if skey in ('','ens','kemhad','kemnsidc'): # == '' or skey == 'ens' or skey=='kemhad':
+            if skey in ('','ens','kemhad','kemnsidc'): # these are the same?@@ (significance)
                 ax.plot(lat,fldmaskdf[skey][sea],color=colordict[skey],linestyle='none',marker='s')
             else:
                 ax.plot(lat,fldmaskdf[skey][sea],color=colordict[skey],linestyle='none',marker='s')
@@ -1502,20 +1508,21 @@ if plotzonmean:
         ax=axs[sii]
 
         ax.fill_between(lat,demin[sii,...],demax[sii,...],facecolor='0.7',alpha=0.2)
-        for skey in sims[5:]:# actually don't skip # skip the r4ct sim here
-            if skey in ('','ens','kemhad','kemnsidc'): # == '' or skey == 'ens' or skey=='kemhad':
+        print '@@ sims other than ens appear to be hard-coded. danger'
+        for skey in sims[5:]: # @@ ack, hard-coded! dangerous
+            if skey in ('','ens','kemhad','kemnsidc'): # thicker line
                 ax.plot(lat,flddiffdf[skey][sea],color=colordict[skey],linewidth=3)
             else:
                 ax.plot(lat,flddiffdf[skey][sea],color=colordict[skey],linewidth=2)
 
-        for skey in sims[5:]: #-1]:
+        for skey in sims[5:]: # @@ danger hard-code again
             ax.plot(lat,fldmaskdf[skey][sea],color=colordict[skey],linestyle='none',marker='s')
 
         ax.set_xlim(0,90)
         ax.set_title(field + ': ' + sea)
         
     ax.set_xlabel('lat')
-    ax.legend(sims[5:],'upper left', prop=fontP,ncol=2)
+    ax.legend(sims[5:],'upper left', prop=fontP,ncol=2) # @@ hard-coded
     if printtofile:
         fig.savefig(fieldstr + 'diff_ens_meanBC' + obsstr + ctstr + '_allseassp_zonmean_nh2shade.pdf')
 
@@ -1527,11 +1534,11 @@ if plotzonmean:
         ax=axs[sii]
         
         for skey in sims:
-            if skey in ('','ens','kemhad','kemnsidc'): # == '' or skey == 'ens' or skey=='kemhad':
+            if skey in ('','ens','kemhad','kemnsidc'): # thicker lines
                 ax.plot(lat,fldpstddf[skey][sea]-fldcstddf[skey][sea],color=colordict[skey],linewidth=3)
             else:
                 ax.plot(lat,fldpstddf[skey][sea]-fldcstddf[skey][sea],color=colordict[skey],linewidth=2)
-        ax.plot(lat,pestd[sii,...]-cestd[sii,...],'k',linewidth=2)
+        ax.plot(lat,pestd[sii,...]-cestd[sii,...],'k',linewidth=2) # ensemble mean std dev diff
 
         ax.set_xlim(0,90)
         ax.set_title(field + ': ' + sea)
@@ -1595,7 +1602,7 @@ if plotseacyc:
         for mii,mon in enumerate(months): 
             tmpc = np.zeros((5,len(lat)))
             tmpp = np.zeros((5,len(lat)))
-            for simii,sim in enumerate(sims[0:5]):# accumulate all ens sims together
+            for simii,sim in enumerate(sims[0:5]):# accumulate all ens sims together @@hard-coded sims!
                 tmpc[simii,:] = tmpcdf[sim][mon].values
                 tmpp[simii,:] = tmppdf[sim][mon].values
             cestd[mii,:] = np.std(tmpc,axis=0)
@@ -1641,13 +1648,13 @@ if plotseacyc:
             fig.set_size_inches(squatterfs)
                 
         for skey in sims:
-            if skey in ('','ens','kemhad','kemnsidc'): # == '' or skey == 'ens' or skey=='kemhad':
+            if skey in ('','ens','kemhad','kemnsidc'): # thicker line (control)
                 axs.plot(moidxs,fldcdf[skey][mol],color=colordict[skey],linewidth=3)
             else:
                 axs.plot(moidxs,fldcdf[skey][mol],color=colordict[skey],linewidth=2)
 
         for skey in sims:
-            if skey in ('','ens','kemhad','kemnsidc'): # == '' or skey == 'ens' or skey=='kemhad':
+            if skey in ('','ens','kemhad','kemnsidc'): # thicker line (pert)
                 axs.plot(moidxs,fldpdf[skey][mol],color=colordict[skey],linewidth=3,linestyle='--')
             else:
                 axs.plot(moidxs,fldpdf[skey][mol],color=colordict[skey],linewidth=2,linestyle='--')
@@ -1674,7 +1681,7 @@ if plotseacyc:
             fig.set_size_inches(squatterfs)
             
         for skey in sims:
-            if skey in ('','ens','kemhad','kemnsidc'): # == '' or skey == 'ens' or skey=='kemhad':
+            if skey in ('','ens','kemhad','kemnsidc'): # thicker line
                 axs.plot(moidxs,flddiffdf[skey][mol],color=colordict[skey],linewidth=3)
             else:
                 axs.plot(moidxs,flddiffdf[skey][mol],color=colordict[skey],linewidth=2)
@@ -1699,6 +1706,7 @@ if plotseacyc:
         # calc stddev over ensemble, and min/max for shading
         tmpcdf = fldcdf.loc[mol]
         tmppdf = fldpdf.loc[mol]
+        print '@@ ens simulation position is hard-coded for std dev calc'
         ce = np.array(tmpcdf.loc[:,sims[0:5]]) # gives array of month x simulation in correct order
         pe = np.array(tmppdf.loc[:,sims[0:5]])
         #ce = np.array(tmpcdf.loc[:,sims[ensmems]]) # index as is (np array) doesn't work
@@ -1721,13 +1729,13 @@ if plotseacyc:
             fsuff='shorter'
             fig.set_size_inches(squatterfs)
             
-        for skey in sims[5:]:  #-1]:
+        for skey in sims[5:]: # @@ ens mems hard-coded
             axs.fill_between(moidxs,demin,demax,facecolor='0.7',alpha=0.2)
-            if skey in ('','ens','kemhad','kemnsidc'): # == '' or skey == 'ens' or skey=='kemhad':
+            if skey in ('','ens','kemhad','kemnsidc'): # thicker line
                 axs.plot(moidxs,flddiffdf[skey][mol],color=colordict[skey],linewidth=3)
             else:
                 axs.plot(moidxs,flddiffdf[skey][mol],color=colordict[skey],linewidth=2)
-        for skey in sims[5:]: #-1]:
+        for skey in sims[5:]: # @@ ens mems hard-coded
             axs.plot(moidxs,fldmaskdf[skey][mol],linestyle='none',color=colordict[skey],marker='s')
 
         plt.legend(sims[5:],leglocs[1], prop=fontP,ncol=2)
@@ -1757,13 +1765,13 @@ if plotseacyc:
             
         for skey in sims:
             
-            if skey in ('','ens','kemhad','kemnsidc'): # == '' or skey == 'ens' or skey=='kemhad':
+            if skey in ('','ens','kemhad','kemnsidc'): # thicker line (control)
                 axs.plot(moidxs,fldcstddf[skey][mol],color=colordict[skey],linewidth=3)
             else:
                 axs.plot(moidxs,fldcstddf[skey][mol],color=colordict[skey],linewidth=2)
 
         for skey in sims:
-            if skey in ('','ens','kemhad','kemnsidc'): # == '' or skey == 'ens' or skey=='kemhad':
+            if skey in ('','ens','kemhad','kemnsidc'): # thicker line (pert)
                 axs.plot(moidxs,fldpstddf[skey][mol],color=colordict[skey],linestyle='--',linewidth=3)
             else:
                 axs.plot(moidxs,fldpstddf[skey][mol],color=colordict[skey],linestyle='--',linewidth=2)
@@ -1793,7 +1801,7 @@ if plotseacyc:
             fig.set_size_inches(squatterfs)
             
         for skey in sims:
-            if skey in ('','ens','kemhad','kemnsidc'): #  == '' or skey == 'ens' or skey=='kemhad':
+            if skey in ('','ens','kemhad','kemnsidc'): # thicker line
                 axs.plot(moidxs,fldpstddf[skey][mol]-fldcstddf[skey][mol],color=colordict[skey],linewidth=3)
             else:
                 axs.plot(moidxs,fldpstddf[skey][mol]-fldcstddf[skey][mol],color=colordict[skey],linewidth=2)
@@ -1865,7 +1873,7 @@ if pattcorrwithtime==1:
     # size (seasons x sims) with inner arrays of length time, and can't take max/min of that
     for sii,sea in enumerate(seasons):
         tmppc = np.zeros( (5,len(tmppcdf['r1']['DJF'])) )
-        for simii,sim in enumerate(sims[0:5]):
+        for simii,sim in enumerate(sims[0:5]): # @@ hard-coded ens members!
             # here we just accumulate all ens sims into one matrix
             tmpsorted = tmppcdf[sim][sea].values
             if sea in ('JJA','MAM','SON'):
@@ -1943,7 +1951,7 @@ if pattcorrwithtime==1:
             fig.savefig(fieldstr + 'diffpattcorr_ens_meanBC' + obsstr + ctstr + '_allseassp_nhshade.pdf')
 
     
-if testhadisst:
+if testhadisst: # this is old 9/8/2014. if want to do again, have to check/update
     # here want to check which ensemble run is most similar to hadisst in terms of SICN
 
     # get HadISST runs
