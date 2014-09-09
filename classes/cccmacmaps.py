@@ -519,7 +519,8 @@ def get_colordict(project=None):
              'kemnsidc': get_linecolor('steelblue4'),
              'r4ct': get_linecolor('darkseagreen4'),
              'kem1pert1b': get_linecolor('darkolivegreen3'),
-             'kem1pert3': get_linecolor('darkolivegreen1')}
+             'kem1pert3': get_linecolor('darkolivegreen1'),
+             'kem1rcp85a': get_linecolor('orange1') }
 
     return colordict
 
