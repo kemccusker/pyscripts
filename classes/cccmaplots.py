@@ -435,8 +435,8 @@ def plotvert_allseas(fld, lev, lat,title='',units='',cmap='blue2red_w20',type=No
     return fig
         
 
-def plot_region(regname,type='nh'): 
-    """ plot_region(regname,type='nh'):
+def plot_region(regname,type='nh',axis=None,latlim=None): 
+    """ plot_region(regname,type='nh',axis=None,latlim=None):
                      Given a region name, plot it for reference.
     """
 
@@ -460,7 +460,7 @@ def plot_region(regname,type='nh'):
     dummym = ma.masked_where(regmask,dummy)
 
     plt.figure()
-    kemmap(dummym,lat,lon,type=type,suppcb=1,cmin=-11,cmax=2,cmap='blue2blue_w10')
+    kemmap(dummym,lat,lon,type=type,axis=axis,latlim=latlim,suppcb=1,cmin=-11,cmax=2,cmap='blue2blue_w10')
 
     
 
