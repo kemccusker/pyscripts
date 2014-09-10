@@ -108,6 +108,20 @@ def get_t63lon():
     
     return cnc.getNCvar(fname,'lon')
 
+def get_t63lev(): # prob isn't tied to t63..
+
+    plat = platform.system()
+
+    if plat == "Linux":
+        basepath = '/home/rkm/work/DATA/CanAM4/constants/'
+    else:
+        basepath = '/Users/kelly/CCCma/CanSISE/DATA/constants/' #@@
+
+    fname = basepath + 'kem1rcp85a_v_001-061_climo.nc'
+    
+    return cnc.getNCvar(fname,'plev')
+
+
 def get_monweights():
 
     monwgts = np.array([31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31])
@@ -127,23 +141,217 @@ def get_g():
     g = 9.810616 
     return g
 
-def casenamec():
-    return 'kemctl1'
+## def casenamec():
+##     return 'kemctl1'
 
-def casenamep1():
-    return 'kem1pert1'
+## def casenamep1():
+##     return 'kem1pert1'
 
-def casenamep2():
-    return 'kem1pert2'
+## def casenamep2():
+##     return 'kem1pert2'
 
-def casenamep3():
-    return 'kem1pert3'
+## def casenamep3():
+##     return 'kem1pert3'
 
-def casenamech():
-    return 'kemhadctl'
+## def casenamech():
+##     return 'kemhadctl'
 
-def casenameph():
-    return 'kemhadpert'
+## def casenameph():
+##     return 'kemhadpert'
+
+def get_simsdict():
+    """ get_simsdict(): return a dictionary of all simulation dictionaries
+              of metadata.
+              
+               # simsdict subdict of metadata:
+               #   fullname, altname (possibly shorter/better for paper),
+               #   timestr, timesel, stdctl, diffname (when referring to pert-ctl)
+
+               @@ kemctl1e2-5 and kem1pert2e2-5 meta are yet to be added
+              
+    """
+
+    # simsdict subdict of metadata:
+    #   fullname, altname (possibly shorter/better for paper),
+    #   timestr, timesel, stdctl, diffname (when referring to pert-ctl)
+
+    # these will be keys (shortnames)
+    sims = ('ctl1', 'pert1', 'pert2', 'pert3', 'rcp85a',
+            'ctl1r1', 'ctl1r2', 'ctl1r3', 'ctl1r4', 'ctl1r4',
+            'pert2r1','pert2r2', 'pert2r3','pert2r4','pert2r5',
+            'pert2r4ct',
+            'hadctl', 'hadpert',
+            'nsidcctl', 'nsidcpert',
+            'ctl1e2', 'ctl1e3', 'ctl1e4', 'ctl1e4',
+            'pert2e2', 'pert2e3','pert2e4','pert2e5')
+
+    simsdict = dict.fromkeys(sims,{})
+
+    # kemctl1
+    meta = {'fullname': 'kemctl1', 'altname': 'CANctl', 'timestr': '001-121',
+            'timesel': '0002-01-01,0121-12-31','stdctl': None,'diffname': None}
+    simsdict['ctl1'] = meta
+    
+    # kem1pert1b
+    meta = {'fullname': 'kem1pert1b', 'altname': 'nosst', 'timestr': '001-121',
+            'timesel': '0002-01-01,0121-12-31','stdctl': 'ctl1','diffname': 'CANnosst'}
+    simsdict['pert1'] = meta
+
+    # kem1pert2
+    meta = {'fullname': 'kem1pert2', 'altname': 'CANpt', 'timestr': '001-121',
+            'timesel': '0002-01-01,0121-12-31','stdctl': 'ctl1','diffname': 'CAN'}
+    simsdict['pert2'] = meta
+    
+    # kem1pert3
+    meta = {'fullname': 'kem1pert3', 'altname': 'nothk', 'timestr': '001-121',
+            'timesel': '0002-01-01,0121-12-31','stdctl': 'ctl1','diffname': 'CANnothk'}
+    simsdict['pert3'] = meta
+
+    # kem1rcp85a
+    meta = {'fullname': 'kem1rcp85a', 'altname': 'RCPpt', 'timestr': '001-121',
+            'timesel': '0002-01-01,0121-12-31','stdctl': 'ctl1','diffname': 'RCPa'}
+    simsdict['rcp85a'] = meta
+
+    # kemctl1r1
+    meta = {'fullname': 'kemctl1r1', 'altname': 'R1ctl', 'timestr': '001-121',
+            'timesel': '0002-01-01,0121-12-31','stdctl': None,'diffname': None}
+    simsdict['ctl1r1'] = meta
+
+    # kemctl1r2
+    meta = {'fullname': 'kemctl1r2', 'altname': 'R2ctl', 'timestr': '001-121',
+            'timesel': '0002-01-01,0121-12-31','stdctl': None,'diffname': None}
+    simsdict['ctl1r2'] = meta
+
+    # kemctl1r3
+    meta = {'fullname': 'kemctl1r3', 'altname': 'R3ctl', 'timestr': '001-121',
+            'timesel': '0002-01-01,0121-12-31','stdctl': None,'diffname': None}
+    simsdict['ctl1r3'] = meta
+
+    # kemctl1r4
+    meta = {'fullname': 'kemctl1r4', 'altname': 'R4ctl', 'timestr': '001-121',
+            'timesel': '0002-01-01,0121-12-31','stdctl': None,'diffname': None}
+    simsdict['ctl1r4'] = meta
+
+    # kemctl1r5
+    meta = {'fullname': 'kemctl1r5', 'altname': 'R5ctl', 'timestr': '001-121',
+            'timesel': '0002-01-01,0121-12-31','stdctl': None,'diffname': None}
+    simsdict['ctl1r5'] = meta
+
+    # kemctl1ens
+    meta = {'fullname': 'kemctl1ens', 'altname': 'ENSctl', 'timestr': '001-121',
+            'timesel': '0002-01-01,0121-12-31','stdctl': None, 'diffname': None}
+    simsdict['ctl1ens'] = meta
+
+    # kem1pert2r1
+    meta = {'fullname': 'kem1pert2r1', 'altname': 'R1pt', 'timestr': '001-121',
+            'timesel': '0002-01-01,0121-12-31','stdctl': 'ctl1r1', 'diffname': 'R1'}
+    simsdict['pert2r1'] = meta
+
+    # kem1pert2r2
+    meta = {'fullname': 'kem1pert2r2', 'altname': 'R2pt', 'timestr': '001-121',
+            'timesel': '0002-01-01,0121-12-31','stdctl': 'ctl1r2', 'diffname': 'R2'}
+    simsdict['pert2r2'] = meta
+
+    # kem1pert2r3
+    meta = {'fullname': 'kem1pert2r3', 'altname': 'R3pt', 'timestr': '001-121',
+            'timesel': '0002-01-01,0121-12-31','stdctl': 'ctl1r3', 'diffname': 'R3'}
+    simsdict['pert2r3'] = meta
+
+    # kem1pert2r4
+    meta = {'fullname': 'kem1pert2r4', 'altname': 'R4pt', 'timestr': '001-121',
+            'timesel': '0002-01-01,0121-12-31','stdctl': 'ctl1r4', 'diffname': 'R4'}
+    simsdict['pert2r4'] = meta
+
+    # kem1pert2r5
+    meta = {'fullname': 'kem1pert2r5', 'altname': 'R5pt', 'timestr': '001-121',
+            'timesel': '0002-01-01,0121-12-31','stdctl': 'ctl1r5', 'diffname': 'R5'}
+    simsdict['pert2r5'] = meta
+
+    # kem1pert2ens
+    meta = {'fullname': 'kem1pert2ens', 'altname': 'ENSpt', 'timestr': '001-121',
+            'timesel': '0002-01-01,0121-12-31','stdctl': 'ctl1ens', 'diffname': 'ENS'}
+    simsdict['pert2ens'] = meta
+
+    # kem1pert2r4ct: constant thickness 'ct'
+    meta = {'fullname': 'kem1pert2r4ct', 'altname': 'R4ctpt', 'timestr': '001-121',
+            'timesel': '0002-01-01,0121-12-31','stdctl': 'ctl1r4', 'diffname': 'R4ct'}
+    simsdict['pert2r4ct'] = meta
+
+    # kemhadctl
+    meta = {'fullname': 'kemhadctl', 'altname': 'HADctl', 'timestr': '001-121',
+            'timesel': '0002-01-01,0121-12-31','stdctl': None,'diffname': None}
+    simsdict['hadctl'] = meta
+
+    # kemhadpert
+    meta = {'fullname': 'kemhadpert', 'altname': 'HADpt', 'timestr': '001-121',
+            'timesel': '0002-01-01,0121-12-31','stdctl': 'hadctl','diffname': 'HAD'}
+    simsdict['hadpert'] = meta
+
+    # kemnsidcctl
+    meta = {'fullname': 'kemnsidcctl', 'altname': 'NSIDCctl', 'timestr': '001-121',
+            'timesel': '0002-01-01,0121-12-31','stdctl': None,'diffname': None}
+    simsdict['nsidcctl'] = meta
+
+    # kemnsidcpert
+    meta = {'fullname': 'kemnsidcpert', 'altname': 'NSIDCpt', 'timestr': '001-121',
+            'timesel': '0002-01-01,0121-12-31','stdctl': 'nsidcctl','diffname': 'NSIDC'}
+    simsdict['nsidcpert'] = meta
+
+
+    return simsdict
+
+
+def get_simmeta(simkey):
+    """ get_simmeta(simkey): return the dictionary of metadata for given key
+    """
+
+    simsdict = get_simsdict()
+    return simsdict[simkey]
+    
+def get_simpairsdict():
+    """ get_simpairsdict(): returns a dictionary of dictionaries of sim metadata
+              Layout is: pairdict --> ctldict and pertdict --> each of those
+                            is a metadict (w/ sim metadata)
+    """
+    simsdict=get_simsdict()
+    
+    # build the pair dictionary. This matches a perturbation
+    #  simulation with its standard control, and leaves out anything
+    #  that isn't yet defined in the simsdict.
+    pairdict = {}
+    for skey in simsdict.iterkeys():
+
+        #print skey
+        simdict=simsdict[skey]
+        
+
+        if simdict == {}:
+            pass
+        elif simdict['diffname'] != None:
+            #print simdict['diffname']
+            # add the diffname to pairs dict as new key
+            # set up the simpair
+            simpt = simsdict[skey]
+            diffkey = simpt['diffname']
+            stdctl = simpt['stdctl']
+            
+            ctldict = simsdict[stdctl]
+            pertdict = simsdict[skey]
+            thepair = {'ctl': ctldict, 'pert': pertdict}
+            
+            pairdict[diffkey] = thepair
+
+    return pairdict
+
+def get_simpair(diffkey):
+    """ get_simpair(diffkey): returns a dictionary of
+                 ctl and pert simulation for given
+                 diffkey
+
+    """
+    
+    pairdict = get_simpairsdict()
+    return pairdict[diffkey]
 
 
 def getBCfilenames(field,sim=None):
@@ -188,8 +396,6 @@ def get_regiondict():
                           eurasia: latlims=[35,60]; lonlims=[40,120]
                           ntham: latlims=[35,60]; lonlims=[240,280]
                           nthatl: latlims=[35,60]; lonlims=[300,360]
-
-                 @@ should define region dict upon import, not in a func...
     """
     regions = ('polcap70', 'polcap65', 'polcap60', 'eurasia',
                'ntham', 'nthatl')
@@ -221,4 +427,39 @@ def get_regionlims(regname):
     regdict = get_regiondict()
 
     return regdict[regname]
+
     
+def get_t63regionmask(regname,limsdict=None):
+    """ get_t63regionmask(regname,limsdict=None):
+                          Return a lat x lon mask for given region name.
+                          If regname='other', use region defined in limsdict
+    """
+
+    lat=get_t63lat()
+    lon=get_t63lon()
+    lons,lats = np.meshgrid(lon,lat)    
+        
+    # create mask
+    if regname=='other':
+        pass # use given limsdict
+    else:
+        limsdict = get_regionlims(regname)
+        
+    latlims = limsdict['latlims']
+    lonlims = limsdict['lonlims']
+
+    reglatsbool = np.logical_and(lat>latlims[0],lat<latlims[1])
+    reglonsbool = np.logical_and(lon>lonlims[0],lon<lonlims[1])
+
+    # create mask of everything but the region of interest
+    regmask = np.logical_or( 
+                            np.logical_or(lats<latlims[0],lats>latlims[1]), 
+                            np.logical_or(lons<lonlims[0],lons>lonlims[1]))
+
+    return regmask
+
+
+if __name__ == "__main__":
+    plot_allregions()
+    
+
