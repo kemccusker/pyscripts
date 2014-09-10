@@ -6,9 +6,11 @@
                 should not be (in the end...) so can have prep scripts for CanESM2, etc
                 
 """
+import constants as con
 import simulation_funcs as sfnc
 
 sfnc = reload(sfnc)
+con = reload(con)
 
 plt.close("all")
 plt.ion()
@@ -30,12 +32,12 @@ level=50000 # for threed
 nonstandardlev=False # standards are 700,500,300
 
 # Choose type of plot =========================
-seasonalmap=True # seasonal maps (SON, DJF, MAM, JJA)
+seasonalmap=False # seasonal maps (SON, DJF, MAM, JJA)
 seasonalvert=False # seasonal vertical zonal means instead of maps
 screen=True # whether to have screen-style vertical zonal means
 
 plotzonmean=False # plotzonmean,plotseacyc,pattcorrwithtime are mutually exclusive
-plotseacyc=False # plotzonmean,plotseacyc,pattcorrwithtime are mutually exclusive
+plotseacyc=True # plotzonmean,plotseacyc,pattcorrwithtime are mutually exclusive
 seacyclatlim=60 # southern limit for plotting polar mean seasonal cycles (line plot)
 withlat=False # plot the seasonal cycle with latitude dimension too (only for plotseacyc=1)@@for now just std over ens
 squatseacyc=False # plot seacycle figs as shorter than wide
@@ -68,8 +70,9 @@ levlim= 100 # level limit for vertical ZM plots (in hPa). ignored if screen=True
 
 # not sure these flags are in use?
 sigtype = 'cont' # significance: 'cont' or 'hatch' which is default
-sigoff=0 # if 1, don't add significance
+sigoff=False # if True, don't add significance
 siglevel=0.05
+model='CanAM4'
 # ??
 
 
@@ -135,13 +138,17 @@ elif halftime2:
     90000, 92500, 95000, 97500, 100000 ;
 """
 fdict = {'field': field, 'ncfield': None, 'fieldstr': None,
-             'units': None, 'conv': conv} # fielddict
+             'units': None, 'conv': conv,
+             'nonstandardlev': nonstandardlev} # fielddict
+
 # reserved for expansion into the plotfunction call
 pparams = {'cmin': None, 'cmax': None, 'cmap': 'blue2red_20',              
            'type':'nh', 'latlim': latlim} # plotparams
 
 infodict ={'cmapclimo': 'Spectral_r','leglocs': None,
-           'seacycylim': None, 'savestr': None} # random other info
+           'seacycylim': None, 'savestr': None,
+           'model': model, 'sigtype': sigtype, 'sigoff': sigoff,
+           'pct': pct} # random other info
 
 if field == 'st':
     fdict['units'] = 'K'
@@ -158,7 +165,7 @@ if field == 'st':
     #cminmp = -1; cmaxmp = 1 # for when pert is 'ctl'
     #cminn = -5; cmaxn = 5 # for norm by std
 
-    if plotseacyc==1  and withlat==1:
+    if plotseacyc  and withlat:
         pparams['cmin']=-.5;
         pparams['cmax']=.5 # @@ will have to update this when add subplots
         
@@ -208,7 +215,7 @@ elif field == 'pmsl':
     
     cminn = -1; cmaxn = 1 # for norm by std
 
-    if plotseacyc==1  and withlat==1:
+    if plotseacyc  and withlat:
         cminm=-1; cmaxm=1 # @@ will have to update this when add subplots
     leglocs = 'lower left', 'lower left', 'upper center', 'lower left'
     seacycylim=(-2,1.5) # >70N
@@ -374,7 +381,6 @@ elif field == 't':
         else:
             cmin = -.5; cmax = .5
             cminm = -.8; cmaxm = .8 
-        
 elif field == 'u':
     threed = 1
 
@@ -461,10 +467,16 @@ if seasonalmap or seasonalvert:
     # this one does data processing and plotting together
     # some stuff in the function need to be removed or set differently.@@
     # marked in the function @@
-    sfnc.plot_seasonal_maps(fdict,coords,sims,pparams,vert=seasonalvert,info=infodict,seas=seasons)
+    sfnc.plot_seasonal_maps(fdict,coords,sims,pparams,vert=seasonalvert,loctimesel=timesel,info=infodict,seas=seasons)
     
 
-elif plotzonmean or plotseacyc or pattcorrwithtime or plotregmean:
+elif plotseacyc:
+
+    print 'test me @@'
+    dblob = sfnc.calc_seasonal_cycle(fdict,coords,sims,withlat=withlat,loctimesel=timesel,info=infodict)
+
+
+elif plotzonmean or pattcorrwithtime or plotregmean:
 
     # call a func that isn't there yet
     print '@@ not implemented'
