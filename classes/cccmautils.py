@@ -123,6 +123,20 @@ def calc_seaicearea(input,lat,lon):
     
     return sia
 
+def calc_totseaicearea(input,lat,lon):
+    """ calculate total sea ice area
+           returns nh,sh
+           input is expected to be time x lat x lon
+
+        @@ needs testing 9/9/2014
+    """
+
+    sia = calc_seaicearea(input,lat,lon)
+    nh = np.sum(np.sum(sia[:,lat>0,:],axis=2),axis=1)
+    sh = np.sum(np.sum(sia[:,lat<0,:],axis=2),axis=1)
+
+    return nh,sh
+
 def calc_meanseaicethick(input,lat,lon):
     """ calc_meanseaicethick(input,lat,lon)
                  input: 2D or greater array of sea ice thickness
