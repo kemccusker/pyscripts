@@ -1237,9 +1237,9 @@ if plotzonmean==1 or plotseacyc==1 or pattcorrwithtime==1 or plotregmean==1:
 
             elif plotregmean==1:
                 
-                limsdict = con.get_regionlims(region)
-                fldczm = cutl.calc_regmean(fldczm,lat,lon,limsdict)
-                fldpzm = cutl.calc_regmean(fldpzm,lat,lon,limsdict) 
+                #limsdict = con.get_regionlims(region)
+                fldczm = cutl.calc_regmean(fldczm,lat,lon,region)#limsdict)
+                fldpzm = cutl.calc_regmean(fldpzm,lat,lon,region)#limsdict) 
 
             seafldcstddict[sea] = np.std(fldczm,axis=0)
             seafldpstddict[sea] = np.std(fldpzm,axis=0)
