@@ -474,9 +474,11 @@ def calc_Nmin(xx,yy,tcrit=1.9719):
     return Nmin
 
 
-def mask_region(fld,lat,lon,limsdict):
+def mask_region(fld,lat,lon,region,limsdict=None):
     """ mask_region(fld, lat,lon,limsdict):
-                 Mask the input data with the given region in limsdict.
+                 Mask the input data with the given region either defined
+                    already in regiondict, or overridden with limsdict.
+                    If limsdict is to be used, set region='other'
                  The data will be masked everywhere BUT the region!
 
                  fld: lat x lon array of data
@@ -484,16 +486,21 @@ def mask_region(fld,lat,lon,limsdict):
 
                  lat: array of lats (coordinates)
                  lon: array of lons (coordinates)
+                 region: named region (defined in constants.py)
                  limsdict: a dictionary of 'latlim' array and 'lonlim' array
-                           (ie from a region dictionary)
+                           (ie from a region dictionary, or user-defined)
 
                  Returns: Tuple of masked field, mask
     """
 
-    lons,lats = np.meshgrid(lon,lat)
-    
+    lons,lats = np.meshgrid(lon,lat)    
         
     # create mask
+    if region=='other':
+        pass # use given limsdict
+    else:
+        limsdict = con.get_regionlims(region)
+        
     latlims = limsdict['latlims']
     lonlims = limsdict['lonlims']
 
@@ -514,21 +521,27 @@ def mask_region(fld,lat,lon,limsdict):
 
     return fld, regmaskt
 
-def calc_regmean(fld,lat,lon,limsdict):
+def calc_regmean(fld,lat,lon,region,limsdict=None):
+    """ calc_regmean(fld, lat,lon,region,limsdict=None):
+                 Mask the input data with the given region either defined
+                    already in regiondict, or overridden with limsdict.
+                    If limsdict is to be used, set region='other'
+                 The data will be masked everywhere BUT the region!
 
+                 fld: lat x lon array of data
+                      time x lat x lon OR lev x lat x lon also accepted (not tested)
 
-    fldm,regmask = mask_region(fld,lat,lon,limsdict)
+                 lat: array of lats (coordinates)
+                 lon: array of lons (coordinates)
+                 region: named region (defined in constants.py)
+                 limsdict: a dictionary of 'latlim' array and 'lonlim' array
+                           (ie from a region dictionary, or user-defined)
+
+                 Returns: Regional mean (or series of regional means with length ndim1)
+    """
+
     
-    ## lons,lats = np.meshgrid(lon,lat)
-                
-    ##             ntime = fldczm.shape[0]
-                
-    ##             reglatsbool = np.logical_and(lat>latlims[0],lat<latlims[1])
-    ##             reglonsbool = np.logical_and(lon>lonlims[0],lon<lonlims[1])
-    ##             regmask = np.logical_or(
-    ##                 np.logical_or(lats<latlims[0],lats>latlims[1]), 
-    ##                 np.logical_or(lons<lonlims[0],lons>lonlims[1]))
-    ##             regmaskt = np.tile(regmask,(ntime,1,1)) # tiled regional mask
+    fldm,regmask = mask_region(fld,lat,lon,region,limsdict)
 
     # calculate area-weights
     areas = calc_cellareas(lat,lon)
