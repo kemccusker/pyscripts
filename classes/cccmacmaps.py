@@ -505,22 +505,41 @@ def get_colordict(project=None):
                                      simulations
                             
                             Current keys:
-                            'r1','r2','r3','r4','r5','ens','',
-                            'kemhad','r4ct','kem1pert1b','kem1pert3'
+                            
+
                             """
-    colordict = {'r1': get_linecolor('warm1'), #'firebrick'),
-             'r4': get_linecolor('warm2'), #'firebrick1'),
-             'r3': get_linecolor('warm3'), #'yelloworange'),#'chocolate1'),
-             'r5': get_linecolor('warm4'), #'darkyellow') #'skyblue'), #yelloworange'),
-             'r2': get_linecolor('warm5'), #'steelblue3'), #'darkgoldenrod1'),
-             'ens': get_linecolor('magenta'),
-             '': get_linecolor('mediumblue'), #'mediumpurple1'), #darkyellow'),
-             'kemhad': get_linecolor('deepskyblue'),
-             'kemnsidc': get_linecolor('steelblue4'),
-             'r4ct': get_linecolor('darkseagreen4'),
-             'kem1pert1b': get_linecolor('darkolivegreen3'),
-             'kem1pert3': get_linecolor('darkolivegreen1'),
-             'kem1rcp85a': get_linecolor('orange1') }
+
+    #pairs = con.get_simpairsdict()
+    ##     pairs.keys()
+    ## Out[33]: 
+    ## ['NSIDC',
+    ##  'R4',
+    ##  'CANnothk',
+    ##  'R1',
+    ##  'R2',
+    ##  'R5',
+    ##  'RCPa',
+    ##  'R3',
+    ##  'HAD',
+    ##  'ENS',
+    ##  'CAN',
+    ##  'CANnosst',
+    ##  'R4ct']
+
+    
+    colordict = {'R1': get_linecolor('warm1'), #'firebrick'),
+             'R4': get_linecolor('warm2'), #'firebrick1'),
+             'R3': get_linecolor('warm3'), #'yelloworange'),#'chocolate1'),
+             'R5': get_linecolor('warm4'), #'darkyellow') #'skyblue'), #yelloworange'),
+             'R2': get_linecolor('warm5'), #'steelblue3'), #'darkgoldenrod1'),
+             'ENS': get_linecolor('magenta'),
+             'CAN': get_linecolor('mediumblue'), #'mediumpurple1'), #darkyellow'),
+             'HAD': get_linecolor('deepskyblue'),
+             'NSIDC': get_linecolor('steelblue4'),
+             'R4ct': get_linecolor('darkseagreen4'),
+             'CANnosst': get_linecolor('darkolivegreen3'),
+             'CANnothk': get_linecolor('darkolivegreen1'),
+             'RCPa': get_linecolor('orange1') }
 
     return colordict
 
