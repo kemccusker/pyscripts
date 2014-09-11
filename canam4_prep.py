@@ -63,7 +63,7 @@ addobs=True # add mean of kemhad* & kemnsidc* runs to line plots, seasonal maps.
 addr4ct=False # add kem1pert2r4ct (constant thickness version of ens4)
 addsens=False # add sensitivity runs (kem1pert1b, kem1pert3)
 addrcp=True # add kem1rcp85a simulation (and others if we do more)
-simsforpaper=True # meanBC, HAD, NSIDC only. best for maps and zonal mean figs (not line plots)
+simsforpaper=False # meanBC, HAD, NSIDC only. best for maps and zonal mean figs (not line plots)
 
 latlim = None # None #45 # lat limit for NH plots. Set to None otherwise. use 45 for BC-type maps
 levlim= 100 # level limit for vertical ZM plots (in hPa). ignored if screen=True
@@ -86,6 +86,7 @@ threed=False # is the field three dimensional
 sia=False # is the requested field sea ice area
 conv=1
 timesel=None
+isflux=False
 
 # set up simulations and figure filename strings
 sims = 'R1','R4','R3','R5','R2','ENS','CAN' # R's in order of sea ice loss
@@ -137,9 +138,11 @@ elif halftime2:
     55000, 60000, 65000, 70000, 75000, 77500, 80000, 82500, 85000, 87500, 
     90000, 92500, 95000, 97500, 100000 ;
 """
+
 fdict = {'field': field, 'ncfield': None, 'fieldstr': None,
-             'units': None, 'conv': conv,
-             'nonstandardlev': nonstandardlev} # fielddict
+         'units': None, 'conv': conv,
+         'nonstandardlev': nonstandardlev,
+         'threed': threed} # fielddict
 
 # reserved for expansion into the plotfunction call
 pparams = {'cmin': None, 'cmax': None, 'cmap': 'blue2red_20',              
@@ -148,7 +151,7 @@ pparams = {'cmin': None, 'cmax': None, 'cmap': 'blue2red_20',
 infodict ={'cmapclimo': 'Spectral_r','leglocs': None,
            'seacycylim': None, 'savestr': None,
            'model': model, 'sigtype': sigtype, 'sigoff': sigoff,
-           'pct': pct} # random other info
+           'pct': pct, 'seacyclatlim': seacyclatlim} # random other info
 
 if field == 'st':
     fdict['units'] = 'K'
@@ -169,8 +172,8 @@ if field == 'st':
         pparams['cmin']=-.5;
         pparams['cmax']=.5 # @@ will have to update this when add subplots
         
-    #pparams['leglocs'] = 'upper left', 'upper left', 'upper right', 'upper left'
-    #pparams['seacycylim']=(-.5,4) # >70N
+    leglocs = 'upper left', 'upper left', 'upper right', 'upper left'
+    seacycylim=(-.5,4) # >70N
     
 elif field == 'sic':
 
@@ -254,6 +257,8 @@ elif field == 'hfl': # sfc upward LH flux
     cminm = -8
     cmaxm = 8
 
+    isflux=True
+    
 elif field == 'hfs': # sfc upward SH flux
     units = 'W/m2'
     conv = 1
@@ -262,6 +267,7 @@ elif field == 'hfs': # sfc upward SH flux
     cminm = -8
     cmaxm = 8
 
+    isflux=True
 elif field == 'turb': # combine hfl and hfs
     units = 'W/m2'
     conv=1
@@ -282,6 +288,8 @@ elif field == 'net': # net of all sfc fluxes
     cmap='blue2red_20'
     leglocs = 'upper left', 'upper left', 'upper left', 'upper left'
     seacycylim=(-5,25) # always >40N (where there is ice in CTL)
+
+    isflux=True
 elif field == 'flg': # net downward LW at the sfc.
     units = 'W/m2'
     conv = -1 # so positive heats atmos
@@ -290,6 +298,8 @@ elif field == 'flg': # net downward LW at the sfc.
     cminm = -8
     cmaxm = 8
     leglocs = 'upper left', 'lower left', 'upper left', 'upper left'
+
+    isflux=True
 elif field == 'fsg': # net (absorbed) solar downard at sfc
     units = 'W/m2'
     conv = 1
@@ -297,6 +307,8 @@ elif field == 'fsg': # net (absorbed) solar downard at sfc
     cmax = 5
     cminm = -8
     cmaxm = 8
+
+    isflux=True
 
 elif field == 'fn': # snow fraction
     units = '%'
@@ -355,7 +367,7 @@ elif field == 'sv':
     cmaxm = .5
 
 elif field == 't':
-    threed = 1
+    threed = True
 
     conv=1
     ncfield = 'TEMP'
@@ -382,7 +394,7 @@ elif field == 't':
             cmin = -.5; cmax = .5
             cminm = -.8; cmaxm = .8 
 elif field == 'u':
-    threed = 1
+    threed = True
 
     conv=1
     ncfield = 'U'
@@ -409,7 +421,7 @@ elif field == 'u':
     #cmapclimo='blue2red_20'
 
 elif field == 'gz':
-    threed=1
+    threed=True
 
     ncfield = 'PHI'
     units = 'm' # @@
@@ -450,7 +462,10 @@ fluxes = 'hfl','hfs','flg' # LH, SH, LWdown
 
 coords = {'lev': con.get_t63lev(), 'lat': con.get_t63lat(), 'lon': con.get_t63lon()}
 infodict['savestr'] = savestr
-
+infodict['leglocs'] = leglocs
+infodict['seacycylim'] = seacycylim
+fdict['isflux'] = isflux
+fdict['threed'] = threed
 
 
 # do an if elif elif ....
@@ -475,6 +490,8 @@ elif plotseacyc:
     print 'test me @@'
     dblob = sfnc.calc_seasonal_cycle(fdict,coords,sims,withlat=withlat,loctimesel=timesel,info=infodict)
 
+    #sfnc.plot_seasonal_cycle(dblob,fdict,sims,ptypes=('climo','anom'),info=infodict)
+    
 
 elif plotzonmean or pattcorrwithtime or plotregmean:
 
