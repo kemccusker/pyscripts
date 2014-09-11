@@ -578,3 +578,60 @@ def calc_regmean(fld,lat,lon,region,limsdict=None):
     return fldreg
 
 
+def calc_monthlystd(input):
+    """ calc_monthlystd(input):
+               Given a monthly timeseries (input) of size time [x lat x lon],
+               return a std deviation for each month such that the return dimension
+               is 12 x [shape[1:]].
+
+        Note, can also get this info from climatologize(), which returns
+          (climo,stddev)
+               
+    """
+    dims = input.shape
+    nt = dims[0]
+
+    if len(dims)==1:
+        stddev = np.zeros((12))
+    else:
+        diml = list(dims[1:])
+        diml.insert(0,12) # insert size 12 into first dimension
+        diml = tuple(diml)
+        stddev = np.zeros(diml)
+        
+    mo = np.arange(0,12)
+
+    for moidx in mo:
+
+        stddev[mo] = np.std(input[moidx::12,...],axis=0)
+
+    return stddev
+
+def calc_monthlytstat(input1,input2):
+    """ calc_monthlytstat(input1,input2):
+            Testing input1 against input2 (think of input2 as a control)
+
+            return tuple of tstat,pval with shape 12 [x shape[1:]]
+    """
+
+    dims = input1.shape
+    nt = dims[0]
+
+    if len(dims)==1:
+        tstat = np.zeros((12))
+        pval = np.zeros((12))
+    else:
+        diml = list(dims[1:])
+        diml.insert(0,12) # insert size 12 into first dimension
+        diml = tuple(diml)
+        tstat = np.zeros(diml)
+        pval = np.zeros(diml)
+        
+    mo = np.arange(0,12)
+
+    for moidx in mo:
+        tstat[moidx,...],pval[moidx,...] =sp.stats.ttest_ind(input1[moidx::12,...],
+                                                             input2[moidx::12,...],
+                                                             axis=0)
+
+    return (tstat,pval)
