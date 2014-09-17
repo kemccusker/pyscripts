@@ -137,13 +137,41 @@ def calc_totseaicearea(input,lat,lon):
 
     return nh,sh
 
-def calc_meanseaicethick(input,lat,lon):
-    """ calc_meanseaicethick(input,lat,lon)
+def calc_meanseaicethick(input,sia,lat,lon):
+    """ calc_meanseaicethick(input,sia,lat,lon)
                  input: 2D or greater array of sea ice thickness
-                 
+                 need sea ice area? @@
     """
     
-    print "Not finished!"
+    print "Not finished! @@"
+
+def calc_totseaicevol(input,sic,lat,lon,repeat=False,area=False):
+    """ calculate total ice volume
+           returns nh, sh
+           input is expected to be time x lat x lon in units of thickness (not mass)
+           sic is fractional sea ice concentration
+           if sic must be repeated to match input, set
+              repeat=True (@@ not yet implemented)
+           set area=True if sic input is actually sea ice area,
+              otherwise sia will be calc'd from incoming sic
+    """
+
+    if repeat:
+        print 'add repeat@@'
+
+    if area==False:
+        sia=calc_seaicearea(sic,lat,lon)
+    else:
+        sia=sic
+    
+    gridvoln = input[:,lat>0,...]*sia[:,lat>0,...] # north
+    gridvols = input[:,lat<0,...]*sia[:,lat<0,...] # south
+
+    nh = np.sum(np.sum(gridvoln,2),1)
+    sh = np.sum(np.sum(gridvols,2),1)
+    
+    return nh,sh
+    
     
 def global_mean_areawgted3d(input, lat, lon):
 
