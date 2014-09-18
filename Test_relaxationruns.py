@@ -36,12 +36,12 @@ cutl = reload(cutl)
 plt.close('all')
 #plt.ion()
 
-printtofile=False
+printtofile=True
 showmaps=False  # show all the monthly map comparisons?
 
 
 #  set field here ==============
-field = 'sic'
+field = 'sicn'
 # ==============================
 
 model = 'CanESM2'
@@ -263,19 +263,30 @@ ax.set_ylim(ylims)
 ax.set_xlim((0,110))
 
 if printtofile:
-    fig.savefig('2xnudge_RMSE_climo_ts.pdf')
+    fig.savefig(field + '_2xnudge_RMSE_climo_ts.pdf')
+
 
 print 'RMSE over polar cap (>60N) by month'
 rmseclimdf = pd.DataFrame(rmseclimdt)
-print rmseclimdf
+g1sims=sims[2:9]
+g2sims=sims[9:]
 
-print 'ANN mean RMSE'
+g1rmseclim=rmseclimdf.loc[:,g1]
+g2rmseclim=rmseclimdf.loc[:,g2]
+
+print g1rmseclim
+
+#print 'ANN mean RMSE'
 
 annrmseclim = rmseclimdf.mean(axis=0)
-print annrmseclim
+#print annrmseclim
 
 print '\nANN mean RMSE (day-weighted)'
-print annrmseclimdt
+#print annrmseclimdt
+annrmseclimdf = pd.DataFrame(annrmseclimdt)
+g1annrmseclim = annrmseclimdf.loc[:,g1]
+g2annrmseclim = annrmseclimdf.loc[:,g2]
+print g1annrmseclim
 
 # <rawcell>
 
@@ -431,18 +442,20 @@ ax.set_ylim(ylims)
 ax.set_xlim((0,110))
 
 if printtofile:
-    fig.savefig('preinudge_RMSE_climo_ts.pdf')
+    fig.savefig(field + '_preinudge_RMSE_climo_ts.pdf')
 
-## print 'RMSE over polar cap (>60N) by month'
+print 'RMSE over polar cap (>60N) by month'
 ## rmseclimdfb = pd.DataFrame(rmseclimdictb)
 ## print rmseclimdfb
-
+print g2rmseclim
 ## print 'ANN mean RMSE'
 
 ## annrmseclimb = rmseclimdfb.mean(axis=0)
 ## print annrmseclimb
 
-## print '\nANN mean RMSE (day-weighted)'
+print '\nANN mean RMSE (day-weighted)'
+print g2annrmseclim
+
 ## print annrmseclimdictb
 
 # <rawcell>
