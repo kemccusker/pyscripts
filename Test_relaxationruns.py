@@ -41,7 +41,7 @@ showmaps=False  # show all the monthly map comparisons?
 
 
 #  set field here ==============
-field = 'sicn'
+field = 'sic'
 # ==============================
 
 model = 'CanESM2'
@@ -55,29 +55,29 @@ timeper2x='2451_2460'
 timesel = '2922-01-01,2930-12-31' # skip first year
 timesel2x = '2452-01-01,2460-12-31' # skip first year
 
-sims = ('iga','gregory_2xco2','kel11','kel09','kel14','kel15','kel17','kel18','kel20',
-        'kel10','kel12','kel16','kel19','kel21')
+sims = ('iga','gregory_2xco2','kel11','kel09','kel14','kel15','kel17','kel18','kel20','kel24',
+        'kel10','kel12','kel16','kel19','kel21','kel25') # 2:10, nudge to 2xco2. 10:, nudge to preI
 timeperdt={'iga':timeperc,
            'gregory_2xco2': timeper2x,
            'kel11': timeperc, 'kel09': timeperc, 'kel14': timeperc, 'kel15': timeperc,
-           'kel17': timeperc, 'kel18': timeperc, 'kel20': timeperc,
+           'kel17': timeperc, 'kel18': timeperc, 'kel20': timeperc,'kel24': timeperc,
            'kel10': timeper2x,'kel12': timeper2x,'kel16': timeper2x,'kel19': timeper2x,
-           'kel21': timeper2x}
+           'kel21': timeper2x, 'kel25': timeper2x}
 timeseldt={'iga':timesel,
            'gregory_2xco2': timesel2x,
            'kel11': timesel, 'kel09': timesel, 'kel14': timesel, 'kel15': timesel,
-           'kel17': timesel, 'kel18': timesel, 'kel20': timesel,
+           'kel17': timesel, 'kel18': timesel, 'kel20': timesel, 'kel24': timesel,
            'kel10': timesel2x,'kel12': timesel2x,'kel16': timesel2x,'kel19': timesel2x,
-           'kel21': timesel2x}
+           'kel21': timesel2x,'kel25': timesel2x}
 
 
 """ The run names to consider from the first set are
 
-kel09, kel11, kel14, kel15, kel17, kel18, kel20 -- timeper '2921_2930'
+kel09, kel11, kel14, kel15, kel17, kel18, kel20,* kel24 -- timeper '2921_2930'
 
 The run names from the second set are
 
-kel10, kel12, kel16, kel19, kel21 -- timeper '2451_2460'
+kel10, kel12, kel16, kel19, kel21, *kel25 -- timeper '2451_2460'
 
 'controls'
 iga -- 2921_2930
@@ -132,8 +132,8 @@ if showmaps:
                               cmap='blue2blue_bw10',cmin=cminc,cmax=cmaxc,lmask=1,title='preI')
     if printtofile:
         fig1.savefig(field + '_iga_allmos_nh.pdf')
-        
-    for skey in sims[2:9]: # just the Group I sims, climo and diff
+
+    for skey in sims[2:10]: # just the Group I sims, climo and diff
         fig2 = cplt.map_allmonths(flddt[skey],lat,lon,type='nh',
                                  cmap='blue2blue_bw10',cmin=cminc,cmax=cmaxc,lmask=1,title='2xco2 nudge (' + skey + ')')
         fig3 = cplt.map_allmonths(flddt[skey]-fldc,lat,lon,type='nh',
@@ -157,7 +157,7 @@ if showmaps:
     if printtofile:
         fig1.savefig(field + '_gregory_2xco2_allmos_nh.pdf')
         
-    for skey in sims[9:]: # just the Group II sims, climo and diff
+    for skey in sims[10:]: # just the Group II sims, climo and diff
         fig2 = cplt.map_allmonths(flddt[skey],lat,lon,type='nh',
                                  cmap='blue2blue_bw10',cmin=cminc,cmax=cmaxc,lmask=1,title='preI nudge (' + skey + ')')
         fig3 = cplt.map_allmonths(flddt[skey]-fldc2x,lat,lon,type='nh',
@@ -191,7 +191,7 @@ fldc = flddt['iga']
 fldcclim,std = cutl.climatologize(fldc) # climo mean (iga)
 fldclimdt['iga'] = fldcclim
 
-for skey in sims[2:9]: # Group I
+for skey in sims[2:10]: # Group I
     fld = flddt[skey]
     # timeseries
     flddiffdt[skey] = fldc2x-fld
@@ -209,7 +209,7 @@ for skey in sims[2:9]: # Group I
     
     climrmsedt[skey],rmsestd = cutl.climatologize(rmsedt[skey])
 
-for skey in sims[9:]: # Group II
+for skey in sims[10:]: # Group II
     fld = flddt[skey]
     # timeseries
     flddiffdt[skey] = fldc-fld 
@@ -230,7 +230,12 @@ for skey in sims[9:]: # Group II
 # <codecell>
 
 from matplotlib import gridspec
-colors = ('b','g','m','y','c','k','r')
+colors = ('b','g','m','y','c','k','r',ccm.get_linecolor('mediumpurple4'))
+cdict = {'iga': '0.5', 'gregory_2xco2': '0.3',
+         'kel11': 'b', 'kel09': 'g', 'kel14': 'm', 'kel15': 'y', 'kel17': 'c',
+         'kel18': 'k', 'kel20': 'r', 'kel24': ccm.get_linecolor('limegreen'),
+         'kel10': 'b', 'kel12': 'g', 'kel16': 'm', 'kel19': 'y', 'kel21': 'c',
+         'kel25': ccm.get_linecolor('limegreen')}
 
 mons=np.arange(1,13)
 
@@ -239,13 +244,13 @@ fig = plt.figure(figsize=(14,4))
 gs = gridspec.GridSpec(1, 2, width_ratios=[1, 2]) 
 
 ax=plt.subplot(gs[0])
-for sii,skey in enumerate(sims[2:9]):
-    ax.plot(mons,rmseclimdt[skey],color=colors[sii],linewidth=2) # RMSE of climatologies
+for sii,skey in enumerate(sims[2:10]):
+    ax.plot(mons,rmseclimdt[skey],color=cdict[skey],linewidth=2) # RMSE of climatologies
 
-for sii,skey in enumerate(sims[2:9]):
-    ax.plot(mons,climrmsedt[skey],color=colors[sii],linestyle='--',linewidth=2)# climatology of the RMSE in time
+for sii,skey in enumerate(sims[2:10]):
+    ax.plot(mons,climrmsedt[skey],color=cdict[skey],linestyle='--',linewidth=2)# climatology of the RMSE in time
 
-legstr=sims[2:9] + ('time avg RSME',)
+legstr=sims[2:10] + ('time avg RSME',)
 ax.legend(legstr,loc='upper left', fancybox=True,
           prop=fontP,framealpha=0.5,ncol=2)
 ax.set_title(region + ': RMSE of climo (solid)')
@@ -253,10 +258,10 @@ ax.set_ylim(ylims)
 ax.set_xlim((1,12))
 
 ax=plt.subplot(gs[1])
-for sii,skey in enumerate(sims[2:9]):
-    ax.plot(rmsedt[skey],color=colors[sii],linewidth=2)# RMSE in time (over 9 years)
+for sii,skey in enumerate(sims[2:10]):
+    ax.plot(rmsedt[skey],color=cdict[skey],linewidth=2)# RMSE in time (over 9 years)
 
-ax.legend(sims[2:9],loc='upper left',fancybox=True,
+ax.legend(sims[2:10],loc='upper left',fancybox=True,
           prop=fontP,framealpha=0.5, ncol=2)
 ax.set_title(region + ': RMSE in time')
 ax.set_ylim(ylims)
@@ -268,11 +273,11 @@ if printtofile:
 
 print 'RMSE over polar cap (>60N) by month'
 rmseclimdf = pd.DataFrame(rmseclimdt)
-g1sims=sims[2:9]
-g2sims=sims[9:]
+g1sims=sims[2:10]
+g2sims=sims[10:]
 
-g1rmseclim=rmseclimdf.loc[:,g1]
-g2rmseclim=rmseclimdf.loc[:,g2]
+g1rmseclim=rmseclimdf.loc[:,g1sims]
+g2rmseclim=rmseclimdf.loc[:,g2sims]
 
 print g1rmseclim
 
@@ -284,8 +289,8 @@ annrmseclim = rmseclimdf.mean(axis=0)
 print '\nANN mean RMSE (day-weighted)'
 #print annrmseclimdt
 annrmseclimdf = pd.DataFrame(annrmseclimdt)
-g1annrmseclim = annrmseclimdf.loc[:,g1]
-g2annrmseclim = annrmseclimdf.loc[:,g2]
+g1annrmseclim = annrmseclimdf.loc[:,g1sims]
+g2annrmseclim = annrmseclimdf.loc[:,g2sims]
 print g1annrmseclim
 
 # <rawcell>
@@ -346,15 +351,15 @@ gs = gridspec.GridSpec(3,3)
 ax=plt.subplot(gs[0,0])
 
 ax.plot(mons,fldc2xplt/divby,color='.5',linewidth=2) # control 2xco2 is gray
-for sii,skey in enumerate(sims[2:9]):
-    ax.plot(mons,(fldpltclimdt[skey])/divby,color=colors[sii],linestyle='--',linewidth=2)
+for sii,skey in enumerate(sims[2:10]):
+    ax.plot(mons,(fldpltclimdt[skey])/divby,color=cdict[skey],linestyle='--',linewidth=2)
 
 ax.set_xlim((1,12))
 ax.set_title('NH ' + tstr)
 
 ax=plt.subplot(gs[0,1])
-for sii,skey in enumerate(sims[2:9]):
-    ax.plot(mons,(fldc2xplt-fldpltclimdt[skey])/divby,color=colors[sii],linewidth=2)
+for sii,skey in enumerate(sims[2:10]):
+    ax.plot(mons,(fldc2xplt-fldpltclimdt[skey])/divby,color=cdict[skey],linewidth=2)
 
 ax.set_xlim((1,12))
 ax.set_title('NH diff: gregory-2xco2 nudges')
@@ -366,15 +371,15 @@ ax.set_title('NH diff: gregory-iga (for ref)')
 
 # plot timeseries 
 ax=plt.subplot(gs[1,:]) # plot DIFF values through time.
-for sii,skey in enumerate(sims[2:9]):
-    ax.plot((fldc2xpltts-fldplttsdt[skey])/divby,color=colors[sii],linewidth=2)
+for sii,skey in enumerate(sims[2:10]):
+    ax.plot((fldc2xpltts-fldplttsdt[skey])/divby,color=cdict[skey],linewidth=2)
 ax.set_xlim((0,110))
 ax.set_ylabel('anomaly')
 
 ax=plt.subplot(gs[2,:]) # plot CLIMO values through time.
 ax.plot(fldc2xpltts/divby,color='.5',linewidth=3)
-for sii,skey in enumerate(sims[2:9]):
-    ax.plot(fldplttsdt[skey]/divby,color=colors[sii],linestyle='--',linewidth=2)
+for sii,skey in enumerate(sims[2:10]):
+    ax.plot(fldplttsdt[skey]/divby,color=cdict[skey],linestyle='--',linewidth=2)
 ax.set_xlim((0,110))
 ax.set_xlabel('time (months)')
 ax.set_ylabel('climo')
@@ -388,12 +393,12 @@ if printtofile:
 
 if showmaps:
     # # Compare 2xco2 with the 2xco2 nudge: maps
-    for skey in sims[2:9]:
+    for skey in sims[2:10]:
         fig = cplt.map_allmonths(fldc2x-flddt[skey],lat,lon,type='nh',
                                  cmap='red2blue_w20',cmin=cminn,cmax=cmaxn,lmask=1,
                                  title='2xco2 - 2xco2 nudge (' + skey + ')')
         if printtofile:
-            fig.savefig(field + 'diff_' + casenamec2x + '_v_' + skey + '_allmos_nh.pdf')
+            fig.savefig(field + 'diff_gregory_2xco2_v_' + skey + '_allmos_nh.pdf')
 
 
 # <rawcell>
@@ -418,12 +423,12 @@ fig = plt.figure(figsize=(14,4))
 gs = gridspec.GridSpec(1, 2, width_ratios=[1, 2]) 
 
 ax=plt.subplot(gs[0])
-for sii,skey in enumerate(sims[9:]):
-    ax.plot(mons,rmseclimdt[skey],color=colors[sii],linewidth=2)  # RMSE of climatologies
-for sii,skey in enumerate(sims[9:]):
-    ax.plot(mons,climrmsedt[skey],color=colors[sii],linestyle='--',linewidth=2)# climatology of the RMSE in time
+for sii,skey in enumerate(sims[10:]):
+    ax.plot(mons,rmseclimdt[skey],color=cdict[skey],linewidth=2)  # RMSE of climatologies
+for sii,skey in enumerate(sims[10:]):
+    ax.plot(mons,climrmsedt[skey],color=cdict[skey],linestyle='--',linewidth=2)# climatology of the RMSE in time
 
-legstr=sims[9:] + ('time avg RMSE',)
+legstr=sims[10:] + ('time avg RMSE',)
 ax.legend(legstr,loc='lower left',
           fancybox=True, prop=fontP,framealpha=0.5,ncol=2)
 ax.set_title(region + ': RMSE of climo (solid)')
@@ -432,10 +437,10 @@ ax.set_xlim((1,12))
 ax.set_ylim(ylims)
 
 ax=plt.subplot(gs[1])
-for sii,skey in enumerate(sims[9:]):
-    ax.plot(rmsedt[skey],color=colors[sii],linewidth=2)# RMSE in time (over 9 years)
+for sii,skey in enumerate(sims[10:]):
+    ax.plot(rmsedt[skey],color=cdict[skey],linewidth=2)# RMSE in time (over 9 years)
     
-ax.legend(sims[9:],
+ax.legend(sims[10:],
            loc='lower left',fancybox=True, prop=fontP,framealpha=0.5, ncol=2)
 ax.set_title(region + ': RMSE in time')
 ax.set_ylim(ylims)
@@ -477,16 +482,16 @@ gs = gridspec.GridSpec(3,3)
 ax=plt.subplot(gs[0,0])
 
 ax.plot(mons,fldcplt/divby,color='.5',linewidth=2) # control prei is gray
-for sii,skey in enumerate(sims[9:]):
-    ax.plot(mons,fldpltclimdt[skey]/divby,color=colors[sii],linestyle='--',linewidth=2)
+for sii,skey in enumerate(sims[10:]):
+    ax.plot(mons,fldpltclimdt[skey]/divby,color=cdict[skey],linestyle='--',linewidth=2)
     
 ax.set_xlim((1,12))
 ax.set_title('NH ' + tstr)
 
 
 ax = plt.subplot(gs[0,1])
-for sii,skey in enumerate(sims[9:]):
-    ax.plot(mons,(fldcplt-fldpltclimdt[skey])/divby,color=colors[sii],linewidth=2)
+for sii,skey in enumerate(sims[10:]):
+    ax.plot(mons,(fldcplt-fldpltclimdt[skey])/divby,color=cdict[skey],linewidth=2)
     
 ax.set_xlim((1,12))
 ax.set_title('NH diff: iga-prei nudges')
@@ -497,15 +502,15 @@ ax.set_xlim((1,12))
 ax.set_title('NH diff: gregory-iga (for ref)')
 
 ax=plt.subplot(gs[1,:]) # plot DIFF values through time.
-for sii,skey in enumerate(sims[9:]):
-    ax.plot((fldcpltts-fldplttsdt[skey])/divby,color=colors[sii],linewidth=2)
+for sii,skey in enumerate(sims[10:]):
+    ax.plot((fldcpltts-fldplttsdt[skey])/divby,color=cdict[skey],linewidth=2)
 ax.set_xlim((0,110))
 ax.set_ylabel('anomaly')
 
 ax=plt.subplot(gs[2,:]) # plot CLIMO values through time.
 ax.plot(fldcpltts/divby,color='.5',linewidth=3)
-for sii,skey in enumerate(sims[9:]):
-    ax.plot(fldplttsdt[skey]/divby,color=colors[sii],linestyle='--',linewidth=2)
+for sii,skey in enumerate(sims[10:]):
+    ax.plot(fldplttsdt[skey]/divby,color=cdict[skey],linestyle='--',linewidth=2)
 ax.set_xlim((0,110))
 ax.set_xlabel('time (months)')
 ax.set_ylabel('climo')
@@ -519,12 +524,12 @@ if printtofile:
 
 if showmaps:
     # # Compare preI with the preI nudge
-    for skey in sims[9:]:
+    for skey in sims[10:]:
         fig = cplt.map_allmonths(fldc-flddt[skey],lat,lon,type='nh',
                                  cmap='red2blue_w20',cmin=cminn,cmax=cmaxn,lmask=1,
                                  title='preI - preI nudge (' + skey + ')')
         if printtofile:
-            fig.savefig(field + 'diff_' + casenamec + '_v_' + skey + '_allmos_nh.pdf')
+            fig.savefig(field + 'diff_iga_v_' + skey + '_allmos_nh.pdf')
         
 
 # <rawcell>
