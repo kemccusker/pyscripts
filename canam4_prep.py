@@ -11,6 +11,7 @@ import simulation_funcs as sfnc
 
 sfnc = reload(sfnc)
 con = reload(con)
+#ccm = reload(ccm)
 
 plt.close("all")
 plt.ion()
@@ -24,7 +25,7 @@ plt.ion()
        # coords = {'lat': con.get_t63lat(), 'lon': con.get_t63lon()}
 
 
-printtofile=False
+printtofile=True
 
 field = 'st'
 smclim=False
@@ -36,8 +37,8 @@ seasonalmap=False # seasonal maps (SON, DJF, MAM, JJA)
 seasonalvert=False # seasonal vertical zonal means instead of maps
 screen=True # whether to have screen-style vertical zonal means
 
-plotzonmean=False # plotzonmean,plotseacyc,pattcorrwithtime are mutually exclusive
-plotseacyc=True # plotzonmean,plotseacyc,pattcorrwithtime are mutually exclusive
+plotzonmean=True # plotzonmean,plotseacyc,pattcorrwithtime are mutually exclusive
+plotseacyc=False # plotzonmean,plotseacyc,pattcorrwithtime are mutually exclusive
 seacyclatlim=60 # southern limit for plotting polar mean seasonal cycles (line plot)
 withlat=False # plot the seasonal cycle with latitude dimension too (only for plotseacyc=1)@@for now just std over ens
 squatseacyc=False # plot seacycle figs as shorter than wide
@@ -47,7 +48,7 @@ pattcorrwithtime=False # plot pattern correlation with time for each ens member
 pattcorryr=False # if 1, do a yearly anomaly pattern rather than time-integrated
 
 plotregmean=False
-region = 'polcap60' # polcap60, polcap65, polcap70, eurasia, ntham, nthatl
+region = None # None, polcap60, polcap65, polcap70, eurasia, ntham, nthatl
 
 testhadisst=0 # check which ens member most similar to hadisst
 
@@ -62,8 +63,9 @@ sensruns=False # sensruns only: addr4ct=1,addsens=1. others=0 no meanBC, r mean,
 addobs=True # add mean of kemhad* & kemnsidc* runs to line plots, seasonal maps. 
 addr4ct=False # add kem1pert2r4ct (constant thickness version of ens4)
 addsens=False # add sensitivity runs (kem1pert1b, kem1pert3)
-addrcp=True # add kem1rcp85a simulation (and others if we do more)
+addrcp=False # add kem1rcp85a simulation (and others if we do more)
 simsforpaper=False # meanBC, HAD, NSIDC only. best for maps and zonal mean figs (not line plots)
+addcanens=True # add "initial condition" ensemble of kemctl1/kem1pert2
 
 latlim = None # None #45 # lat limit for NH plots. Set to None otherwise. use 45 for BC-type maps
 levlim= 100 # level limit for vertical ZM plots (in hPa). ignored if screen=True
@@ -87,18 +89,25 @@ sia=False # is the requested field sea ice area
 conv=1
 timesel=None
 isflux=False
+shadeens=('histBC',)
+corrlim=45 # southern lat limit for pattern correlation with time
 
 # set up simulations and figure filename strings
-sims = 'R1','R4','R3','R5','R2','ENS','CAN' # R's in order of sea ice loss
+sims = 'R1','R4','R3','R5','R2','ENS'#,'CAN' # R's in order of sea ice loss
 
 if simsforpaper: # best for maps only
+    print '@@ need to fix sim names now that CAN has an ensemble'
     sims = ('HAD','NSIDC','CAN')
     savestr = '_forpap'
     seasons=('SON','DJF')
 elif sensruns: # add sensitivity runs. with Shaded ENS. don't plot meanBC, mean of ens
-    sims = sims[0:5] + ('R4ct','CANnosst','CANnothk')
+    sims = sims[0:5] + ('R4ct','CANnosst','CANnothk') # @@ change to E1nosst, etc?
     savestr = '_sensruns'
 else:
+    if addcanens:
+        sims = sims + ('E1','E2','E3') # @@@@ for now only 3. E1=CAN
+        savestr = savestr + 'canens'
+        shadeens=shadeens+('histIC',)
     if addobs:
         sims = sims + ('HAD','NSIDC')
         savestr = savestr + 'obs'
@@ -112,7 +121,6 @@ else:
         sims = sims + ('RCPa',) # control is kemctl1
         savestr = savestr + 'rcpa'
     
-
 
 
 # # # ######## set Field info ###################
@@ -151,7 +159,8 @@ pparams = {'cmin': None, 'cmax': None, 'cmap': 'blue2red_20',
 infodict ={'cmapclimo': 'Spectral_r','leglocs': None,
            'seacycylim': None, 'savestr': None,
            'model': model, 'sigtype': sigtype, 'sigoff': sigoff,
-           'pct': pct, 'seacyclatlim': seacyclatlim} # random other info
+           'pct': pct, 'seacyclatlim': seacyclatlim, 'region': region,
+           'shadeens': shadeens, 'corrlim': corrlim} # random other info
 
 if field == 'st':
     fdict['units'] = 'K'
@@ -173,7 +182,8 @@ if field == 'st':
         pparams['cmax']=.5 # @@ will have to update this when add subplots
         
     leglocs = 'upper left', 'upper left', 'upper right', 'upper left'
-    seacycylim=(-.5,4) # >70N
+    if region not in ('eurasia','ntham','nthatl'):
+        seacycylim=(-.5,4) # >70N
     
 elif field == 'sic':
 
@@ -205,23 +215,40 @@ elif field == 'gt':
     cminmp = -1; cmaxmp = 1 # for when pert is 'ctl'
     cmap = 'blue2red_w20'
 elif field == 'pmsl':
-    units = 'hPa' # pretty sure hpa @@double check
-    conv = 1
-    cmin = -1; cmax = 1  # for anomaly plots
-    cminm=-2; cmaxm=2  # for monthly maps
-    cminp=cmin; cmaxp=cmax # for when pert is 'ctl'
-    cminmp=cminm; cmaxmp=cmaxm
-    cmap = 'blue2red_20'
-    ## print 'new cmap and small clim! @@ '
-    ## cmap = 'blue2red_w20'
-    ## cminm=-1; cmaxm=1  for monthly maps, small clim
-    
-    cminn = -1; cmaxn = 1 # for norm by std
+    fdict['units'] = 'hPa'
+    fdict['ncfield'] = field.upper()
+    fdict['fieldstr'] = field
+
+    pparams['cmin'] = -2; pparams['cmax'] = 2 # seasonal/monthly
+    if smclim:
+        pparams['cmin'] = -1; pparams['cmax'] = 1 # seasonal/monthly
+        savestr= savestr + '_smclim'
+
+    pparams['cmap'] = 'blue2red_20'
 
     if plotseacyc  and withlat:
-        cminm=-1; cmaxm=1 # @@ will have to update this when add subplots
+        pparams['cmin']=-1;
+        pparams['cmax']=1 # @@ will have to update this when add subplots
+
     leglocs = 'lower left', 'lower left', 'upper center', 'lower left'
-    seacycylim=(-2,1.5) # >70N
+    if region not in ('eurasia','ntham','nthatl'):
+        seacycylim=(-2,1.5) # >70N
+
+    
+    ## units = 'hPa' # pretty sure hpa @@double check
+    ## conv = 1
+    ## cmin = -1; cmax = 1  # for anomaly plots
+    ## cminm=-2; cmaxm=2  # for monthly maps
+    ## cminp=cmin; cmaxp=cmax # for when pert is 'ctl'
+    ## cminmp=cminm; cmaxmp=cmaxm
+    ## cmap = 'blue2red_20'
+    ## ## print 'new cmap and small clim! @@ '
+    ## ## cmap = 'blue2red_w20'
+    ## ## cminm=-1; cmaxm=1  for monthly maps, small clim
+    
+    ## cminn = -1; cmaxn = 1 # for norm by std
+
+    
 elif field == 'pcp':
     units = 'mm/day' # original: kg m-2 s-1
     
@@ -445,7 +472,8 @@ elif field == 'gz':
     else:
         #cminsea = -15; cmaxsea = 15
         cminm = -15; cmaxm = 15  # for monthly
-        seacycylim=(-16,20) # >70N, 500hPa
+        if region not in ('eurasia','ntham','nthatl'):
+            seacycylim=(-16,20) # >70N, 500hPa
 
     if seasvert:
         if screen:
@@ -487,16 +515,24 @@ if seasonalmap or seasonalvert:
 
 elif plotseacyc:
 
-    print 'test me @@'
     dblob = sfnc.calc_seasonal_cycle(fdict,coords,sims,withlat=withlat,loctimesel=timesel,info=infodict)
 
-    #sfnc.plot_seasonal_cycle(dblob,fdict,sims,ptypes=('climo','anom'),info=infodict)
+    sfnc.plot_seasonal_cycle(dblob,fdict,sims,ptypes=('anom'),info=infodict,printtofile=printtofile)
     
 
-elif plotzonmean or pattcorrwithtime or plotregmean:
+elif plotzonmean:
+    
+    dblob = sfnc.calc_seasons(fdict,coords,sims,loctimesel=timesel,info=infodict,calctype='zonmean')
+    sfnc.plot_zonmean_byseas(dblob,fdict,coords,sims,ptypes=('climo','anom','stddev','stdan'),info=infodict,printtofile=printtofile)
 
-    # call a func that isn't there yet
-    print '@@ not implemented'
+elif pattcorrwithtime:
+
+    dblob = sfnc.calc_seasons(fdict,coords,sims,loctimesel=timesel,info=infodict,calctype='pattcorrwithtime')
+
+elif plotregmean:
+
+    dblob = sfnc.calc_seasons(fdict,coords,sims,loctimesel=timesel,info=infodict,calctype='regmean')
+    sfnc.plot_regmean_byseas(dblob,fdict,sims,info=infodict,printtofile=printtofile)
 
 elif testhadisst:
     print '@@testhadisst not implemented'

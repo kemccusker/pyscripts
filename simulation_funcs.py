@@ -23,6 +23,7 @@ import constants as con
 import cccmautils as cutl
 import cccmacmaps as ccm
 import cccmaNC as cnc
+import pandas as pd
 
 cplt = reload(cplt)
 con = reload(con)
@@ -234,25 +235,291 @@ def plot_seasonal_maps(fielddict,coords,sims,pparams,vert=False,loctimesel=None,
     ##             fig6.savefig(fieldstr + 'diff' + sigstr + '_enssubplot' + obsstr + ctstr + '_seas_nh'
     ##                          + latstr + '2.' + suff)
 
+def calc_seasons(fielddict,coords,sims,loctimesel=None,info=None,siglevel=0.05,
+                 calctype=None):
+    """ calc_seasons(fielddict,coords,sims,withlat=False,loctimesel=None,info=None,siglevel=0.05)
 
-def calc_seasonal_cycle(fielddict,coords,sims,withlat=False,loctimesel=None,info=None,siglevel=0.05):
-    """ calc_seasonal_cycle(fielddict,coords,sims,loctimesel=None,info=None,siglevel=0.05)
-
+              info: a dict which specifies lots of things, but in particular, which region to average
+              calctype: 'zonmean', 'regmean', 'pattcorrwithtime', 'pattcorrwithtimeyr', None
+              
               returns a data blob:
                    blob['ctl'] = fldcdict
                    blob['pert'] = fldpdict
                    blob['tstat'] = tstatdict
                    blob['pval'] = pvaldict
+                   blob['ci'] = cidict
+                   blob['ctlstd'] = fldcstddict
+                   blob['pertstd'] = fldpstddict
+                   blob['diff'] = flddiffdict
+                   blob['mask'] = flddmaskdict
+                   blob['pcorr'] = fldpcorrdict # pattern corr with time only
+    """
+
+    seasons='SON','DJF','MAM','JJA'
+    sia = False
+
+    field=fielddict['field']
+    ncfield=fielddict['ncfield']
+    fieldstr=fielddict['fieldstr']
+    conv=fielddict['conv']
+    threed=fielddict['threed']
+    isflux=fielddict['isflux']
+    nonstandardlev=fielddict['nonstandardlev']
+
+    model=info['model'] 
+    pct=info['pct']   # percentage change?
+    corrlim=info['corrlim'] # southern limit for pattern correlation
+    
+    bp=con.get_basepath()
+    basepath=bp['basepath'] + model + '/'; subdir=bp['subdir'] # @@ move out of function?
+
+    lat=coords['lat']
+    nlat=len(lat)
+    lon=coords['lon']
+    nlon=len(lon)
+
+    plotzonmean=False; plotregmean=False; pattcorrwithtime=False; pattcorryr=False
+
+    if calctype!=None and calctype=='zonmean':
+        plotzonmean=True
+    elif calctype!=None and calctype=='regmean':
+        plotregmean=True
+        region=info['region']
+    elif calctype!=None and calctype=='pattcorrwithtime':
+         # note that this is pattern correlating a run's
+         # pattern in time (cumulative avg) w/ its final pattern
+        pattcorrwithtime=True
+    elif  calctype!=None and calctype=='pattcorrwithtimeyr':
+         # note that this is pattern correlating a run's
+         # pattern each year in time w/ its final pattern, then sorted
+        pattcorrwithtime=True
+        pattcorryr=True
+        
+    # note that pattern corr with time will be a 2D processed field -->
+    #    for each season, fld.shape = ntime
+    # zonal mean will be a 2D processed field -->
+    #    for each season, fld.shape = nlat
+    # regional mean will be a 1D processed field -->
+    #    for each season, fld.shape = 1 (regional mean)
+    
+
+    if field=='sia':
+        sia=True
+        field = 'sicn' # while getting the data...
+        
+    tstatdict = dict.fromkeys(sims,{}); pvaldict = dict.fromkeys(sims,{})
+    fldcdict = dict.fromkeys(sims,{}); fldpdict = dict.fromkeys(sims,{})
+    fldcstddict = dict.fromkeys(sims,{}); fldpstddict = dict.fromkeys(sims,{})
+    flddiffdict = dict.fromkeys(sims,{}); flddmaskdict = dict.fromkeys(sims,{})
+    fldpcorrdict = dict.fromkeys(sims,{});
+    cidict = dict.fromkeys(sims,{})
+
+    for ridx,sim in enumerate(sims):    
+        seatstatdict=dict.fromkeys(seasons); seapvaldict=dict.fromkeys(seasons)
+        seafldcdict=dict.fromkeys(seasons); seafldpdict=dict.fromkeys(seasons)
+        seafldcstddict=dict.fromkeys(seasons); seafldpstddict=dict.fromkeys(seasons)
+        seadiffdict=dict.fromkeys(seasons); seadmaskdict=dict.fromkeys(seasons)
+        seapcorrdict=dict.fromkeys(seasons)
+        seacidict=dict.fromkeys(seasons)
+
+        simpair = con.get_simpair(sim)
+        simctl = simpair['ctl']['fullname']
+        timstr = simpair['ctl']['timestr']
+        simpt = simpair['pert']['fullname']
+        timstrp = simpair['pert']['timestr']
+        frootc = basepath + simctl + subdir + simctl + '_' 
+        frootp = basepath + simpt + subdir + simpt + '_' 
+
+        if loctimesel !=None: # e.g. for when want to look at half of a run...
+            timesel = loctimesel
+        else:
+            timesel = simpair['ctl']['timesel']
+
+        if threed and nonstandardlev:
+            fnamec = frootc + field + '_' + '001-061_ts.nc'
+            fnamec2 = frootc + field + '_' + '062-121_ts.nc'
+            fnamep = frootp + field + '_' + '001-061_ts.nc'
+            fnamep2 = frootp + field + '_' + '062-121_ts.nc'
+        else:
+            fnamec = frootc + field + '_' + timstr + '_ts.nc'
+            fnamep = frootp + field + '_' + timstrp + '_ts.nc'
+        
+        for sii,sea in enumerate(seasons):
+
+            ncparams = {'seas': sea}  
+
+            # Now get the data
+            if field in ('turb','net'):
+                #print 'not implemented @@'
+                #print 'field is ' + field + '. getting hfl, hfs'
+                fielda='hfl'; fieldb='hfs'
+                fnamec = frootc + fielda + '_' + timstr + '_ts.nc'
+                fnamep = frootp + fielda + '_' + timstrp + '_ts.nc'
+                fnamecb = frootc + fieldb + '_' + timstr + '_ts.nc'
+                fnamepb = frootp + fieldb + '_' + timstrp + '_ts.nc'
+
+                fldc = cnc.getNCvar(fnamec,fielda.upper(),timesel=timesel,
+                                               **ncparams)*conv + cnc.getNCvar(fnamecb,fieldb.upper(),
+                                               timesel=timesel,**ncparams)*conv
+                fldp = cnc.getNCvar(fnamep,fielda.upper(),timesel=timesel,
+                                               **ncparams)*conv + cnc.getNCvar(fnamepb,fieldb.upper(),
+                                               timesel=timesel,**ncparams)*conv
+                if field=='net':
+                    #print 'getting flg for net'
+                    fieldb='flg'
+                    conv=-1
+                    fnamecb = frootc + fieldb + '_' + timstr + '_ts.nc'
+                    fnamepb = frootp + fieldb + '_' + timstrp + '_ts.nc'
+                    fldc = fldc + cnc.getNCvar(fnamecb,fieldb.upper(),
+                                                   timesel=timesel,**ncparams)*conv
+                    fldp = fldp + cnc.getNCvar(fnamepb,fieldb.upper(),
+                                                   timesel=timesel,**ncparams)*conv
+                    field='net'
+                    conv=1
+                else:
+                    field='turb'               
+            else:
+
+                if threed and nonstandardlev:
+                    ncparams['levsel'] = level
+                    fldc = np.append(cnc.getNCvar(fnamec,ncfield,timesel='0002-01-01,061-12-31',**ncparams)*conv,
+                                        cnc.getNCvar(fnamec2,ncfield,**ncparams)*conv,
+                                        axis=0)
+                    fldp = np.append(cnc.getNCvar(fnamep,ncfield,timesel='0002-01-01,061-12-31',**ncparams)*conv,
+                                        cnc.getNCvar(fnamep2,ncfield,**ncparams)*conv,
+                                        axis=0)
+                else:
+                    fldc = cnc.getNCvar(fnamec,ncfield,timesel=timesel,
+                                          **ncparams)*conv
+                    fldp = cnc.getNCvar(fnamep,ncfield,timesel=timesel,
+                                          **ncparams)*conv
+                        
+                if sia:
+                    fldc = cutl.calc_seaicearea(fldc,lat,lon)
+                    fldp = cutl.calc_seaicearea(fldp,lat,lon)
+                    
+
+            if isflux: #field in (fluxes,'fsg','turb','net'):
+                # mask out regions that are not ice in the control (as P&M 2014 JClim)
+                sicnc = cnc.getNCvar(frootc + 'sicn_' + timstr + '_ts.nc','SICN',timesel=timesel,**ncparams)
+                
+                fldc = ma.masked_where(sicnc<.10,fldc)
+                fldp = ma.masked_where(sicnc<.10,fldp)
+                
+            if plotzonmean:
+                fldc = np.mean(fldc[...,:-1],axis=2)# take zonal mean, removing extra lon
+                fldp = np.mean(fldp[...,:-1],axis=2)
+                
+            elif pattcorrwithtime:
+                # loop through each year
+                # calc pattern corr either yearly or integrated
+                years=np.arange(0,fldc.shape[0])
+                fldctm = np.mean(fldc[:,lat>corrlim,...],axis=0)
+                pcorr = np.zeros(len(years))
+                for yr in years:
+                    areas = cutl.calc_cellareas(lat,lon)
+                    areas = areas[lat>corrlim,:]
+                    weights = areas / np.sum(np.sum(areas,axis=1),axis=0)
+                    if pattcorryr:
+                        # yearly anomaly pattern corr w/ the time mean pattern
+                        tmp = fldp[yr,lat>corrlim,...]-fldctm
+                    else:
+                        tmp = np.mean(fldp[:yr,lat>corrlim,...],axis=0)-fldctm # integrated anomaly pattern
+                        
+                    tmpmean = np.mean(fldp[:,lat>corrlim,...],axis=0) - fldctm # end pattern to compare against
+                    pcorr[yr] = cutl.pattcorr(tmp.flatten()*weights.flatten(),tmpmean.flatten()*weights.flatten())
+
+                seapcorrdict[sea] = pcorr
+
+            elif plotregmean:
+                
+                #limsdict = con.get_regionlims(region)
+                fldc = cutl.calc_regmean(fldc,lat,lon,region)#limsdict)
+                fldp = cutl.calc_regmean(fldp,lat,lon,region)#limsdict)
+                
+            else: # just calculate a polar mean
+                if sia:
+                    fldc,sh = cutl.calc_totseaicearea(fldc,lat,lon)
+                    fldp,sh = cutl.calc_totseaicearea(fldp,lat,lon)
+                else:
+                    fldc = cutl.polar_mean_areawgted3d(fldc,lat,lon,latlim=seacyclatlim)
+                    fldp = cutl.polar_mean_areawgted3d(fldp,lat,lon,latlim=seacyclatlim)
+
+            seafldcstddict[sea] = np.std(fldc,axis=0)
+            seafldpstddict[sea] = np.std(fldp,axis=0)
+            ttmp,pvtmp = sp.stats.ttest_ind(fldp,fldc,axis=0)
+ 
+            # calculate confidence interval
+            # double-check the scale setting
+            ci = sp.stats.t.interval(1-siglevel,len(fldp)-1,loc=np.mean(fldp,axis=0)-np.mean(fldc,axis=0),
+                                     scale=np.std(fldp,axis=0)/np.sqrt(len(fldp)))
+            seacidict[sea] = ci
+                
+            seatstatdict[sea] = ttmp
+            seapvaldict[sea] = pvtmp
+            seafldcdict[sea] =  np.mean(fldc,axis=0) # time mean
+            seafldpdict[sea] =  np.mean(fldp,axis=0)
+            seadiffdict[sea] = np.mean(fldp,axis=0)- np.mean(fldc,axis=0)
+            seadmaskdict[sea] = ma.masked_where(pvtmp>siglevel,seadiffdict[sea])
+
+            # end loop through seasons
+
+        fldcstddict[sim] = seafldcstddict
+        fldpstddict[sim] = seafldpstddict
+        cidict[sim] = seacidict
+        tstatdict[sim] = seatstatdict
+        pvaldict[sim] = seapvaldict
+        fldcdict[sim] = seafldcdict
+        fldpdict[sim] = seafldpdict
+        flddiffdict[sim] = seadiffdict
+        flddmaskdict[sim] = seadmaskdict
+        if pattcorrwithtime==1:
+            fldpcorrdict[sim] = seapcorrdict
+
+        # end loop through simulations
+    if sia:
+        field = 'sia' # put back after getting the data. prob not important in the function context
+
+    blob = {}
+    blob['ctl'] = fldcdict
+    blob['pert'] = fldpdict
+    blob['tstat'] = tstatdict
+    blob['pval'] = pvaldict
+    blob['ci'] = cidict
+    blob['ctlstd'] = fldcstddict
+    blob['pertstd'] = fldpstddict
+    blob['diff'] = flddiffdict
+    blob['mask'] = flddmaskdict
+    if pattcorrwithtime:
+        blob['pcorr'] = fldpcorrdict
+
+    return blob # datablob
+
+
+def calc_seasonal_cycle(fielddict,coords,sims,withlat=False,loctimesel=None,info=None,siglevel=0.05):
+    """ calc_seasonal_cycle(fielddict,coords,sims,withlat=False,loctimesel=None,info=None,siglevel=0.05)
+
+              info: a dict which specifies lots of things, but in particular, which region to average
+              
+              returns a data blob:
+                   blob['ctl'] = fldcdict
+                   blob['pert'] = fldpdict
+                   blob['tstat'] = tstatdict
+                   blob['pval'] = pvaldict
+                   blob['ci'] = cidict
                    blob['ctlstd'] = fldcstddict
                    blob['pertstd'] = fldpstddict
                    blob['diff'] = flddiffdict
                    blob['mask'] = flddmaskdict
     """
 
+    print 'calc_seasonal_cycle()'
+
     sia = False
     
-    # @@ switch to handling any region
-
+    # make standard function that will be called by "seasonal_cycle", "regional mean", etc...
+    #  this can be adapted for lots of processing rather than have multiple copies of code. @@
+    
     field=fielddict['field']
     ncfield=fielddict['ncfield']
     fieldstr=fielddict['fieldstr']
@@ -285,6 +552,7 @@ def calc_seasonal_cycle(fielddict,coords,sims,withlat=False,loctimesel=None,info
         # else leave seacyclatlim as set at top of script"""
     seacyc = con.get_mon()
     seacyclatlim=info['seacyclatlim'] # should be 40N for (fluxes,'fsg','turb','net')
+    region = info['region'] # if region is set, it supercedes seacyclatlim! @@
 
     if field=='sia':
         sia=True
@@ -302,7 +570,7 @@ def calc_seasonal_cycle(fielddict,coords,sims,withlat=False,loctimesel=None,info
         seafldc = np.zeros((12)); seafldp = np.zeros((12))
         seafldcstd = np.zeros((12)); seafldpstd = np.zeros((12))
         seadiffdict= np.zeros((12)); seadmaskdict=np.zeros((12))
-        
+        seacidict = np.zeros((12,2));#@@ might need new shape for ci.
         
         ## seatstatdict=dict.fromkeys(seacyc); seapvaldict=dict.fromkeys(seacyc)
         ## seafldcdict=dict.fromkeys(seacyc); seafldpdict=dict.fromkeys(seacyc)
@@ -401,6 +669,7 @@ def calc_seasonal_cycle(fielddict,coords,sims,withlat=False,loctimesel=None,info
                                       cnc.getNCvar(fnamep2,ncfield,**ncparams)*conv,
                                       axis=0)
                 else:
+                    # @@ really have only tested this one...
                     fldc = cnc.getNCvar(fnamec,ncfield,timesel=timesel)*conv#,
                                         #**ncparams)*conv
                     fldp = cnc.getNCvar(fnamep,ncfield,timesel=timesel)*conv#,
@@ -458,8 +727,12 @@ def calc_seasonal_cycle(fielddict,coords,sims,withlat=False,loctimesel=None,info
                 else:
                     # consider masking out land for sfc fluxes...?
                     # @@@ switch to regional mean? which includes polar means....
-                    fldc = cutl.polar_mean_areawgted3d(fldc,lat,lon,latlim=seacyclatlim)
-                    fldp = cutl.polar_mean_areawgted3d(fldp,lat,lon,latlim=seacyclatlim)
+                    if region!=None:
+                        fldc = cutl.calc_regmean(fldc,lat,lon,region)
+                        fldp = cutl.calc_regmean(fldp,lat,lon,region)
+                    else:
+                        fldc = cutl.polar_mean_areawgted3d(fldc,lat,lon,latlim=seacyclatlim)
+                        fldp = cutl.polar_mean_areawgted3d(fldp,lat,lon,latlim=seacyclatlim)
 
             """elif plotregmean==1:
                 
@@ -489,6 +762,15 @@ def calc_seasonal_cycle(fielddict,coords,sims,withlat=False,loctimesel=None,info
             #seadiffdict[sea] = np.mean(fldp,axis=0)- np.mean(fldc,axis=0)
             seadmask = ma.masked_where(seapval>siglevel,seadiff)
 
+            # calculate confidence interval on the regional mean
+            # double-check the scale setting
+            # @@ can do conf interval for any mean, not just regional mean?
+            'confidence interval not working yet....@@'
+            for moidx in seacyc:
+                ci[moidx,:] = sp.stats.t.interval(1-siglevel,len(fldp[moidx::12])-1,
+                                                  loc=np.mean(fldp[moidx::12],axis=0)-np.mean(fldc[moidx::12],axis=0),
+                                                  scale=np.std(fldp[moidx::12],axis=0)/np.sqrt(len(fldp[moidx::12])))
+            seacidict = ci
             """if plotregmean==1:
                 # calculate confidence interval on the regional mean
                 # double-check the scale setting
@@ -501,8 +783,7 @@ def calc_seasonal_cycle(fielddict,coords,sims,withlat=False,loctimesel=None,info
 
         fldcstddict[sim] = seafldcstd
         fldpstddict[sim] = seafldpstd
-        #if plotregmean==1:
-        #    cidict[sim] = seacidict
+        cidict[sim] = seacidict
         tstatdict[sim] = seatstat
         pvaldict[sim] = seapval
         fldcdict[sim] = seafldc
@@ -521,6 +802,7 @@ def calc_seasonal_cycle(fielddict,coords,sims,withlat=False,loctimesel=None,info
     blob['pert'] = fldpdict
     blob['tstat'] = tstatdict
     blob['pval'] = pvaldict
+    blob['ci'] = cidict
     blob['ctlstd'] = fldcstddict
     blob['pertstd'] = fldpstddict
     blob['diff'] = flddiffdict
@@ -537,14 +819,12 @@ def plot_seasonal_cycle(datablob,fielddict,sims,pparams=None,ptypes=('anom',),wi
                   ptypes: 'anom': anomaly sea cycle (pert - ctl)
                           'climo': pert and ctl climatological sea cycle
                           'stddev': pert and ctl monthly standard dev
-                          'stdanom': monthly std dev anomaly (pert - ctl)
+                          'stdan': monthly std dev anomaly (pert - ctl)
                           
                   figsize = (6,2.5) This is the 'squatter' size
 
     """
-
-    
-    import pandas as pd
+        
     colordict=ccm.get_colordict()
     leglocs='best','best','best','best'
     if info !=None:
@@ -553,10 +833,20 @@ def plot_seasonal_cycle(datablob,fielddict,sims,pparams=None,ptypes=('anom',),wi
 
     field=fielddict['field']
     fieldstr=fielddict['fieldstr']
+
+    shadeens = info['shadeens'] # list of ensembles
+    savestr = info['savestr']
+    seacyclatlim = info['seacyclatlim']
+    region = info['region']
+
+    if region!=None:
+        regstr=region
+    else:
+        regstr= 'pol' + str(seacyclatlim) + 'N'
+
+    simspdt = con.get_simpairsdict()
     
     months = con.get_mon()
-    mol = list(months) # use this list of strings for indexing the dataframe
-    blobdf = pd.DataFrame(datablob)
 
     fontP = fm.FontProperties()
     fontP.set_size('small')
@@ -616,15 +906,8 @@ def plot_seasonal_cycle(datablob,fielddict,sims,pparams=None,ptypes=('anom',),wi
     else: # regular seasonal cycle
         print '@@ implement printtofile!'
         
-        ## flddiffdf = pd.DataFrame(flddiffdict)
-        ## fldcdf = pd.DataFrame(fldcdict)
-        ## fldpdf = pd.DataFrame(fldpdict)
-        ## fldmaskdf = pd.DataFrame(flddmaskdict)
-        ## fldcstddf = pd.DataFrame(fldcstddict)
-        ## fldpstddf = pd.DataFrame(fldpstddict)
-
         if 'climo' in ptypes:
-
+ 
             fldcdf = pd.DataFrame(datablob['ctl'])
             fldpdf = pd.DataFrame(datablob['pert'])
             
@@ -633,12 +916,13 @@ def plot_seasonal_cycle(datablob,fielddict,sims,pparams=None,ptypes=('anom',),wi
             fig.set_size_inches(figsize)
 
             for skey in sims:
-                axs.plot(moidxs,fldcdf[skey][mol],color=colordict[skey],linewidth=2)
+                # try removing [mol] b/c I think it's just an array of months now
+                axs.plot(moidxs,fldcdf[skey],color=colordict[skey],linewidth=2)
 
             for skey in sims:
-                axs.plot(moidxs,fldpdf[skey][mol],color=colordict[skey],linewidth=2,linestyle='--')
+                axs.plot(moidxs,fldpdf[skey],color=colordict[skey],linewidth=2,linestyle='--')
 
-            plt.legend(sims,leglocs[0], prop=fontP,ncol=2)
+            plt.legend(sims,leglocs[0], fancybox=True,prop=fontP,framealpha=0.5,ncol=2)
             plt.xlim((1,12))
             plt.gca().set_xticks(range(1,13))
             plt.gca().set_xticklabels(months)
@@ -647,11 +931,39 @@ def plot_seasonal_cycle(datablob,fielddict,sims,pparams=None,ptypes=('anom',),wi
             plt.title('Climos')
 
             if printtofile: 
-                fig.savefig(fieldstr + '_ens_meanBC' + obsstr + ctstr + '_seacyc_pol' + str(seacyclatlim) + 'N3' + fsuff + '.pdf')
+                fig.savefig(fieldstr + '_ens_meanBC' + savestr + '_seacyc_' + regstr + '4.pdf')
         # end if 'climo'
 
-        if 'anom' in ptypes:
+        # set up ensemble dict to do max/min/stddev calcs later
+        if ('anom' in ptypes) or ('stddev' in ptypes) or ('stdan' in ptypes):           
+            simsplt=() #  initialize tuple
+            callensdt={}; pallensdt={}
+            
+            if shadeens != None:
+                for ensname in shadeens:
+                    censdt={}; pensdt={};
+                    print ensname
+                    for skey in sims: # for each simulation check if it's in an ensemble to shade
 
+                        if simspdt[skey]['pert']['ensname']==ensname:
+                            # create an ensemble dict
+                            censdt[skey] = datablob['ctl'][skey]
+                            pensdt[skey] = datablob['pert'][skey]
+
+                    callensdt[ensname] = censdt # dict of ens -> dict of sims in ens --> data
+                    pallensdt[ensname] = pensdt
+                # end loop through ens to shade
+                    
+                for skey in sims: # only want to do this once: the leftover non-ens sims
+                    if simspdt[skey]['pert']['ensname'] not in shadeens:
+                        simsplt = simsplt + (skey,)
+                                            
+                print simsplt
+                
+
+        if 'anom' in ptypes:
+            print 'anom'
+            
             flddiffdf = pd.DataFrame(datablob['diff'])
             fldmaskdf = pd.DataFrame(datablob['mask'])
             seacycylim = info['seacycylim']
@@ -661,13 +973,14 @@ def plot_seasonal_cycle(datablob,fielddict,sims,pparams=None,ptypes=('anom',),wi
             fig.set_size_inches(figsize)
 
             for skey in sims:
-                axs.plot(moidxs,flddiffdf[skey][mol],color=colordict[skey],linewidth=2)
+                axs.plot(moidxs,flddiffdf[skey],color=colordict[skey],linewidth=2)
             for skey in sims:
-                axs.plot(moidxs,fldmaskdf[skey][mol],linestyle='none',color=colordict[skey],marker='s')
+                axs.plot(moidxs,fldmaskdf[skey],linestyle='none',color=colordict[skey],marker='s')
 
-            plt.legend(sims,leglocs[1], prop=fontP,ncol=2)
+            plt.legend(sims,leglocs[1], fancybox=True, prop=fontP, framealpha=0.5,ncol=2)
             plt.xlim((1,12))
-            plt.ylim(seacycylim)
+            if seacycylim!=None:
+                plt.ylim(seacycylim)
             plt.gca().set_xticks(range(1,13))
             plt.gca().set_xticklabels(months)
             #plt.xlabel('Month')
@@ -678,45 +991,35 @@ def plot_seasonal_cycle(datablob,fielddict,sims,pparams=None,ptypes=('anom',),wi
                 axs.axhline(y=0,color='k',linewidth=.5) # @@ figure out how to make it first layer of plot...
 
             if printtofile: # version 2 loops through sims in order of melt
-                fig.savefig(fieldstr + 'diff_ens_meanBC' + obsstr + ctstr + '_seacyc_pol' + str(seacyclatlim) + 'N3' + fsuff + '.pdf')
+                fig.savefig(fieldstr + 'diff_ens_meanBC' + savestr + '_seacyc_' + regstr + '4.pdf')
 
-            # calc stddev over ensemble, and min/max for shading
 
-            # need to check whether the ensemble is present first
-            if 'R1' in sims and 'R5' in sims: # @@ assume they all are.....
-
-                fldcdf = pd.DataFrame(datablob['ctl'])
-                fldpdf = pd.DataFrame(datablob['pert'])
-                
-                tmpcdf = fldcdf.loc[mol]
-                tmppdf = fldpdf.loc[mol]
-                print '@@ ens simulation position is hard-coded for std dev calc'
-                ce = np.array(tmpcdf.loc[:,sims[0:5]]) # gives array of month x simulation in correct order
-                pe = np.array(tmppdf.loc[:,sims[0:5]])
-                #ce = np.array(tmpcdf.loc[:,sims[ensmems]]) # index as is (np array) doesn't work
-                #pe = np.array(tmppdf.loc[:,sims[ensmems]])
-                cestd = np.std(ce,axis=1) # std dev over ensemble, 1st 5 simulations
-                pestd = np.std(pe,axis=1)
-                cemax = np.max(ce,axis=1) # ens ctl max/min
-                cemin = np.min(ce,axis=1)
-                pemax = np.max(pe,axis=1) # ens pert max/min
-                pemin = np.min(pe,axis=1)
-                demax = np.max(pe-ce,axis=1) # ens diff max/min
-                demin = np.min(pe-ce,axis=1)
-
+            # sims are 'diffname' in simsdict (con.get_simsdict())
+            # sims are also keys to simspairsdict (con.get_simpairsdict())
+            #    see if part of ensemble, e.g.: simpairsdict['R1']['pert']['ensname']
+            #    If no ensemble, then it's None. Otherwise, it's ensname.
+            if shadeens != None:
+           
                 # differences SHADED
                 fig,axs = plt.subplots()
                 fig.set_size_inches(figsize)
+                fc='0.3','y'
+                for eii,ensname in enumerate(shadeens):
+                    censdf=pd.DataFrame(callensdt[ensname])
+                    pensdf=pd.DataFrame(pallensdt[ensname])
+                    demin = np.min(pensdf-censdf,axis=1)
+                    demax = np.max(pensdf-censdf,axis=1)
+                    axs.fill_between(moidxs,demin,demax,facecolor=fc[eii],alpha=0.2)
+                    #fc=fc-.3
+                for skey in simsplt:
+                    axs.plot(moidxs,flddiffdf[skey],color=colordict[skey],linewidth=2)
+                for skey in simsplt:
+                    axs.plot(moidxs,fldmaskdf[skey],linestyle='none',color=colordict[skey],marker='s')
 
-                for skey in sims[5:]: # @@ ens mems hard-coded
-                    axs.fill_between(moidxs,demin,demax,facecolor='0.7',alpha=0.2)
-                    axs.plot(moidxs,flddiffdf[skey][mol],color=colordict[skey],linewidth=2)
-                for skey in sims[5:]: # @@ ens mems hard-coded
-                    axs.plot(moidxs,fldmaskdf[skey][mol],linestyle='none',color=colordict[skey],marker='s')
-
-                plt.legend(sims[5:],leglocs[1], prop=fontP,ncol=2)
+                plt.legend(simsplt,leglocs[1], fancybox=True,prop=fontP,framealpha=0.5,ncol=2)
                 plt.xlim((1,12))
-                plt.ylim(seacycylim)
+                if seacycylim!=None:
+                    plt.ylim(seacycylim)
                 plt.gca().set_xticks(range(1,13))
                 plt.gca().set_xticklabels(months)
                 #plt.xlabel('Month')
@@ -727,77 +1030,549 @@ def plot_seasonal_cycle(datablob,fielddict,sims,pparams=None,ptypes=('anom',),wi
                     axs.axhline(y=0,color='k',linewidth=.5) # @@ figure out how to make it first layer of plot...
 
                 if printtofile: # version 2 loops through sims in order of melt
-                    fig.savefig(fieldstr + 'diff_ens_meanBC' + obsstr + ctstr + '_seacyc_pol' + str(seacyclatlim) + 'N3shade' + fsuff + '.pdf')
+                    fig.savefig(fieldstr + 'diff_ens_meanBC' + savestr + '_seacyc_' + regstr + '4shade.pdf')
         # end if 'anom'
 
         if 'stddev' in ptypes:
-            print '@@ implement stddev'
-            
+            fldcstddf = pd.DataFrame(datablob['ctlstd'])
+            fldpstddf = pd.DataFrame(datablob['pertstd'])
+          
             # Standard deviation climos
             fig,axs = plt.subplots()
-            if squatseacyc:
-                fsuff='short'
-                fig.set_size_inches(squatfs)
-            elif squatterseacyc:
-                fsuff='shorter'
-                fig.set_size_inches(squatterfs)
+            fig.set_size_inches(figsize)
 
             for skey in sims:
-
-                if skey in ('','ens','kemhad','kemnsidc'): # thicker line (control)
-                    axs.plot(moidxs,fldcstddf[skey][mol],color=colordict[skey],linewidth=3)
-                else:
-                    axs.plot(moidxs,fldcstddf[skey][mol],color=colordict[skey],linewidth=2)
+                axs.plot(moidxs,fldcstddf[skey],color=colordict[skey],linewidth=2)
 
             for skey in sims:
-                if skey in ('','ens','kemhad','kemnsidc'): # thicker line (pert)
-                    axs.plot(moidxs,fldpstddf[skey][mol],color=colordict[skey],linestyle='--',linewidth=3)
-                else:
-                    axs.plot(moidxs,fldpstddf[skey][mol],color=colordict[skey],linestyle='--',linewidth=2)
+                axs.plot(moidxs,fldpstddf[skey],color=colordict[skey],linestyle='--',linewidth=2)
 
-            axs.plot(range(1,13),cestd,color='k',linewidth=3)
-            axs.plot(range(1,13),pestd,color='k',linewidth=3,linestyle='--')
+            if shadeens != None:
+                col=.3
+                for ensname in shadeens:
+                    censdf=pd.DataFrame(callensdt[ensname])
+                    pensdf=pd.DataFrame(pallensdt[ensname])
+                    cestd = np.std(censdf,axis=1)
+                    pestd = np.std(pensdf,axis=1)                    
 
-            plt.legend(sims,leglocs[2], prop=fontP,ncol=2)
+                    axs.plot(range(1,13),cestd,color=str(col),linewidth=3)
+                    axs.plot(range(1,13),pestd,color=str(col),linewidth=3,linestyle='--')
+                    col=col+.3
+
+            plt.legend(sims,leglocs[2], fancybox=True,prop=fontP, framealpha=0.5, ncol=2)
             plt.xlim((1,12))
             plt.gca().set_xticks(range(1,13))
             plt.gca().set_xticklabels(months)
             #plt.xlabel('Month')
             plt.ylabel(fieldstr)
             plt.title('Sigma')
+            axylims = axs.get_ylim()
+            if axylims[0]<=0 and axylims[1]>=0:
+                axs.axhline(y=0,color='k',linewidth=.5) # @@ figure out how to make it first layer of plot...
 
             if printtofile:
-                fig.savefig(fieldstr + 'STD_ens_meanBC' + obsstr + ctstr + '_seacyc_pol' + str(seacyclatlim) + 'N3' + fsuff + '.pdf')
+                fig.savefig(fieldstr + 'STD_ens_meanBC' + savestr + '_seacyc_' + regstr + '4.pdf')
         # end if 'stddev'
 
-        if 'stdanom' in ptypes:
+        if 'stdan' in ptypes:
 
-            print '@@ implement stdanom'
+            fldcstddf = pd.DataFrame(datablob['ctlstd'])
+            fldpstddf = pd.DataFrame(datablob['pertstd'])
             
             # Difference in standard deviation
             fig,axs = plt.subplots()
-            if squatseacyc:
-                fsuff='short'
-                fig.set_size_inches(squatfs)
-            elif squatterseacyc:
-                fsuff='shorter'
-                fig.set_size_inches(squatterfs)
+            fig.set_size_inches(figsize)
 
             for skey in sims:
-                if skey in ('','ens','kemhad','kemnsidc'): # thicker line
-                    axs.plot(moidxs,fldpstddf[skey][mol]-fldcstddf[skey][mol],color=colordict[skey],linewidth=3)
-                else:
-                    axs.plot(moidxs,fldpstddf[skey][mol]-fldcstddf[skey][mol],color=colordict[skey],linewidth=2)
-            axs.plot(moidxs,pestd-cestd,color='k',linewidth=3)
+                axs.plot(moidxs,fldpstddf[skey]-fldcstddf[skey],color=colordict[skey],linewidth=2)
+            col=0.3
+            for ensname in shadeens:
+                censdf=pd.DataFrame(callensdt[ensname])
+                pensdf=pd.DataFrame(pallensdt[ensname])
+                cestd = np.std(censdf,axis=1)
+                pestd = np.std(pensdf,axis=1)                    
+                axs.plot(moidxs,pestd-cestd,color=str(col),linewidth=3)
+                col=col+.3
 
-            plt.legend(sims,leglocs[3], prop=fontP,ncol=2)
+            plt.legend(sims,leglocs[3], fancybox=True, prop=fontP, framealpha=0.5,ncol=2)
             plt.xlim((1,12))
             plt.gca().set_xticks(range(1,13))
             plt.gca().set_xticklabels(months)
             #plt.xlabel('Month')
             plt.ylabel(fieldstr)
             plt.title('Sigma anomalies')
+            axylims = axs.get_ylim()
+            if axylims[0]<=0 and axylims[1]>=0:
+                axs.axhline(y=0,color='k',linewidth=.5) # @@ figure out how to make it first layer of plot...
 
             if printtofile:
-                fig.savefig(fieldstr + 'STDdiff_ens_meanBC' + obsstr + ctstr + '_seacyc_pol' + str(seacyclatlim) + 'N3' + fsuff + '.pdf')
+                fig.savefig(fieldstr + 'STDdiff_ens_meanBC' + savestr + '_seacyc_' + regstr + '4.pdf')
         # end if 'stdanom'
+
+def plot_zonmean_byseas(datablob,fielddict,coords,sims,pparams=None,ptypes=('anom',),withlat=False,info=None,printtofile=False,figsize=(6,2.5)):
+
+    print '@@@ not implemented yet'
+
+    seasons = 'SON','DJF','MAM','JJA'
+    lat=coords['lat']
+    nlat=len(lat)
+    
+    colordict=ccm.get_colordict()
+    leglocs='best','best','best','best'
+    if info !=None:
+        if info['leglocs'] != None:
+            leglocs=info['leglocs']
+
+    field=fielddict['field']
+    fieldstr=fielddict['fieldstr']
+
+    shadeens = info['shadeens'] # list of ensembles
+    savestr = info['savestr']
+
+    simspdt = con.get_simpairsdict()
+    
+    fontP = fm.FontProperties()
+    fontP.set_size('small')
+
+
+    # =========================================
+    ## seal = list(seasons)
+    
+    flddiffdf = pd.DataFrame(datablob['diff'])
+    fldcdf = pd.DataFrame(datablob['ctl'])
+    fldpdf = pd.DataFrame(datablob['pert'])
+    fldmaskdf = pd.DataFrame(datablob['mask'])
+    fldcstddf = pd.DataFrame(datablob['ctlstd'])
+    fldpstddf = pd.DataFrame(datablob['pertstd'])   
+    
+    ## tmpcdf = fldcdf.loc[seal]
+    ## tmppdf = fldpdf.loc[seal]
+
+    ## cestd = np.zeros((4,len(lat)))
+    ## pestd = np.zeros((4,len(lat)))
+    ## cemin = np.zeros((4,len(lat))) # ctl ens min/max
+    ## cemax = np.zeros((4,len(lat)))
+    ## pemin = np.zeros((4,len(lat))) # pert ens min/max
+    ## pemax = np.zeros((4,len(lat)))
+    ## demin = np.zeros((4,len(lat))) # difference min/max
+    ## demax = np.zeros((4,len(lat)))
+    ## # have to do these loops b/c np.array(tmpcdf) comes out as an object of
+    ## # size (seasons x sims) with inner arrays of length lat, and can't take std of that
+    ## # also construct a min and max line of ens, for fill_between spread
+    ## for sii,sea in enumerate(seasons):
+    ##     tmpc = np.zeros((5,len(lat)))
+    ##     tmpp = np.zeros((5,len(lat)))
+    ##     print '@@ fix this because ens members are hardcoded into sims'
+    ##     for simii,sim in enumerate(sims[0:5]):
+    ##         # here we just accumulate all ens sims into one matrix
+    ##         tmpc[simii,:] = tmpcdf[sim][sea].values
+    ##         tmpp[simii,:] = tmppdf[sim][sea].values
+    ##     # now do calcs: standard dev, min, max
+    ##     cestd[sii,:] = np.std(tmpc,axis=0)
+    ##     pestd[sii,:] = np.std(tmpp,axis=0)
+    ##     cemax[sii,:] = np.max(tmpc,axis=0)
+    ##     cemin[sii,:] = np.min(tmpc,axis=0)
+    ##     pemax[sii,:] = np.max(tmpp,axis=0)
+    ##     pemin[sii,:] = np.min(tmpp,axis=0)
+    ##     demax[sii,:] = np.max(tmpp-tmpc,axis=0)
+    ##     demin[sii,:] = np.min(tmpp-tmpc,axis=0)
+
+    # ========================
+    # set up ensemble dict to do max/min/stddev calcs later
+    if ('anom' in ptypes) or ('stddev' in ptypes) or ('stdan' in ptypes):           
+        simsplt=() #  initialize tuple for legends
+        callensdt={}; pallensdt={} # contains all ensembles
+
+        if shadeens != None:
+            for ensname in shadeens:
+                censdt={}; pensdt={}; # all runs w/in one ensemble
+                print ensname
+                for skey in sims: # for each simulation check if it's in an ensemble to shade
+
+                    if simspdt[skey]['pert']['ensname']==ensname:
+                        # create an ensemble dict
+                        censdt[skey] = datablob['ctl'][skey]
+                        pensdt[skey] = datablob['pert'][skey]
+
+                callensdt[ensname] = censdt # dict of ens -> dict of sims in ens --> data
+                pallensdt[ensname] = pensdt
+            # end loop through ens to shade
+
+            for skey in sims: # only want to do this once: the leftover non-ens sims
+                if simspdt[skey]['pert']['ensname'] not in shadeens:
+                    simsplt = simsplt + (skey,)
+
+            print simsplt
+    #====================
+    
+    # climo
+    if 'climo' in ptypes:
+        fig,axs = plt.subplots(4,1)
+        fig.set_size_inches(6,12)
+        fig.subplots_adjust(hspace=.2,wspace=.2)
+
+        for sii,sea in enumerate(seasons):
+            ax=axs[sii]
+
+            for skey in sims:
+                if skey in ('','ens','kemhad','kemnsidc'): # thicker line (control)
+                    ax.plot(lat,fldcdf[skey][sea],color=colordict[skey],linewidth=3)
+                else:
+                    ax.plot(lat,fldcdf[skey][sea],color=colordict[skey],linewidth=2)
+
+            for skey in sims:
+                if skey in ('','ens','kemhad','kemnsidc'): # thicker line (pert)
+                    ax.plot(lat,fldpdf[skey][sea],color=colordict[skey],linewidth=3,linestyle='--')
+                else:
+                    ax.plot(lat,fldpdf[skey][sea],color=colordict[skey],linewidth=2,linestyle='--')
+
+            ax.set_xlim(-90,90)
+            ax.set_title(sea)
+
+        ax.set_xlabel('lat')
+        if printtofile: # version 2 has new colors and seasons and sims are reordered
+            fig.savefig(fieldstr + '_ens_meanBC' + savestr + '_allseassp_zonmean2.pdf')
+
+    # standard deviation
+    if 'stddev' in ptypes:
+
+        fig,axs = plt.subplots(4,1)
+        fig.set_size_inches(6,12)
+        fig.subplots_adjust(hspace=.2,wspace=.2)
+        for sii,sea in enumerate(seasons):
+            ax=axs[sii]
+
+            for eii,ensname in enumerate(shadeens):
+                censdf = pd.DataFrame(callensdt[ensname]).loc[sea] # returns series of length sim. each element has nlat data
+                pensdf = pd.DataFrame(pallensdt[ensname]).loc[sea]
+                # hack to get data into a matrix
+                tmpc=np.zeros((len(censdf),nlat))
+                tmpp=np.zeros((len(pensdf),nlat))
+                for ii,ekey in enumerate(censdf.keys()):
+                    tmpc[ii,:] = censdf[ekey]
+                    tmpp[ii,:] = pensdf[ekey]
+                cestd = np.std(tmpc,axis=0)
+                pestd = np.std(tmpp,axis=0)
+                    
+            for skey in sims:
+                if skey in ('','ens','kemhad','kemnsidc'):  # thicker line (control)
+                    ax.plot(lat,fldcstddf[skey][sea],color=colordict[skey],linewidth=3)
+                else:
+                    ax.plot(lat,fldcstddf[skey][sea],color=colordict[skey],linewidth=2)
+            ax.plot(lat,cestd,'k',linewidth=2)
+
+            for skey in sims:
+                if skey in ('','ens','kemhad','kemnsidc'): # thicker line (pert)
+                    ax.plot(lat,fldpstddf[skey][sea],color=colordict[skey],linewidth=3,linestyle='--')
+                else:
+                    ax.plot(lat,fldpstddf[skey][sea],color=colordict[skey],linewidth=2,linestyle='--')
+            ax.plot(lat,pestd,'k',linewidth=2,linestyle='--')
+
+            ax.set_xlim(-90,90)
+            ax.set_title(sea)
+
+        ax.set_xlabel('lat')
+        if printtofile:
+            fig.savefig(fieldstr + 'STD_ens_meanBC' + savestr + '_allseassp_zonmean2.pdf')
+
+    # differences
+    if 'anom' in ptypes:
+        fig,axs = plt.subplots(4,1)
+        fig.set_size_inches(6,12)
+        fig.subplots_adjust(hspace=.2,wspace=.2)
+        for sii,sea in enumerate(seasons):
+            ax=axs[sii]
+
+            for skey in sims:
+                if skey in ('','ens','kemhad','kemnsidc'): # thicker line
+                    ax.plot(lat,flddiffdf[skey][sea],color=colordict[skey],linewidth=3)
+                else:
+                    ax.plot(lat,flddiffdf[skey][sea],color=colordict[skey],linewidth=2)
+
+            for skey in sims:
+                if skey in ('','ens','kemhad','kemnsidc'): # these are the same?@@ (significance)
+                    ax.plot(lat,fldmaskdf[skey][sea],color=colordict[skey],linestyle='none',marker='s')
+                else:
+                    ax.plot(lat,fldmaskdf[skey][sea],color=colordict[skey],linestyle='none',marker='s')
+
+            ax.set_xlim(0,90)
+            ax.set_title(field + ': ' + sea)
+
+        ax.set_xlabel('lat')
+        ax.legend(sims,'upper left', prop=fontP,ncol=2,fancybox=True,framealpha=0.5)
+        if printtofile:
+            fig.savefig(fieldstr + 'diff_ens_meanBC' + savestr + '_allseassp_zonmean_nh2.pdf')
+
+        # sims are 'diffname' in simsdict (con.get_simsdict())
+        # sims are also keys to simspairsdict (con.get_simpairsdict())
+        #    see if part of ensemble, e.g.: simpairsdict['R1']['pert']['ensname']
+        #    If no ensemble, then it's None. Otherwise, it's ensname.
+        if shadeens != None:
+           
+            # differences SHADED
+            fig,axs = plt.subplots(4,1)
+            fig.set_size_inches(6,12)
+            fig.subplots_adjust(hspace=.2,wspace=.2)
+            for sii,sea in enumerate(seasons):
+                ax=axs[sii]
+                fc='0.3','y'
+                for eii,ensname in enumerate(shadeens):
+                    censdf = pd.DataFrame(callensdt[ensname]).loc[sea] # returns series of length sim. each element has nlat data
+                    pensdf = pd.DataFrame(pallensdt[ensname]).loc[sea]
+                    # hack to get data into a matrix
+                    tmpc=np.zeros((len(censdf),nlat))
+                    tmpp=np.zeros((len(pensdf),nlat))
+                    for ii,ekey in enumerate(censdf.keys()):
+                        tmpc[ii,:] = censdf[ekey]
+                        tmpp[ii,:] = pensdf[ekey]
+                    demin = np.min(tmpp-tmpc,axis=0)
+                    demax = np.max(tmpp-tmpc,axis=0)
+                    ax.fill_between(lat,demin,demax,facecolor=fc[eii],alpha=0.2)
+
+                #ax.fill_between(lat,demin[sii,...],demax[sii,...],facecolor='0.7',alpha=0.2)
+                #print '@@ sims other than ens appear to be hard-coded. danger'
+                for skey in simsplt: #sims[5:]: # @@ ack, hard-coded! dangerous
+                    ax.plot(lat,flddiffdf[skey][sea],color=colordict[skey],linewidth=2)
+
+                for skey in simsplt: #sims[5:]: # @@ danger hard-code again
+                    ax.plot(lat,fldmaskdf[skey][sea],color=colordict[skey],linestyle='none',marker='s')
+
+                ax.set_xlim(0,90)
+                ax.set_title(field + ': ' + sea)
+
+            ax.set_xlabel('lat')
+            ax.legend(simsplt,'upper left', prop=fontP,ncol=2,fancybox=True,framealpha=0.5) # @@ hard-coded
+            if printtofile:
+                fig.savefig(fieldstr + 'diff_ens_meanBC' + savestr + '_allseassp_zonmean_nh2shade.pdf')
+
+    # standard deviation differences
+    if 'stdan' in ptypes:
+                
+        fig,axs = plt.subplots(4,1)
+        fig.set_size_inches(6,12)
+        fig.subplots_adjust(hspace=.2,wspace=.2)
+        for sii,sea in enumerate(seasons):
+            ax=axs[sii]
+
+            for eii,ensname in enumerate(shadeens):
+                censdf = pd.DataFrame(callensdt[ensname]).loc[sea] # returns series of length sim. each element has nlat data
+                pensdf = pd.DataFrame(pallensdt[ensname]).loc[sea]
+                # hack to get data into a matrix
+                tmpc=np.zeros((len(censdf),nlat))
+                tmpp=np.zeros((len(pensdf),nlat))
+                for ii,ekey in enumerate(censdf.keys()):
+                    tmpc[ii,:] = censdf[ekey]
+                    tmpp[ii,:] = pensdf[ekey]
+                cestd = np.std(tmpc,axis=0)
+                pestd = np.std(tmpp,axis=0)
+                
+            for skey in sims:
+                if skey in ('','ens','kemhad','kemnsidc'): # thicker lines
+                    ax.plot(lat,fldpstddf[skey][sea]-fldcstddf[skey][sea],color=colordict[skey],linewidth=3)
+                else:
+                    ax.plot(lat,fldpstddf[skey][sea]-fldcstddf[skey][sea],color=colordict[skey],linewidth=2)
+            ax.plot(lat,pestd-cestd,'k',linewidth=2) # ensemble mean std dev diff
+
+            ax.set_xlim(0,90)
+            ax.set_title(field + ': ' + sea)
+
+        ax.set_xlabel('lat')
+
+        if printtofile:
+            fig.savefig(fieldstr + 'STDdiff_ens_meanBC' + savestr + '_allseassp_zonmean_nh2.pdf')
+
+    # =========================================
+
+def plot_regmean_byseas(datablob,fielddict,sims,pparams=None,info=None,printtofile=False):
+    """
+    def plot_regmean_byseas(datablob,fielddict,sims,pparams=None,info=None,printtofile=False):
+        
+        plot the regional mean by season, like a box and whisker plot, with confidence intervals
+        
+    """
+
+    seasons='SON','DJF','MAM','JJA'
+    
+    colordict=ccm.get_colordict()
+
+    field=fielddict['field']
+    fieldstr=fielddict['fieldstr']
+
+    shadeens = info['shadeens'] # list of ensembles
+    savestr = info['savestr']
+    region = info['region']
+
+    simspdt = con.get_simpairsdict()
+    
+    months = con.get_mon()
+
+    fontP = fm.FontProperties()
+    fontP.set_size('small')
+
+    flddiffdf = pd.DataFrame(datablob['diff']) 
+    fldcdf = pd.DataFrame(datablob['ctl'])
+    fldpdf = pd.DataFrame(datablob['pert']) 
+    fldmaskdf = pd.DataFrame(datablob['mask'])
+    fldcstddf = pd.DataFrame(datablob['ctlstd'])
+    fldpstddf = pd.DataFrame(datablob['pertstd'])
+    cidf = pd.DataFrame(datablob['ci'])
+
+    fig,axs = plt.subplots(4,1)
+    fig.set_size_inches(10,8)
+    for sii,sea in enumerate(seasons):
+
+        ax=axs[sii]
+        if sii==0:
+            ax.set_title(fieldstr + ' ' + region)
+            
+        for skeyii,skey in enumerate(sims):
+             
+            val=flddiffdf[skey][sea]
+            ci=cidf[skey][sea]
+            
+            ax.plot(skeyii,val,color=colordict[skey],marker='s',markersize=8)
+            ax.plot((skeyii,skeyii),ci,color=colordict[skey],linewidth=2,marker='_',markersize=6)
+            axylims = ax.get_ylim()
+            if axylims[0]<=0 and axylims[1]>=0:
+                ax.axhline(y=0,color='k',linewidth=.5) # @@ figure out how to make it first layer of plot...
+            print sea + ' ' + skey + ' ' + str(val)
+
+        ax.set_xticks(np.arange(0,len(sims)))
+        ax.set_xticklabels(sims)
+        ax.set_ylabel(sea)
+        ax.set_xlim(-.5,len(sims)+.5)
+        ax.grid()
+
+    if printtofile:
+        fig.savefig(fieldstr + 'diffCI_ens_meanBC' + savestr + '_allseassp_' + region + '.pdf')
+
+
+def plot_pattcorrwithtime_byseas(datablob,fielddict,sims,pparams=None,info=None,printtofile=False):
+
+
+    colordict=ccm.get_colordict()
+
+    field=fielddict['field']
+    fieldstr=fielddict['fieldstr']
+
+    shadeens = info['shadeens'] # list of ensembles
+    savestr = info['savestr']
+
+    simspdt = con.get_simpairsdict()
+    
+    fontP = fm.FontProperties()
+    fontP.set_size('small')
+    
+    # ==============================
+    seasons='SON','DJF','MAM','JJA'
+    seal=list(seasons)
+    
+    fldpcorrdf = pd.DataFrame(datablob['pcorr']) #fldpcorrdict)
+    tmppcdf = fldpcorrdf.loc[seal] # put seasons in order
+
+
+    ## pcemax = np.zeros((4,len(tmppcdf['r1']['DJF'])))# get any element to get time
+    ## pcemin = np.zeros((4,len(tmppcdf['r1']['DJF'])))
+    ## # have to do these loops b/c np.array(tmppcdf) comes out as an object of
+    ## # size (seasons x sims) with inner arrays of length time, and can't take max/min of that
+    for sii,sea in enumerate(seasons):
+
+        
+        tmppc = np.zeros( (5,len(tmppcdf['r1']['DJF'])) )
+        for simii,sim in enumerate(simsplt):#[0:5]): # @@ hard-coded ens members!
+            # here we just accumulate all ens sims into one matrix
+            tmpsorted = tmppcdf[sim][sea].values
+            if sea in ('JJA','MAM','SON'):
+                if threed==1:
+                    tmpsorted=tmpsorted[:-2]
+                else:
+                    tmpsorted=tmpsorted[:-1] # all timeseries have to be same length
+                
+            if pattcorryr:
+                # sort
+                tmpsorted.sort()
+                
+            tmppc[simii,:] = tmpsorted
+
+        # now do calcs: min, max            
+        pcemax[sii,:] = np.max(tmppc,axis=0)
+        pcemin[sii,:] = np.min(tmppc,axis=0)
+        
+    
+    ylims = 0,1
+    if pattcorryr:
+        ylims = -1,1
+
+    fig,axs = plt.subplots(4,1)
+    fig.set_size_inches(6,12)
+    fig.subplots_adjust(hspace=.2,wspace=.2)
+    for ii,ax in enumerate(axs.flat):
+        sea = seasons[ii]
+
+        for simii,sim in enumerate(sims):
+            
+            if pattcorryr:
+                sortfld = fldpcorrdict[sim][sea]
+                sortfld.sort() # sort from smallest to largest patt corr
+                ax.plot(sortfld,color=colordict[sim],linewidth=2)
+            else:
+                ax.plot(fldpcorrdict[sim][sea],color=colordict[sim],linewidth=2)
+        ax.set_ylim(ylims)    
+        ax.set_title(fieldstr + ': ' + sea)
+        
+    ax.set_xlabel('lat')
+    ax.legend(sims,'lower right', prop=fontP,ncol=2)
+    
+    if printtofile:
+        if pattcorryr:
+            fig.savefig(fieldstr + 'diffpattcorryrly_ens_meanBC' + obsstr + ctstr + '_allseassp_nh.pdf')
+        else:
+            fig.savefig(fieldstr + 'diffpattcorr_ens_meanBC' + obsstr + ctstr + '_allseassp_nh.pdf')
+
+    # with SHADING
+    fig,axs = plt.subplots(4,1)
+    fig.set_size_inches(6,12)
+    fig.subplots_adjust(hspace=.2,wspace=.2)
+    for ii,ax in enumerate(axs.flat):
+        sea = seasons[ii]
+
+        # ===
+        fc='0.3','y'
+        for eii,ensname in enumerate(shadeens):
+            pcensdf = pd.DataFrame(pcallensdt[ensname]).loc[sea] # returns series of length sim. each element has nlat data
+            #pensdf = pd.DataFrame(pallensdt[ensname]).loc[sea]
+            # hack to get data into a matrix
+            tmppc=np.zeros((len(pcensdf),ntime))
+            #tmpp=np.zeros((len(pensdf),ntime))
+            for ii,ekey in enumerate(censdf.keys()):
+                tmppc[ii,:] = pcensdf[ekey]
+                #tmpp[ii,:] = pensdf[ekey]
+            pcemin = np.min(tmppc,axis=0)
+            pcemax = np.max(tmppc,axis=0)
+            ax.fill_between(np.arange(0,pcemin.shape[1]),pcemin,pcemax,facecolor=fc[eii],alpha=0.2)
+
+        # ===
+
+        #ax.fill_between(np.arange(0,pcemin.shape[1]),pcemin[ii,...],pcemax[ii,...],facecolor='0.7',alpha=0.2)
+        for simii,sim in enumerate(sims[5:]):
+            
+            if pattcorryr:
+                sortfld = fldpcorrdict[sim][sea]
+                sortfld.sort() # sort from smallest to largest patt corr
+                ax.plot(sortfld,color=colordict[sim],linewidth=2)
+            else:
+                ax.plot(fldpcorrdict[sim][sea],color=colordict[sim],linewidth=2)
+        ax.set_ylim(ylims)    
+        ax.set_title(fieldstr + ': ' + sea)
+        
+    ax.set_xlabel('lat')
+    ax.legend(sims[5:],'lower right', prop=fontP,ncol=2)
+    
+    if printtofile:
+        if pattcorryr:
+            fig.savefig(fieldstr + 'diffpattcorryrly_ens_meanBC' + savestr + '_allseassp_nhshade.pdf')
+        else:
+            fig.savefig(fieldstr + 'diffpattcorr_ens_meanBC' + savestr + '_allseassp_nhshade.pdf')
+
+    # ==============================
+    
