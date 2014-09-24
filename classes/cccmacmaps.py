@@ -533,13 +533,16 @@ def get_colordict(project=None):
              'R5': get_linecolor('warm4'), #'darkyellow') #'skyblue'), #yelloworange'),
              'R2': get_linecolor('warm5'), #'steelblue3'), #'darkgoldenrod1'),
              'ENS': get_linecolor('magenta'),
-             'CAN': get_linecolor('mediumblue'), #'mediumpurple1'), #darkyellow'),
+             'CAN': get_linecolor('mediumblue'), #'mediumpurple1'), #darkyellow'),                 
              'HAD': get_linecolor('deepskyblue'),
              'NSIDC': get_linecolor('steelblue4'),
              'R4ct': get_linecolor('darkseagreen4'),
              'CANnosst': get_linecolor('darkolivegreen3'),
              'CANnothk': get_linecolor('darkolivegreen1'),
-             'RCPa': get_linecolor('orange1') }
+             'RCPa': get_linecolor('orange1'),
+             'E1': get_linecolor('mediumblue'),# same as CAN
+             'E2': get_linecolor('mediumpurple1'),
+             'E3': get_linecolor('mediumpurple4')}
 
     return colordict
 
