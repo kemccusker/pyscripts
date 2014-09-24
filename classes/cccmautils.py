@@ -631,7 +631,7 @@ def calc_monthlystd(input):
 
     for moidx in mo:
 
-        stddev[mo] = np.std(input[moidx::12,...],axis=0)
+        stddev[moidx] = np.std(input[moidx::12,...],axis=0)
 
     return stddev
 
