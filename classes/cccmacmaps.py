@@ -475,6 +475,7 @@ def get_linecolorwheel():
                   'magenta': np.array([112, 0, 102])/255.,
                   'violet': np.array([85, 0, 140])/255.,
                   'deepskyblue': np.array([0,191,255])/255.,
+                  'midnightblue': np.array([25,25,112])/255.,
                   'skyblue': np.array([135, 206, 250])/255.,
                   'red1': np.array([118, 1, 1])/255.,    # dark to light: these reds are kind of pinky
                   'red2': np.array([171, 31, 31])/255.,
@@ -542,7 +543,10 @@ def get_colordict(project=None):
              'RCPa': get_linecolor('orange1'),
              'E1': get_linecolor('mediumblue'),# same as CAN
              'E2': get_linecolor('mediumpurple1'),
-             'E3': get_linecolor('mediumpurple4')}
+             'E3': get_linecolor('mediumpurple4'),
+             'E4': get_linecolor('violet'),
+             'E5':  get_linecolor('lightsteelblue4'),
+             'ENSE': get_linecolor('midnightblue')}
 
     return colordict
 

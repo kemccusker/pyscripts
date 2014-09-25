@@ -177,13 +177,13 @@ def get_simsdict():
 
     # these will be keys (shortnames)
     sims = ('ctl1', 'pert1', 'pert2', 'pert3', 'rcp85a',
-            'ctl1r1', 'ctl1r2', 'ctl1r3', 'ctl1r4', 'ctl1r4',
-            'pert2r1','pert2r2', 'pert2r3','pert2r4','pert2r5',
+            'ctl1r1', 'ctl1r2', 'ctl1r3', 'ctl1r4', 'ctl1r4', 'ctl1ens',
+            'pert2r1','pert2r2', 'pert2r3','pert2r4','pert2r5','pert2ens',
             'pert2r4ct',
             'hadctl', 'hadpert',
             'nsidcctl', 'nsidcpert',
-            'ctl1e2', 'ctl1e3', 'ctl1e4', 'ctl1e4',
-            'pert2e2', 'pert2e3','pert2e4','pert2e5')
+            'ctl1e2', 'ctl1e3', 'ctl1e4', 'ctl1e5', 'ctl1ense',
+            'pert2e2', 'pert2e3','pert2e4','pert2e5', 'pert2ense')
 
     simsdict = dict.fromkeys(sims,{})
 
@@ -343,6 +343,23 @@ def get_simsdict():
             'ensname': 'histIC'}
     simsdict['ctl1e3'] = meta
 
+    # kemctl1e4
+    meta = {'fullname': 'kemctl1e4', 'altname': 'E4ctl', 'timestr': '001-121',
+            'timesel': '0002-01-01,0121-12-31','stdctl': None,'diffname': None,
+            'ensname': 'histIC'}
+    simsdict['ctl1e4'] = meta
+
+    # kemctl1e5
+    meta = {'fullname': 'kemctl1e5', 'altname': 'E5ctl', 'timestr': '001-121',
+            'timesel': '0002-01-01,0121-12-31','stdctl': None,'diffname': None,
+            'ensname': 'histIC'}
+    simsdict['ctl1e5'] = meta
+
+    # kemctl1ense
+    meta = {'fullname': 'kemctl1ense', 'altname': 'ENSEctl', 'timestr': '001-121',
+            'timesel': '0002-01-01,0121-12-31','stdctl': None, 'diffname': None,
+            'ensname': 'histICmean'} # @@
+    simsdict['ctl1ense'] = meta
 
     # kem1pert2e2
     meta = {'fullname': 'kem1pert2e2', 'altname': 'E2pt', 'timestr': '001-121',
@@ -355,6 +372,24 @@ def get_simsdict():
             'timesel': '0002-01-01,0121-12-31','stdctl': 'ctl1e3', 'diffname': 'E3',
             'ensname': 'histIC'}
     simsdict['pert2e3'] = meta
+
+     # kem1pert2e4
+    meta = {'fullname': 'kem1pert2e4', 'altname': 'E4pt', 'timestr': '001-121',
+            'timesel': '0002-01-01,0121-12-31','stdctl': 'ctl1e4', 'diffname': 'E4',
+            'ensname': 'histIC'}
+    simsdict['pert2e4'] = meta
+
+     # kem1pert2e5
+    meta = {'fullname': 'kem1pert2e5', 'altname': 'E5pt', 'timestr': '001-121',
+            'timesel': '0002-01-01,0121-12-31','stdctl': 'ctl1e5', 'diffname': 'E5',
+            'ensname': 'histIC'}
+    simsdict['pert2e5'] = meta
+
+    # kem1pert2ense
+    meta = {'fullname': 'kem1pert2ense', 'altname': 'ENSEpt', 'timestr': '001-121',
+            'timesel': '0002-01-01,0121-12-31','stdctl': 'ctl1ense', 'diffname': 'ENSE',
+            'ensname': 'histICmean'}# @@
+    simsdict['pert2ense'] = meta
 
 
     return simsdict
@@ -491,6 +526,7 @@ def get_regionlims(regname):
 def get_t63regionmask(regname,limsdict=None):
     """ get_t63regionmask(regname,limsdict=None):
                           Return a lat x lon mask for given region name.
+                          (Masks everything BUT the region of interest)
                           If regname='other', use region defined in limsdict
     """
 
