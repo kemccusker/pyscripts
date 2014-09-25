@@ -37,15 +37,16 @@ seasonalmap=False # seasonal maps (SON, DJF, MAM, JJA)
 seasonalvert=False # seasonal vertical zonal means instead of maps
 screen=True # whether to have screen-style vertical zonal means
 
-plotzonmean=True # plotzonmean,plotseacyc,pattcorrwithtime are mutually exclusive
-plotseacyc=False # plotzonmean,plotseacyc,pattcorrwithtime are mutually exclusive
+plotzonmean=False # plotzonmean,plotseacyc,pattcorrwithtime are mutually exclusive
+
+plotseacyc=True # plotzonmean,plotseacyc,pattcorrwithtime are mutually exclusive
 seacyclatlim=60 # southern limit for plotting polar mean seasonal cycles (line plot)
 withlat=False # plot the seasonal cycle with latitude dimension too (only for plotseacyc=1)@@for now just std over ens
 squatseacyc=False # plot seacycle figs as shorter than wide
 squatterseacyc=True # even shorter, for paper
 
 pattcorrwithtime=False # plot pattern correlation with time for each ens member
-pattcorryr=False # if 1, do a yearly anomaly pattern rather than time-integrated
+pattcorryr=True # if True, do a yearly anomaly pattern rather than time-integrated
 
 plotregmean=False
 region = None # None, polcap60, polcap65, polcap70, eurasia, ntham, nthatl
@@ -105,7 +106,7 @@ elif sensruns: # add sensitivity runs. with Shaded ENS. don't plot meanBC, mean 
     savestr = '_sensruns'
 else:
     if addcanens:
-        sims = sims + ('E1','E2','E3') # @@@@ for now only 3. E1=CAN
+        sims = sims + ('E1','E2','E3','E4','E5','ENSE') # E1=CAN
         savestr = savestr + 'canens'
         shadeens=shadeens+('histIC',)
     if addobs:
@@ -513,26 +514,32 @@ if seasonalmap or seasonalvert:
     sfnc.plot_seasonal_maps(fdict,coords,sims,pparams,vert=seasonalvert,loctimesel=timesel,info=infodict,seas=seasons)
     
 
-elif plotseacyc:
+if plotseacyc:
 
     dblob = sfnc.calc_seasonal_cycle(fdict,coords,sims,withlat=withlat,loctimesel=timesel,info=infodict)
 
     sfnc.plot_seasonal_cycle(dblob,fdict,sims,ptypes=('anom'),info=infodict,printtofile=printtofile)
     
 
-elif plotzonmean:
+if plotzonmean:
     
     dblob = sfnc.calc_seasons(fdict,coords,sims,loctimesel=timesel,info=infodict,calctype='zonmean')
     sfnc.plot_zonmean_byseas(dblob,fdict,coords,sims,ptypes=('climo','anom','stddev','stdan'),info=infodict,printtofile=printtofile)
 
-elif pattcorrwithtime:
+if pattcorrwithtime:
 
-    dblob = sfnc.calc_seasons(fdict,coords,sims,loctimesel=timesel,info=infodict,calctype='pattcorrwithtime')
+    if pattcorryr==True:
+        calctype='pattcorrwithtimeyr'
+    else:
+        calctype='pattcorrwithtime'
+        
+    dblob = sfnc.calc_seasons(fdict,coords,sims,loctimesel=timesel,info=infodict,calctype=calctype)
+    sfnc.plot_pattcorrwithtime_byseas(dblob,fdict,sims,info=infodict,calctype=calctype,printtofile=printtofile)
 
-elif plotregmean:
+if plotregmean:
 
     dblob = sfnc.calc_seasons(fdict,coords,sims,loctimesel=timesel,info=infodict,calctype='regmean')
     sfnc.plot_regmean_byseas(dblob,fdict,sims,info=infodict,printtofile=printtofile)
 
-elif testhadisst:
+if testhadisst:
     print '@@testhadisst not implemented'
