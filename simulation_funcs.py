@@ -53,7 +53,7 @@ def plot_seasonal_maps(fielddict,coords,sims,pparams,vert=False,loctimesel=None,
     sigoff=info['sigoff']  # turn off significance marking?
     pct=info['pct']   # percentage change?
     nonstandardlev=fielddict['nonstandardlev']
-
+    savestr=info['savestr']
 
     bp=con.get_basepath()
     basepath=bp['basepath'] + model + '/'; subdir=bp['subdir'] # @@ move out of function?
@@ -77,6 +77,7 @@ def plot_seasonal_maps(fielddict,coords,sims,pparams,vert=False,loctimesel=None,
     fldcallseas = np.zeros(theshape)
     fldpallseas = np.zeros(theshape)
 
+    latlim=pparams['latlim']
     cmap=pparams['cmap']
     cmin=pparams['cmin']; cmax=pparams['cmax']
     cmlen=float( plt.cm.get_cmap(cmap).N)
@@ -169,8 +170,8 @@ def plot_seasonal_maps(fielddict,coords,sims,pparams,vert=False,loctimesel=None,
             
             if vert: # zonal mean with height
                 pparams['suppcb'] = True
-                pparams['levlim'] = levlim
-                pparams['screen'] = screen
+                #pparams['levlim'] = levlim
+                #pparams['screen'] = screen
                 pparams['addcontlines'] = True
                 if colidx!=0: # if not the first column, suppress y labels
                     pparams['suppylab'] = True
@@ -204,36 +205,38 @@ def plot_seasonal_maps(fielddict,coords,sims,pparams,vert=False,loctimesel=None,
     fig6.colorbar(pc,cax=cbar_ax) # or do bm.colorbar....
     plt.suptitle(fieldstr)
 
-    ## if printtofile:
+    if printtofile:
     ##     if sigoff==0:
     ##         sigstr='sig' + sigtype
     ##     else:
     ##         sigstr=''
+        sigstr='sigcont' #@@ hard code
+        suff='pdf'
 
-    ##     if latlim!= None:
-    ##         latstr=str(latlim)
-    ##     else:
-    ##         latstr=''
+        if latlim!= None:
+            latstr=str(latlim)
+        else:
+            latstr=''
 
-    ##     if seasvert:
-    ##         if screen:
-    ##             style = 'screen'
-    ##         else:
-    ##             style = str(latlim) + 'N' + str(levlim) + 'hPa'
+        if vert:
+            if screen:
+                style = 'screen'
+            else:
+                style = str(latlim) + 'N' + str(levlim) + 'hPa'
                 
-    ##         if pct:
-    ##             fig6.savefig(fieldstr + 'pctdiff' + sigstr + '_enssubplot' + obsstr + ctstr +
-    ##                          '_seas_' + style + '2.' + suff)
-    ##         else:
-    ##             fig6.savefig(fieldstr + 'diff' + sigstr + '_enssubplot' + obsstr + ctstr +
-    ##                          '_seas_' + style + '2.' + suff)
-    ##     else: # maps
-    ##         if pct: # version 2 has new season order, new filename/key org
-    ##             fig6.savefig(fieldstr + 'pctdiff' + sigstr + '_enssubplot' + obsstr + ctstr +
-    ##                          '_seas_nh' + latstr + '2.' + suff)
-    ##         else:
-    ##             fig6.savefig(fieldstr + 'diff' + sigstr + '_enssubplot' + obsstr + ctstr + '_seas_nh'
-    ##                          + latstr + '2.' + suff)
+            if pct:
+                fig6.savefig(fieldstr + 'pctdiff' + sigstr + '_enssubplot' + savestr +
+                             '_seas_' + style + '2.' + suff)
+            else:
+                fig6.savefig(fieldstr + 'diff' + sigstr + '_enssubplot' + savestr +
+                             '_seas_' + style + '2.' + suff)
+        else: # maps
+            if pct: # version 2 has new season order, new filename/key org
+                fig6.savefig(fieldstr + 'pctdiff' + sigstr + '_enssubplot' + savestr +
+                             '_seas_nh' + latstr + '2.' + suff)
+            else:
+                fig6.savefig(fieldstr + 'diff' + sigstr + '_enssubplot' + savestr + '_seas_nh'
+                             + latstr + '2.' + suff)
 
 def calc_seasons(fielddict,coords,sims,loctimesel=None,info=None,siglevel=0.05,
                  calctype=None):
@@ -389,6 +392,7 @@ def calc_seasons(fielddict,coords,sims,loctimesel=None,info=None,siglevel=0.05,
                                         cnc.getNCvar(fnamep2,ncfield,**ncparams)*conv,
                                         axis=0)
                 else:
+                    print fnamec
                     fldc = cnc.getNCvar(fnamec,ncfield,timesel=timesel,
                                           **ncparams)*conv
                     fldp = cnc.getNCvar(fnamep,ncfield,timesel=timesel,
@@ -1081,7 +1085,6 @@ def plot_seasonal_cycle(datablob,fielddict,sims,pparams=None,ptypes=('anom',),wi
 
 def plot_zonmean_byseas(datablob,fielddict,coords,sims,pparams=None,ptypes=('anom',),withlat=False,info=None,printtofile=False,figsize=(6,2.5)):
 
-    print '@@@ not implemented yet'
 
     seasons = 'SON','DJF','MAM','JJA'
     lat=coords['lat']
