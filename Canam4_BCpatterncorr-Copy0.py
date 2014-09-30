@@ -38,7 +38,7 @@ model = 'CanAM4'
 bp=con.get_basepath()
 basepath=bp['basepath'] + model + '/'; subdir=bp['subdir']
 
-field='gz'  # sicn, st, pmsl, gz
+field='st'  # sicn, st, pmsl, gz
 level=50000
 latlim=60
 ylims=(0,1)
@@ -49,17 +49,17 @@ conv=1
 etype = 'e' # which ensemble are we doing. 'r' or 'e'
     
 # baseline pattern to compare to
-## cmpcasenamep='kem1pert2ens' # else, 'kemhadpert', 'kemnsidcpert'
-## cmpcasenamec='kemctl1ens'
-## cmptype = 'ensavg' 
+cmpcasenamep='kem1pert2ens' # else, 'kemhadpert', 'kemnsidcpert'
+cmpcasenamec='kemctl1ens'
+cmptype = 'ensavg' 
 
 #cmpcasenamep='kem1pert2' # else, 'kemhadpert', 'kemnsidcpert'
 #cmpcasenamec='kemctl1'
 #cmptype = 'meanBC'
 
-cmpcasenamep='kem1pert2ense' # meanBC ensemble average
-cmpcasenamec='kemctl1ense'
-cmptype = 'eensavg' 
+#cmpcasenamep='kem1pert2ense' # meanBC ensemble average
+#cmpcasenamec='kemctl1ense'
+#cmptype = 'eensavg' 
 
 
 bcasenamep='kem1pert2' # base for the ensemble members
@@ -498,7 +498,7 @@ for eii in range(1,ensnum+1):
         ax.axvline(x=0,color='k')
     
 if printtofile:
-    fig.savefig(fieldstr + 'scatter_nof' + str(latlim) + 'N_ensmems_cmpto_' + cmptype + '_seacyc.pdf')
+    fig.savefig(fieldstr + 'scatter_nof' + str(latlim) + 'N_' + etype + 'ensmems_cmpto_' + cmptype + '_seacyc.pdf')
 
 # <codecell>
 
@@ -559,7 +559,7 @@ ax.set_ylim((0,1))
 ax.legend(('max','min','range','mean','frac IV1','frac IV2'))
 
 if printtofile:
-    fig.savefig(fieldstr + 'pattcorr_nof' + str(latlim) + 'N_ensmems_cmpto_' + cmptype + '_seacyc.pdf')
+    fig.savefig(fieldstr + 'pattcorr_nof' + str(latlim) + 'N_' + etype + 'ensmems_cmpto_' + cmptype + '_seacyc.pdf')
 
 # <rawcell>
 
@@ -618,7 +618,7 @@ ax.set_ylim(ylims)
 ax.legend(('max','min','mean','frac IV1'),'lower left')
 
 if printtofile:
-    fig.savefig(fieldstr + 'pattcorr_nof' + str(latlim) + 'N_ensmems_cmpto_' + cmptype + '_SEAS.pdf')
+    fig.savefig(fieldstr + 'pattcorr_nof' + str(latlim) + 'N_' + etype + 'ensmems_cmpto_' + cmptype + '_SEAS.pdf')
 
 # <rawcell>
 
@@ -775,7 +775,7 @@ ax.legend(('max','min','range','mean','frac IV1','frac IV2'))
 ax.set_xlabel('month')
 
 if printtofile:
-    fig.savefig(fieldstr + 'pattcorr_nof' + str(latlim) + 'N_ensmems_cmpto_ensmems_seacyc.pdf')
+    fig.savefig(fieldstr + 'pattcorr_nof' + str(latlim) + 'N_' + etype + 'ensmems_cmpto_ensmems_seacyc.pdf')
 
 # <codecell>
 
@@ -857,7 +857,7 @@ ax.set_xlabel('season')
 ax.legend(('max','min','mean','frac IV1'),'lower left')
 
 if printtofile:
-    fig.savefig(fieldstr + 'pattcorr_nof' + str(latlim) + 'N_ensmems_cmpto_ensmems_SEAS.pdf')
+    fig.savefig(fieldstr + 'pattcorr_nof' + str(latlim) + 'N_' + etype + 'ensmems_cmpto_ensmems_SEAS.pdf')
     
 #print 'SEASONAL:'
 #print avgabssea*avgabssea*100
@@ -868,7 +868,7 @@ if printtofile:
 
 # <codecell>
 # ################## This is more like the final version of the figure ########
-printtofile=False
+printtofile=True
 
 fig,axs = plt.subplots(2,1)
 fig.set_size_inches(5,7) # more squat
@@ -928,7 +928,7 @@ ax.set_title('Compare ' + etype.upper() + '1-5 with each other ' + etype.upper()
 ax.grid(True)
 
 if printtofile:
-    fig.savefig(fieldstr + 'pattcorr_nof' + str(latlim) + 'N_bothcmps_' + cmptype + 'SEAS.pdf')
+    fig.savefig(fieldstr + 'pattcorr_nof' + str(latlim) + 'N_' + etype + 'bothcmps_' + cmptype + 'SEAS.pdf')
     
 
 # <codecell>
@@ -1059,7 +1059,7 @@ ax.grid(True)
 
 
 if printtofile:
-    fig.savefig(fieldstr + 'pattcorr_nof' + str(latlim) + 'N_bothcmps_' + cmptype + 'BARS_SEAS_sqfirst.pdf')
+    fig.savefig(fieldstr + 'pattcorr_nof' + str(latlim) + 'N_' + etype + 'bothcmps_' + cmptype + 'BARS_SEAS_sqfirst.pdf')
     
 
 # <codecell>
