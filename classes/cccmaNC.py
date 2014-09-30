@@ -275,6 +275,12 @@ def getNCvar_old(filename,field,timechunk=None,monsel=None,level=None,seas=None,
             fld = ncfile.variables[field][...]
     else:
         if len(timechunk)==1: # start time until end
+            print timechunk # @@
+            firsttime = ncfile.variables['time'][timechunk[0],...] #@@@
+            firstdate = datetime.date(1850, 1, 1) + datetime.timedelta(int(firsttime))
+            print firsttime # @@@
+            print firstdate # @@@
+
             if level != None:
                 fld = ncfile.variables[field][timechunk[0]:,level,...]
             else:
