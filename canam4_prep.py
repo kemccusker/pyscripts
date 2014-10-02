@@ -27,17 +27,17 @@ plt.ion()
 
 printtofile=True
 
-field = 'gz'
+field = 'u'
 smclim=False
 level=50000 # for threed
 nonstandardlev=False # standards are 700,500,300
 
 # Choose type of plot =========================
-seasonalmap=False # seasonal maps (SON, DJF, MAM, JJA)
+seasonalmap=True # seasonal maps (SON, DJF, MAM, JJA)
 seasonalvert=True # seasonal vertical zonal means instead of maps
 screen=True # whether to have screen-style vertical zonal means
 
-plotzonmean=True # plotzonmean,plotseacyc,pattcorrwithtime are mutually exclusive
+plotzonmean=False # plotzonmean,plotseacyc,pattcorrwithtime are mutually exclusive
 
 plotseacyc=False # plotzonmean,plotseacyc,pattcorrwithtime are mutually exclusive
 seacyclatlim=60 # southern limit for plotting polar mean seasonal cycles (line plot)
@@ -60,6 +60,7 @@ halftime=False # get only the first 60yrs. make sure to set the other flag the o
 halftime2=False # get only the last 60yrs. make sure to set the other flag the opp
 
 # Choose what simulations to add =============
+#  default is R1-5, ENS
 canens=True # just the CAN ensemble (E1-E5) plus mean, plus mean of R ensemble. option to addobs only.
 sensruns=False # sensruns only: addr4ct=1,addsens=1. others=0 no meanBC, r mean, or obs
 addobs=True # add mean of kemhad* & kemnsidc* runs to line plots, seasonal maps. 
@@ -67,7 +68,7 @@ addr4ct=False # add kem1pert2r4ct (constant thickness version of ens4)
 addsens=False # add sensitivity runs (kem1pert1b, kem1pert3)
 addrcp=False # add kem1rcp85a simulation (and others if we do more)
 simsforpaper=False # meanBC, HAD, NSIDC only. best for maps and zonal mean figs (not line plots)
-addcanens=True # add "initial condition" ensemble of kemctl1/kem1pert2
+addcanens=False # add "initial condition" ensemble of kemctl1/kem1pert2
 
 latlim = None # None #45 # lat limit for NH plots. Set to None otherwise. use 45 for BC-type maps
 levlim= 100 # level limit for vertical ZM plots (in hPa). ignored if screen=True
@@ -420,59 +421,54 @@ elif field == 'sv':
     cmaxm = .5
 
 elif field == 't':
-    threed = True
 
-    conv=1
-    ncfield = 'TEMP'
-    units = 'K' # @@
-    ## if level == 30000:
-    ##     cminc = 215; cmaxc = 245        
-    ## elif level == 70000:
-    ##     cminc = 245; cmaxc = 285
+    fdict['units'] = 'K'
+    fdict['ncfield'] = 'TEMP'
+
+    threed = True
+    fdict['conv'] = 1
+
+    pparams['cmap'] = 'blue2red_w20'
         
     if level == 30000:
-        cmin = -.3; cmax = .3
-        cminm = -.5; cmaxm = .5  # for monthly
+        pparams['cmin'] = -.5; pparams['cmax'] = .5
+        #cminm = -.5; cmaxm = .5  # for monthly
         #cminsea = -.5; cmaxsea = .5
     elif level == 70000:
-        cmin = -.3; cmax = .3
-        cminm = -.5; cmaxm = .5  # for monthly
+        #cmin = -.3; cmax = .3
+        pparams['cmin'] = -.5; pparams['cmax'] = .5  # for monthly
         #cminsea = -.5; cmaxsea = .5
 
-    if seasvert:
+    if seasonalvert:
         if screen:
             pparams['levlim']=300
-            cmin=-2.5; cmax=2.5
-            cminm=-2.5; cmaxm=2.5
+            pparams['cmin']=-2.5; pparams['cmax']=2.5
+            #cminm=-2.5; cmaxm=2.5
         else:
             cmin = -.5; cmax = .5
-            cminm = -.8; cmaxm = .8 
+            pparams['cmin'] = -.8; pparams['cmax'] = .8 
 elif field == 'u':
     threed = True
-
-    conv=1
-    ncfield = 'U'
-    units = 'm/s' #@@
-    ## if level==50000:
-    ##     cminc=-25; cmaxc=25
-    ## elif level==70000:
-    ##     cminc=-15; cmaxc=15
-    ## elif level == 30000:
-    ##     cminc=-40; cmaxc=40
+    fdict['units'] = 'm/s'
+    fdict['ncfield'] = 'U'
+    fdict['conv'] = 1
 
     if level == 30000:
-        cmin = -2; cmax = 2
-        cminm = -3; cmaxm = 3
+        #cmin = -2; cmax = 2
+        pparams['cmin'] = -3; pparams['cmax'] = 3
         #cminsea = -3; cmaxsea = 3
     else:
-        cmin = -1; cmax = 1
-        cminm = -1; cmaxm = 1
+        #cmin = -1; cmax = 1
+        pparams['cmin'] = -1; pparams['cmax'] = 1
         #cminsea = -1; cmaxsea = 1
 
-    if seasvert:
-        cmin=-.5; cmax=.5
-        cminm=-1; cmaxm=1
-    #cmapclimo='blue2red_20'
+    if seasonalvert:
+        #cmin=-.5; cmax=.5
+        pparams['cmin'] = -1; pparams['cmax'] = 1
+        if screen:
+            pparams['levlim']=300
+        
+    pparams['cmap']='blue2red_20'
 
 elif field == 'gz':
     
