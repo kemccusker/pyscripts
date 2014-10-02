@@ -54,7 +54,8 @@ def plot_seasonal_maps(fielddict,coords,sims,pparams,vert=False,loctimesel=None,
     pct=info['pct']   # percentage change?
     nonstandardlev=fielddict['nonstandardlev']
     savestr=info['savestr']
-
+    screen = pparams['screen']
+    
     bp=con.get_basepath()
     basepath=bp['basepath'] + model + '/'; subdir=bp['subdir'] # @@ move out of function?
 
