@@ -38,7 +38,7 @@ model = 'CanAM4'
 bp=con.get_basepath()
 basepath=bp['basepath'] + model + '/'; subdir=bp['subdir']
 
-field='st'  # sicn, st, pmsl, gz
+field='gz'  # sicn, st, pmsl, gz
 level=50000
 latlim=60
 ylims=(0,1)
@@ -46,7 +46,7 @@ ncfield=field.upper()
 fieldstr=field
 conv=1
 
-etype = 'e' # which ensemble are we doing. 'r' or 'e'
+etype = 'r' # which ensemble are we doing. 'r' or 'e'
     
 # baseline pattern to compare to
 cmpcasenamep='kem1pert2ens' # else, 'kemhadpert', 'kemnsidcpert'
