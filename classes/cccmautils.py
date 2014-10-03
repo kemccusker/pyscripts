@@ -663,3 +663,31 @@ def calc_monthlytstat(input1,input2):
                                                              axis=0)
 
     return (tstat,pval)
+
+def calc_monthlysigarea(input1,input2,siglevel=0.05,latlim=60,region=None):
+    """ calc_monthlysigarea(input1,input2,siglevel=0.05,latlim=60,region=None)
+              If 'region' is set, it supercedes latlim!!
+              
+    """
+    
+    tstat,pval = calc_monthlytstat(input1,input2) # climo of lat x lon
+    lat = con.get_t63lat()
+    lon = con.get_t63lon()
+    cellareas = calc_cellareas(lat,lon,repeat=pval.shape)
+
+    amask = ma.masked_where(pval>siglevel,cellareas) # mask out non-sig cells
+
+    # now need to mask out regions of globe we don't care about
+    if region != None:
+        # region supercedes latlim!
+        amask = mask_region(amask,lat,lon,region)
+    
+    elif latlim != None:
+        amask = ma.masked_where(lat>latlim,amask)
+
+    for moidx in mo:
+        sigarea[moidx] = np.sum(moidx,...)
+
+    return sigarea
+    
+    
