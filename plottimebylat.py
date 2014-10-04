@@ -31,16 +31,16 @@ cutl = reload(cutl)
 plt.close("all")
 plt.ion()
 
-printtofile=1
+printtofile=True
 
 # if seasonal is the only true, will do anomaly plus signif in time.
-seasonal = 1 # plot all 4 seasons in a subplot
-seacycle = 0
+seasonal = True # plot all 4 seasons in a subplot
+seacycle = False
 pattcorr=0 # do pattern correlation with time instead
 pattcorryr=0# yearly pattern corr with mean instead of time-integrated patt corr
 dostd=0 # plot standard dev with time (just the pert run, not anomaly for now@@)
 addsicn=False # add sicn contours on top (probably just for when field=='st')
-
+smclim=True # only set up for 'st' and v2 at the moment.
 
 # version 2 uses control climo as baseline (rather than individual times),
 #   and full timeseries for ttest
@@ -48,7 +48,7 @@ v2=1 # only for seasonal=1
 
 sigtype = 'cont'
 
-seasons = 'DJF','MAM','JJA','SON'
+seasons = 'SON','DJF','MAM','JJA'
 model = 'CanAM4'
 threed = 0
 
@@ -75,9 +75,19 @@ casenamep25 = 'kem1pert2r5'
 ensruns = casenamep21, casenamep22, casenamep23, casenamep24, casenamep25
 casenamep2e = 'kem1pert2ens'
 
+casenamep2e1 = 'kem1pert2e1'; 
+casenamep2e2 = 'kem1pert2e2'
+casenamep2e3 = 'kem1pert2e3'
+casenamep2e4 = 'kem1pert2e4'
+casenamep2e5 = 'kem1pert2e5'
+enseruns = casenamep2e1, casenamep2e2, casenamep2e3, casenamep2e4, casenamep2e5
+casenamep2ee = 'kem1pert2ense'
+
+casenamep2es = 'kem1pert2ensspr' # super ensemble
+
 # SET SIMULATION
-casenamep = casenamepn
-rnum=1 # @@ set if casenamep is one of the ens members
+casenamep = casenamep2es
+rnum=5 # @@ set if casenamep is one of the ens members
 
 
 timstrp = '001-121'
@@ -88,7 +98,7 @@ timstrp2 = '062-121' # "
 # # # ######## set Field info ###################
 # st, sicn, sic, gt, pmsl, pcp, hfl, hfs, turb, flg, fsg, fn, pcpn, zn, su, sv (@@later ufs,vfs)
 # OR threed: 'gz','t','u'
-field = 'st'
+field = 'pmsl'
 level=30000
 #level = 100000  # only for threed vars
 thickness=0 # do thickness instead: just for gz
@@ -111,6 +121,9 @@ elif casenamep in ensruns:
     ## timstrp = '001-121'
     ## timstrp2 = '062-121'
     ## timesel = '0002-01-01,0121-12-31'
+elif casenamep in enseruns:
+    casename = casename + 'e' + str(rnum)
+    
 elif casenamep == casenamep2e:
     casename = 'kemctl1ens'
     ## timstr = '001-121'
@@ -118,6 +131,10 @@ elif casenamep == casenamep2e:
     ## timstrp = '001-121'
     ## timstrp2 = '062-121'
     ## timesel = '0002-01-01,0121-12-31'
+elif casenamep == casenamep2ee:
+    casename = 'kemctl1ense'
+elif casenamep == casenamep2es:
+    casename = 'kemctl1ensspr'
 elif casenamep == casenamepn:
     casename = casenamen
 
@@ -134,10 +151,11 @@ if field == 'st':
     cmin = -2; cmax = 2  # for anomaly plots
     cminp=-.5; cmaxp=.5 # for when pert is 'ctl'
     cminm = -2; cmaxm = 2   # monthly
-    
-    ## print 'small clim!'
-    ## cmin = -1; cmax = 1  for anomaly plots
-    ## cminm = -.5; cmaxm = .5   monthly
+
+    if smclim:
+        print 'small clim!'
+        cmin = -1; cmax = 1  #for anomaly plots
+        cminm = -.5; cmaxm = .5  # monthly
     
     cminmp = -1; cmaxmp = 1 # for when pert is 'ctl'
     if dostd==1 and casenamep in casenamep2e:
@@ -185,7 +203,7 @@ elif field == 'pmsl':
     units = 'hPa' # pretty sure hpa @@double check
     conv = 1
     cmin = -1; cmax = 1  # for anomaly plots
-    cminm=-2; cmaxm=2  # for monthly maps
+    cminm=-1; cmaxm=1  # for monthly maps
     cminp=cmin; cmaxp=cmax # for when pert is 'ctl'
     cminmp=cminm; cmaxmp=cmaxm
     cmap = 'blue2red_20'
@@ -662,9 +680,13 @@ if seasonal: # plot all 4 seasons in a subplot
         elif dostd==1:
              fig.savefig(prfield + 'stddev' + '_' + casenamep +\
                         '_timexlat_seas_nh.' + suff)
-        elif v2: 
-            fig.savefig(prfield + 'diffsig' + sigtype + '_' + casenamep +\
+        elif v2:
+            if smclim:
+                fig.savefig(prfield + 'diffsig' + sigtype + '_' + casenamep +\
                         '_v_' + casename + '_timexlat_seas_nh_v2smclim.' + suff)
+            else:
+                fig.savefig(prfield + 'diffsig' + sigtype + '_' + casenamep +\
+                        '_v_' + casename + '_timexlat_seas_nh_v2.' + suff)
         else:
             fig.savefig(prfield + 'diffsig' + sigtype + '_' + casenamep +\
                         '_v_' + casename + '_timexlat_seas_nh.' + suff)
