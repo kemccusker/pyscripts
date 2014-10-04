@@ -311,7 +311,7 @@ def map_allmonths(fld, lat, lon,title='',units='',cmap='blue2red_w20',type='sq',
                      axis=ax,suppcb=1,lmask=lmask,flipmask=flipmask,units=units,latlim=latlim)
         ax.set_title(months[midx])
         if pvals != None:
-            cplt.addtsigm(bm,pvals,lat,lon,type=sigtype)
+            addtsigm(bm,pvals[midx,...],lat,lon,type=sigtype)
         if conts != None:
             # add specified contour(s)
             lons, lats = np.meshgrid(lon,lat)
@@ -361,7 +361,7 @@ def map_allseas(fld, lat, lon,title='',units='',cmap='blue2red_w20',type='sq',
                        axis=ax,suppcb=1,lmask=lmask,flipmask=flipmask,units=units,latlim=latlim)
         ax.set_title(seasons[midx])
         if pvals != None:
-            cplt.addtsigm(bm,pvals,lat,lon,type=sigtype)
+            addtsigm(bm,pvals,lat,lon,type=sigtype)
 
         if conts != None:
             # add specified contour(s)
@@ -424,7 +424,7 @@ def plotvert_allseas(fld, lev, lat,title='',units='',cmap='blue2red_w20',type=No
         
         ax.set_title(seasons[midx])
         if pvals != None:
-            cplt.addtsig(cf,pvals,lat,lon,type=sigtype)
+            addtsig(cf,pvals,lat,lon,type=sigtype)
 
         midx = midx+1
 
