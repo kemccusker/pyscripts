@@ -123,21 +123,25 @@ def calc_seaicearea(input,lat,lon):
     
     return sia
 
-def calc_totseaicearea(input,lat,lon):
+def calc_totseaicearea(fld,lat,lon,isarea=False):
     """ calculate total sea ice area
            returns nh,sh
-           input is expected to be time x lat x lon
+           input is expected to be time x lat x lon SEA ICE CONC
+              unless isarea=True
 
         @@ needs testing 9/9/2014
     """
-
-    sia = calc_seaicearea(input,lat,lon)
+    if isarea:
+        sia=fld
+    else:
+        sia = calc_seaicearea(fld,lat,lon)
+        
     nh = np.sum(np.sum(sia[:,lat>0,:],axis=2),axis=1)
     sh = np.sum(np.sum(sia[:,lat<0,:],axis=2),axis=1)
 
     return nh,sh
 
-def calc_meanseaicethick(input,sia,lat,lon):
+def calc_meanseaicethick(fld,sia,lat,lon):
     """ calc_meanseaicethick(input,sia,lat,lon)
                  input: 2D or greater array of sea ice thickness
                  need sea ice area? @@
@@ -145,14 +149,14 @@ def calc_meanseaicethick(input,sia,lat,lon):
     
     print "Not finished! @@"
 
-def calc_totseaicevol(input,sic,lat,lon,repeat=False,area=False):
+def calc_totseaicevol(fld,sic,lat,lon,repeat=False,isarea=False):
     """ calculate total ice volume
            returns nh, sh
            input is expected to be time x lat x lon in units of thickness (not mass)
            sic is fractional sea ice concentration
            if sic must be repeated to match input, set
               repeat=True (@@ not yet implemented)
-           set area=True if sic input is actually sea ice area,
+           set isarea=True if sic input is actually sea ice area,
               otherwise sia will be calc'd from incoming sic
     """
 
@@ -164,8 +168,8 @@ def calc_totseaicevol(input,sic,lat,lon,repeat=False,area=False):
     else:
         sia=sic
     
-    gridvoln = input[:,lat>0,...]*sia[:,lat>0,...] # north
-    gridvols = input[:,lat<0,...]*sia[:,lat<0,...] # south
+    gridvoln = fld[:,lat>0,...]*sia[:,lat>0,...] # north
+    gridvols = fld[:,lat<0,...]*sia[:,lat<0,...] # south
 
     nh = np.sum(np.sum(gridvoln,2),1)
     sh = np.sum(np.sum(gridvols,2),1)
@@ -173,24 +177,24 @@ def calc_totseaicevol(input,sic,lat,lon,repeat=False,area=False):
     return nh,sh
     
     
-def global_mean_areawgted3d(input, lat, lon):
+def global_mean_areawgted3d(fld, lat, lon):
 
     earthrad = con.get_earthrad()
     totalarea = 4*np.pi*earthrad**2
 
     cellareas = calc_cellareas(lat,lon)
 
-    nt = input.shape[0]
+    nt = fld.shape[0]
     wgts = cellareas/totalarea
     
     gm = np.zeros(nt)    
     for tidx in range(0,nt):
-        gm[tidx] = np.average(input[tidx,:,:],weights=wgts)
+        gm[tidx] = np.average(fld[tidx,:,:],weights=wgts)
         
     return gm
    
 
-def polar_mean_areawgted3d(input,lat,lon,latlim=60,hem='nh',cellareas=None,includenan=False):
+def polar_mean_areawgted3d(fld,lat,lon,latlim=60,hem='nh',cellareas=None,includenan=False):
     """ Pass in cellareas if you want some of the cells masked, e.g. if masking ocean or land.
         This ONLY works if the mask is the same for each time in timeseries.
             includenan: whether or not to consider NaN values. if True, a mean of a NaN is NaN.
@@ -205,14 +209,14 @@ def polar_mean_areawgted3d(input,lat,lon,latlim=60,hem='nh',cellareas=None,inclu
 
     if hem=='nh':
         polcellareas = cellareas[lat>=latlim,:]
-        polinput = input[:,lat>=latlim,:]
+        polinput = fld[:,lat>=latlim,:]
     else:
         polcellareas = cellareas[lat<=latlim,:]
-        polinput = input[:,lat<=latlim,:]
+        polinput = fld[:,lat<=latlim,:]
 
     totalarea=float(np.sum(np.sum(polcellareas)))
 
-    nt = input.shape[0]
+    nt = fld.shape[0]
     wgts = polcellareas/totalarea
     #print wgts #@@
     
@@ -606,9 +610,9 @@ def calc_regmean(fld,lat,lon,region,limsdict=None):
     return fldreg
 
 
-def calc_monthlystd(input):
-    """ calc_monthlystd(input):
-               Given a monthly timeseries (input) of size time [x lat x lon],
+def calc_monthlystd(fld):
+    """ calc_monthlystd(fld):
+               Given a monthly timeseries (fld) of size time [x lat x lon],
                return a std deviation for each month such that the return dimension
                is 12 x [shape[1:]].
 
@@ -616,7 +620,7 @@ def calc_monthlystd(input):
           (climo,stddev)
                
     """
-    dims = input.shape
+    dims = fld.shape
     nt = dims[0]
 
     if len(dims)==1:
@@ -631,7 +635,7 @@ def calc_monthlystd(input):
 
     for moidx in mo:
 
-        stddev[moidx] = np.std(input[moidx::12,...],axis=0)
+        stddev[moidx] = np.std(fld[moidx::12,...],axis=0)
 
     return stddev
 
@@ -667,27 +671,44 @@ def calc_monthlytstat(input1,input2):
 def calc_monthlysigarea(input1,input2,siglevel=0.05,latlim=60,region=None):
     """ calc_monthlysigarea(input1,input2,siglevel=0.05,latlim=60,region=None)
               If 'region' is set, it supercedes latlim!!
-              
+
+              returns: sigarea AS PERCENT OF DOMAIN
     """
     
     tstat,pval = calc_monthlytstat(input1,input2) # climo of lat x lon
+    
     lat = con.get_t63lat()
     lon = con.get_t63lon()
+    lons,lats = np.meshgrid(lon,lat)
+    
     cellareas = calc_cellareas(lat,lon,repeat=pval.shape)
-
+    totmask = cellareas # for computing total area
+    
     amask = ma.masked_where(pval>siglevel,cellareas) # mask out non-sig cells
+    
 
     # now need to mask out regions of globe we don't care about
     if region != None:
         # region supercedes latlim!
         amask = mask_region(amask,lat,lon,region)
+        totmask = mask_region(totmask,lat,lon,region)
     
     elif latlim != None:
-        amask = ma.masked_where(lat>latlim,amask)
+        regmask=lats>latlim        
+        regmask = np.tile(regmask,(12,1,1))
 
+        amask = ma.masked_where(regmask,amask)
+        totmask = ma.masked_where(regmask,totmask)
+
+    mo = np.arange(0,12)
+    sigarea= np.zeros(mo.shape)
+    totarea= np.zeros(sigarea.shape)
     for moidx in mo:
-        sigarea[moidx] = np.sum(moidx,...)
+        sigarea[moidx] = np.sum(amask[moidx,...])
+        totarea[moidx] = np.sum(totmask[moidx,...])
 
-    return sigarea
+    #print totarea
+    #print sigarea
+    return sigarea/(totarea)*100 # as a percent of total area
     
     
