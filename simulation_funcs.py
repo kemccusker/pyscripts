@@ -54,7 +54,7 @@ def plot_seasonal_maps(fielddict,coords,sims,pparams,vert=False,loctimesel=None,
     pct=info['pct']   # percentage change?
     nonstandardlev=fielddict['nonstandardlev']
     savestr=info['savestr']
-    screen = pparams['screen']
+    screen = info['screen']
     
     bp=con.get_basepath()
     basepath=bp['basepath'] + model + '/'; subdir=bp['subdir'] # @@ move out of function?
@@ -516,6 +516,7 @@ def calc_seasonal_cycle(fielddict,coords,sims,withlat=False,loctimesel=None,info
                    blob['pertstd'] = fldpstddict
                    blob['diff'] = flddiffdict
                    blob['mask'] = flddmaskdict
+                   blob['sigarea'] # @@@
     """
 
     print 'calc_seasonal_cycle()'
@@ -568,14 +569,15 @@ def calc_seasonal_cycle(fielddict,coords,sims,withlat=False,loctimesel=None,info
     fldcstddict = dict.fromkeys(sims,{}); fldpstddict = dict.fromkeys(sims,{})
     flddiffdict = dict.fromkeys(sims,{}); flddmaskdict = dict.fromkeys(sims,{})
     fldpcorrdict = dict.fromkeys(sims,{});
-    cidict = dict.fromkeys(sims,{})
+    cidict = dict.fromkeys(sims,{}); sigardict = dict.fromkeys(sims,{})
 
     for ridx,sim in enumerate(sims):
         seatstat = np.zeros((12)); seapval = np.zeros((12))
         seafldc = np.zeros((12)); seafldp = np.zeros((12))
         seafldcstd = np.zeros((12)); seafldpstd = np.zeros((12))
         seadiff= np.zeros((12)); seadmask=np.zeros((12))
-        seaci = np.zeros((12,2));#@@ might need new shape for ci.
+        seaci = np.zeros((12,2));
+        seasigar = np.zeros((12));
         
         ## seatstatdict=dict.fromkeys(seacyc); seapvaldict=dict.fromkeys(seacyc)
         ## seafldcdict=dict.fromkeys(seacyc); seafldpdict=dict.fromkeys(seacyc)
@@ -703,8 +705,8 @@ def calc_seasonal_cycle(fielddict,coords,sims,withlat=False,loctimesel=None,info
             else:
                 if sia:
                     #calc total area instead of average
-                    fldc,sh = cutl.calc_totseaicearea(fldc,lat,lon) #np.sum(np.sum(fldczm[:,lat>0,:],axis=2),axis=1)
-                    fldp,sh = cutl.calc_totseaicearea(fldp,lat,lon) #np.sum(np.sum(fldpzm[:,lat>0,:],axis=2),axis=1)
+                    fldc,sh = cutl.calc_totseaicearea(fldc,lat,lon,isarea=True) #np.sum(np.sum(fldczm[:,lat>0,:],axis=2),axis=1)
+                    fldp,sh = cutl.calc_totseaicearea(fldp,lat,lon,isarea=True) #np.sum(np.sum(fldpzm[:,lat>0,:],axis=2),axis=1)
                 else:
                     # consider masking out land for sfc fluxes...?
                     # @@@ switch to regional mean? which includes polar means....
@@ -737,6 +739,10 @@ def calc_seasonal_cycle(fielddict,coords,sims,withlat=False,loctimesel=None,info
             #seadiffdict[sea] = np.mean(fldp,axis=0)- np.mean(fldc,axis=0)
             seadmask = ma.masked_where(seapval>siglevel,seadiff)
 
+            print '@@ add sig area here!'
+            #@@print 'latlim: ' + str(latlim) + ' region: ' + region # @@@
+            #@@seasigar = cutl.calc_monthlysigarea(fldp,fldc,latlim=latlim,region=region) # @@@@
+
             # calculate confidence interval on the regional mean
             # double-check the scale setting
             # @@ can do conf interval for any mean, not just regional mean?
@@ -761,6 +767,7 @@ def calc_seasonal_cycle(fielddict,coords,sims,withlat=False,loctimesel=None,info
         cidict[sim] = seaci
         tstatdict[sim] = seatstat
         pvaldict[sim] = seapval
+        sigardict[sim] = seasigar
         fldcdict[sim] = seafldc
         fldpdict[sim] = seafldp
         flddiffdict[sim] = seadiff
@@ -782,6 +789,7 @@ def calc_seasonal_cycle(fielddict,coords,sims,withlat=False,loctimesel=None,info
     blob['pertstd'] = fldpstddict
     blob['diff'] = flddiffdict
     blob['mask'] = flddmaskdict
+    blob['sigarea'] = sigardict
 
     return blob # datablob
 
