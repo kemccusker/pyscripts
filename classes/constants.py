@@ -167,7 +167,6 @@ def get_simsdict():
                #   fullname, altname (possibly shorter/better for paper),
                #   timestr, timesel, stdctl, diffname (when referring to pert-ctl)
 
-               @@ kemctl1e2-5 and kem1pert2e2-5 meta are yet to be added
               
     """
 
@@ -183,10 +182,13 @@ def get_simsdict():
             'hadctl', 'hadpert',
             'nsidcctl', 'nsidcpert',
             'ctl1e2', 'ctl1e3', 'ctl1e4', 'ctl1e5', 'ctl1ense',
-            'pert2e2', 'pert2e3','pert2e4','pert2e5', 'pert2ense')
+            'pert2e2', 'pert2e3','pert2e4','pert2e5', 'pert2ense',
+            'ctl1espr',
+            'pert2espr') # super ensemble mean
 
     simsdict = dict.fromkeys(sims,{})
-
+    model='CanAM4' # @@@ all of these are CanAM4
+    
     ## # kemctl1
     ## meta = {'fullname': 'kemctl1', 'altname': 'CANctl', 'timestr': '001-121',
     ##         'timesel': '0002-01-01,0121-12-31','stdctl': None,'diffname': None,
@@ -196,13 +198,13 @@ def get_simsdict():
     # kemctl1
     meta = {'fullname': 'kemctl1', 'altname': 'E1ctl', 'timestr': '001-121',
             'timesel': '0002-01-01,0121-12-31','stdctl': None,'diffname': None,
-            'ensname': 'histIC'} # aka CAN
+            'ensname': 'histIC','model':model} # aka CAN
     simsdict['ctl1'] = meta
     
     # kem1pert1b
     meta = {'fullname': 'kem1pert1b', 'altname': 'nosst', 'timestr': '001-121',
             'timesel': '0002-01-01,0121-12-31','stdctl': 'ctl1','diffname': 'CANnosst',
-            'ensname': None}
+            'ensname': None,'model':model}
     simsdict['pert1'] = meta
 
     ## # kem1pert2
@@ -214,183 +216,194 @@ def get_simsdict():
     # kem1pert2
     meta = {'fullname': 'kem1pert2', 'altname': 'E1pt', 'timestr': '001-121',
             'timesel': '0002-01-01,0121-12-31','stdctl': 'ctl1','diffname': 'E1',
-            'ensname': 'histIC'} # aka CAN
+            'ensname': 'histIC','model':model} # aka CAN
     simsdict['pert2'] = meta
     
     # kem1pert3
     meta = {'fullname': 'kem1pert3', 'altname': 'nothk', 'timestr': '001-121',
             'timesel': '0002-01-01,0121-12-31','stdctl': 'ctl1','diffname': 'CANnothk',
-            'ensname': None}
+            'ensname': None,'model':model}
     simsdict['pert3'] = meta
 
     # kem1rcp85a
     meta = {'fullname': 'kem1rcp85a', 'altname': 'RCPpt', 'timestr': '001-121',
             'timesel': '0002-01-01,0121-12-31','stdctl': 'ctl1','diffname': 'RCPa',
-            'ensname': None}
+            'ensname': None,'model':model}
     simsdict['rcp85a'] = meta
 
     # kemctl1r1
     meta = {'fullname': 'kemctl1r1', 'altname': 'R1ctl', 'timestr': '001-121',
             'timesel': '0002-01-01,0121-12-31','stdctl': None,'diffname': None,
-            'ensname': 'histBC'}
+            'ensname': 'histBC','model':model}
     simsdict['ctl1r1'] = meta
 
     # kemctl1r2
     meta = {'fullname': 'kemctl1r2', 'altname': 'R2ctl', 'timestr': '001-121',
             'timesel': '0002-01-01,0121-12-31','stdctl': None,'diffname': None,
-            'ensname': 'histBC'}
+            'ensname': 'histBC','model':model}
     simsdict['ctl1r2'] = meta
 
     # kemctl1r3
     meta = {'fullname': 'kemctl1r3', 'altname': 'R3ctl', 'timestr': '001-121',
             'timesel': '0002-01-01,0121-12-31','stdctl': None,'diffname': None,
-            'ensname': 'histBC'}
+            'ensname': 'histBC','model':model}
     simsdict['ctl1r3'] = meta
 
     # kemctl1r4
     meta = {'fullname': 'kemctl1r4', 'altname': 'R4ctl', 'timestr': '001-121',
             'timesel': '0002-01-01,0121-12-31','stdctl': None,'diffname': None,
-            'ensname': 'histBC'}
+            'ensname': 'histBC','model':model}
     simsdict['ctl1r4'] = meta
 
     # kemctl1r5
     meta = {'fullname': 'kemctl1r5', 'altname': 'R5ctl', 'timestr': '001-121',
             'timesel': '0002-01-01,0121-12-31','stdctl': None,'diffname': None,
-            'ensname': 'histBC'}
+            'ensname': 'histBC','model':model}
     simsdict['ctl1r5'] = meta
 
     # kemctl1ens
     meta = {'fullname': 'kemctl1ens', 'altname': 'ENSctl', 'timestr': '001-121',
             'timesel': '0002-01-01,0121-12-31','stdctl': None, 'diffname': None,
-            'ensname': 'histBCmean'} # @@
+            'ensname': 'histBCmean','model':model} # @@
     simsdict['ctl1ens'] = meta
 
     # kem1pert2r1
     meta = {'fullname': 'kem1pert2r1', 'altname': 'R1pt', 'timestr': '001-121',
             'timesel': '0002-01-01,0121-12-31','stdctl': 'ctl1r1', 'diffname': 'R1',
-            'ensname': 'histBC'}
+            'ensname': 'histBC','model':model}
     simsdict['pert2r1'] = meta
 
     # kem1pert2r2
     meta = {'fullname': 'kem1pert2r2', 'altname': 'R2pt', 'timestr': '001-121',
             'timesel': '0002-01-01,0121-12-31','stdctl': 'ctl1r2', 'diffname': 'R2',
-            'ensname': 'histBC'}
+            'ensname': 'histBC','model':model}
     simsdict['pert2r2'] = meta
 
     # kem1pert2r3
     meta = {'fullname': 'kem1pert2r3', 'altname': 'R3pt', 'timestr': '001-121',
             'timesel': '0002-01-01,0121-12-31','stdctl': 'ctl1r3', 'diffname': 'R3',
-            'ensname': 'histBC'}
+            'ensname': 'histBC','model':model}
     simsdict['pert2r3'] = meta
 
     # kem1pert2r4
     meta = {'fullname': 'kem1pert2r4', 'altname': 'R4pt', 'timestr': '001-121',
             'timesel': '0002-01-01,0121-12-31','stdctl': 'ctl1r4', 'diffname': 'R4',
-            'ensname': 'histBC'}
+            'ensname': 'histBC','model':model}
     simsdict['pert2r4'] = meta
 
     # kem1pert2r5
     meta = {'fullname': 'kem1pert2r5', 'altname': 'R5pt', 'timestr': '001-121',
             'timesel': '0002-01-01,0121-12-31','stdctl': 'ctl1r5', 'diffname': 'R5',
-            'ensname': 'histBC'}
+            'ensname': 'histBC','model':model}
     simsdict['pert2r5'] = meta
 
     # kem1pert2ens
     meta = {'fullname': 'kem1pert2ens', 'altname': 'ENSpt', 'timestr': '001-121',
             'timesel': '0002-01-01,0121-12-31','stdctl': 'ctl1ens', 'diffname': 'ENS',
-            'ensname': 'histBCmean'}# @@
+            'ensname': 'histBCmean','model':model}# @@
     simsdict['pert2ens'] = meta
 
     # kem1pert2r4ct: constant thickness 'ct'
     meta = {'fullname': 'kem1pert2r4ct', 'altname': 'R4ctpt', 'timestr': '001-121',
             'timesel': '0002-01-01,0121-12-31','stdctl': 'ctl1r4', 'diffname': 'R4ct',
-            'ensname': None}
+            'ensname': None,'model':model}
     simsdict['pert2r4ct'] = meta
 
     # kemhadctl
     meta = {'fullname': 'kemhadctl', 'altname': 'HADctl', 'timestr': '001-121',
             'timesel': '0002-01-01,0121-12-31','stdctl': None,'diffname': None,
-            'ensname': None}
+            'ensname': None,'model':model}
     simsdict['hadctl'] = meta
 
     # kemhadpert
     meta = {'fullname': 'kemhadpert', 'altname': 'HADpt', 'timestr': '001-121',
             'timesel': '0002-01-01,0121-12-31','stdctl': 'hadctl','diffname': 'HAD',
-            'ensname': None}
+            'ensname': None,'model':model}
     simsdict['hadpert'] = meta
 
     # kemnsidcctl
     meta = {'fullname': 'kemnsidcctl', 'altname': 'NSIDCctl', 'timestr': '001-121',
             'timesel': '0002-01-01,0121-12-31','stdctl': None,'diffname': None,
-            'ensname': None}
+            'ensname': None,'model':model}
     simsdict['nsidcctl'] = meta
 
     # kemnsidcpert
     meta = {'fullname': 'kemnsidcpert', 'altname': 'NSIDCpt', 'timestr': '001-121',
             'timesel': '0002-01-01,0121-12-31','stdctl': 'nsidcctl','diffname': 'NSIDC',
-            'ensname': None}
+            'ensname': None,'model':model}
     simsdict['nsidcpert'] = meta
 
     # kemctl1e2
     meta = {'fullname': 'kemctl1e2', 'altname': 'E2ctl', 'timestr': '001-121',
             'timesel': '0002-01-01,0121-12-31','stdctl': None,'diffname': None,
-            'ensname': 'histIC'}
+            'ensname': 'histIC','model':model}
     simsdict['ctl1e2'] = meta
 
     # kemctl1e3
     meta = {'fullname': 'kemctl1e3', 'altname': 'E3ctl', 'timestr': '001-121',
             'timesel': '0002-01-01,0121-12-31','stdctl': None,'diffname': None,
-            'ensname': 'histIC'}
+            'ensname': 'histIC','model':model}
     simsdict['ctl1e3'] = meta
 
     # kemctl1e4
     meta = {'fullname': 'kemctl1e4', 'altname': 'E4ctl', 'timestr': '001-121',
             'timesel': '0002-01-01,0121-12-31','stdctl': None,'diffname': None,
-            'ensname': 'histIC'}
+            'ensname': 'histIC','model':model}
     simsdict['ctl1e4'] = meta
 
     # kemctl1e5
     meta = {'fullname': 'kemctl1e5', 'altname': 'E5ctl', 'timestr': '001-121',
             'timesel': '0002-01-01,0121-12-31','stdctl': None,'diffname': None,
-            'ensname': 'histIC'}
+            'ensname': 'histIC','model':model}
     simsdict['ctl1e5'] = meta
 
     # kemctl1ense
     meta = {'fullname': 'kemctl1ense', 'altname': 'ENSEctl', 'timestr': '001-121',
             'timesel': '0002-01-01,0121-12-31','stdctl': None, 'diffname': None,
-            'ensname': 'histICmean'} # @@
+            'ensname': 'histICmean','model':model} # @@
     simsdict['ctl1ense'] = meta
+
+    # kemctl1ensspr
+    meta = {'fullname': 'kemctl1ensspr', 'altname': 'ESPRctl', 'timestr': '001-121',
+            'timesel': '0002-01-01,0121-12-31','stdctl': None, 'diffname': None,
+            'ensname': 'histBCICmean','model':model} # @@
+    simsdict['ctl1espr'] = meta
 
     # kem1pert2e2
     meta = {'fullname': 'kem1pert2e2', 'altname': 'E2pt', 'timestr': '001-121',
             'timesel': '0002-01-01,0121-12-31','stdctl': 'ctl1e2', 'diffname': 'E2',
-            'ensname': 'histIC'}
+            'ensname': 'histIC','model':model}
     simsdict['pert2e2'] = meta
 
     # kem1pert2e3
     meta = {'fullname': 'kem1pert2e3', 'altname': 'E3pt', 'timestr': '001-121',
             'timesel': '0002-01-01,0121-12-31','stdctl': 'ctl1e3', 'diffname': 'E3',
-            'ensname': 'histIC'}
+            'ensname': 'histIC','model':model}
     simsdict['pert2e3'] = meta
 
      # kem1pert2e4
     meta = {'fullname': 'kem1pert2e4', 'altname': 'E4pt', 'timestr': '001-121',
             'timesel': '0002-01-01,0121-12-31','stdctl': 'ctl1e4', 'diffname': 'E4',
-            'ensname': 'histIC'}
+            'ensname': 'histIC','model':model}
     simsdict['pert2e4'] = meta
 
      # kem1pert2e5
     meta = {'fullname': 'kem1pert2e5', 'altname': 'E5pt', 'timestr': '001-121',
             'timesel': '0002-01-01,0121-12-31','stdctl': 'ctl1e5', 'diffname': 'E5',
-            'ensname': 'histIC'}
+            'ensname': 'histIC','model':model}
     simsdict['pert2e5'] = meta
 
     # kem1pert2ense
     meta = {'fullname': 'kem1pert2ense', 'altname': 'ENSEpt', 'timestr': '001-121',
             'timesel': '0002-01-01,0121-12-31','stdctl': 'ctl1ense', 'diffname': 'ENSE',
-            'ensname': 'histICmean'}# @@
+            'ensname': 'histICmean','model':model}# @@
     simsdict['pert2ense'] = meta
 
+    # kem1pert2ensspr
+    meta = {'fullname': 'kem1pert2ensspr', 'altname': 'ESPRpt', 'timestr': '001-121',
+            'timesel': '0002-01-01,0121-12-31','stdctl': 'ctl1espr', 'diffname': 'ESPR',
+            'ensname': 'histBCICmean','model':model}# @@
+    simsdict['pert2espr'] = meta
 
     return simsdict
 
@@ -430,7 +443,9 @@ def get_simpairsdict():
             stdctl = simpt['stdctl']
             
             ctldict = simsdict[stdctl]
+            ctldict['shortname'] = stdctl
             pertdict = simsdict[skey]
+            pertdict['shortname'] = skey
             thepair = {'ctl': ctldict, 'pert': pertdict}
             
             pairdict[diffkey] = thepair
@@ -446,6 +461,51 @@ def get_simpair(diffkey):
     
     pairdict = get_simpairsdict()
     return pairdict[diffkey]
+
+def build_filepath(sim,field,timeper=None):
+    """ build_filename(sim,field,timeper=None)
+            sim: simulation shortname (ie. 'ctl1')
+            simtype: 'ctl' or 'pert'
+            field: what variable
+            timeper: filename time period. Default is to use
+                     the time period specified in the sim metadata
+                     
+            returns filename
+            
+    """
+    meta = get_simmeta(sim)
+    simfull = meta['fullname']
+    timstr = meta['timestr']
+    model = meta['model']
+    
+    bp=get_basepath()
+    basepath=bp['basepath'] + model + '/'; subdir=bp['subdir']   
+
+    froot = basepath + simfull + subdir + simfull + '_' 
+
+    fname = froot + field + '_' + timstr + '_ts.nc'
+
+    return fname
+
+def build_filepathpair(simpairkey,field,timeper=None):
+    """ build_filenamepair(simpairkey,field,timeper=None)
+            sim: simulation diffname/pairname (ie. 'R1' or 'ENSE')
+            field: what variable
+            timeper: filename time period. Default is to use
+                     the time period specified in the sim metadata
+                     
+            returns tuple (fnamecontrol, fnamepert)
+            
+    """
+    
+    simpair = get_simpair(simpairkey)
+    simctl = simpair['ctl']['shortname']
+    simpert = simpair['pert']['shortname']
+    
+    fnamec = build_filepath(simctl,field,timeper)
+    fnamep = build_filepath(simpert,field,timeper)
+
+    return (fnamec,fnamep)
 
 
 def getBCfilenames(field,sim=None):

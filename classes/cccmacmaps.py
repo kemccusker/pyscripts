@@ -546,7 +546,8 @@ def get_colordict(project=None):
              'E3': get_linecolor('mediumpurple4'),
              'E4': get_linecolor('violet'),
              'E5':  get_linecolor('lightsteelblue4'),
-             'ENSE': get_linecolor('midnightblue')}
+             'ENSE': get_linecolor('midnightblue'),
+             'ESPR': get_linecolor('limegreen')}
 
     return colordict
 

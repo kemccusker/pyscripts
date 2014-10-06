@@ -26,7 +26,7 @@ import matplotlib.font_manager as fm
 plt.close("all")
 plt.ion()
 
-printtofile=1
+printtofile=False
 
 seasons = 'DJF','MAM','JJA','SON'
 
@@ -49,11 +49,11 @@ acasenamep = 'kem1pert2'  # 2002-2012 sic, sit, adjusted sst
 # same timstrs as coupled
 
 comp = 'Amon'
-
+ensnum=5
 
 # # # ######## set Field info (CanAM name) ###################
 # st, sicn, gt, pmsl, pcp, hfl, hfs, turb, flg, fsg, fn, pcpn, zn, su, sv (@@later ufs,vfs)
-afield = 'sicn'
+afield = 'st'
 
 if afield == 'st':
     cfield = 'tas' # coupled (CMIP) field name
@@ -145,7 +145,7 @@ for eii in range(1,ensnum+1): # five ens members
         else:
             latlim = 60 # 60N
             # just do polar mean for now
-            print 'doing polar mean of ' + field
+            print 'doing polar mean of ' + cfield
             cfldcall[eii-1,:] = cutl.polar_mean_areawgted3d(cfldc,lat,lon,latlim=latlim)
             cfldpall[eii-1,:] = cutl.polar_mean_areawgted3d(cfldp,lat,lon,latlim=latlim)
             
@@ -209,8 +209,9 @@ plt.plot(years,cutl.annualize_monthlyts(cfldpall[2,:]),'0.55')
 plt.plot(years,cutl.annualize_monthlyts(cfldpall[3,:]),'0.7')
 plt.plot(years,cutl.annualize_monthlyts(cfldpall[4,:]),'0.85')
 plt.plot(years,cutl.annualize_monthlyts( np.mean(cfldpall,axis=0) ),color='k',linewidth=2)
-plt.plot(hyears,cutl.annualize_monthlyts(hfldp),color=orangered4,linewidth=2)
-plt.plot(nyears,cutl.annualize_monthlyts(nfldp),color=dodgerblue,linewidth=2)      
+if afield=='sicn':
+    plt.plot(hyears,cutl.annualize_monthlyts(hfldp),color=orangered4,linewidth=2)
+    plt.plot(nyears,cutl.annualize_monthlyts(nfldp),color=dodgerblue,linewidth=2)      
 plt.xlim((1850,2012))
 plt.title('ANN NH SIA')
 plt.grid()
@@ -232,9 +233,10 @@ plt.plot(years,cutl.annualize_monthlyts(cfldpall[4,:])-
 plt.plot(years,cutl.annualize_monthlyts(np.mean(cfldpall,axis=0) )-
          cutl.annualize_monthlyts( np.mean(cfldcall,axis=0) ),
          color='k',linewidth=2)
-plt.plot(hyears,cutl.annualize_monthlyts(hfldp)-
+if afield=='sicn':
+    plt.plot(hyears,cutl.annualize_monthlyts(hfldp)-
          cutl.annualize_monthlyts(hfldc),color=orangered4,linewidth=2)
-plt.plot(nyears,cutl.annualize_monthlyts(nfldp)-
+    plt.plot(nyears,cutl.annualize_monthlyts(nfldp)-
          cutl.annualize_monthlyts(nfldc),color=dodgerblue,linewidth=2)      
 plt.xlim((1850,2012))
 plt.title('ANN NH SIA anom from 1979-89')
@@ -252,8 +254,9 @@ plt.plot(years,cutl.seasonalize_monthlyts(cfldpall[2,:],mo=9),'0.55')
 plt.plot(years,cutl.seasonalize_monthlyts(cfldpall[3,:],mo=9),'0.7')
 plt.plot(years,cutl.seasonalize_monthlyts(cfldpall[4,:],mo=9),'0.85')
 plt.plot(years,cutl.seasonalize_monthlyts( np.mean(cfldpall,axis=0),mo=9 ),color='k',linewidth=2)
-plt.plot(hyears,cutl.seasonalize_monthlyts(hfldp,mo=9),color=orangered4,linewidth=2)
-plt.plot(nyears,cutl.seasonalize_monthlyts(nfldp,mo=9),color=dodgerblue,linewidth=2)      
+if afield=='sicn':
+    plt.plot(hyears,cutl.seasonalize_monthlyts(hfldp,mo=9),color=orangered4,linewidth=2)
+    plt.plot(nyears,cutl.seasonalize_monthlyts(nfldp,mo=9),color=dodgerblue,linewidth=2)      
 plt.xlim((1850,2012))
 plt.title('September NH SIA')
 plt.grid()
@@ -275,9 +278,10 @@ plt.plot(years,cutl.seasonalize_monthlyts(cfldpall[4,:],mo=9)-
 plt.plot(years,cutl.seasonalize_monthlyts(np.mean(cfldpall,axis=0),mo=9 )-
          cutl.seasonalize_monthlyts( np.mean(cfldcall,axis=0),mo=9,climo=1 ),
          color='k',linewidth=2)
-plt.plot(hyears,cutl.seasonalize_monthlyts(hfldp,mo=9)-
+if afield=='sicn':
+    plt.plot(hyears,cutl.seasonalize_monthlyts(hfldp,mo=9)-
          cutl.seasonalize_monthlyts(hfldc,mo=9,climo=1),color=orangered4,linewidth=2)
-plt.plot(nyears,cutl.seasonalize_monthlyts(nfldp,mo=9)-
+    plt.plot(nyears,cutl.seasonalize_monthlyts(nfldp,mo=9)-
          cutl.seasonalize_monthlyts(nfldc,mo=9,climo=1),color=dodgerblue,linewidth=2)      
 plt.xlim((1850,2012))
 plt.title('September NH SIA anom from 1979-89')
@@ -295,8 +299,9 @@ plt.plot(years,cutl.seasonalize_monthlyts(cfldpall[2,:],mo=3),'0.55')
 plt.plot(years,cutl.seasonalize_monthlyts(cfldpall[3,:],mo=3),'0.7')
 plt.plot(years,cutl.seasonalize_monthlyts(cfldpall[4,:],mo=3),'0.85')
 plt.plot(years,cutl.seasonalize_monthlyts( np.mean(cfldpall,axis=0),mo=3 ),color='k',linewidth=2)
-plt.plot(hyears,cutl.seasonalize_monthlyts(hfldp,mo=3),color=orangered4,linewidth=2)
-plt.plot(nyears,cutl.seasonalize_monthlyts(nfldp,mo=3),color=dodgerblue,linewidth=2)      
+if afield=='sicn':
+    plt.plot(hyears,cutl.seasonalize_monthlyts(hfldp,mo=3),color=orangered4,linewidth=2)
+    plt.plot(nyears,cutl.seasonalize_monthlyts(nfldp,mo=3),color=dodgerblue,linewidth=2)      
 plt.xlim((1850,2012))
 plt.title('March NH SIA')
 plt.grid()
@@ -318,9 +323,10 @@ plt.plot(years,cutl.seasonalize_monthlyts(cfldpall[4,:],mo=3)-
 plt.plot(years,cutl.seasonalize_monthlyts(np.mean(cfldpall,axis=0),mo=3 )-
          cutl.seasonalize_monthlyts( np.mean(cfldcall,axis=0),mo=3,climo=1 ),
          color='k',linewidth=2)
-plt.plot(hyears,cutl.seasonalize_monthlyts(hfldp,mo=3)-
+if afield=='sicn':
+    plt.plot(hyears,cutl.seasonalize_monthlyts(hfldp,mo=3)-
          cutl.seasonalize_monthlyts(hfldc,mo=3,climo=1),color=orangered4,linewidth=2)
-plt.plot(nyears,cutl.seasonalize_monthlyts(nfldp,mo=3)-
+    plt.plot(nyears,cutl.seasonalize_monthlyts(nfldp,mo=3)-
          cutl.seasonalize_monthlyts(nfldc,mo=3,climo=1),color=dodgerblue,linewidth=2)      
 plt.xlim((1850,2012))
 plt.title('March NH SIA anom from 1979-89')

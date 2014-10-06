@@ -34,12 +34,12 @@ nonstandardlev=False # standards are 700,500,300
 
 # Choose type of plot =========================
 seasonalmap=False # seasonal maps (SON, DJF, MAM, JJA)
-seasonalvert=True # seasonal vertical zonal means instead of maps
+seasonalvert=False # seasonal vertical zonal means instead of maps
 screen=True # whether to have screen-style vertical zonal means
 
-plotzonmean=True # plotzonmean,plotseacyc,pattcorrwithtime are mutually exclusive
+plotzonmean=False # plotzonmean,plotseacyc,pattcorrwithtime are mutually exclusive
 
-plotseacyc=False # plotzonmean,plotseacyc,pattcorrwithtime are mutually exclusive
+plotseacyc=True # plotzonmean,plotseacyc,pattcorrwithtime are mutually exclusive
 seacyclatlim=60 # southern limit for plotting polar mean seasonal cycles (line plot)
 withlat=False # plot the seasonal cycle with latitude dimension too (only for plotseacyc=1)@@for now just std over ens
 #squatseacyc=False # plot seacycle figs as shorter than wide
@@ -60,7 +60,9 @@ halftime=False # get only the first 60yrs. make sure to set the other flag the o
 halftime2=False # get only the last 60yrs. make sure to set the other flag the opp
 
 # Choose what simulations to add =============
-canens=True # just the CAN ensemble (E1-E5) plus mean, plus mean of R ensemble. option to addobs only.
+#  default is R1-5, ENS
+canens=False # just the CAN ensemble (E1-E5) plus mean, plus mean of R ensemble. option to addobs only.
+allens=False # this is ONLY the ensemble means, plus superensemble
 sensruns=False # sensruns only: addr4ct=1,addsens=1. others=0 no meanBC, r mean, or obs
 addobs=True # add mean of kemhad* & kemnsidc* runs to line plots, seasonal maps. 
 addr4ct=False # add kem1pert2r4ct (constant thickness version of ens4)
@@ -68,6 +70,7 @@ addsens=False # add sensitivity runs (kem1pert1b, kem1pert3)
 addrcp=False # add kem1rcp85a simulation (and others if we do more)
 simsforpaper=False # meanBC, HAD, NSIDC only. best for maps and zonal mean figs (not line plots)
 addcanens=True # add "initial condition" ensemble of kemctl1/kem1pert2
+addsuper=True # add superensemble mean
 
 latlim = None # None #45 # lat limit for NH plots. Set to None otherwise. use 45 for BC-type maps
 levlim= 100 # level limit for vertical ZM plots (in hPa). ignored if screen=True
@@ -98,8 +101,9 @@ sims = 'R1','R4','R3','R5','R2','ENS'#,'ENSE'#,'CAN' # R's in order of sea ice l
 seasons = ('SON','DJF','MAM','JJA')
 
 if simsforpaper: # best for maps only
-    sims = ('HAD','NSIDC','E1')
-    savestr = '_forpap'
+    #sims = ('HAD','NSIDC','E1')
+    sims = ('HAD','NSIDC','ENSE')
+    savestr = '_forpap2'
     seasons=('SON','DJF')
     
 elif sensruns: # add sensitivity runs. with Shaded ENS. don't plot meanBC, mean of ens
@@ -113,6 +117,13 @@ elif canens: # do canens instead of r ens. Useful for maps.
     if addobs:
         sims = sims + ('HAD','NSIDC')
         savestr = savestr + 'obs'
+    if addsuper:
+        sims = sims + ('ESPR',)
+        savestr = savestr + 'spr'
+elif allens: # just do the ens means and superensemble mean
+    sims = ('ENS','ENSE','ESPR')
+    savestr = '_allens'
+    # addobs? @@@
 else:
     if addcanens:
         sims = sims + ('E1','E2','E3','E4','E5','ENSE') # E1=CAN
@@ -120,6 +131,9 @@ else:
         shadeens=shadeens+('histIC',)
     else:
         sims = sims + ('ENSE',)
+    if addsuper:
+        sims = sims + ('ESPR',)
+        savestr = savestr + 'spr'
     if addobs:
         sims = sims + ('HAD','NSIDC')
         savestr = savestr + 'obs'
@@ -166,7 +180,7 @@ fdict = {'field': field, 'ncfield': None, 'fieldstr': None,
 
 # reserved for expansion into the plotfunction call
 pparams = {'cmin': None, 'cmax': None, 'cmap': 'blue2red_20',              
-           'type':'nh', 'latlim': latlim, 'levlim': levlim} # plotparams
+           'type':'nh', 'latlim': latlim} # plotparams
 
 infodict ={'cmapclimo': 'Spectral_r','leglocs': None,
            'seacycylim': None, 'savestr': None,
@@ -420,59 +434,54 @@ elif field == 'sv':
     cmaxm = .5
 
 elif field == 't':
-    threed = True
 
-    conv=1
-    ncfield = 'TEMP'
-    units = 'K' # @@
-    ## if level == 30000:
-    ##     cminc = 215; cmaxc = 245        
-    ## elif level == 70000:
-    ##     cminc = 245; cmaxc = 285
+    fdict['units'] = 'K'
+    fdict['ncfield'] = 'TEMP'
+
+    threed = True
+    fdict['conv'] = 1
+
+    pparams['cmap'] = 'blue2red_w20'
         
     if level == 30000:
-        cmin = -.3; cmax = .3
-        cminm = -.5; cmaxm = .5  # for monthly
+        pparams['cmin'] = -.5; pparams['cmax'] = .5
+        #cminm = -.5; cmaxm = .5  # for monthly
         #cminsea = -.5; cmaxsea = .5
     elif level == 70000:
-        cmin = -.3; cmax = .3
-        cminm = -.5; cmaxm = .5  # for monthly
+        #cmin = -.3; cmax = .3
+        pparams['cmin'] = -.5; pparams['cmax'] = .5  # for monthly
         #cminsea = -.5; cmaxsea = .5
 
-    if seasvert:
+    if seasonalvert:
         if screen:
             pparams['levlim']=300
-            cmin=-2.5; cmax=2.5
-            cminm=-2.5; cmaxm=2.5
+            pparams['cmin']=-2.5; pparams['cmax']=2.5
+            #cminm=-2.5; cmaxm=2.5
         else:
             cmin = -.5; cmax = .5
-            cminm = -.8; cmaxm = .8 
+            pparams['cmin'] = -.8; pparams['cmax'] = .8 
 elif field == 'u':
     threed = True
-
-    conv=1
-    ncfield = 'U'
-    units = 'm/s' #@@
-    ## if level==50000:
-    ##     cminc=-25; cmaxc=25
-    ## elif level==70000:
-    ##     cminc=-15; cmaxc=15
-    ## elif level == 30000:
-    ##     cminc=-40; cmaxc=40
+    fdict['units'] = 'm/s'
+    fdict['ncfield'] = 'U'
+    fdict['conv'] = 1
 
     if level == 30000:
-        cmin = -2; cmax = 2
-        cminm = -3; cmaxm = 3
+        #cmin = -2; cmax = 2
+        pparams['cmin'] = -3; pparams['cmax'] = 3
         #cminsea = -3; cmaxsea = 3
     else:
-        cmin = -1; cmax = 1
-        cminm = -1; cmaxm = 1
+        #cmin = -1; cmax = 1
+        pparams['cmin'] = -1; pparams['cmax'] = 1
         #cminsea = -1; cmaxsea = 1
 
-    if seasvert:
-        cmin=-.5; cmax=.5
-        cminm=-1; cmaxm=1
-    #cmapclimo='blue2red_20'
+    if seasonalvert:
+        #cmin=-.5; cmax=.5
+        pparams['cmin'] = -1; pparams['cmax'] = 1
+        if screen:
+            pparams['levlim']=300
+        
+    pparams['cmap']='blue2red_20'
 
 elif field == 'gz':
     
@@ -494,6 +503,7 @@ elif field == 'gz':
             #cmin=-10; cmax=10
             #cminm=-25; cmaxm=25
             pparams['cmin'] = -25; pparams['cmax'] = 25 # seasonal/monthly
+            pparams['levlim'] = 300
         else:
             #cmin = -10; cmax = 10
             #cminm = -15; cmaxm = 15
@@ -537,7 +547,9 @@ if seasonalmap or seasonalvert:
     print pparams
 
     if seasonalvert:
-        pparams['screen']=screen
+        infodict['screen']=screen
+    else:
+        infodict['screen'] = None
         
     # this one does data processing and plotting together
     # some stuff in the function need to be removed or set differently.@@
@@ -551,7 +563,7 @@ if plotseacyc:
 
     dblob = sfnc.calc_seasonal_cycle(fdict,coords,sims,withlat=withlat,loctimesel=timesel,info=infodict)
 
-    sfnc.plot_seasonal_cycle(dblob,fdict,sims,ptypes=('climo','anom','stddev','stdan'),info=infodict,printtofile=printtofile)
+    sfnc.plot_seasonal_cycle(dblob,fdict,sims,ptypes=('anom','stddev'),info=infodict,printtofile=printtofile)
     
 
 if plotzonmean:

@@ -38,7 +38,7 @@ model = 'CanAM4'
 bp=con.get_basepath()
 basepath=bp['basepath'] + model + '/'; subdir=bp['subdir']
 
-field='st'  # sicn, st, pmsl, gz
+field='gz'  # sicn, st, pmsl, gz
 level=50000
 latlim=60
 ylims=(0,1)
@@ -46,7 +46,7 @@ ncfield=field.upper()
 fieldstr=field
 conv=1
 
-etype = 'e' # which ensemble are we doing. 'r' or 'e'
+etype = 'r' # which ensemble are we doing. 'r' or 'e'
     
 # baseline pattern to compare to
 cmpcasenamep='kem1pert2ens' # else, 'kemhadpert', 'kemnsidcpert'
@@ -57,9 +57,9 @@ cmptype = 'ensavg'
 #cmpcasenamec='kemctl1'
 #cmptype = 'meanBC'
 
-#cmpcasenamep='kem1pert2ense' # meanBC ensemble average
-#cmpcasenamec='kemctl1ense'
-#cmptype = 'eensavg' 
+## cmpcasenamep='kem1pert2ense' # meanBC ensemble average
+## cmpcasenamec='kemctl1ense'
+## cmptype = 'enseavg' 
 
 
 bcasenamep='kem1pert2' # base for the ensemble members
@@ -465,15 +465,13 @@ print ensmeanseasq
 #        tmpcmp = np.squeeze(flddcsea[seaii,lat>latlim,...])
 #        pcsea[seaii] = cutl.pattcorr(tmp.flatten()*weights2.flatten(),tmpcmp.flatten()*weights2.flatten())
 
-# @@ add regression line and r, r^2
 
-printtofile=False
+printtofile=True
 
 #subseasons=('SON','DJF')
 subseasons=seasons
 fig,axs = plt.subplots(len(subseasons),ensnum,sharey=True,sharex=True)
 fig.set_size_inches(14,10)
-
 
 for eii in range(1,ensnum+1):
     
@@ -482,23 +480,62 @@ for eii in range(1,ensnum+1):
     for sii,sea in enumerate(subseasons):
         ax = axs[sii,eii-1]
         
-        scatxx = seadiffdict[skey]
-        scatxx = np.squeeze(scatxx[sii,lat>latlim,...])
-        scatyy = np.squeeze(flddcsea[sii,lat>latlim,...])
+        scatyy = seadiffdict[skey]
+        scatyy = np.squeeze(scatyy[sii,lat>latlim,...])
+        scatxx = np.squeeze(flddcsea[sii,lat>latlim,...])
         
-        ax.scatter(scatxx,scatyy,marker='.')
+        ax.scatter(scatxx.flatten()*weights.flatten(),scatyy.flatten()*weights.flatten(),marker='.')
         
-        if sii==0:
+        if sii==0: # if top row
             ax.set_title(skey)
+        if sii==len(subseasons)-1: # if last row
+            ax.set_xlabel(cmptype)
    
         if eii==1: # if first column
             ax.set_ylabel(sea)
+        if eii==ensnum: # last column
+            ax.set_ylabel(etype + ' mem')
+            ax.yaxis.set_label_position('right')
             
         ax.axhline(y=0,color='k')
         ax.axvline(x=0,color='k')
+
+for eii in range(1,ensnum+1): # have to do this later after x and y lims are set
     
+    skey = etype + str(eii)
+    
+    for sii,sea in enumerate(subseasons):
+        ax = axs[sii,eii-1]
+        axylims = ax.get_ylim()
+        axxlims = ax.get_xlim()
+        onex=np.arange(-100,100)
+        oney=onex
+        # one-to-one line
+        ax.plot(onex,oney,color='b',linestyle='--')
+        
+        # add regression line
+        scatyy = seadiffdict[skey]
+        scatyy = np.squeeze(scatyy[sii,lat>latlim,...])
+        scatxx = np.squeeze(flddcsea[sii,lat>latlim,...])
+        mm, bb = np.polyfit(scatxx.flatten()*weights.flatten(), scatyy.flatten()*weights.flatten(), 1)
+        ax.plot(onex,mm*onex + bb, color='k')#,linestyle='--')
+        rr = np.corrcoef(scatxx.flatten()*weights.flatten(), scatyy.flatten()*weights.flatten())[0,1]
+        #print rr
+        rsq = rr**2
+        #print 'R squared: ' + str(rsq)
+        val = '$%.2f$'%(rsq)
+        ax.annotate('$R^2$= ' + val, xy=(axxlims[0]+.1*axxlims[1], axylims[1]-.2*axylims[1]),
+                    xycoords='data') # upper left?
+        mval = '$%.2f$'%(mm)
+        ax.annotate('$m$= ' + mval, xy=(axxlims[0]+.1*axxlims[1], axylims[1]-.4*axylims[1]),
+                    xycoords='data') # slope
+
+        # reset the limits
+        ax.set_ylim(axylims)
+        ax.set_xlim(axxlims)
+
 if printtofile:
-    fig.savefig(fieldstr + 'scatter_nof' + str(latlim) + 'N_' + etype + 'ensmems_cmpto_' + cmptype + '_seacyc.pdf')
+    fig.savefig(fieldstr + 'scatter_nof' + str(latlim) + 'N_' + etype + 'ensmems_cmpto_' + cmptype + '_seas_areawgted.pdf')
 
 # <codecell>
 
@@ -1177,13 +1214,69 @@ if 1:   # cheating with the indentation
     pcsea = np.zeros((4))
     pcsea2 = np.zeros((4)) # test pattcorr_pearson() @@
     pcsea2pval = np.zeros((4)) # test pattcorr_pearson()
+
+    fig,axs = plt.subplots(len(subseasons),1,sharex=True,sharey=True)
+    fig.set_size_inches(4,10)
     for seaii,sea in enumerate(seasons):
+        ax=axs[seaii]
+        
         tmp = np.squeeze(flddsea[seaii,lat>latlim,...])
         tmpcmp = np.squeeze(flddcsea[seaii,lat>latlim,...])
         pcsea[seaii] = cutl.pattcorr(tmp.flatten()*weights.flatten(),
                                      tmpcmp.flatten()*weights.flatten())
         pcsea2[seaii],pcsea2pval[seaii] = cutl.pattcorr_pearson(tmp.flatten()*weights.flatten(),
                                                                 tmpcmp.flatten()*weights.flatten())
+        # plot @@@@
+        # first, scatter:
+        scatyy = tmp
+        scatxx = tmpcmp
+        ax.scatter(scatxx.flatten()*weights.flatten(),scatyy.flatten()*weights.flatten(),marker='.')
+
+        if sii==len(subseasons)-1: # if last row
+            ax.set_xlabel(cmptype)
+   
+        #ax.set_ylabel(sea)
+        ax.set_ylabel(sea + ': ' + etype + ' mean')
+        ax.yaxis.set_label_position('right')
+            
+        ax.axhline(y=0,color='k')
+        ax.axvline(x=0,color='k')
+
+    for seaii,sea in enumerate(seasons):
+        ax=axs[seaii]
+        
+        axylims = ax.get_ylim()
+        axxlims = ax.get_xlim()
+        onex=np.arange(-100,100)
+        oney=onex
+        # one-to-one line
+        ax.plot(onex,oney,color='b',linestyle='--')
+
+        tmp = np.squeeze(flddsea[seaii,lat>latlim,...])
+        tmpcmp = np.squeeze(flddcsea[seaii,lat>latlim,...])
+        scatyy = tmp
+        scatxx = tmpcmp
+        
+        # add regression line        
+        mm, bb = np.polyfit(scatxx.flatten()*weights.flatten(), scatyy.flatten()*weights.flatten(), 1)
+        ax.plot(onex,mm*onex + bb, color='k')#,linestyle='--')
+        rr = np.corrcoef(scatxx.flatten()*weights.flatten(), scatyy.flatten()*weights.flatten())[0,1]
+        #print rr
+        rsq = rr**2
+        #rsq = pcsea2[seaii]**2
+        #print 'R squared: ' + str(rsq)
+        val = '$%.2f$'%(rsq)
+        ax.annotate('$R^2$= ' + val, xy=(axxlims[0]+.1*axxlims[1], axylims[1]-.2*axylims[1]),  xycoords='data') # upper left?
+        mval = '$%.2f$'%(mm)
+        ax.annotate('$m$= ' + mval, xy=(axxlims[0]+.1*axxlims[1], axylims[1]-.4*axylims[1]),
+                    xycoords='data') # slope
+
+        # reset the limits
+        ax.set_ylim(axylims)
+        ax.set_xlim(axxlims)
+
+    if printtofile:
+        fig.savefig(fieldstr + 'scatter_nof' + str(latlim) + 'N_' + etype + 'mean_cmpto_' + cmptype + '_seas_areawgted.pdf')
         
     print 'corr: ' + str(pcsea2)
     testpcsea2=copy.copy(pcsea2)
