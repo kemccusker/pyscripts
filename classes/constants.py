@@ -561,6 +561,8 @@ def get_regiondict():
     regdict['eurasia'] = {'latlims': [35,60], 'lonlims': [40,120]}
     regdict['ntham'] = {'latlims': [35,60], 'lonlims': [240,280]}
     regdict['nthatl'] = {'latlims': [35,60], 'lonlims': [300,360]}
+
+    regdict['pig'] = {'latlims':[0,384], 'lonlims': [230,280])} # CCSM4 OCEAN!!! @@@ untested 10/6/2014
     
     return regdict
     
