@@ -18,7 +18,8 @@ import pandas as pd
 import constants as con
 import collections as coll
 import scipy as sp
-import scipy.stats 
+import scipy.stats
+import cccmacmaps as ccm
 
 plt.close('all')
 plt.ion()
@@ -42,6 +43,9 @@ montrenddt = coll.OrderedDict() #dict.fromkeys(mons)
 monmndt = coll.OrderedDict()
 monmxdt = coll.OrderedDict()
 monavgdt = coll.OrderedDict()
+hmontrenddt = coll.OrderedDict()
+nmontrenddt = coll.OrderedDict()
+
 
 #mondf = pd.DataFrame() # index will be np.arange
 totens=len(df.keys()) # total # of ens members
@@ -52,6 +56,33 @@ totens=len(df.keys()) # total # of ens members
 
 ## better trend
 ## slope, intercept, r_value, p_value, std_err = stats.linregress(xi,y)
+
+
+
+# ================= OBS ===========
+basepath2 = '/home/rkm/work/BCs/'
+#fhadsicc = basepath2 + 'HadISST/hadisst1.1_bc_128_64_1870_2013m03_sicn_' +\
+#         ctimstr + 'climo.nc' #SICN, 129x64 CLIMO
+fhad = basepath2 + 'HadISST/hadisst1.1_bc_128_64_1870_2013m03_SIEnhfrac_1870010100-2013030100.nc'
+
+#fnsidcsicc = basepath2 + 'NSIDC/nsidc_bt_128x64_1978m11_2011m12_sicn_' + ctimstr + 'climo.nc'
+fnsidc = basepath2 + 'NSIDC/nsidc_bt_128x64_1978m11_2011m12_SIEnhfrac_1978111600-2011121612.nc' #SICN, 129x64
+
+had = cnc.getNCvar(fhad,'SICN',timesel='1979-01-01,2012-12-31')
+hadtime = cnc.getNCvar(fhad,'time',timesel='1979-01-01,2012-12-31')
+nsidc = cnc.getNCvar(fnsidc,'SICN',timesel='1979-01-01,2012-12-31')
+
+earthrad = con.get_earthrad()
+totalarea = 4*np.pi*earthrad**2
+print had.shape
+print nsidc.shape
+had=had*(totalarea/2.) # convert to SIE from hemispheric fraction
+nsidc=nsidc*(totalarea/2.) # convert to SIE from hemispheric fraction
+
+# =================================
+
+
+
 
 #superii=0 # super index for all ensemble member trends
 superslopes = np.zeros((len(mons),totens))
@@ -98,6 +129,17 @@ for monii,mo in enumerate(mons):
          mxdt[mod] = mxtrnd
          avgdt[mod] = avgtrnd
 
+     # do obs e/ month
+     homon = cutl.seasonalize_monthlyts(had,mo=monii+1)
+     xx = np.arange(0,homon.shape[0])
+     hslope, intercept, r_value, p_value, std_err = sp.stats.linregress(xx,homon)
+     hmontrenddt[mo] = hslope
+     
+     nomon = cutl.seasonalize_monthlyts(nsidc,mo=monii+1)
+     xx = np.arange(0,nomon.shape[0])
+     nslope, intercept, r_value, p_value, std_err = sp.stats.linregress(xx,nomon)
+     nmontrenddt[mo] = nslope
+
      superkeys = superkeys + (thismonskey,)
      montrenddt[mo] = modtrenddt
      monmndt[mo]= mndt
@@ -113,10 +155,16 @@ superensdf=pd.DataFrame(data=superslopes,index=mons,columns=superkeys[0])
 canesm=superensdf.CanESM2
 
 # plot seasonal trends for all ensemble members
+hmontrenddf = pd.DataFrame(hmontrenddt,index=(1,))
+nmontrenddf = pd.DataFrame(nmontrenddt,index=(1,))
+
 superensdf.plot(color='k',alpha=0.5,legend=False)
 plt.plot(canesm,color='r',linewidth=3)
+plt.plot(hmontrenddf.values[0],'green',linewidth=3) # not sure why but this has an array w/in an array....
+plt.plot(nmontrenddf.values[0],color=ccm.get_linecolor('dodgerblue'),linewidth=3)# not sure why but this has an array w/in an array....
 plt.title('SIE 1979-2012 trends (/yr)')
 plt.xlabel('Month')
+plt.xlim((0,11))
 if printtofile:
     plt.savefig('SIE_CMIP5_allmemstrend_seacycle_1979-2012_wCanESM2.pdf')
 
@@ -136,13 +184,15 @@ for aii,ax in enumerate(axs.flat):
 if printtofile:
     fig.savefig('SIE_CMIP5_minmaxtrendhist_allmos_1979-2012_wCanESM2.pdf')
 
-# min / max histograms each month
+# average trend histograms each month
 fig,axs = plt.subplots(3,4)
 fig.set_size_inches(12,9)
 for aii,ax in enumerate(axs.flat):
     mon = mons[aii]
     ax.hist(avgdf[mon],color='.5',alpha=0.5)
     ax.axvline(avgdf[mon]['CanESM2'],color='k',linewidth=3)
+    ax.axvline(hmontrenddt[mon],color='green',linewidth=3)
+    ax.axvline(nmontrenddt[mon],color=ccm.get_linecolor('dodgerblue'),linewidth=3)
     ax.set_title(mon)
 if printtofile:
     fig.savefig('SIE_CMIP5_avgtrendhist_allmos_1979-2012_wCanESM2.pdf')
@@ -159,7 +209,9 @@ for rii,row in enumerate(superensdf.iterrows()):
     ax.hist(rseries,color='.5',alpha=0.5)
     for vline in rseries.CanESM2:
         ax.axvline(vline,color='k',linewidth=3)
-
+    ax.axvline(hmontrenddt[mon],color='green',linewidth=3)
+    ax.axvline(nmontrenddt[mon],color=ccm.get_linecolor('dodgerblue'),linewidth=3)
+    
     ax.set_title(mon)
 if printtofile:
     fig.savefig('SIE_CMIP5_allmemstrendhist_allmos_1979-2012_wCanESM2.pdf')
@@ -177,7 +229,7 @@ canidx=10
 canxx=np.squeeze(np.ones((len(mons),1))*canidx)
 fig,ax = plt.subplots()
 fig.set_size_inches(14,3)
-ax.set_color_cycle(mycc)
+#ax.set_color_cycle(mycc)
 
 mons2= ('Nov','Dec','Jan','Feb',
         'Mar','Apr','May',
@@ -247,7 +299,6 @@ ax.set_title('Sep/Mar within-CMIP5-model trend range (1979-2012)')
 
 
 # SEA CYCLE trend RANGE
-
 fig,ax = plt.subplots()
 fig.set_size_inches(7,4)
 
