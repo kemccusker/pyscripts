@@ -18,6 +18,7 @@ import matplotlib.colors as col
 import platform as platform
 import constants as con      # my module
 import cccmautils as cutl    # my module
+import cccmaNC as cnc
 import matplotlib.font_manager as fm
 #import cccmaplots as cplt
 
@@ -26,9 +27,9 @@ import matplotlib.font_manager as fm
 plt.close("all")
 plt.ion()
 
-printtofile=False
+printtofile=True
+zoom=True # zoom in on ~1950-2012. @@later add trend lines?
 
-seasons = 'DJF','MAM','JJA','SON'
 
 amodel = 'CanAM4'
 cmodel = 'CanESM2'
@@ -53,7 +54,7 @@ ensnum=5
 
 # # # ######## set Field info (CanAM name) ###################
 # st, sicn, gt, pmsl, pcp, hfl, hfs, turb, flg, fsg, fn, pcpn, zn, su, sv (@@later ufs,vfs)
-afield = 'st'
+afield = 'sicn'
 
 if afield == 'st':
     cfield = 'tas' # coupled (CMIP) field name
@@ -77,6 +78,10 @@ elif afield == 'sicn':
     cminp=-.10; cmaxp=.10 # for when pert is 'ctl'
     cminm = -.15; cmaxm = .15   # monthly
     cmap = 'red2blue_w20'
+
+    saylims = -0.4e13,0.4e13 # september anomaly
+    maylims = -2e12,3e12
+    
 elif afield == 'pmsl':
     cfield = 'psl'
     units = 'hPa' # pretty sure hpa @@double check
@@ -90,6 +95,12 @@ elif afield == 'pmsl':
 else:
     print 'No settings for ' + afield
 
+xlims = (1850,2012)
+pstr=''
+
+if zoom:
+    xlims = 1970,2012
+    pstr = '_zoom'
 
 # # # ########## Read NC data ###############
 plat = platform.system()
@@ -151,7 +162,7 @@ for eii in range(1,ensnum+1): # five ens members
             
         
 # Now get obs for sea ice
-if cfield=='sic':
+if cfield=='sic': # sea ice concentration
 
     fhadsicc = basepath2 + 'HadISST/hadisst1.1_bc_128_64_1870_2013m03_sicn_' +\
               ctimstr + 'climo.nc' #SICN, 129x64 CLIMO
@@ -210,13 +221,13 @@ plt.plot(years,cutl.annualize_monthlyts(cfldpall[3,:]),'0.7')
 plt.plot(years,cutl.annualize_monthlyts(cfldpall[4,:]),'0.85')
 plt.plot(years,cutl.annualize_monthlyts( np.mean(cfldpall,axis=0) ),color='k',linewidth=2)
 if afield=='sicn':
-    plt.plot(hyears,cutl.annualize_monthlyts(hfldp),color=orangered4,linewidth=2)
+    plt.plot(hyears,cutl.annualize_monthlyts(hfldp),color='green',linewidth=2)
     plt.plot(nyears,cutl.annualize_monthlyts(nfldp),color=dodgerblue,linewidth=2)      
-plt.xlim((1850,2012))
+plt.xlim(xlims)
 plt.title('ANN NH SIA')
 plt.grid()
 if printtofile:
-    plt.savefig('CanESMens_OBS_' + cfield + '_ANN_timeseries.pdf')
+    plt.savefig('CanESMens_OBS_' + cfield + '_ANN_timeseries' + pstr + '.pdf')
 
 
 plt.figure()
@@ -235,104 +246,245 @@ plt.plot(years,cutl.annualize_monthlyts(np.mean(cfldpall,axis=0) )-
          color='k',linewidth=2)
 if afield=='sicn':
     plt.plot(hyears,cutl.annualize_monthlyts(hfldp)-
-         cutl.annualize_monthlyts(hfldc),color=orangered4,linewidth=2)
+         cutl.annualize_monthlyts(hfldc),color='green',linewidth=2)
     plt.plot(nyears,cutl.annualize_monthlyts(nfldp)-
          cutl.annualize_monthlyts(nfldc),color=dodgerblue,linewidth=2)      
-plt.xlim((1850,2012))
+plt.xlim(xlims)
 plt.title('ANN NH SIA anom from 1979-89')
 plt.grid()
 if printtofile:
-    plt.savefig('CanESMens_OBSanom' + ctimstr + '_' + cfield + '_ANN_timeseries.pdf')
+    plt.savefig('CanESMens_OBSanom' + ctimstr + '_' + cfield + '_ANN_timeseries' + pstr + '.pdf')
 
 
 
 #   MINIMUM (SEPT)
 plt.figure()
-plt.plot(years,cutl.seasonalize_monthlyts(cfldpall[0,:],mo=9),'0.25')
-plt.plot(years,cutl.seasonalize_monthlyts(cfldpall[1,:],mo=9),'0.4')
-plt.plot(years,cutl.seasonalize_monthlyts(cfldpall[2,:],mo=9),'0.55')
-plt.plot(years,cutl.seasonalize_monthlyts(cfldpall[3,:],mo=9),'0.7')
-plt.plot(years,cutl.seasonalize_monthlyts(cfldpall[4,:],mo=9),'0.85')
-plt.plot(years,cutl.seasonalize_monthlyts( np.mean(cfldpall,axis=0),mo=9 ),color='k',linewidth=2)
+cii=0.25
+mosel=9
+for ii in xrange(0,5):
+    plotfld = cutl.seasonalize_monthlyts(cfldpall[ii,:],mo=mosel)
+    plt.plot(years,plotfld,color=str(cii))
+    if zoom:
+        slope, intercept, r_value, p_value, std_err = sp.stats.linregress(hyears,plotfld[129:])
+        plt.plot(years,slope*years+intercept,color=str(cii))
+    cii=cii+0.15
+
+plotfld = cutl.seasonalize_monthlyts( np.mean(cfldpall,axis=0),mo=mosel )
+plt.plot(years,plotfld,color='k',linewidth=2)
+if zoom:
+    slope, intercept, r_value, p_value, std_err = sp.stats.linregress(hyears,plotfld[129:])
+    plt.plot(years,slope*years+intercept,color='k',linewidth=2)
+
 if afield=='sicn':
-    plt.plot(hyears,cutl.seasonalize_monthlyts(hfldp,mo=9),color=orangered4,linewidth=2)
-    plt.plot(nyears,cutl.seasonalize_monthlyts(nfldp,mo=9),color=dodgerblue,linewidth=2)      
-plt.xlim((1850,2012))
+    plotfld=cutl.seasonalize_monthlyts(hfldp,mo=mosel)
+    plt.plot(hyears,plotfld,color='green',linewidth=2)
+    if zoom:
+        slope, intercept, r_value, p_value, std_err = sp.stats.linregress(hyears,plotfld)
+        plt.plot(hyears,slope*hyears+intercept,color='green',linewidth=2)
+
+    plotfld=cutl.seasonalize_monthlyts(nfldp,mo=mosel)
+    plt.plot(nyears,plotfld,color=dodgerblue,linewidth=2)
+    if zoom:
+        slope, intercept, r_value, p_value, std_err = sp.stats.linregress(nyears,plotfld)
+        plt.plot(nyears,slope*nyears+intercept,color=dodgerblue,linewidth=2)
+    
+plt.xlim(xlims)
 plt.title('September NH SIA')
 plt.grid()
 if printtofile:
-    plt.savefig('CanESMens_OBS_' + cfield + '_Sep_timeseries.pdf')
+    plt.savefig('CanESMens_OBS_' + cfield + '_Sep_timeseries' + pstr + '.pdf')
 
 
 plt.figure()
-plt.plot(years,cutl.seasonalize_monthlyts(cfldpall[0,:],mo=9)-
-         cutl.seasonalize_monthlyts(cfldcall[0,:],mo=9,climo=1),'0.25')
-plt.plot(years,cutl.seasonalize_monthlyts(cfldpall[1,:],mo=9)-
-         cutl.seasonalize_monthlyts(cfldcall[1,:],mo=9,climo=1),'0.4')
-plt.plot(years,cutl.seasonalize_monthlyts(cfldpall[2,:],mo=9)-
-         cutl.seasonalize_monthlyts(cfldcall[2,:],mo=9,climo=1),'0.55')
-plt.plot(years,cutl.seasonalize_monthlyts(cfldpall[3,:],mo=9)-
-         cutl.seasonalize_monthlyts(cfldcall[3,:],mo=9,climo=1),'0.7')
-plt.plot(years,cutl.seasonalize_monthlyts(cfldpall[4,:],mo=9)-
-         cutl.seasonalize_monthlyts(cfldcall[4,:],mo=9,climo=1),'0.85')
-plt.plot(years,cutl.seasonalize_monthlyts(np.mean(cfldpall,axis=0),mo=9 )-
-         cutl.seasonalize_monthlyts( np.mean(cfldcall,axis=0),mo=9,climo=1 ),
-         color='k',linewidth=2)
+cii=0.25
+mosel=9
+for ii in xrange(0,5):
+    plotfld = cutl.seasonalize_monthlyts(cfldpall[ii,:],mo=mosel) -\
+              cutl.seasonalize_monthlyts(cfldcall[ii,:],mo=mosel,climo=1)
+    plt.plot(years,plotfld,color=str(cii))
+    if zoom:
+        slope, intercept, r_value, p_value, std_err = sp.stats.linregress(hyears,plotfld[129:])
+        plt.plot(years,slope*years+intercept,color=str(cii))
+    cii=cii+0.15
+
+plotfld = cutl.seasonalize_monthlyts( np.mean(cfldpall,axis=0),mo=mosel ) -\
+          cutl.seasonalize_monthlyts( np.mean(cfldcall,axis=0),mo=mosel,climo=1 )
+plt.plot(years,plotfld,color='k',linewidth=2)
+if zoom:
+    slope, intercept, r_value, p_value, std_err = sp.stats.linregress(hyears,plotfld[129:])
+    plt.plot(years,slope*years+intercept,color='k',linewidth=2)
+
 if afield=='sicn':
-    plt.plot(hyears,cutl.seasonalize_monthlyts(hfldp,mo=9)-
-         cutl.seasonalize_monthlyts(hfldc,mo=9,climo=1),color=orangered4,linewidth=2)
-    plt.plot(nyears,cutl.seasonalize_monthlyts(nfldp,mo=9)-
-         cutl.seasonalize_monthlyts(nfldc,mo=9,climo=1),color=dodgerblue,linewidth=2)      
-plt.xlim((1850,2012))
+    plotfld=cutl.seasonalize_monthlyts(hfldp,mo=mosel)-\
+             cutl.seasonalize_monthlyts(hfldc,mo=mosel,climo=1)
+    plt.plot(hyears,plotfld,color='green',linewidth=2)
+    if zoom:
+        slope, intercept, r_value, p_value, std_err = sp.stats.linregress(hyears,plotfld)
+        plt.plot(hyears,slope*hyears+intercept,color='green',linewidth=2)
+
+    plotfld=cutl.seasonalize_monthlyts(nfldp,mo=mosel)-\
+             cutl.seasonalize_monthlyts(nfldc,mo=mosel,climo=1)
+    plt.plot(nyears,plotfld,color=dodgerblue,linewidth=2)
+    if zoom:
+        slope, intercept, r_value, p_value, std_err = sp.stats.linregress(nyears,plotfld)
+        plt.plot(nyears,slope*nyears+intercept,color=dodgerblue,linewidth=2)
+plt.xlim(xlims)
+plt.ylim(saylims)
 plt.title('September NH SIA anom from 1979-89')
 plt.grid()
 if printtofile:
-    plt.savefig('CanESMens_OBSanom' + ctimstr + '_' + cfield + '_Sep_timeseries.pdf')
+    plt.savefig('CanESMens_OBSanom' + ctimstr + '_' + cfield + '_Sep_timeseries' + pstr + '.pdf')
+
+
+## plt.figure()
+## plt.plot(years,cutl.seasonalize_monthlyts(cfldpall[0,:],mo=9)-
+##          cutl.seasonalize_monthlyts(cfldcall[0,:],mo=9,climo=1),'0.25')
+## plt.plot(years,cutl.seasonalize_monthlyts(cfldpall[1,:],mo=9)-
+##          cutl.seasonalize_monthlyts(cfldcall[1,:],mo=9,climo=1),'0.4')
+## plt.plot(years,cutl.seasonalize_monthlyts(cfldpall[2,:],mo=9)-
+##          cutl.seasonalize_monthlyts(cfldcall[2,:],mo=9,climo=1),'0.55')
+## plt.plot(years,cutl.seasonalize_monthlyts(cfldpall[3,:],mo=9)-
+##          cutl.seasonalize_monthlyts(cfldcall[3,:],mo=9,climo=1),'0.7')
+## plt.plot(years,cutl.seasonalize_monthlyts(cfldpall[4,:],mo=9)-
+##          cutl.seasonalize_monthlyts(cfldcall[4,:],mo=9,climo=1),'0.85')
+## plt.plot(years,cutl.seasonalize_monthlyts(np.mean(cfldpall,axis=0),mo=9 )-
+##          cutl.seasonalize_monthlyts( np.mean(cfldcall,axis=0),mo=9,climo=1 ),
+##          color='k',linewidth=2)
+## if afield=='sicn':
+##     plt.plot(hyears,cutl.seasonalize_monthlyts(hfldp,mo=9)-
+##          cutl.seasonalize_monthlyts(hfldc,mo=9,climo=1),color='green',linewidth=2)
+##     plt.plot(nyears,cutl.seasonalize_monthlyts(nfldp,mo=9)-
+##          cutl.seasonalize_monthlyts(nfldc,mo=9,climo=1),color=dodgerblue,linewidth=2)      
+## plt.xlim(xlims)
+## plt.title('September NH SIA anom from 1979-89')
+## plt.grid()
+## if printtofile:
+##     plt.savefig('CanESMens_OBSanom' + ctimstr + '_' + cfield + '_Sep_timeseries' + pstr + '.pdf')
 
 
 
 #   MAXIMUM (MAR)
 plt.figure()
-plt.plot(years,cutl.seasonalize_monthlyts(cfldpall[0,:],mo=3),'0.25')
-plt.plot(years,cutl.seasonalize_monthlyts(cfldpall[1,:],mo=3),'0.4')
-plt.plot(years,cutl.seasonalize_monthlyts(cfldpall[2,:],mo=3),'0.55')
-plt.plot(years,cutl.seasonalize_monthlyts(cfldpall[3,:],mo=3),'0.7')
-plt.plot(years,cutl.seasonalize_monthlyts(cfldpall[4,:],mo=3),'0.85')
-plt.plot(years,cutl.seasonalize_monthlyts( np.mean(cfldpall,axis=0),mo=3 ),color='k',linewidth=2)
+cii=0.25
+mosel=3
+for ii in xrange(0,5):
+    plotfld = cutl.seasonalize_monthlyts(cfldpall[ii,:],mo=mosel)
+    plt.plot(years,plotfld,color=str(cii))
+    if zoom:
+        slope, intercept, r_value, p_value, std_err = sp.stats.linregress(hyears,plotfld[129:])
+        plt.plot(years,slope*years+intercept,color=str(cii))
+    cii=cii+0.15
+
+plotfld = cutl.seasonalize_monthlyts( np.mean(cfldpall,axis=0),mo=mosel )
+plt.plot(years,plotfld,color='k',linewidth=2)
+if zoom:
+    slope, intercept, r_value, p_value, std_err = sp.stats.linregress(hyears,plotfld[129:])
+    plt.plot(years,slope*years+intercept,color='k',linewidth=2)
+
 if afield=='sicn':
-    plt.plot(hyears,cutl.seasonalize_monthlyts(hfldp,mo=3),color=orangered4,linewidth=2)
-    plt.plot(nyears,cutl.seasonalize_monthlyts(nfldp,mo=3),color=dodgerblue,linewidth=2)      
-plt.xlim((1850,2012))
+    plotfld=cutl.seasonalize_monthlyts(hfldp,mo=mosel)
+    plt.plot(hyears,plotfld,color='green',linewidth=2)
+    if zoom:
+        slope, intercept, r_value, p_value, std_err = sp.stats.linregress(hyears,plotfld)
+        plt.plot(hyears,slope*hyears+intercept,color='green',linewidth=2)
+
+    plotfld=cutl.seasonalize_monthlyts(nfldp,mo=mosel)
+    plt.plot(nyears,plotfld,color=dodgerblue,linewidth=2)
+    if zoom:
+        slope, intercept, r_value, p_value, std_err = sp.stats.linregress(nyears,plotfld)
+        plt.plot(nyears,slope*nyears+intercept,color=dodgerblue,linewidth=2)
+    
+plt.xlim(xlims)
 plt.title('March NH SIA')
 plt.grid()
 if printtofile:
-    plt.savefig('CanESMens_OBS_' + cfield + '_Mar_timeseries.pdf')
+    plt.savefig('CanESMens_OBS_' + cfield + '_Mar_timeseries' + pstr + '.pdf')
 
 
 plt.figure()
-plt.plot(years,cutl.seasonalize_monthlyts(cfldpall[0,:],mo=3)-
-         cutl.seasonalize_monthlyts(cfldcall[0,:],mo=3,climo=1),'0.25')
-plt.plot(years,cutl.seasonalize_monthlyts(cfldpall[1,:],mo=3)-
-         cutl.seasonalize_monthlyts(cfldcall[1,:],mo=3,climo=1),'0.4')
-plt.plot(years,cutl.seasonalize_monthlyts(cfldpall[2,:],mo=3)-
-         cutl.seasonalize_monthlyts(cfldcall[2,:],mo=3,climo=1),'0.55')
-plt.plot(years,cutl.seasonalize_monthlyts(cfldpall[3,:],mo=3)-
-         cutl.seasonalize_monthlyts(cfldcall[3,:],mo=3,climo=1),'0.7')
-plt.plot(years,cutl.seasonalize_monthlyts(cfldpall[4,:],mo=3)-
-         cutl.seasonalize_monthlyts(cfldcall[4,:],mo=3,climo=1),'0.85')
-plt.plot(years,cutl.seasonalize_monthlyts(np.mean(cfldpall,axis=0),mo=3 )-
-         cutl.seasonalize_monthlyts( np.mean(cfldcall,axis=0),mo=3,climo=1 ),
-         color='k',linewidth=2)
+cii=0.25
+mosel=3
+for ii in xrange(0,5):
+    plotfld = cutl.seasonalize_monthlyts(cfldpall[ii,:],mo=mosel) -\
+              cutl.seasonalize_monthlyts(cfldcall[ii,:],mo=mosel,climo=1)
+    plt.plot(years,plotfld,color=str(cii))
+    if zoom:
+        slope, intercept, r_value, p_value, std_err = sp.stats.linregress(hyears,plotfld[129:])
+        plt.plot(years,slope*years+intercept,color=str(cii))
+    cii=cii+0.15
+
+plotfld = cutl.seasonalize_monthlyts( np.mean(cfldpall,axis=0),mo=mosel ) -\
+          cutl.seasonalize_monthlyts( np.mean(cfldcall,axis=0),mo=mosel,climo=1 )
+plt.plot(years,plotfld,color='k',linewidth=2)
+if zoom:
+    slope, intercept, r_value, p_value, std_err = sp.stats.linregress(hyears,plotfld[129:])
+    plt.plot(years,slope*years+intercept,color='k',linewidth=2)
+
 if afield=='sicn':
-    plt.plot(hyears,cutl.seasonalize_monthlyts(hfldp,mo=3)-
-         cutl.seasonalize_monthlyts(hfldc,mo=3,climo=1),color=orangered4,linewidth=2)
-    plt.plot(nyears,cutl.seasonalize_monthlyts(nfldp,mo=3)-
-         cutl.seasonalize_monthlyts(nfldc,mo=3,climo=1),color=dodgerblue,linewidth=2)      
-plt.xlim((1850,2012))
+    plotfld=cutl.seasonalize_monthlyts(hfldp,mo=mosel)-\
+             cutl.seasonalize_monthlyts(hfldc,mo=mosel,climo=1)
+    plt.plot(hyears,plotfld,color='green',linewidth=2)
+    if zoom:
+        slope, intercept, r_value, p_value, std_err = sp.stats.linregress(hyears,plotfld)
+        plt.plot(hyears,slope*hyears+intercept,color='green',linewidth=2)
+
+    plotfld=cutl.seasonalize_monthlyts(nfldp,mo=mosel)-\
+             cutl.seasonalize_monthlyts(nfldc,mo=mosel,climo=1)
+    plt.plot(nyears,plotfld,color=dodgerblue,linewidth=2)
+    if zoom:
+        slope, intercept, r_value, p_value, std_err = sp.stats.linregress(nyears,plotfld)
+        plt.plot(nyears,slope*nyears+intercept,color=dodgerblue,linewidth=2)
+plt.xlim(xlims)
+plt.ylim(maylims)
 plt.title('March NH SIA anom from 1979-89')
 plt.grid()
 if printtofile:
-    plt.savefig('CanESMens_OBSanom' + ctimstr + '_' + cfield + '_Mar_timeseries.pdf')
+    plt.savefig('CanESMens_OBSanom' + ctimstr + '_' + cfield + '_Mar_timeseries' + pstr + '.pdf')
+
+
+
+
+## plt.figure()
+## plt.plot(years,cutl.seasonalize_monthlyts(cfldpall[0,:],mo=3),'0.25')
+## plt.plot(years,cutl.seasonalize_monthlyts(cfldpall[1,:],mo=3),'0.4')
+## plt.plot(years,cutl.seasonalize_monthlyts(cfldpall[2,:],mo=3),'0.55')
+## plt.plot(years,cutl.seasonalize_monthlyts(cfldpall[3,:],mo=3),'0.7')
+## plt.plot(years,cutl.seasonalize_monthlyts(cfldpall[4,:],mo=3),'0.85')
+## plt.plot(years,cutl.seasonalize_monthlyts( np.mean(cfldpall,axis=0),mo=3 ),color='k',linewidth=2)
+## if afield=='sicn':
+##     plt.plot(hyears,cutl.seasonalize_monthlyts(hfldp,mo=3),color='green',linewidth=2)
+##     plt.plot(nyears,cutl.seasonalize_monthlyts(nfldp,mo=3),color=dodgerblue,linewidth=2)      
+## plt.xlim(xlims)
+## plt.title('March NH SIA')
+## plt.grid()
+## if printtofile:
+##     plt.savefig('CanESMens_OBS_' + cfield + '_Mar_timeseries' + pstr + '.pdf')
+
+
+## plt.figure()
+## plt.plot(years,cutl.seasonalize_monthlyts(cfldpall[0,:],mo=3)-
+##          cutl.seasonalize_monthlyts(cfldcall[0,:],mo=3,climo=1),'0.25')
+## plt.plot(years,cutl.seasonalize_monthlyts(cfldpall[1,:],mo=3)-
+##          cutl.seasonalize_monthlyts(cfldcall[1,:],mo=3,climo=1),'0.4')
+## plt.plot(years,cutl.seasonalize_monthlyts(cfldpall[2,:],mo=3)-
+##          cutl.seasonalize_monthlyts(cfldcall[2,:],mo=3,climo=1),'0.55')
+## plt.plot(years,cutl.seasonalize_monthlyts(cfldpall[3,:],mo=3)-
+##          cutl.seasonalize_monthlyts(cfldcall[3,:],mo=3,climo=1),'0.7')
+## plt.plot(years,cutl.seasonalize_monthlyts(cfldpall[4,:],mo=3)-
+##          cutl.seasonalize_monthlyts(cfldcall[4,:],mo=3,climo=1),'0.85')
+## plt.plot(years,cutl.seasonalize_monthlyts(np.mean(cfldpall,axis=0),mo=3 )-
+##          cutl.seasonalize_monthlyts( np.mean(cfldcall,axis=0),mo=3,climo=1 ),
+##          color='k',linewidth=2)
+## if afield=='sicn':
+##     plt.plot(hyears,cutl.seasonalize_monthlyts(hfldp,mo=3)-
+##          cutl.seasonalize_monthlyts(hfldc,mo=3,climo=1),color='green',linewidth=2)
+##     plt.plot(nyears,cutl.seasonalize_monthlyts(nfldp,mo=3)-
+##          cutl.seasonalize_monthlyts(nfldc,mo=3,climo=1),color=dodgerblue,linewidth=2)      
+## plt.xlim(xlims)
+## plt.title('March NH SIA anom from 1979-89')
+## plt.grid()
+## if printtofile:
+##     plt.savefig('CanESMens_OBSanom' + ctimstr + '_' + cfield + '_Mar_timeseries' + pstr + '.pdf')
 
 
 
