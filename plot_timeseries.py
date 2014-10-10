@@ -27,8 +27,8 @@ import matplotlib.font_manager as fm
 plt.close("all")
 plt.ion()
 
-printtofile=True
-zoom=True # zoom in on ~1950-2012. @@later add trend lines?
+printtofile=False
+zoom=True # zoom in on ~1970-2012 and add linear trend lines
 
 
 amodel = 'CanAM4'
@@ -80,6 +80,7 @@ elif afield == 'sicn':
     cmap = 'red2blue_w20'
 
     saylims = -0.4e13,0.4e13 # september anomaly
+    saylims = -2e12,2e12  # december anomaly
     maylims = -2e12,3e12
     
 elif afield == 'pmsl':
@@ -260,7 +261,8 @@ if printtofile:
 #   MINIMUM (SEPT)
 plt.figure()
 cii=0.25
-mosel=9
+mosel=12; mostr='Dec'
+#mosel=9; mostr='Sep'
 for ii in xrange(0,5):
     plotfld = cutl.seasonalize_monthlyts(cfldpall[ii,:],mo=mosel)
     plt.plot(years,plotfld,color=str(cii))
@@ -289,15 +291,15 @@ if afield=='sicn':
         plt.plot(nyears,slope*nyears+intercept,color=dodgerblue,linewidth=2)
     
 plt.xlim(xlims)
-plt.title('September NH SIA')
+plt.title(mostr + ' NH SIA')
 plt.grid()
 if printtofile:
-    plt.savefig('CanESMens_OBS_' + cfield + '_Sep_timeseries' + pstr + '.pdf')
+    plt.savefig('CanESMens_OBS_' + cfield + '_' + mostr + '_timeseries' + pstr + '.pdf')
 
 
 plt.figure()
 cii=0.25
-mosel=9
+#mosel=9
 for ii in xrange(0,5):
     plotfld = cutl.seasonalize_monthlyts(cfldpall[ii,:],mo=mosel) -\
               cutl.seasonalize_monthlyts(cfldcall[ii,:],mo=mosel,climo=1)
@@ -330,10 +332,10 @@ if afield=='sicn':
         plt.plot(nyears,slope*nyears+intercept,color=dodgerblue,linewidth=2)
 plt.xlim(xlims)
 plt.ylim(saylims)
-plt.title('September NH SIA anom from 1979-89')
+plt.title(mostr + ' NH SIA anom from 1979-89')
 plt.grid()
 if printtofile:
-    plt.savefig('CanESMens_OBSanom' + ctimstr + '_' + cfield + '_Sep_timeseries' + pstr + '.pdf')
+    plt.savefig('CanESMens_OBSanom' + ctimstr + '_' + cfield + '_' + mostr + '_timeseries' + pstr + '.pdf')
 
 
 ## plt.figure()
