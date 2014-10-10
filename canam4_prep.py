@@ -27,19 +27,19 @@ plt.ion()
 
 printtofile=True
 
-field = 'gz'
-smclim=False
+field = 'st'
+smclim=True
 level=50000 # for threed
 nonstandardlev=False # standards are 700,500,300
 
 # Choose type of plot =========================
-seasonalmap=False # seasonal maps (SON, DJF, MAM, JJA)
+seasonalmap=True # seasonal maps (SON, DJF, MAM, JJA)
 seasonalvert=False # seasonal vertical zonal means instead of maps
-screen=True # whether to have screen-style vertical zonal means
+screen=False # whether to have screen-style vertical zonal means
 
 plotzonmean=False # plotzonmean,plotseacyc,pattcorrwithtime are mutually exclusive
 
-plotseacyc=True # plotzonmean,plotseacyc,pattcorrwithtime are mutually exclusive
+plotseacyc=False # plotzonmean,plotseacyc,pattcorrwithtime are mutually exclusive
 seacyclatlim=60 # southern limit for plotting polar mean seasonal cycles (line plot)
 withlat=False # plot the seasonal cycle with latitude dimension too (only for plotseacyc=1)@@for now just std over ens
 #squatseacyc=False # plot seacycle figs as shorter than wide
@@ -62,8 +62,9 @@ halftime2=False # get only the last 60yrs. make sure to set the other flag the o
 # Choose what simulations to add =============
 #  default is R1-5, ENS
 canens=False # just the CAN ensemble (E1-E5) plus mean, plus mean of R ensemble. option to addobs only.
-allens=False # this is ONLY the ensemble means, plus superensemble
+allens=True # this is ONLY the ensemble means, plus superensemble
 sensruns=False # sensruns only: addr4ct=1,addsens=1. others=0 no meanBC, r mean, or obs
+
 addobs=True # add mean of kemhad* & kemnsidc* runs to line plots, seasonal maps. 
 addr4ct=False # add kem1pert2r4ct (constant thickness version of ens4)
 addsens=False # add sensitivity runs (kem1pert1b, kem1pert3)
@@ -194,11 +195,11 @@ if field == 'st':
     fdict['fieldstr'] = field
 
     pparams['cmin'] = -3; pparams['cmax'] = 3 # seasonal/monthly
+    pparams['cmap'] = 'blue2red_w20'
     if smclim:
         pparams['cmin'] = -1.5; pparams['cmax'] = 1.5 # seasonal/monthly
+        pparams['cmap'] = 'blue2red_20'
         savestr= savestr + '_smclim'
-
-    pparams['cmap'] = 'blue2red_w20'
         
     #cminmp = -1; cmaxmp = 1 # for when pert is 'ctl'
     #cminn = -5; cmaxn = 5 # for norm by std
