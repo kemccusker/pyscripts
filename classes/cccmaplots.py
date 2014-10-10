@@ -149,10 +149,13 @@ def addtsigm(basem, pvals, lat, lon, siglevel=0.05,color='k',type='hatch'):
     addtsigm(basem, pvals, lat, lon, siglevel=0.05,color='k',type='hatch')
 
     Add significance contour to given basemap(!)
+    If type is anything other than 'hatch', it will be a contour
     """
     
     # Make pval field binary
     plotfld = copy.copy(pvals) # shallow copy
+    #plotfld=ma.masked_where(pvals,plotfld) # @@ didn't work...
+    
     plotfld[pvals<=siglevel] = 1.5
     plotfld[pvals>siglevel] = 0
 
