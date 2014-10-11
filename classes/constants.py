@@ -405,6 +405,18 @@ def get_simsdict():
             'ensname': 'histBCICmean','model':model}# @@
     simsdict['pert2espr'] = meta
 
+    # kemens # THIS IS kem1pert2ens - kemctl1ens ! TOT
+    meta = {'fullname': 'kemens', 'altname': 'TOT', 'timestr': '001-121',
+            'timesel': '0002-01-01,0121-12-31','stdctl': 'kemense', 'diffname': 'IVAR',
+            'ensname': None,'model':model}# @@
+    simsdict['kemens'] = meta
+
+    # kemense # THIS IS kem1pert2ense - kemctl1ense ! ANTHRO (a control)
+    meta = {'fullname': 'kemense', 'altname': 'ANTH', 'timestr': '001-121',
+            'timesel': '0002-01-01,0121-12-31','stdctl': None, 'diffname': None,
+            'ensname': None,'model':model}# @@
+    simsdict['kemense'] = meta
+
     return simsdict
 
 
@@ -428,14 +440,15 @@ def get_simpairsdict():
     pairdict = {}
     for skey in simsdict.iterkeys():
 
-        #print skey
+        #print skey # @@
         simdict=simsdict[skey]
         
 
         if simdict == {}:
             pass
         elif simdict['diffname'] != None:
-            #print simdict['diffname']
+            #print simdict['diffname'] # @@
+            
             # add the diffname to pairs dict as new key
             # set up the simpair
             simpt = simsdict[skey]

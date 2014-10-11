@@ -27,8 +27,8 @@ plt.ion()
 
 printtofile=True
 
-field = 'st'
-smclim=True
+field = 'gz'
+smclim=False
 level=50000 # for threed
 nonstandardlev=False # standards are 700,500,300
 
@@ -62,8 +62,9 @@ halftime2=False # get only the last 60yrs. make sure to set the other flag the o
 # Choose what simulations to add =============
 #  default is R1-5, ENS
 canens=False # just the CAN ensemble (E1-E5) plus mean, plus mean of R ensemble. option to addobs only.
-allens=True # this is ONLY the ensemble means, plus superensemble
+allens=False # this is ONLY the ensemble means, plus superensemble
 sensruns=False # sensruns only: addr4ct=1,addsens=1. others=0 no meanBC, r mean, or obs
+ivar=True # this will show ENS (TOT) and ENSE (ANTH) and their difference = internal var
 
 addobs=True # add mean of kemhad* & kemnsidc* runs to line plots, seasonal maps. 
 addr4ct=False # add kem1pert2r4ct (constant thickness version of ens4)
@@ -125,6 +126,10 @@ elif allens: # just do the ens means and superensemble mean
     sims = ('ENS','ENSE','ESPR')
     savestr = '_allens'
     # addobs? @@@
+elif ivar:
+    sims = sims = ('ENS','ENSE','IVAR')
+    savestr = '_ivar'
+    smclim=True # @@
 else:
     if addcanens:
         sims = sims + ('E1','E2','E3','E4','E5','ENSE') # E1=CAN
