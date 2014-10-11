@@ -507,3 +507,63 @@ def plot_allregions(type='nh'):
         if aii==nreg-1: break # get out of loop if done with regions
         
     
+def kemscatter(fldx,fldy,weights=None,axis=None,xlims=None,ylims=None,suppregress=False,
+               supponetoone=False, marker='.',color='k',grid=True):
+    """ fldx, fldy, and weights if given will be flattened.
+          suppregress: suppress regression line if True.
+          supponetoone: suppress one-to-one line if True.
+          
+    """
+
+    if axis!=None:
+        ax=axis
+    else:
+        ax=plt.gca()
+
+    if weights!=None:
+        scatxx=fldx.flatten()*weights.flatten()
+        scatyy=fldy.flatten()*weights.flatten()        
+    else:
+        scatxx=fldx.flatten()
+        scatyy=fldy.flatten()
+
+    ax.scatter(scatxx,scatyy, marker=marker,color=color)
+
+
+    if xlims==None:
+        axxlims = ax.get_xlim()
+    else:
+        axxlims = xlims
+    if ylims==None:
+        axylims = ax.get_ylim()
+    else:
+        axylims = ylims
+    
+    onex=np.arange(-100,100) # a hack. Need to actuall infer it from data @@
+    oney=onex
+    if ~supponetoone:
+        # one-to-one line
+        ax.plot(onex,oney,color='b',linestyle='--')
+
+
+    if ~suppregress:
+        mm, bb = np.polyfit(scatxx, scatyy, 1)
+        ax.plot(onex,mm*onex + bb, color=color)
+        rr = np.corrcoef(scatxx, scatyy)[0,1]
+        #print rr
+        rsq = rr**2
+        #print 'R squared: ' + str(rsq)
+        val = '$%.2f$'%(rsq)
+        ax.annotate('$R^2$= ' + val, xy=(axxlims[0]+.1*axxlims[1], axylims[1]-.2*axylims[1]),
+                    xycoords='data') # upper left?
+        mval = '$%.2f$'%(mm)
+        ax.annotate('$m$= ' + mval, xy=(axxlims[0]+.1*axxlims[1], axylims[1]-.4*axylims[1]),
+                    xycoords='data')
+
+    # reset the limits
+    ax.set_ylim(axylims)
+    ax.set_xlim(axxlims)
+    ax.grid(grid)
+
+
+    return ax
