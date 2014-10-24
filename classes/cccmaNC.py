@@ -57,10 +57,17 @@ def getNCvar(filename,field,timesel=None,levsel=None,monsel=None,seas=None,calc=
         else:
             level=None        
 
-        if timesel == '0002-01-01,0111-12-31' or timesel == '0002-01-01,0061-12-31' or timesel=='0002-01-01,0121-12-31':
-            print 'hard-coded skipping of first year @@'
+        if timesel == '0002-01-01,0061-12-31':
+            print 'hard-coded skipping of first year of 61-yr chunk @@'
             fld = getNCvar_old(filename,field,seas=seas, monsel=monsel,timechunk=(12,),level=level,calc=calc)
         else:
+            # if timesel=='0002-01-01,0121-12-31' then just don't set timechunk because 
+            #     files on the mac are already selected to skip first year, and they reside
+            #     in the 'timsel' subdirectory. Check for that?
+            if timesel=='0002-01-01,0121-12-31':
+                if 'timsel/' not in filename:
+                    print 'On mac, use files in timsel/ subdirectory! @@ NEEDS TESTING'
+
             fld = getNCvar_old(filename,field,seas=seas,monsel=monsel,level=level,calc=calc) # doesn't work with all arguments yet @@
         return fld
 

@@ -26,7 +26,7 @@ def get_basepath():
     plat = platform.system()   
     if plat == 'Darwin':  # means I'm on my mac
         bp['basepath'] = '/Volumes/MyPassport2TB/DATA/CanSISE/'
-        bp['subdir'] = '/'
+        bp['subdir'] = '/timsel/'
 
     else:  # on linux workstation in Vic
         bp['basepath'] = '/home/rkm/work/DATA/'
