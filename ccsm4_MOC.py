@@ -232,11 +232,19 @@ for lii,zz in enumerate(zt):
     tempp2[lii,...] = ma.masked_where(kmt <= lii,tempp2[lii,...])
     
 if pig:  # 80W to 120W. Or 280 to 230
-    region = 'PIG'
-    rmaskout = np.logical_and(tlon>230, tlon<280) # region mask! this masks OUT the region itself
-    rmask = np.logical_or(tlon<=230,tlon>=280) # use this one for averaging. keep only the region
+    printtofile=False
+    lonlims = [230,280]; region = 'PIG'; strlims='80W-120W'
+    #lonlims = [230,260]; region='PIG2'; strlims='100W-120W'
+    
+    rmaskout = np.logical_and(tlon>lonlims[0], tlon<lonlims[1]) # region mask! this masks OUT the region itself
+    rmask = np.logical_or(tlon<=lonlims[0],tlon>=lonlims[1]) # use this one for averaging. keep only the region
     testmask = tempc[0,...]
     testmask = ma.masked_where(rmask,testmask)
+    
+    bm = cplt.kemmap(testmask,tlat[:,0],tlon[0,:],title='region mask',type='sh')
+    if printtofile:
+        plt.savefig(region + '_' + strlims + '_map.pdf')
+
     # tile the mask
     rmask = np.tile(rmask,(len(zt),1,1))
     print rmask.shape
@@ -270,11 +278,13 @@ if pig:  # 80W to 120W. Or 280 to 230
     cbar = fig.colorbar(CF1)
 
 
+# # ====================== paper ====================
+# # PIG zonal mean TEMP
     #cmap='blue2red_w20'
-    cmap='blue2red_20'  # @@@
+    cmap='blue2red_w20'  # @@@
     cmin=-.5; cmax=.5
 
-    printtofile= True
+    printtofile= False
 
     #cmlen=float( plt.cm.get_cmap(cmap).N) # or: from __future__ import division
     cmlen=float(20)
@@ -306,6 +316,34 @@ if pig:  # 80W to 120W. Or 280 to 230
     cbar = fig.colorbar(CF2)
     if printtofile:
         fig.savefig('TEMPanom_subplotSHzm_' + region + '.pdf')
+
+
+    # ===== TEST figure showing the difference b/w Sulf and GHGrem differences
+if 1:
+    cmin=-1.2; cmax=1.2
+    cmap='blue2red_20'
+
+    cmlen=float(20)
+    incr = (cmax-cmin) / (cmlen)
+    conts = np.arange(cmin,cmax+incr,incr)
+
+    fig = plt.figure()
+    fig.set_size_inches(7,3)
+    ax = fig.add_subplot(111)
+    CF1 = plt.contourf(tlats,zlevs,(temppreg-tempcreg)-(tempp2reg-tempcreg),
+                       cmap=cmap,vmin=cmin,vmax=cmax,levels=conts,extend='both')
+
+    # contours for MOC anomaly
+    contspd = np.arange(.1,5,.3)
+    contsnd = np.arange(-5,-.1,.3)
+
+    ax.set_ylim((0,800))
+    ax.invert_yaxis()
+    ax.set_xlim((-75,-50))
+    ax.set_title(casenamep + '-' + casenamep2 + ' ' + region + ' anom TEMP')
+    cbar = fig.colorbar(CF1)
+    if printtofile:
+        fig.savefig('TEMPanom_Sulf-GHGrem_' + region + '.pdf')
 
     # end if pig region
     # #########################
@@ -717,6 +755,10 @@ wisopprime = wip-wic
 wvelprime2 = wvp2-wvc
 wisopprime2 = wip2-wic
 
+# also wbar*dTprime/dz
+wbar = wvc+wic
+wisopbar = wic
+wvelbar = wvc
 
 print wprime.shape
 
@@ -736,6 +778,9 @@ for lii,zz in enumerate(zt):
     wvelprime2[lii,...] = ma.masked_where(kmt <= lii,wvelprime2[lii,...])
     wisopprime[lii,...] = ma.masked_where(kmt <= lii,wisopprime[lii,...])
     wisopprime2[lii,...] = ma.masked_where(kmt <= lii,wisopprime2[lii,...])
+    wbar[lii,...] = ma.masked_where(kmt <= lii,wbar[lii,...])
+    wvelbar[lii,...] = ma.masked_where(kmt <= lii,wvelbar[lii,...])
+    wisopbar[lii,...] = ma.masked_where(kmt <= lii,wisopbar[lii,...])
 
 #plt.figure()
 #plt.pcolor(wprime[10,...],vmin=-2e-6,vmax=2e-6)
@@ -752,6 +797,10 @@ if pig:
     wvelprime2reg = ma.masked_where(rmask,wvelprime2)
     wisopprimereg = ma.masked_where(rmask,wisopprime)
     wisopprime2reg = ma.masked_where(rmask,wisopprime2)
+
+    wbarreg = ma.masked_where(rmask,wbar)
+    wvelbarreg = ma.masked_where(rmask,wvelbar)
+    wisopbarreg = ma.masked_where(rmask,wisopbar)
     
     wprimereg = np.squeeze(np.mean(wprimereg,axis=2))
     wprime2reg = np.squeeze(np.mean(wprime2reg,axis=2))
@@ -760,8 +809,18 @@ if pig:
     wisopprimereg = np.squeeze(np.mean(wisopprimereg,axis=2))
     wisopprime2reg = np.squeeze(np.mean(wisopprime2reg,axis=2))
 
-    tbarreg = tempcreg# already zonal meaned 
-    dtbarreg = np.diff(tbarreg,axis=0)
+    wbarreg = np.squeeze(np.mean(wbarreg,axis=2))
+    wvelbarreg = np.squeeze(np.mean(wvelbarreg,axis=2))
+    wisopbarreg = np.squeeze(np.mean(wisopbarreg,axis=2))
+
+
+    tbarreg = tempcreg# already zonal meaned MEAN T
+    dtbarreg = np.diff(tbarreg,axis=0) # delta of MEAN T with height
+
+    tprimereg = temppreg-tempcreg
+    tprime2reg = tempp2reg-tempcreg
+    dtprimereg = np.diff(tprimereg, axis=0) # delta of ANOM T with height
+    dtprime2reg = np.diff(tprime2reg, axis=0)
 
     # thickness of each layer
     dzt = np.diff(zt/100.) # convert to m
@@ -772,10 +831,17 @@ if pig:
     wtranswireg = np.zeros((len(dzt),wprimereg.shape[1]))
     wtranswi2reg = np.zeros((len(dzt),wprime2reg.shape[1]))
 
+    wbartransreg = np.zeros((len(dzt),wbarreg.shape[1])) # mean w time anom dT
+    wbartrans2reg = np.zeros((len(dzt),wbarreg.shape[1])) # mean w time anom dT
+    wbartranswvreg = np.zeros((len(dzt),wbarreg.shape[1]))
+    wbartranswv2reg = np.zeros((len(dzt),wbarreg.shape[1]))
+    wbartranswireg = np.zeros((len(dzt),wbarreg.shape[1]))
+    wbartranswi2reg = np.zeros((len(dzt),wbarreg.shape[1]))
+
     # calc heat transport (heating rate) for each level
     for lii,dz in enumerate(dzt):
         #print 'ind: ' + str(lii) + ', dz: ' + str(dz)
-
+        #  W prime * (dTbar / dz)
         wtransreg[lii,...] = wprimereg[lii,...]*(dtbarreg[lii,...]/dz)
         wtrans2reg[lii,...] = wprime2reg[lii,...]*(dtbarreg[lii,...]/dz)
 
@@ -785,7 +851,20 @@ if pig:
         wtranswireg[lii,...] = wisopprimereg[lii,...]*(dtbarreg[lii,...]/dz) # WISOP only
         wtranswi2reg[lii,...] = wisopprime2reg[lii,...]*(dtbarreg[lii,...]/dz)
 
-    printtofile=True
+        # W bar * (dTprime / dz)
+        wbartransreg[lii,...] = wbarreg[lii,...]*(dtprimereg[lii,...]/dz)
+        wbartrans2reg[lii,...] = wbarreg[lii,...]*(dtprime2reg[lii,...]/dz)
+
+        wbartranswvreg[lii,...] = wvelbarreg[lii,...]*(dtprimereg[lii,...]/dz)
+        wbartranswv2reg[lii,...] = wvelbarreg[lii,...]*(dtprime2reg[lii,...]/dz)
+
+        wbartranswireg[lii,...] = wisopbarreg[lii,...]*(dtprimereg[lii,...]/dz)
+        wbartranswi2reg[lii,...] = wisopbarreg[lii,...]*(dtprime2reg[lii,...]/dz)
+
+
+# # 
+# #   PIG zonal mean vertical heat trans and velocity subplot
+    printtofile=False
     meshlats,meshdz = np.meshgrid(np.squeeze(tlat[:,1]),zt[1:]/100.)
 
     cmlen=float(20)
@@ -800,7 +879,7 @@ if pig:
     conts = np.arange(cmin,cmax+incr,incr)
 
     ax = fig.add_subplot(241)
-    plt.contourf(meshlats,meshdz,dtbarreg,cmap='blue2red_20',vmin=cmin,vmax=cmax,levels=conts,extend='both') # @@@ dtbarsave???
+    plt.contourf(meshlats,meshdz,dtbarreg,cmap='blue2red_20',vmin=cmin,vmax=cmax,levels=conts,extend='both') 
     plt.colorbar()
     ax.set_ylim(ylims)
     ax.set_xlim(xlims)
@@ -883,7 +962,80 @@ if pig:
     if printtofile:
         fig.savefig('dTbardz_Wcomps_Sulf_GHGrem_subplotSHzm_' + region + '.pdf')
 
+    # THIS PLOT IS W bar * dTprime ! ==================
+# #   PIG zonal mean vertical heat trans and velocity subplot
+    printtofile=False
+    meshlats,meshdz = np.meshgrid(np.squeeze(tlat[:,1]),zt[1:]/100.)
 
+    cmlen=float(20)
+    ylims = (0,500)
+    xlims = (-77,-40)
+
+    fig = plt.figure()
+    fig.set_size_inches(14,8)
+
+    cmax=.1; cmin=-.1
+    incr = (cmax-cmin) / (cmlen)
+    conts = np.arange(cmin,cmax+incr,incr)
+
+    ax = fig.add_subplot(241)
+    plt.contourf(meshlats,meshdz,dtprimereg,cmap='blue2red_20',vmin=cmin,vmax=cmax,levels=conts,extend='both') 
+    plt.colorbar()
+    ax.set_ylim(ylims)
+    ax.set_xlim(xlims)
+    ax.invert_yaxis()
+    ax.set_title('Sulf: ' + region + ' dTprime/dz')
+
+    cmax=.1; cmin=-.1
+    incr = (cmax-cmin) / (cmlen)
+    conts = np.arange(cmin,cmax+incr,incr)
+
+    ax = fig.add_subplot(245) # second row
+    plt.contourf(meshlats,meshdz,dtprime2reg,cmap='blue2red_20',vmin=cmin,vmax=cmax,levels=conts,extend='both') 
+    plt.colorbar()
+    ax.set_ylim(ylims)
+    ax.set_xlim(xlims)
+    ax.invert_yaxis()
+    ax.set_title('GHGrem: ' + region + ' dTprime/dz')
+
+    cmax=3e-6; cmin=-3e-6
+    incr = (cmax-cmin) / (cmlen)
+    conts = np.arange(cmin,cmax+incr,incr)
+
+    ax = fig.add_subplot(242)
+    plt.contourf(tlats,zlevs,wbarreg,cmap='blue2red_20',vmin=cmin,vmax=cmax,levels=conts,extend='both')
+    plt.colorbar()
+    ax.set_ylim(ylims)
+    ax.set_xlim(xlims)
+    ax.invert_yaxis()
+    ax.set_title(region + ' wbar')
+
+    cmax=3e-6; cmin=-3e-6
+    incr = (cmax-cmin) / (cmlen)
+    conts = np.arange(cmin,cmax+incr,incr)
+
+    ax = fig.add_subplot(243)
+    plt.contourf(tlats,zlevs,wvelbarreg,cmap='blue2red_20',vmin=cmin,vmax=cmax,levels=conts,extend='both')
+    plt.colorbar()
+    ax.set_ylim(ylims)
+    ax.set_xlim(xlims)
+    ax.invert_yaxis()
+    ax.set_title(region + ' wvelbar')
+
+    cmax=3e-6; cmin=-3e-6
+    incr = (cmax-cmin) / (cmlen)
+    conts = np.arange(cmin,cmax+incr,incr)
+
+    ax = fig.add_subplot(244)
+    plt.contourf(tlats,zlevs,wisopbarreg,cmap='blue2red_20',vmin=cmin,vmax=cmax,levels=conts,extend='both')
+    plt.colorbar()
+    ax.set_ylim(ylims)
+    ax.set_xlim(xlims)
+    ax.invert_yaxis()
+    ax.set_title(region + ' wisopbar')
+
+    if printtofile:
+        fig.savefig('dTprimedz_Wbarcomps_Sulf_GHGrem_subplotSHzm_' + region + '.pdf')
 
 ##### end if pig region
 
@@ -1296,7 +1448,10 @@ if printtofile:
 
 # <codecell>
 
-printtofile=True
+# # ===================== paper ======
+# #  Zonal mean TEMP plus total MOC contour
+
+printtofile=False
 
 # plot MOC contours over T anomaly
 rho_sw=cnc.getNCvar(filenamec,'rho_sw')
@@ -1342,7 +1497,7 @@ CSm = plt.contour(lats,levs,plotmoc,contspd,\
             colors='.3',linestyles='solid',linewidths=2)
 #plt.clabel(CS1,fmt = '%2.1f',inline=1,fontsize=10)
 CSm = plt.contour(lats,levs,plotmoc,contsnd,\
-            colors='.3',linestyles='solid')
+            colors='.3',linestyles='dashed')
 
 ax.set_ylim(ylims)
 ax.invert_yaxis()
@@ -1367,7 +1522,7 @@ CSm2 = plt.contour(lats,levs,plotmoc2,contspd,\
             colors='.3',linestyles='solid',linewidths=2)
 #plt.clabel(CS1,fmt = '%2.1f',inline=1,fontsize=10)
 CSm2 = plt.contour(lats,levs,plotmoc2,contsnd,\
-            colors='.3',linestyles='solid')
+            colors='.3',linestyles='dashed')
 
 ax2.set_ylim(ylims)
 ax2.invert_yaxis()
@@ -1375,7 +1530,7 @@ ax2.set_xlim(xlims)
 ax2.set_title(casenamep2)
 
 if printtofile:
-    fig.savefig('MOCeul+eddanom_TEMPanom_subplotSH_ylim' + str(ylims[1]) + '.pdf')
+    fig.savefig('MOCeul+eddanom_TEMPanom_subplotSH_ylim' + str(ylims[1]) + 'xlim' + str(xlims[1]) + '_dash.pdf')
 
 # <codecell>
 
@@ -1464,7 +1619,6 @@ import cccmacmaps as ccm
 
 printtofile=False #True
 
-# note, these don't appear to be area-weighted (the plots averaging b/w lats for e/ depth) @@
 sec2yr = s2day*365
 
 mediumblue = ccm.get_linecolor('mediumblue') # Sulf
@@ -1487,6 +1641,14 @@ if pig:
     totwireg = wtranswireg*rhocp*dzttile
     totwi2reg = wtranswi2reg*rhocp*dzttile
 
+    totwbarreg = wbartransreg*rhocp*dzttile
+    totwbar2reg = wbartrans2reg*rhocp*dzttile
+    totwbarwvreg = wbartranswvreg*rhocp*dzttile
+    totwbarwv2reg = wbartranswv2reg*rhocp*dzttile
+    totwbarwireg = wbartranswireg*rhocp*dzttile
+    totwbarwi2reg = wbartranswi2reg*rhocp*dzttile
+
+
 """totwL450 = np.squeeze(totw[30,...]) # 408m depth using zlevs
 totw2L450 = np.squeeze(totw2[30,...])
 totwvL450 = np.squeeze(totwv[30,...]) 
@@ -1495,8 +1657,10 @@ totwiL450 = np.squeeze(totwi[30,...])
 totwi2L450 = np.squeeze(totwi2[30,...]) """
 
 ylim=500
-dep=19 # 197m depth using zlevs (in meters already)
+#dep=19; pigvhylims=[-.8,.5] # 197m depth using zlevs (in meters already)
 #dep=15 # 155m depth using zlevs
+dep=28; pigvhylims=[-.2,.2] # 351.09347534179688 depth using zlevs
+
 totwL1 = np.squeeze(wtrans[dep,...]) 
 totw2L1 = np.squeeze(wtrans2[dep,...])
 totwvL1 = np.squeeze(wtranswv[dep,...]) 
@@ -1541,6 +1705,7 @@ wgtsw = tareaytw[:,np.logical_and(onelat<= Nlim,onelat>Slim)] / totareaytw
 
 
 # try area-weighting:
+#  vertical heat trans
 totw = np.average(totw[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgts)
 totw2 = np.average(totw2[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgts)
 totwv = np.average(totwv[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgts)
@@ -1548,6 +1713,7 @@ totwv2 = np.average(totwv2[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,w
 totwi = np.average(totwi[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgts)
 totwi2 = np.average(totwi2[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgts)
 
+#  vertical velocity
 wavg=np.average(wprime[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgtsw)
 wavg2=np.average(wprime2[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgtsw)
 wvavg=np.average(wvelprime[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgtsw)
@@ -1556,9 +1722,12 @@ wiavg=np.average(wisopprime[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,
 wiavg2=np.average(wisopprime2[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgtsw)
 
 if pig:
-    printtofile=True
+# # =================== paper =======
+# #  PIG vertical heat trans and velocity
 
-    ylim=400
+    printtofile=False
+
+    ylim=450
     totwL1reg = np.squeeze(wtransreg[dep,...]) 
     totw2L1reg = np.squeeze(wtrans2reg[dep,...])
     totwvL1reg = np.squeeze(wtranswvreg[dep,...]) 
@@ -1566,6 +1735,7 @@ if pig:
     totwiL1reg = np.squeeze(wtranswireg[dep,...]) 
     totwi2L1reg = np.squeeze(wtranswi2reg[dep,...])
 
+    # meridional average with depth: vertical heat transport
     totwreg = np.average(totwreg[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgts)
     totw2reg = np.average(totw2reg[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgts)
     totwvreg = np.average(totwvreg[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgts)
@@ -1573,12 +1743,35 @@ if pig:
     totwireg = np.average(totwireg[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgts)
     totwi2reg = np.average(totwi2reg[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgts)
 
+    # meridional average WBAR*dTPRIME with depth: vertical heat transport
+    totwbarreg = np.average(totwbarreg[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgts)
+    totwbar2reg = np.average(totwbar2reg[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgts)
+    totwbarwvreg = np.average(totwbarwvreg[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgts)
+    totwbarwv2reg = np.average(totwbarwv2reg[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgts)
+    totwbarwireg = np.average(totwbarwireg[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgts)
+    totwbarwi2reg = np.average(totwbarwi2reg[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgts)
+
+    # meridional average w PRIME with depth
     wavgreg=np.average(wprimereg[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgtsw)
     wavg2reg=np.average(wprime2reg[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgtsw)
     wvavgreg=np.average(wvelprimereg[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgtsw)
     wvavg2reg=np.average(wvelprime2reg[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgtsw)
     wiavgreg=np.average(wisopprimereg[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgtsw)
     wiavg2reg=np.average(wisopprime2reg[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgtsw)
+
+    # meridional average w BAR with depth
+    wbaravgreg = np.average(wbarreg[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgtsw)
+    wbarwvavgreg = np.average(wvelbarreg[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgtsw)
+    wbarwiavgreg = np.average(wisopbarreg[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgtsw)
+
+    
+    # climo dTbar, averaged meridionally
+    dTbaravgreg=np.average(dtbarreg[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgts)
+
+    # anom dTprime, averaged meridionally
+    dTprimeavgreg = np.average(dtprimereg[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgts)
+    dTprime2avgreg = np.average(dtprime2reg[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgts)
+
 
     fig2 = plt.figure()
     fig2.set_size_inches(14,4)
@@ -1597,7 +1790,6 @@ if pig:
     plt.xlim(-.15,.15)
     plt.title(region + ' Avg vert heat trans (W/m2) ' + str(np.abs(Slim)) + 'S-' + str(np.abs(Nlim)) + 'S at e/ lev')
     ax.invert_yaxis()
-
 
     ax2=fig2.add_subplot(132)
     plt.plot(wavgreg*sec2yr,zt/100.,color=mediumblue,linewidth=2)
@@ -1632,11 +1824,108 @@ if pig:
     ax3.set_title(str(zlevs[dep,1]) + 'm heat trans')
     ax3.set_xlabel('Lat')
     ax3.set_xlim((Slim,Nlim))
-    ax3.set_ylim((-.8,.5))
+    #ax3.set_ylim((-.8,.5))
+    ax3.set_ylim(pigvhylims)
 
     if printtofile:
         fig2.savefig('vertheattrans_wvels_' + str(np.abs(Slim)) + 'S-' + str(np.abs(Nlim)) + 
-                     'S_lev' + str(zlevs[dep,1]) + '_ylim' + str(ylim) + '_' + region + '.pdf')
+                     'S_lev' + str(np.round(zlevs[dep,1])) + '_ylim' + str(ylim) + '_' + region + '.pdf')
+
+
+    # VERSION 2 has dTbar instead of vert heat through a layer
+    fig2 = plt.figure()
+    fig2.set_size_inches(14,4)
+    ax = fig2.add_subplot(131)
+
+    plt.plot(totwreg,zt[1:]/100.,color=mediumblue,linewidth=2)
+    plt.plot(totw2reg,zt[1:]/100.,color=dodgerblue,linewidth=2) # GHGrem
+    plt.plot(totwvreg,zt[1:]/100.,color=mediumblue,linestyle='--')
+    plt.plot(totwv2reg,zt[1:]/100.,color=dodgerblue,linestyle='--')
+    plt.plot(totwireg,zt[1:]/100.,color=mediumblue)
+    plt.plot(totwi2reg,zt[1:]/100.,color=dodgerblue)
+
+    plt.plot([0,0],[0,1000],'k')
+    plt.legend(('sulfate','ghgrem'),loc='best')
+    plt.ylim((0,ylim))
+    plt.xlim(-.15,.15)
+    plt.title(region + ' Avg vert heat trans (W/m2) ' + str(np.abs(Slim)) + 'S-' + str(np.abs(Nlim)) + 'S at e/ lev')
+    ax.invert_yaxis()
+
+    ax2=fig2.add_subplot(132)
+    plt.plot(wavgreg*sec2yr,zt/100.,color=mediumblue,linewidth=2)
+    plt.plot(wavg2reg*sec2yr,zt/100.,color=dodgerblue,linewidth=2)
+    plt.plot(wvavgreg*sec2yr,zt/100.,color=mediumblue,linestyle='--')
+    plt.plot(wvavg2reg*sec2yr,zt/100.,color=dodgerblue,linestyle='--')
+    plt.plot(wiavgreg*sec2yr,zt/100.,color=mediumblue)
+    plt.plot(wiavg2reg*sec2yr,zt/100.,color=dodgerblue,)
+
+    plt.plot([0,0],[0,1000],'k')
+    plt.ylim((0,ylim))
+    plt.xlim(-10,8)
+    plt.title('Vert velocity (m/yr) ' + str(np.abs(Slim)) + 'S-' + str(np.abs(Nlim)) + 'S at e/ lev')
+    ax2.invert_yaxis()
+
+    ax3=fig2.add_subplot(133)
+    # POSITIVE means getting warmer with depth
+    plt.plot(dTbaravgreg,zt[1:]/100.,color='k',linewidth=2)
+
+    plt.plot([0,0],[0,1000],'k')
+    plt.ylim((0,ylim))
+    #plt.xlim(-10,8)
+    plt.title('dTbar ' + str(np.abs(Slim)) + 'S-' + str(np.abs(Nlim)) + 'S at e/ lev')
+    ax3.invert_yaxis()
+
+    if printtofile:
+        fig2.savefig('vertheattrans_wvels_dTbar_' + str(np.abs(Slim)) + 'S-' + str(np.abs(Nlim)) + 
+                     'S_ylim' + str(ylim) + '_' + region + '.pdf')
+
+
+    # VERSION 3 is wbar * dTprime
+    printtofile=True
+
+    fig2 = plt.figure()
+    fig2.set_size_inches(14,4)
+    ax = fig2.add_subplot(131)
+
+    plt.plot(totwbarreg,zt[1:]/100.,color=mediumblue,linewidth=2)
+    plt.plot(totwbar2reg,zt[1:]/100.,color=dodgerblue,linewidth=2) # GHGrem
+    plt.plot(totwbarwvreg,zt[1:]/100.,color=mediumblue,linestyle='--')
+    plt.plot(totwbarwv2reg,zt[1:]/100.,color=dodgerblue,linestyle='--')
+    plt.plot(totwbarwireg,zt[1:]/100.,color=mediumblue)
+    plt.plot(totwbarwi2reg,zt[1:]/100.,color=dodgerblue)
+
+    plt.plot([0,0],[0,1000],'k')
+    plt.legend(('sulfate','ghgrem'),loc='best')
+    plt.ylim((0,ylim))
+    plt.xlim(-15,15)
+    plt.title(region + ' Avg vert heat trans wbar*dTprime (W/m2) ' + str(np.abs(Slim)) + 'S-' + str(np.abs(Nlim)) + 'S at e/ lev')
+    ax.invert_yaxis()
+
+    ax2=fig2.add_subplot(132)
+    plt.plot(wbaravgreg*sec2yr,zt/100.,color='k',linewidth=2)
+    plt.plot(wbarwvavgreg*sec2yr,zt/100.,color='k',linestyle='--')
+    plt.plot(wbarwiavgreg*sec2yr,zt/100.,color='k')
+
+    plt.plot([0,0],[0,1000],'k')
+    plt.ylim((0,ylim))
+    #@@plt.xlim(-10,8)
+    plt.title('Climo w (m/yr) ' + str(np.abs(Slim)) + 'S-' + str(np.abs(Nlim)) + 'S at e/ lev')
+    ax2.invert_yaxis()
+
+    ax3=fig2.add_subplot(133)
+    # POSITIVE means getting warmer with depth
+    plt.plot(dTprimeavgreg,zt[1:]/100.,color=mediumblue,linewidth=2)
+    plt.plot(dTprime2avgreg,zt[1:]/100.,color=dodgerblue,linewidth=2)
+
+    plt.plot([0,0],[0,1000],'k')
+    plt.ylim((0,ylim))
+    #plt.xlim(-10,8)
+    plt.title('dTprime ' + str(np.abs(Slim)) + 'S-' + str(np.abs(Nlim)) + 'S at e/ lev')
+    ax3.invert_yaxis()
+
+    if printtofile:
+        fig2.savefig('vertheattrans_wbarvels_dTprime_' + str(np.abs(Slim)) + 'S-' + str(np.abs(Nlim)) + 
+                     'S_ylim' + str(ylim) + '_' + region + '.pdf')
 
 
 """ comment out non-area weighted @@
@@ -1655,7 +1944,9 @@ wiavg=np.mean(wisopprime[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1)
 wiavg2=np.mean(wisopprime2[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1)
 """
 
-printtofile=True # True
+# # === full zonal vertical heat trans and velocity ====
+
+printtofile=False # True
 
 fig2 = plt.figure()
 fig2.set_size_inches(14,4)
