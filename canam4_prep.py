@@ -25,9 +25,9 @@ plt.ion()
        # coords = {'lat': con.get_t63lat(), 'lon': con.get_t63lon()}
 
 
-printtofile=True
+printtofile=False
 
-field = 'gz'
+field = 'st'
 smclim=False
 level=50000 # for threed
 nonstandardlev=False # standards are 700,500,300
@@ -49,7 +49,7 @@ pattcorrwithtime=False # plot pattern correlation with time for each ens member
 pattcorryr=False # if True, do a yearly anomaly pattern rather than time-integrated
 
 plotregmean=False
-region = 'polcap65' # None, polcap60, polcap65, polcap70, eurasia, ntham, nthatl
+region = 'ntham' # None, polcap60, polcap65, polcap70, eurasia, ntham, nthatl
 
 testhadisst=0 # check which ens member most similar to hadisst
 
@@ -187,7 +187,7 @@ fdict = {'field': field, 'ncfield': None, 'fieldstr': None,
 # reserved for expansion into the plotfunction call
 pparams = {'cmin': None, 'cmax': None, 'cmap': 'blue2red_20',              
            'type':'nh', 'latlim': latlim} # plotparams
-
+seacycylim=None
 infodict ={'cmapclimo': 'Spectral_r','leglocs': None,
            'seacycylim': None, 'savestr': None,
            'model': model, 'sigtype': sigtype, 'sigoff': sigoff,
