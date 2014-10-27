@@ -25,17 +25,17 @@ plt.ion()
        # coords = {'lat': con.get_t63lat(), 'lon': con.get_t63lon()}
 
 
-printtofile=False
+printtofile=True
 
-field = 'st'
+field = 'gz'
 smclim=False
 level=50000 # for threed
 nonstandardlev=False # standards are 700,500,300
 
 # Choose type of plot =========================
 seasonalmap=True # seasonal maps (SON, DJF, MAM, JJA)
-seasonalvert=False # seasonal vertical zonal means instead of maps
-screen=False # whether to have screen-style vertical zonal means
+seasonalvert=True # seasonal vertical zonal means instead of maps
+screen=True # whether to have screen-style vertical zonal means
 
 plotzonmean=False # plotzonmean,plotseacyc,pattcorrwithtime are mutually exclusive
 
@@ -71,8 +71,8 @@ addr4ct=False # add kem1pert2r4ct (constant thickness version of ens4)
 addsens=False # add sensitivity runs (kem1pert1b, kem1pert3)
 addrcp=False # add kem1rcp85a simulation (and others if we do more)
 simsforpaper=False # meanBC, HAD, NSIDC only. best for maps and zonal mean figs (not line plots)
-addcanens=True # add "initial condition" ensemble of kemctl1/kem1pert2
-addsuper=True # add superensemble mean
+addcanens=False # add "initial condition" ensemble of kemctl1/kem1pert2
+addsuper=False # add superensemble mean
 
 latlim = None # None #45 # lat limit for NH plots. Set to None otherwise. use 45 for BC-type maps
 levlim= 100 # level limit for vertical ZM plots (in hPa). ignored if screen=True
@@ -422,10 +422,12 @@ elif field == 'zn': # snow depth (m)
     leglocs = 'upper right', 'lower left', 'upper right', 'lower right'
 
 elif field == 'su':
-    units = 'm/s'
-    conv = 1;
-    cmap = 'blue2red_20'
-    cmin = -1; cmax = 1
+    fdict['units'] = 'm/s'
+    fdict['ncfield'] = 'SU'    
+    fdict['conv'] = 1;
+    
+    pparams['cmap'] = 'blue2red_20'
+    pparams['cmin'] = -1; pparams['cmax'] = 1
     cminm = -1; cmaxm = 1
     cminp = -.5; cmaxp=.5
     cminmp = -.5; cmaxmp=.5
