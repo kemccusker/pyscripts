@@ -172,7 +172,7 @@ def plot_seasonal_maps(fielddict,coords,sims,pparams,vert=False,loctimesel=None,
             if vert: # zonal mean with height
                 pparams['suppcb'] = True
                 #pparams['levlim'] = levlim
-                #pparams['screen'] = screen
+                pparams['screen'] = screen
                 pparams['addcontlines'] = True
                 if colidx!=0: # if not the first column, suppress y labels
                     pparams['suppylab'] = True
