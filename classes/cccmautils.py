@@ -132,7 +132,7 @@ def calc_totseaicearea(fld,lat,lon,isarea=False):
         @@ needs testing 9/9/2014
     """
     if isarea:
-        sia=fld
+        sia=fld 
     else:
         sia = calc_seaicearea(fld,lat,lon)
         
@@ -605,6 +605,54 @@ def calc_regmean(fld,lat,lon,region,limsdict=None):
 
     tmp = ma.masked_where(regmask,fldm)
     tmpreg = np.sum(np.sum(tmp*weightsmt,axis=2),axis=1)
+    fldreg = tmpreg # should be ndim1 of regional mean (or just one regional mean)
+
+    return fldreg
+
+
+def calc_regtotseaicearea(fld,lat,lon,region,limsdict=None,isarea=False):
+    """ calc_regtotseaicearea(fld, lat,lon,region,limsdict=None,isarea=False):
+                 Mask the input data with the given region either defined
+                    already in regiondict, or overridden with limsdict.
+                    If limsdict is to be used, set region='other'
+                 The data will be masked everywhere BUT the region!
+
+                 fld: lat x lon array of SEA ICE CONC (unless isarea=True)
+                      time x lat x lon OR lev x lat x lon also accepted (not tested)
+
+                 lat: array of lats (coordinates)
+                 lon: array of lons (coordinates)
+                 region: named region (defined in constants.py)
+                 limsdict: a dictionary of 'latlim' array and 'lonlim' array
+                           (ie from a region dictionary, or user-defined)
+                 isarea: specifies whether the incoming data is already converted
+                         to sea ice area from concentration
+
+                 Returns: Regional total SIA (or series of regional totals with length ndim1)
+    """
+    if isarea:
+        sia=fld
+    else: # note that this function also masks out land
+        sia = calc_seaicearea(fld,lat,lon)
+    
+    fldm,regmask = mask_region(sia,lat,lon,region,limsdict)
+
+    ## # calculate area-weights
+    ## areas = calc_cellareas(lat,lon)
+    ## if regmask.ndim>2:
+    ##     areasm = ma.masked_where(np.squeeze(regmask[0,...]),areas)
+    ## else:
+    ##     areasm = ma.masked_where(regmask,areas)
+    ## weightsm = areasm / np.sum(np.sum(areasm,axis=1),axis=0) # weights masked
+
+    ## if fld.ndim>2:
+    ##     ndim1 = fld.shape[0]
+    ##     weightsmt = np.tile(weightsm,(ndim1,1,1)) # weights masked tiled
+    ## else:
+    ##     weightsmt = weightsm
+
+    tmp = ma.masked_where(regmask,fldm) # am I masking out twice? does it matter?
+    tmpreg = np.sum(np.sum(tmp,axis=2),axis=1)
     fldreg = tmpreg # should be ndim1 of regional mean (or just one regional mean)
 
     return fldreg
