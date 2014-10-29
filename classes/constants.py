@@ -496,6 +496,9 @@ def build_filepath(sim,field,timeper=None):
 
     froot = basepath + simfull + subdir + simfull + '_' 
 
+    if field=='sia':
+        field='sicn' # just for filename
+        
     fname = froot + field + '_' + timstr + '_ts.nc'
 
     return fname
@@ -563,17 +566,30 @@ def get_regiondict():
                           eurasia: latlims=[35,60]; lonlims=[40,120]
                           ntham: latlims=[35,60]; lonlims=[240,280]
                           nthatl: latlims=[35,60]; lonlims=[300,360]
+                          bks: latlims=[65,80], lonlims=[27,96] Barents-Kara Seas
+                          soo: latlims=[46,61], lonlims=[136,158] Sea of Okhotsk
+
+                          pig: untested, Pine Island Glacier, CCSM4 ocean grid
     """
-    regions = ('polcap70', 'polcap65', 'polcap60', 'eurasia',
-               'ntham', 'nthatl')
+    regions = ('polcap70', 'polcap65', 'polcap60', 'eurasia','eurasiamori',
+               'eurasiathin','eurasiasth','eurasiathinw','eurasiathine','ntham',
+               'nthatl','bks','soo','pig')
     regdict = dict.fromkeys(regions, {})
 
     regdict['polcap70'] = {'latlims': [70,89], 'lonlims': [0,359]}
     regdict['polcap65'] = {'latlims': [65,89], 'lonlims': [0,359]}
     regdict['polcap60'] = {'latlims': [60,89], 'lonlims': [0,359]}
     regdict['eurasia'] = {'latlims': [35,60], 'lonlims': [40,120]}
+    regdict['eurasiamori'] = {'latlims': [40,60], 'lonlims': [60,120]} # Mori et al NatGeo 2014
+    regdict['eurasiathin'] = {'latlims': [35,55], 'lonlims': [40,120]}
+    regdict['eurasiasth'] = {'latlims': [32,52], 'lonlims': [60,120]} # further south, same lons as mori. ideal for NSIDC DJF?
+    regdict['eurasiathinw'] = {'latlims': [35,55], 'lonlims': [40,80]}
+    regdict['eurasiathine'] = {'latlims': [35,50], 'lonlims': [80,120]}
     regdict['ntham'] = {'latlims': [35,60], 'lonlims': [240,280]}
     regdict['nthatl'] = {'latlims': [35,60], 'lonlims': [300,360]}
+    regdict['bks'] = {'latlims': [65,80], 'lonlims': [27,96]} # Barents-Kara Seas 65N-80N,27E-96E
+    regdict['bksmori'] = {'latlims': [65,85], 'lonlims': [30,90]} # Barents-Kara Seas 65N-85N,30E-90E
+    regdict['soo'] = {'latlims': [46,61], 'lonlims': [136,158]} # Sea of Okhotsk 46N-61N,136E-158E
 
     regdict['pig'] = {'latlims':[0,384], 'lonlims': [230,280]} # CCSM4 OCEAN!!! @@@ untested 10/6/2014
     
@@ -587,8 +603,11 @@ def get_regionlims(regname):
                           polcap65: latlims=[65,89]; lonlims=[0,359] # Polar cap north of 65N for NAM proxy
                           polcap60: latlims=[60,89]; lonlims=[0,359] # Polar cap north of 60N to match pattern corrs
                           eurasia: latlims=[35,60]; lonlims=[40,120] # Eurasia 35-60N, 40E-120E
+                          eurasiathin: latlims=[35,55]; lonlims=[40,120] # Eurasia 35-55N, 40E-120E
                           ntham: latlims=[35,60]; lonlims=[240,280]  # North America 35-60N, 120W-80W
                           nthatl: latlims=[35,60]; lonlims=[300,360] # North Atlantic 35-60N, 60W-0
+                          bks: latlims=[65,80], lonlims=[27,96] Barents-Kara Seas 65N-80N,27E-96E
+                          soo: latlims=[46,61], lonlims=[136,158] Sea of Okhotsk 46N-61N,136E-158E
 
     """
 
