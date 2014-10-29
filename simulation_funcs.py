@@ -439,13 +439,20 @@ def calc_seasons(fielddict,coords,sims,loctimesel=None,info=None,siglevel=0.05,
             elif plotregmean:
                 
                 #limsdict = con.get_regionlims(region)
-                fldc = cutl.calc_regmean(fldc,lat,lon,region)#limsdict)
-                fldp = cutl.calc_regmean(fldp,lat,lon,region)#limsdict)
+                if sia:
+                    # calc total SIA in the requested region
+                    #print 'should isarea=True here? @@@ 10/28/2014'
+                    fldc = cutl.calc_regtotseaicearea(fldc,lat,lon,region,isarea=True)
+                    fldp = cutl.calc_regtotseaicearea(fldp,lat,lon,region,isarea=True)
+                else:
+                    fldc = cutl.calc_regmean(fldc,lat,lon,region)#limsdict)
+                    fldp = cutl.calc_regmean(fldp,lat,lon,region)#limsdict)
                 
             else: # just calculate a polar mean
                 if sia:
-                    fldc,sh = cutl.calc_totseaicearea(fldc,lat,lon)
-                    fldp,sh = cutl.calc_totseaicearea(fldp,lat,lon)
+                    print 'should isarea=True here? @@@ 10/28/2014' # I think so...
+                    fldc,sh = cutl.calc_totseaicearea(fldc,lat,lon,isarea=True)
+                    fldp,sh = cutl.calc_totseaicearea(fldp,lat,lon,isarea=True)
                 else:
                     fldc = cutl.polar_mean_areawgted3d(fldc,lat,lon,latlim=seacyclatlim)
                     fldp = cutl.polar_mean_areawgted3d(fldp,lat,lon,latlim=seacyclatlim)
