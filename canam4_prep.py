@@ -27,15 +27,15 @@ plt.ion()
 
 printtofile=True
 
-field = 'gz'
+field = 'sia'
 smclim=False
 level=50000 # for threed
 nonstandardlev=False # standards are 700,500,300
 
 # Choose type of plot =========================
-seasonalmap=True # seasonal maps (SON, DJF, MAM, JJA)
-seasonalvert=True # seasonal vertical zonal means instead of maps
-screen=True # whether to have screen-style vertical zonal means
+seasonalmap=False # seasonal maps (SON, DJF, MAM, JJA)
+seasonalvert=False # seasonal vertical zonal means instead of maps
+screen=False # whether to have screen-style vertical zonal means
 
 plotzonmean=False # plotzonmean,plotseacyc,pattcorrwithtime are mutually exclusive
 
@@ -48,8 +48,8 @@ withlat=False # plot the seasonal cycle with latitude dimension too (only for pl
 pattcorrwithtime=False # plot pattern correlation with time for each ens member
 pattcorryr=False # if True, do a yearly anomaly pattern rather than time-integrated
 
-plotregmean=False
-region = 'ntham' # None, polcap60, polcap65, polcap70, eurasia, ntham, nthatl
+plotregmean=True
+region = 'bksmori' # None, polcap60, polcap65, polcap70, eurasia, eurasiamori, ntham, nthatl, bks, bksmori, soo
 
 testhadisst=0 # check which ens member most similar to hadisst
 
@@ -64,14 +64,14 @@ halftime2=False # get only the last 60yrs. make sure to set the other flag the o
 canens=False # just the CAN ensemble (E1-E5) plus mean, plus mean of R ensemble. option to addobs only.
 allens=False # this is ONLY the ensemble means, plus superensemble
 sensruns=False # sensruns only: addr4ct=1,addsens=1. others=0 no meanBC, r mean, or obs
-ivar=True # this will show ENS (TOT) and ENSE (ANTH) and their difference = internal var
+ivar=False # this will show ENS (TOT) and ENSE (ANTH) and their difference = internal var
 
 addobs=True # add mean of kemhad* & kemnsidc* runs to line plots, seasonal maps. 
 addr4ct=False # add kem1pert2r4ct (constant thickness version of ens4)
 addsens=False # add sensitivity runs (kem1pert1b, kem1pert3)
 addrcp=False # add kem1rcp85a simulation (and others if we do more)
 simsforpaper=False # meanBC, HAD, NSIDC only. best for maps and zonal mean figs (not line plots)
-addcanens=False # add "initial condition" ensemble of kemctl1/kem1pert2
+addcanens=True # add "initial condition" ensemble of kemctl1/kem1pert2
 addsuper=False # add superensemble mean
 
 latlim = None # None #45 # lat limit for NH plots. Set to None otherwise. use 45 for BC-type maps
@@ -238,9 +238,12 @@ elif field == 'sicn' or field == 'sia':
     pparams['cmin'] = -.15; pparams['cmax'] = .15 # seasonal/monthly
 
     pparams['cmap'] = 'red2blue_w20'
-    #leglocs = 'lower left', 'lower left', 'upper left', 'upper left'
+    leglocs = 'lower left', 'lower left', 'upper left', 'upper left'
+
     if field=='sia':
+        fdict['ncfield'] = 'SICN'
         seacycylim=(-2e12,0) # for sia
+        sia=True
     
 elif field == 'gt':
     units='K'
