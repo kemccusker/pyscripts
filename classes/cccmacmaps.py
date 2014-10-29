@@ -423,7 +423,8 @@ def get_linecolor(lckey):
                   'magenta': np.array([112, 0, 102])/255.,
                   'violet': np.array([85, 0, 140])/255.,
                   'deepskyblue': np.array([0,191,255])/255.,
-                  'skyblue': np.array([135, 206, 250])/255.
+                  'skyblue': np.array([135, 206, 250])/255.,
+                  'turq': np.array([0, 153, 153])/255.
 
                    http://web.njit.edu/~kevin/rgb.txt.html
                    http://en.wikipedia.org/wiki/Shades_of_red
@@ -491,7 +492,8 @@ def get_linecolorwheel():
                   'warm2': np.array([215, 50, 1])/255., 
                   'warm3': np.array([240, 119, 1])/255.,
                   'warm4': np.array([255, 163, 1])/255.,
-                  'warm5': np.array([255, 200, 1])/255.}
+                  'warm5': np.array([255, 200, 1])/255.,
+                  'turq': np.array([0, 153, 153])/255.}
 
     return linecolors
 
@@ -536,7 +538,7 @@ def get_colordict(project=None):
              'ENS': get_linecolor('magenta'),
              'CAN': get_linecolor('mediumblue'), #'mediumpurple1'), #darkyellow'),                 
              'HAD': get_linecolor('deepskyblue'),
-             'NSIDC': get_linecolor('steelblue4'),
+             'NSIDC': get_linecolor('turq'),
              'R4ct': get_linecolor('darkseagreen4'),
              'CANnosst': get_linecolor('darkolivegreen3'),
              'CANnothk': get_linecolor('darkolivegreen1'),
