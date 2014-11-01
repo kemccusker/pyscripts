@@ -10,8 +10,8 @@ plt.close('all')
 
 conv1=1; conv2=1
 
-#field1='st'; ncfield1='ST'
-field1='sia'; ncfield1='SICN'
+field1='st'; ncfield1='ST'
+#field1='sia'; ncfield1='SICN'
 #field1='gz50000'; ncfield1='PHI'; conv1=1/con.get_g()
 #field1='pmsl'; ncfield1='PMSL'
 region1='polcap60' #'bksmori' #'polcap65'
@@ -21,10 +21,12 @@ sea1='SON'
 #field2='sia'; ncfield2='SICN'
 field2='pmsl'; ncfield2='PMSL'
 #field2='gz50000'; ncfield2='PHI'; conv2=1/con.get_g()
-region2= 'polcap70' #'eurasiamori'
+region2= 'polcap60' #'eurasiamori'
 sea2='SON'
 
 sims = ('E1','E2','E3','E4','E5','R1','R2','R3','R4','R5','HAD','NSIDC','ENS','ENSE')
+TOT = ('R1','R2','R3','R4','R5')
+ANT = ('E1','E2','E3','E4','E5')
 
 siglevel=0.05
 flddregdt= {}
@@ -34,6 +36,21 @@ flddregtsdt2 = {}
 ciregdt = {}
 ciregdt2 = {}
 
+alltotcr1=np.zeros(120*5)
+alltotcr2=np.zeros(120*5)
+alltotpr1=np.zeros(120*5)
+alltotpr2=np.zeros(120*5)
+alltotr1=np.zeros(120*5)
+alltotr2=np.zeros(120*5)
+
+allantcr1=np.zeros(120*5)
+allantcr2=np.zeros(120*5)
+allantpr1=np.zeros(120*5)
+allantpr2=np.zeros(120*5)
+allantr1=np.zeros(120*5)
+allantr2=np.zeros(120*5)
+tallii=0 # index to keep track of time in accumulated TOT ensemble
+aallii=0 # index to keep track of time in accumulated ANT ensemble
 for sim in sims:
 
     fnamec,fnamep=con.build_filepathpair(sim,field1)
@@ -53,7 +70,7 @@ for sim in sims:
         fldpreg=cutl.calc_regmean(fldp,lat,lon,region1)
         
     flddregdt[sim] = np.mean(fldpreg-fldcreg,axis=0) # time mean
-    if sea2 is 'DJF' and sea1 is not 'DJF':
+    if sea2 is 'DJF' and sea1 is not 'DJF': # have to shorten other timeseries
         flddregtsdt[sim] = fldpreg[:-1,...]-np.mean(fldcreg[:-1,...],axis=0) # anomaly timeseries from ctl mean
     else:
         flddregtsdt[sim] = fldpreg-np.mean(fldcreg,axis=0)
@@ -82,12 +99,76 @@ for sim in sims:
     else:
         flddregtsdt2[sim] = fldpreg2-np.mean(fldcreg2,axis=0) # anomaly timeseries from ctl mean
 
+    if sim in TOT:
+        #print 'concat tot ens members'
+        alltotcr1[tallii:tallii+120] = fldcreg
+        alltotcr2[tallii:tallii+120] = fldcreg2
+        alltotpr1[tallii:tallii+120] = fldpreg
+        alltotpr2[tallii:tallii+120] = fldpreg2
+        alltotr1[tallii:tallii+120] = flddregtsdt[sim]
+        alltotr2[tallii:tallii+120] = flddregtsdt2[sim]
+        tallii+=120
+        #totser.append(pd.Series(flddregtsdt))
+        #totser2.append(pd.Series(flddregtsdt2))
+    elif sim in ANT:
+        #print 'concat ant ens members'
+        allantcr1[aallii:aallii+120] = fldcreg
+        allantcr2[aallii:aallii+120] = fldcreg2
+        allantpr1[aallii:aallii+120] = fldpreg
+        allantpr2[aallii:aallii+120] = fldpreg2
+        allantr1[aallii:aallii+120] = flddregtsdt[sim]
+        allantr2[aallii:aallii+120] = flddregtsdt2[sim]
+        aallii+=120
+        
     # calculate confidence interval
     # double-check the scale setting
     ciregdt[sim] = sp.stats.t.interval(1-siglevel,len(fldpreg)-1,loc=np.mean(fldpreg,axis=0)-np.mean(fldcreg,axis=0),
                              scale=np.std(fldpreg,axis=0)/np.sqrt(len(fldpreg)))
     ciregdt2[sim] = sp.stats.t.interval(1-siglevel,len(fldpreg2)-1,loc=np.mean(fldpreg2,axis=0)-np.mean(fldcreg2,axis=0),
                              scale=np.std(fldpreg2,axis=0)/np.sqrt(len(fldpreg2)))
+
+
+# @@@ add confidence int for allant and alltot (means have to concat control and pert separately as well)
+# calculate confidence interval
+# double-check the scale setting
+ciregalltotr1 = sp.stats.t.interval(1-siglevel,len(alltotpr1)-1,loc=np.mean(alltotpr1,axis=0)-np.mean(alltotcr1,axis=0),
+                         scale=np.std(alltotpr1,axis=0)/np.sqrt(len(alltotpr1)))
+ciregalltotr2 = sp.stats.t.interval(1-siglevel,len(alltotpr2)-1,loc=np.mean(alltotpr2,axis=0)-np.mean(alltotcr2,axis=0),
+                         scale=np.std(alltotpr2,axis=0)/np.sqrt(len(alltotpr2)))
+ciregallantr1 = sp.stats.t.interval(1-siglevel,len(allantpr1)-1,loc=np.mean(allantpr1,axis=0)-np.mean(allantcr1,axis=0),
+                         scale=np.std(allantpr1,axis=0)/np.sqrt(len(allantpr1)))
+ciregallantr2 = sp.stats.t.interval(1-siglevel,len(allantpr2)-1,loc=np.mean(allantpr2,axis=0)-np.mean(allantcr2,axis=0),
+                         scale=np.std(allantpr2,axis=0)/np.sqrt(len(allantpr2)))
+
+
+# super ensembles
+plt.figure();
+plt.scatter(allantr1,allantr2,color='r')
+plt.scatter(alltotr1,alltotr2,color='k')
+antr1std=allantr1.std()
+antr2std=allantr2.std()
+totr1std=alltotr1.std()
+totr2std=alltotr2.std()
+
+print 'really should be printing the conf int range on the figure@@'
+plt.figure();
+ant=plt.scatter(allantr1.mean(),allantr2.mean(),color='r',marker='s',s=8**2)
+tot=plt.scatter(alltotr1.mean(),alltotr2.mean(),color='k',marker='s',s=8**2)
+plt.plot(ciregalltotr1,(alltotr2.mean(),alltotr2.mean()),
+        color='k',linewidth=2,marker='_',markersize=6)
+plt.plot((alltotr1.mean(),alltotr1.mean()),ciregalltotr2,
+        color='k',linewidth=2,marker='_',markersize=6)
+plt.plot(ciregallantr1,(allantr2.mean(),allantr2.mean()),
+        color='r',linewidth=2,marker='_',markersize=6)
+plt.plot((allantr1.mean(),allantr1.mean()),ciregallantr2,
+        color='r',linewidth=2,marker='_',markersize=6)
+plt.xlabel(str(sea1) + ' ' + field1 + ' ' + region1)
+plt.ylabel(str(sea2) + ' ' + field2 + ' ' + region2)
+plt.legend((ant,tot),('ANT','TOT'),loc='best',fancybox=True,framealpha=0.5)
+if printtofile:
+    plt.savefig('scatterCI_' + field1 + region1 + str(sea1) + '_v_' + field2 + region2 + str(sea2) + '_ANTTOTsuperens.pdf')
+
+
 
 ser1 = pd.Series(flddregdt)
 ser2 = pd.Series(flddregdt2)
