@@ -19,7 +19,7 @@ vfield='sv'; vncfield='SV'
 level=50000 # for when threed is True
 threed=False
 
-sim = 'ENSE'
+sim = 'ESPR'
 sea = 'DJF' #1 #'DJF'
 
 
