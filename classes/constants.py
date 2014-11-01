@@ -54,9 +54,9 @@ def get_BCbasepath():
 
     return bp
     
-def get_t63landmask(repeat=None):
+def get_t63landmask(repeat=None,remcyclic=False):
     """ Return ground cover.
-        64x129
+        64x129 or 64x128 if remcyclic=True
         -1=land, 0=open water, 1=sea ice (not present), 2=inland lake
 
         repeat: shape you want landmask as. assume last 2 dims are lat,lon
@@ -75,6 +75,8 @@ def get_t63landmask(repeat=None):
     #           GC:min_avg_max = -1.f, -0.2944274f, 2.f ;
     # Also 2 is inland lake
     lmask = ncfile.variables['GC'][...]
+    if remcyclic:
+        lmask=lmask[...,:-1]
 
     if repeat != None:
         nrep = repeat[0:-2] # leave off last 2 dims (lat, lon)
