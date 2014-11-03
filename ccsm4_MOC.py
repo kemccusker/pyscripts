@@ -1451,13 +1451,12 @@ if printtofile:
 # # ===================== paper ======
 # #  Zonal mean TEMP plus total MOC contour
 
-printtofile=False
+printtofile=True
 
 # plot MOC contours over T anomaly
 rho_sw=cnc.getNCvar(filenamec,'rho_sw')
 cp_sw = cnc.getNCvar(filenamec,'cp_sw')
 rhocp = 1e-1*cp_sw*rho_sw # [J/K/m^3]
-
 
 xlims=(-77,-50)
 ylims=(0,800)
@@ -1486,8 +1485,8 @@ ax.invert_yaxis()
 
 # ---- Add MOC contours
 # contours for MOC anomaly
-contspd = np.arange(.1,5,.5) # pos
-contsnd = np.arange(-5,-.1,.5) # neg
+contspd = np.arange(.1,5,.15) # pos
+contsnd = np.arange(-5,-.1,.15) # neg
 # total MOC
 plotmoc = (totmocp[0,0,1,...]+totmocp[0,0,0,...])-(totmocc[0,0,1,...]+totmocc[0,0,0,...]) # Eulerian+eddy-induced
 plotmoc2 = (totmocp2[0,0,1,...]+totmocp2[0,0,0,...])-(totmocc[0,0,1,...]+totmocc[0,0,0,...]) # Eulerian+eddy-induced
@@ -1497,7 +1496,7 @@ CSm = plt.contour(lats,levs,plotmoc,contspd,\
             colors='.3',linestyles='solid',linewidths=2)
 #plt.clabel(CS1,fmt = '%2.1f',inline=1,fontsize=10)
 CSm = plt.contour(lats,levs,plotmoc,contsnd,\
-            colors='.3',linestyles='dashed')
+            colors='.3',linestyles='solid')
 
 ax.set_ylim(ylims)
 ax.invert_yaxis()
@@ -1522,7 +1521,7 @@ CSm2 = plt.contour(lats,levs,plotmoc2,contspd,\
             colors='.3',linestyles='solid',linewidths=2)
 #plt.clabel(CS1,fmt = '%2.1f',inline=1,fontsize=10)
 CSm2 = plt.contour(lats,levs,plotmoc2,contsnd,\
-            colors='.3',linestyles='dashed')
+            colors='.3',linestyles='solid')
 
 ax2.set_ylim(ylims)
 ax2.invert_yaxis()
@@ -1530,8 +1529,8 @@ ax2.set_xlim(xlims)
 ax2.set_title(casenamep2)
 
 if printtofile:
-    fig.savefig('MOCeul+eddanom_TEMPanom_subplotSH_ylim' + str(ylims[1]) + 'xlim' + str(xlims[1]) + '_dash.pdf')
-
+    fig.savefig('MOCeul+eddanom_TEMPanom_subplotSH_ylim' + str(ylims[1]) + 'xlim' + str(xlims[1]) + '_smcont.pdf')
+# ==================== end paper fig ==========
 # <codecell>
 
 printtofile=False #True
@@ -1558,7 +1557,7 @@ incr = (cmax-cmin) / (cmlen)
 conts = np.arange(cmin,cmax+incr,incr)
 
 #plt.pcolor(meshlats,meshdz,dtbarsave,cmap='blue2red_20',vmin=-1,vmax=1)
-plt.contourf(tlats,zlevs,tempp-tempc,cmap='blue2red_20',vmin=cmin,vmax=cmax,levels=conts,extend='both')
+plt.contourf(tlats,zlevs,tempp-tempc,cmap=cmap,vmin=cmin,vmax=cmax,levels=conts,extend='both')
 plt.colorbar()
 ax.set_ylim(ylims)
 ax.set_xlim(xlims)
@@ -1567,8 +1566,8 @@ ax.invert_yaxis()
 
 # ---- Add MOC contours
 # contours for MOC anomaly
-contspd = np.arange(.1,5,.5) # pos
-contsnd = np.arange(-5,-.1,.5) # neg
+contspd = np.arange(.1,5,.2) # pos
+contsnd = np.arange(-5,-.1,.2) # neg
 # total MOC
 plotmoc = (totmocp[0,0,0,...])-(totmocc[0,0,0,...]) # Eulerian
 plotmoc2 = (totmocp2[0,0,0,...])-(totmocc[0,0,0,...]) # Eulerian
@@ -1592,7 +1591,7 @@ incr = (cmax-cmin) / (cmlen)
 conts = np.arange(cmin,cmax+incr,incr)
 
 #plt.pcolor(meshlats,meshdz,dtbarsave,cmap='blue2red_20',vmin=-1,vmax=1)
-plt.contourf(tlats,zlevs,tempp2-tempc,cmap='blue2red_20',vmin=cmin,vmax=cmax,levels=conts,extend='both')
+plt.contourf(tlats,zlevs,tempp2-tempc,cmap=cmap,vmin=cmin,vmax=cmax,levels=conts,extend='both')
 plt.colorbar()
 ax.set_ylim(ylims)
 ax.set_xlim(xlims)
@@ -1611,7 +1610,7 @@ ax2.set_xlim(xlims)
 ax2.set_title(casenamep2)
 
 if printtofile:
-    fig.savefig('MOCeulanom_TEMPanom_subplotSH_ylim' + str(ylims[1]) + '.pdf')
+    fig.savefig('MOCeulanom_TEMPanom_subplotSH_ylim' + str(ylims[1]) + '_2smcont.pdf')
 
 # <codecell>
 
@@ -1881,7 +1880,7 @@ if pig:
 
 
     # VERSION 3 is wbar * dTprime
-    printtofile=True
+    printtofile=False
 
     fig2 = plt.figure()
     fig2.set_size_inches(14,4)
