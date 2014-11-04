@@ -111,12 +111,17 @@ def calc_seaicearea(input,lat,lon):
     ishape = input.shape
     ndims=len(ishape)
 
+    if np.mod(input.shape[-1],2) != 0: # if lon is odd, leave cyclic lon in landmask
+        remcyc=False
+    else:
+        remcyc=True
+        
     if ndims>2: # first dim is tim
         areas = calc_cellareas(lat,lon,repeat=ishape)
-        lmask = con.get_t63landmask(repeat=ishape,remcyclic=True) # @@ note assuming T63 here...
+        lmask = con.get_t63landmask(repeat=ishape,remcyclic=remcyc) # @@ note assuming T63 here...
     else:
         areas = calc_cellareas(lat,lon)
-        lmask = con.get_t63landmask()
+        lmask = con.get_t63landmask(remcyclic=remcyc)
 
     sia = input*areas
     sia = ma.masked_where(lmask==-1,sia) # mask where land
