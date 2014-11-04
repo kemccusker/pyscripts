@@ -25,9 +25,9 @@ plt.ion()
        # coords = {'lat': con.get_t63lat(), 'lon': con.get_t63lon()}
 
 
-printtofile=True
+printtofile=False
 
-field = 'sia'
+field = 'st'
 smclim=False
 level=50000 # for threed
 nonstandardlev=False # standards are 700,500,300
@@ -49,7 +49,7 @@ pattcorrwithtime=False # plot pattern correlation with time for each ens member
 pattcorryr=False # if True, do a yearly anomaly pattern rather than time-integrated
 
 plotregmean=True
-region = 'bksmori' # None, polcap60, polcap65, polcap70, eurasia, eurasiamori, ntham, nthatl, bks, bksmori, soo
+region = 'polcap60' # None, polcap60, polcap65, polcap70, eurasia, eurasiamori, ntham, nthatl, bks, bksmori, soo
 
 testhadisst=0 # check which ens member most similar to hadisst
 
