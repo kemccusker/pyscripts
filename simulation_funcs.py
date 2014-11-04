@@ -1407,6 +1407,8 @@ def plot_regmean_byseas(datablob,fielddict,sims,pparams=None,info=None,printtofi
             if axylims[0]<=0 and axylims[1]>=0:
                 ax.axhline(y=0,color='k',linewidth=.5) # @@ figure out how to make it first layer of plot...
             print sea + ' ' + skey + ' ' + str(val)
+            if skey in ('ENS','ENSE'):
+                print skey + 'CI: ' + str(ci)
 
         ax.set_xticks(np.arange(0,len(sims)))
         ax.set_xticklabels(sims)
