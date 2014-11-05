@@ -283,18 +283,21 @@ if pig:  # 80W to 120W. Or 280 to 230
     #cmap='blue2red_w20'
     cmap='blue2red_w20'  # @@@
     cmin=-.5; cmax=.5
+    
 
-    printtofile= False
+    printtofile= True
 
     #cmlen=float( plt.cm.get_cmap(cmap).N) # or: from __future__ import division
     cmlen=float(20)
     incr = (cmax-cmin) / (cmlen)
     conts = np.arange(cmin,cmax+incr,incr)
 
-    fig = plt.figure()
+    #fig = plt.figure()
+    fig,axs=plt.subplots(1,2,sharey=True)
+    ax=axs[0]
     fig.set_size_inches(14,3)
-    ax = fig.add_subplot(121)
-    CF1 = plt.contourf(tlats,zlevs,temppreg-tempcreg,cmap=cmap,vmin=cmin,vmax=cmax,levels=conts,extend='both')
+    #ax = fig.add_subplot(121)
+    CF1 = ax.contourf(tlats,zlevs,temppreg-tempcreg,cmap=cmap,vmin=cmin,vmax=cmax,levels=conts,extend='both')
 
     # contours for MOC anomaly
     contspd = np.arange(.1,5,.3)
@@ -303,23 +306,42 @@ if pig:  # 80W to 120W. Or 280 to 230
     ax.set_ylim((0,800))
     ax.invert_yaxis()
     ax.set_xlim((-75,-50))
-    ax.set_title(casenamep + ' ' + region + ' anom TEMP')
-    cbar = fig.colorbar(CF1)
+    ax.set_yticks(np.arange(0,900,100))
+    ax.set_yticklabels([0,'',200,'',400,'',600,'',800],fontsize=18)
+    ax.set_xticks(np.arange(-75,-45,5))
+    ax.set_xticklabels(['75$^\circ$S', '70$^\circ$S', '65$^\circ$S', \
+                        '60$^\circ$S', '55$^\circ$S', '50$^\circ$S'],fontsize=18)
 
-    ax2 = fig.add_subplot(122)
-    CF2 = plt.contourf(tlats,zlevs,tempp2reg-tempcreg,cmap=cmap,vmin=cmin,vmax=cmax,levels=conts,extend='both')
+    ax.set_title(casenamep + ' ' + region + ' anom TEMP')
+    ax.axvline(x=-65,linestyle='--',color='k') # @@@ the vert line is to show the area averaged in the VHT plots
+    #cbar = fig.colorbar(CF1)
+
+    #ax2 = fig.add_subplot(122)
+    ax2=axs[1]
+    CF2 = ax2.contourf(tlats,zlevs,tempp2reg-tempcreg,cmap=cmap,vmin=cmin,vmax=cmax,levels=conts,extend='both')
 
     ax2.set_ylim((0,800))
     ax2.invert_yaxis()
     ax2.set_xlim((-75,-50))
+    ax2.set_yticks(np.arange(0,900,100))
+    ax2.set_yticklabels([0,'',200,'',400,'',600,'',800],fontsize=18)
+    ax2.set_xticks(np.arange(-75,-45,5))
+    ax2.set_xticklabels(['75$^\circ$S', '70$^\circ$S', '65$^\circ$S', \
+                        '60$^\circ$S', '55$^\circ$S', '50$^\circ$S'],fontsize=18)
     ax2.set_title(casenamep2 + ' ' + region + ' anom TEMP')
-    cbar = fig.colorbar(CF2)
+    ax2.axvline(x=-65,linestyle='--',color='k') # @@@ the vert line is to show the area averaged in the VHT plots
+    #cbar = fig.colorbar(CF2)
+    cbar_ax = fig.add_axes([.91,.15, .02,.7])
+    fig.colorbar(CF2,cax=cbar_ax)
+
     if printtofile:
-        fig.savefig('TEMPanom_subplotSHzm_' + region + '.pdf')
+        fig.savefig('TEMPanom_subplotSHzm_' + region + '_c.pdf')
 
 
     # ===== TEST figure showing the difference b/w Sulf and GHGrem differences
-if 1:
+
+    printtofile=False
+
     cmin=-1.2; cmax=1.2
     cmap='blue2red_20'
 
@@ -1451,7 +1473,7 @@ if printtofile:
 # # ===================== paper ======
 # #  Zonal mean TEMP plus total MOC contour
 
-printtofile=True
+printtofile=False
 
 # plot MOC contours over T anomaly
 rho_sw=cnc.getNCvar(filenamec,'rho_sw')
@@ -1531,11 +1553,108 @@ ax2.set_title(casenamep2)
 if printtofile:
     fig.savefig('MOCeul+eddanom_TEMPanom_subplotSH_ylim' + str(ylims[1]) + 'xlim' + str(xlims[1]) + '_smcont.pdf')
 # ==================== end paper fig ==========
-# <codecell>
 
-printtofile=False #True
+# # ===================== paper ======
+# #  Zonal mean TEMP --- NO MOC
+
+printtofile=True
 
 # plot MOC contours over T anomaly
+rho_sw=cnc.getNCvar(filenamec,'rho_sw')
+cp_sw = cnc.getNCvar(filenamec,'cp_sw')
+rhocp = 1e-1*cp_sw*rho_sw # [J/K/m^3]
+
+xlims=(-77,-50)
+ylims=(0,800)
+
+cmlen=float(20)
+
+cmap='blue2red_w20' # @@@
+
+#fig = plt.figure()
+
+fig,axs = plt.subplots(1,2,sharey=True)
+ax=axs[0]
+#fig.set_size_inches(10,3)
+fig.set_size_inches(14,3) # to match PIG region
+#ax = fig.add_subplot(121)
+# dTbar/dz here ==============
+
+cmax=.5; cmin=-.5
+incr = (cmax-cmin) / (cmlen)
+conts = np.arange(cmin,cmax+incr,incr)
+
+#plt.pcolor(meshlats,meshdz,dtbarsave,cmap='blue2red_20',vmin=-1,vmax=1)
+CF = ax.contourf(tlats,zlevs,tempp-tempc,cmap=cmap,vmin=cmin,vmax=cmax,levels=conts,extend='both')
+#cbar = fig.colorbar(CF)
+
+"""# ---- Add MOC contours
+# contours for MOC anomaly
+contspd = np.arange(.1,5,.15) # pos
+contsnd = np.arange(-5,-.1,.15) # neg
+# total MOC
+plotmoc = (totmocp[0,0,1,...]+totmocp[0,0,0,...])-(totmocc[0,0,1,...]+totmocc[0,0,0,...]) # Eulerian+eddy-induced
+plotmoc2 = (totmocp2[0,0,1,...]+totmocp2[0,0,0,...])-(totmocc[0,0,1,...]+totmocc[0,0,0,...]) # Eulerian+eddy-induced
+
+
+CSm = plt.contour(lats,levs,plotmoc,contspd,\
+            colors='.3',linestyles='solid',linewidths=2)
+#plt.clabel(CS1,fmt = '%2.1f',inline=1,fontsize=10)
+CSm = plt.contour(lats,levs,plotmoc,contsnd,\
+            colors='.3',linestyles='solid')
+"""
+ax.set_ylim(ylims)
+ax.invert_yaxis()
+ax.set_yticks(np.arange(0,900,100))
+ax.set_yticklabels([0,'',200,'',400,'',600,'',800],fontsize=18)
+ax.set_xlim(xlims)
+ax.set_xticks(np.arange(-75,-45,5))
+ax.set_xticklabels(['75$^\circ$S', '70$^\circ$S', '65$^\circ$S', \
+                    '60$^\circ$S', '55$^\circ$S', '50$^\circ$S'],fontsize=18)
+ax.set_title(casenamep)
+
+
+#ax2 = fig.add_subplot(122)
+ax2=axs[1]
+cmax=.5; cmin=-.5
+incr = (cmax-cmin) / (cmlen)
+conts = np.arange(cmin,cmax+incr,incr)
+
+#plt.pcolor(meshlats,meshdz,dtbarsave,cmap='blue2red_20',vmin=-1,vmax=1)
+CF2 = ax2.contourf(tlats,zlevs,tempp2-tempc,cmap=cmap,vmin=cmin,vmax=cmax,levels=conts,extend='both')
+#cbar = fig.colorbar(CF2)
+
+#CSm2 = plt.contour(lats,levs,plotmoc2,contspd,\
+#            colors='.3',linestyles='solid',linewidths=2)
+#plt.clabel(CS1,fmt = '%2.1f',inline=1,fontsize=10)
+#CSm2 = plt.contour(lats,levs,plotmoc2,contsnd,\
+#            colors='.3',linestyles='solid')
+
+ax2.set_ylim(ylims)
+ax2.invert_yaxis()
+ax2.set_yticks(np.arange(0,900,100))
+ax2.set_yticklabels([0,'',200,'',400,'',600,'',800],fontsize=18)
+ax2.set_xlim(xlims)
+ax2.set_xticks(np.arange(-75,-45,5))
+ax2.set_xticklabels(['75$^\circ$S', '70$^\circ$S', '65$^\circ$S', \
+                    '60$^\circ$S', '55$^\circ$S', '50$^\circ$S'],fontsize=18)
+ax2.set_title(casenamep2)
+cbar_ax = fig.add_axes([.91,.15, .02,.7])
+fig.colorbar(CF,cax=cbar_ax)
+
+if printtofile:
+    fig.savefig('TEMPanom_subplotSH_ylim' + str(ylims[1]) + 'xlim' + str(xlims[1]) + '_c.pdf')
+# ==================== end paper fig ==========
+# =============================
+
+
+# ====== Test Figure ===================
+# ======= Climo Temp with total MOC anom =========
+# <codecell>
+
+printtofile=True
+
+# plot MOC contours over T
 rho_sw=cnc.getNCvar(filenamec,'rho_sw')
 cp_sw = cnc.getNCvar(filenamec,'cp_sw')
 rhocp = 1e-1*cp_sw*rho_sw # [J/K/m^3]
@@ -1546,18 +1665,18 @@ ylims=(0,800)
 
 cmlen=float(20)
 
-
 fig = plt.figure()
 fig.set_size_inches(10,3)
 ax = fig.add_subplot(121)
 # dTbar/dz here ==============
 
-cmax=.5; cmin=-.5
+cmax=5; cmin=-2
 incr = (cmax-cmin) / (cmlen)
 conts = np.arange(cmin,cmax+incr,incr)
+cmap='jet'
 
 #plt.pcolor(meshlats,meshdz,dtbarsave,cmap='blue2red_20',vmin=-1,vmax=1)
-plt.contourf(tlats,zlevs,tempp-tempc,cmap=cmap,vmin=cmin,vmax=cmax,levels=conts,extend='both')
+plt.contourf(tlats,zlevs,tempc,cmap=cmap,vmin=cmin,vmax=cmax,levels=conts,extend='both')
 plt.colorbar()
 ax.set_ylim(ylims)
 ax.set_xlim(xlims)
@@ -1568,9 +1687,10 @@ ax.invert_yaxis()
 # contours for MOC anomaly
 contspd = np.arange(.1,5,.2) # pos
 contsnd = np.arange(-5,-.1,.2) # neg
+
 # total MOC
-plotmoc = (totmocp[0,0,0,...])-(totmocc[0,0,0,...]) # Eulerian
-plotmoc2 = (totmocp2[0,0,0,...])-(totmocc[0,0,0,...]) # Eulerian
+plotmoc = (totmocp[0,0,1,...]+totmocp[0,0,0,...])-(totmocc[0,0,1,...]+totmocc[0,0,0,...]) # Eulerian+eddy-induced
+plotmoc2 = (totmocp2[0,0,1,...]+totmocp2[0,0,0,...])-(totmocc[0,0,1,...]+totmocc[0,0,0,...]) # Eulerian+eddy-induced
 
 
 CSm = plt.contour(lats,levs,plotmoc,contspd,\
@@ -1586,12 +1706,12 @@ ax.set_title(casenamep)
 
 
 ax2 = fig.add_subplot(122)
-cmax=.5; cmin=-.5
+cmax=5; cmin=-2
 incr = (cmax-cmin) / (cmlen)
 conts = np.arange(cmin,cmax+incr,incr)
 
 #plt.pcolor(meshlats,meshdz,dtbarsave,cmap='blue2red_20',vmin=-1,vmax=1)
-plt.contourf(tlats,zlevs,tempp2-tempc,cmap=cmap,vmin=cmin,vmax=cmax,levels=conts,extend='both')
+plt.contourf(tlats,zlevs,tempc,cmap=cmap,vmin=cmin,vmax=cmax,levels=conts,extend='both')
 plt.colorbar()
 ax.set_ylim(ylims)
 ax.set_xlim(xlims)
@@ -1610,7 +1730,94 @@ ax2.set_xlim(xlims)
 ax2.set_title(casenamep2)
 
 if printtofile:
-    fig.savefig('MOCeulanom_TEMPanom_subplotSH_ylim' + str(ylims[1]) + '_2smcont.pdf')
+    fig.savefig('MOCeul+eddyanom_TEMPclimo_subplotSH_ylim' + str(ylims[1]) + '_2smcont.pdf')
+
+
+# === test fig 2: dTbar / dz with total MOC contours ===
+
+printtofile=True
+
+# plot MOC contours over T
+rho_sw=cnc.getNCvar(filenamec,'rho_sw')
+cp_sw = cnc.getNCvar(filenamec,'cp_sw')
+rhocp = 1e-1*cp_sw*rho_sw # [J/K/m^3]
+
+
+xlims=(-77,-50)
+ylims=(0,800)
+
+cmlen=float(20)
+
+fig = plt.figure()
+fig.set_size_inches(10,3)
+ax = fig.add_subplot(121)
+# dTbar/dz here ==============
+
+cmax=0.8; cmin=-0.8
+incr = (cmax-cmin) / (cmlen)
+conts = np.arange(cmin,cmax+incr,incr)
+cmap='blue2red_20'
+
+#plt.pcolor(meshlats,meshdz,dtbarsave,cmap='blue2red_20',vmin=-1,vmax=1)
+plt.contourf(meshlats,meshdz,dtbar,cmap=cmap,vmin=cmin,vmax=cmax,levels=conts,extend='both')
+plt.colorbar()
+ax.set_ylim(ylims)
+ax.set_xlim(xlims)
+ax.invert_yaxis()
+#ax.set_title('dTbar/dz')
+
+# ---- Add MOC contours
+# contours for MOC anomaly
+contspd = np.arange(.1,5,.2) # pos
+contsnd = np.arange(-5,-.1,.2) # neg
+
+# total MOC
+plotmoc = (totmocp[0,0,1,...]+totmocp[0,0,0,...])-(totmocc[0,0,1,...]+totmocc[0,0,0,...]) # Eulerian+eddy-induced
+plotmoc2 = (totmocp2[0,0,1,...]+totmocp2[0,0,0,...])-(totmocc[0,0,1,...]+totmocc[0,0,0,...]) # Eulerian+eddy-induced
+
+
+CSm = plt.contour(lats,levs,plotmoc,contspd,\
+            colors='.3',linestyles='solid',linewidths=2)
+#plt.clabel(CS1,fmt = '%2.1f',inline=1,fontsize=10)
+CSm = plt.contour(lats,levs,plotmoc,contsnd,\
+            colors='.3',linestyles='solid')
+
+ax.set_ylim(ylims)
+ax.invert_yaxis()
+ax.set_xlim(xlims)
+ax.set_title(casenamep)
+
+ax2 = fig.add_subplot(122)
+cmax=0.8; cmin=-0.8
+incr = (cmax-cmin) / (cmlen)
+conts = np.arange(cmin,cmax+incr,incr)
+
+#plt.pcolor(meshlats,meshdz,dtbarsave,cmap='blue2red_20',vmin=-1,vmax=1)
+plt.contourf(meshlats,meshdz,dtbar,cmap=cmap,vmin=cmin,vmax=cmax,levels=conts,extend='both') # $$$
+plt.colorbar()
+ax.set_ylim(ylims)
+ax.set_xlim(xlims)
+ax.invert_yaxis()
+#ax.set_title('dTbar/dz')
+
+CSm2 = plt.contour(lats,levs,plotmoc2,contspd,\
+            colors='.3',linestyles='solid',linewidths=2)
+#plt.clabel(CS1,fmt = '%2.1f',inline=1,fontsize=10)
+CSm2 = plt.contour(lats,levs,plotmoc2,contsnd,\
+            colors='.3',linestyles='solid')
+
+ax2.set_ylim(ylims)
+ax2.invert_yaxis()
+ax2.set_xlim(xlims)
+ax2.set_title(casenamep2)
+
+if printtofile:
+    fig.savefig('MOCeul+eddyanom_dTbar_subplotSH_ylim' + str(ylims[1]) + '_2smcont.pdf')
+
+
+
+# ============ end test fig ============
+
 
 # <codecell>
 
@@ -1621,8 +1828,10 @@ printtofile=False #True
 sec2yr = s2day*365
 
 mediumblue = ccm.get_linecolor('mediumblue') # Sulf
-dodgerblue = ccm.get_linecolor('dodgerblue') # GHGrem
+#dodgerblue = ccm.get_linecolor('dodgerblue') # GHGrem
+darkolivegreen3 = ccm.get_linecolor('darkolivegreen3') # GHGrem
 firebrick = ccm.get_linecolor('firebrick') # RCP8.5
+
                   
 onelat = tlat[:,1]
 totw = wtrans*rhocp*dzttile
@@ -1724,7 +1933,7 @@ if pig:
 # # =================== paper =======
 # #  PIG vertical heat trans and velocity
 
-    printtofile=False
+    printtofile=True
 
     ylim=450
     totwL1reg = np.squeeze(wtransreg[dep,...]) 
@@ -1776,31 +1985,41 @@ if pig:
     fig2.set_size_inches(14,4)
     ax = fig2.add_subplot(131)
 
-    plt.plot(totwreg,zt[1:]/100.,color=mediumblue,linewidth=2)
-    plt.plot(totw2reg,zt[1:]/100.,color=dodgerblue,linewidth=2) # GHGrem
+    plt.plot(totwreg,zt[1:]/100.,color=mediumblue,linewidth=3)
+    plt.plot(totw2reg,zt[1:]/100.,color=darkolivegreen3,linewidth=3) # GHGrem
     plt.plot(totwvreg,zt[1:]/100.,color=mediumblue,linestyle='--')
-    plt.plot(totwv2reg,zt[1:]/100.,color=dodgerblue,linestyle='--')
+    plt.plot(totwv2reg,zt[1:]/100.,color=darkolivegreen3,linestyle='--')
     plt.plot(totwireg,zt[1:]/100.,color=mediumblue)
-    plt.plot(totwi2reg,zt[1:]/100.,color=dodgerblue)
+    plt.plot(totwi2reg,zt[1:]/100.,color=darkolivegreen3)
 
     plt.plot([0,0],[0,1000],'k')
     plt.legend(('sulfate','ghgrem'),loc='best')
     plt.ylim((0,ylim))
     plt.xlim(-.15,.15)
-    plt.title(region + ' Avg vert heat trans (W/m2) ' + str(np.abs(Slim)) + 'S-' + str(np.abs(Nlim)) + 'S at e/ lev')
+    #plt.xticks([-0.15,-0.10,-0.05, 0, 0.05, 0.1, 0.15])
+    #ax.set_xticklabels([-0.15,'',-0.05, 0, .05,'', 0.15], fontsize=16)
+    plt.yticks([0,100,200,300,400])
+    ax.set_yticklabels([0,100,200,300,400],fontsize=16)
+    #plt.title(region + ' Avg vert heat trans (W/m2) ' + str(np.abs(Slim)) + 'S-' + str(np.abs(Nlim)) + 'S at e/ lev')
+    plt.title('VHT ($W/m^2$)')
     ax.invert_yaxis()
 
     ax2=fig2.add_subplot(132)
-    plt.plot(wavgreg*sec2yr,zt/100.,color=mediumblue,linewidth=2)
-    plt.plot(wavg2reg*sec2yr,zt/100.,color=dodgerblue,linewidth=2)
+    plt.plot(wavgreg*sec2yr,zt/100.,color=mediumblue,linewidth=3)
+    plt.plot(wavg2reg*sec2yr,zt/100.,color=darkolivegreen3,linewidth=3)
     plt.plot(wvavgreg*sec2yr,zt/100.,color=mediumblue,linestyle='--')
-    plt.plot(wvavg2reg*sec2yr,zt/100.,color=dodgerblue,linestyle='--')
+    plt.plot(wvavg2reg*sec2yr,zt/100.,color=darkolivegreen3,linestyle='--')
     plt.plot(wiavgreg*sec2yr,zt/100.,color=mediumblue)
-    plt.plot(wiavg2reg*sec2yr,zt/100.,color=dodgerblue,)
+    plt.plot(wiavg2reg*sec2yr,zt/100.,color=darkolivegreen3)
 
     plt.plot([0,0],[0,1000],'k')
     plt.ylim((0,ylim))
     plt.xlim(-10,8)
+    plt.xticks([-10,-8,-6,-4,-2, 0, 2, 4, 6, 8, 10])
+    ax2.set_xticklabels([-10,'',-6,'',-2,0,2, '',6,'',10], fontsize=16)
+    plt.yticks([0,100,200,300,400])
+    ax2.set_yticklabels([0,100,200,300,400],fontsize=16)
+
     plt.title('Vert velocity (m/yr) ' + str(np.abs(Slim)) + 'S-' + str(np.abs(Nlim)) + 'S at e/ lev')
     ax2.invert_yaxis()
 
@@ -1810,13 +2029,13 @@ if pig:
 
 
     ax3=fig2.add_subplot(133)
-    plt.plot(onelat,plottotw*sec2yr,color=mediumblue,linewidth=2)
+    plt.plot(onelat,plottotw*sec2yr,color=mediumblue,linewidth=3)
     plt.plot(onelat,plottotwv*sec2yr,color=mediumblue,linestyle='--')
     plt.plot(onelat,plottotwi*sec2yr,color=mediumblue)
 
-    plt.plot(onelat,plottotw2*sec2yr,color=dodgerblue,linewidth=2)
-    plt.plot(onelat,plottotwv2*sec2yr,color=dodgerblue,linestyle='--')
-    plt.plot(onelat,plottotwi2*sec2yr,color=dodgerblue)
+    plt.plot(onelat,plottotw2*sec2yr,color=darkolivegreen3,linewidth=3)
+    plt.plot(onelat,plottotwv2*sec2yr,color=darkolivegreen3,linestyle='--')
+    plt.plot(onelat,plottotwi2*sec2yr,color=darkolivegreen3)
 
     plt.plot((Slim,Nlim),(0,0),'k')
 
@@ -1828,55 +2047,78 @@ if pig:
 
     if printtofile:
         fig2.savefig('vertheattrans_wvels_' + str(np.abs(Slim)) + 'S-' + str(np.abs(Nlim)) + 
-                     'S_lev' + str(np.round(zlevs[dep,1])) + '_ylim' + str(ylim) + '_' + region + '.pdf')
+                     'S_lev' + str(np.round(zlevs[dep,1])) + '_ylim' + str(ylim) + '_' + region + '_b.pdf')
 
 
-    # VERSION 2 has dTbar instead of vert heat through a layer
-    fig2 = plt.figure()
+    # VERSION 2 has dTbar instead of vert heat through a layer ======= PAPER
+    #fig2 = plt.figure()
+    fig2,axs = plt.subplots(1,3,sharey=True)
     fig2.set_size_inches(14,4)
-    ax = fig2.add_subplot(131)
+    ax = axs[0] #fig2.add_subplot(131,sharey=True)
 
-    plt.plot(totwreg,zt[1:]/100.,color=mediumblue,linewidth=2)
-    plt.plot(totw2reg,zt[1:]/100.,color=dodgerblue,linewidth=2) # GHGrem
-    plt.plot(totwvreg,zt[1:]/100.,color=mediumblue,linestyle='--')
-    plt.plot(totwv2reg,zt[1:]/100.,color=dodgerblue,linestyle='--')
-    plt.plot(totwireg,zt[1:]/100.,color=mediumblue)
-    plt.plot(totwi2reg,zt[1:]/100.,color=dodgerblue)
+    ax.plot(totwreg,zt[1:]/100.,color=mediumblue,linewidth=4)
+    ax.plot(totw2reg,zt[1:]/100.,color=darkolivegreen3,linewidth=4) # GHGrem
+    ax.plot(totwvreg,zt[1:]/100.,color=mediumblue,linewidth=2,linestyle='--')
+    ax.plot(totwv2reg,zt[1:]/100.,color=darkolivegreen3,linewidth=2,linestyle='--')
+    ax.plot(totwireg,zt[1:]/100.,color=mediumblue,linewidth=2)#,linestyle=':')
+    ax.plot(totwi2reg,zt[1:]/100.,color=darkolivegreen3,linewidth=2)#3,linestyle=':')
 
-    plt.plot([0,0],[0,1000],'k')
-    plt.legend(('sulfate','ghgrem'),loc='best')
-    plt.ylim((0,ylim))
-    plt.xlim(-.15,.15)
-    plt.title(region + ' Avg vert heat trans (W/m2) ' + str(np.abs(Slim)) + 'S-' + str(np.abs(Nlim)) + 'S at e/ lev')
+    ax.plot([0,0],[0,1000],'k')
+    ax.legend(('sulfate','ghgrem'),loc='best')
+    ax.set_ylim((0,ylim))
+    ax.set_xlim(-.15,.15)
+    ax.set_xticks([-0.15,-0.10,-0.05, 0, 0.05, 0.1, 0.15])
+    ax.set_xticklabels([-0.15,'',-0.05, 0, .05,'', 0.15], fontsize=18)
+    ax.set_yticks([0,100,200,300,400])
+    ax.set_yticklabels([0,100,200,300,400],fontsize=18)
+    ax.set_title('VHT ($W/m^2$)',fontsize=18)
+    ax.set_ylabel('Depth (m)',fontsize=18)
+    #plt.title(region + ' Avg vert heat trans (W/m2) ' + str(np.abs(Slim)) + 'S-' + str(np.abs(Nlim)) + 'S at e/ lev')
     ax.invert_yaxis()
 
-    ax2=fig2.add_subplot(132)
-    plt.plot(wavgreg*sec2yr,zt/100.,color=mediumblue,linewidth=2)
-    plt.plot(wavg2reg*sec2yr,zt/100.,color=dodgerblue,linewidth=2)
-    plt.plot(wvavgreg*sec2yr,zt/100.,color=mediumblue,linestyle='--')
-    plt.plot(wvavg2reg*sec2yr,zt/100.,color=dodgerblue,linestyle='--')
-    plt.plot(wiavgreg*sec2yr,zt/100.,color=mediumblue)
-    plt.plot(wiavg2reg*sec2yr,zt/100.,color=dodgerblue,)
+    ax2=axs[1] #fig2.add_subplot(132,sharey=True)
+    ax2.plot(wavgreg*sec2yr,zt/100.,color=mediumblue,linewidth=4)
+    ax2.plot(wavg2reg*sec2yr,zt/100.,color=darkolivegreen3,linewidth=4)
+    ax2.plot(wvavgreg*sec2yr,zt/100.,color=mediumblue,linewidth=2,linestyle='--')
+    ax2.plot(wvavg2reg*sec2yr,zt/100.,color=darkolivegreen3,linewidth=2,linestyle='--')
+    ax2.plot(wiavgreg*sec2yr,zt/100.,color=mediumblue,linewidth=2)#,linestyle='-.')
+    ax2.plot(wiavg2reg*sec2yr,zt/100.,color=darkolivegreen3,linewidth=2)#,linestyle='-.')
 
-    plt.plot([0,0],[0,1000],'k')
-    plt.ylim((0,ylim))
-    plt.xlim(-10,8)
-    plt.title('Vert velocity (m/yr) ' + str(np.abs(Slim)) + 'S-' + str(np.abs(Nlim)) + 'S at e/ lev')
+    ax2.plot([0,0],[0,1000],'k')
+    ax2.set_ylim((0,ylim))
+    ax2.set_xlim(-10,8)
+    ax2.set_xticks([-10,-8,-6,-4,-2, 0, 2, 4, 6, 8, 10])
+    ax2.set_xticklabels([-10,'',-6,'',-2,0,2, '',6,'',10], fontsize=18)
+    #ax2.set_yticks([0,100,200,300,400])
+    #ax2.set_yticklabels([0,100,200,300,400],fontsize=18)
+    #plt.title('Vert velocity (m/yr) ' + str(np.abs(Slim)) + 'S-' + str(np.abs(Nlim)) + 'S at e/ lev')
+    ax2.set_title('$\omega  (m/yr)$',fontsize=20)
     ax2.invert_yaxis()
 
-    ax3=fig2.add_subplot(133)
-    # POSITIVE means getting warmer with depth
-    plt.plot(dTbaravgreg,zt[1:]/100.,color='k',linewidth=2)
+    ax3=axs[2] #fig2.add_subplot(133)
+#    # POSITIVE means getting warmer with depth
+#    plt.plot(dTbaravgreg,zt[1:]/100.,color='k',linewidth=3)
+    # NEGATIVE means getting warmer with depth (if mult by -1)
+    ax3.plot(dTbaravgreg,zt[1:]/100.,color='k',linewidth=3) 
 
-    plt.plot([0,0],[0,1000],'k')
-    plt.ylim((0,ylim))
+    ax3.plot([0,0],[0,1000],'k')
+    ax3.set_ylim((0,ylim))
     #plt.xlim(-10,8)
-    plt.title('dTbar ' + str(np.abs(Slim)) + 'S-' + str(np.abs(Nlim)) + 'S at e/ lev')
+    #ax3.set_xticks([-0.3,-0.2,-0.1,0,0.1]) # for when dT/dz is neg for warm with depth
+    #ax3.set_xticklabels([-0.3,-0.2,-0.1,0,0.1], fontsize=18)
+    ax3.set_xticks([-0.1,0,0.1,0.2,0.3])
+    ax3.set_xticklabels([-0.1,0,0.1,0.2,0.3], fontsize=18)
+
+    #ax3.set_yticks([0,100,200,300,400])
+    #ax3.set_yticklabels([0,100,200,300,400],fontsize=18)
+
+    #ax3.set_title('dTbar ' + str(np.abs(Slim)) + 'S-' + str(np.abs(Nlim)) + 'S at e/ lev')
+    ax3.set_title('$d\overline{T}/dz$ $(^\circ C/m)$',fontsize=18)
     ax3.invert_yaxis()
 
     if printtofile:
-        fig2.savefig('vertheattrans_wvels_dTbar_' + str(np.abs(Slim)) + 'S-' + str(np.abs(Nlim)) + 
-                     'S_ylim' + str(ylim) + '_' + region + '.pdf')
+        fig2.savefig('vertheattrans_wvels_dTbarposwrmwithdepth_' + str(np.abs(Slim)) + 'S-' + str(np.abs(Nlim)) + 
+                     'S_ylim' + str(ylim) + '_' + region + '_b.pdf')
 
 
     # VERSION 3 is wbar * dTprime
