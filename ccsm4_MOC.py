@@ -312,7 +312,9 @@ if pig:  # 80W to 120W. Or 280 to 230
     ax.set_xticklabels(['75$^\circ$S', '70$^\circ$S', '65$^\circ$S', \
                         '60$^\circ$S', '55$^\circ$S', '50$^\circ$S'],fontsize=18)
 
-    ax.set_title(casenamep + ' ' + region + ' anom TEMP')
+    #ax.set_title(casenamep + ' ' + region + ' anom TEMP')
+    ax.set_title('PIG Sulf',fontsize=18)
+    ax.set_ylabel('Depth (m)',fontsize=18)
     ax.axvline(x=-65,linestyle='--',color='k') # @@@ the vert line is to show the area averaged in the VHT plots
     #cbar = fig.colorbar(CF1)
 
@@ -328,7 +330,8 @@ if pig:  # 80W to 120W. Or 280 to 230
     ax2.set_xticks(np.arange(-75,-45,5))
     ax2.set_xticklabels(['75$^\circ$S', '70$^\circ$S', '65$^\circ$S', \
                         '60$^\circ$S', '55$^\circ$S', '50$^\circ$S'],fontsize=18)
-    ax2.set_title(casenamep2 + ' ' + region + ' anom TEMP')
+    #ax2.set_title(casenamep2 + ' ' + region + ' anom TEMP')
+    ax2.set_title('PIG GHGrem',fontsize=18)
     ax2.axvline(x=-65,linestyle='--',color='k') # @@@ the vert line is to show the area averaged in the VHT plots
     #cbar = fig.colorbar(CF2)
     cbar_ax = fig.add_axes([.91,.15, .02,.7])
@@ -1611,8 +1614,9 @@ ax.set_xlim(xlims)
 ax.set_xticks(np.arange(-75,-45,5))
 ax.set_xticklabels(['75$^\circ$S', '70$^\circ$S', '65$^\circ$S', \
                     '60$^\circ$S', '55$^\circ$S', '50$^\circ$S'],fontsize=18)
-ax.set_title(casenamep)
-
+#ax.set_title(casenamep)
+ax.set_title('Sulf',fontsize=18)
+ax.set_ylabel('Depth (m)',fontsize=18)
 
 #ax2 = fig.add_subplot(122)
 ax2=axs[1]
@@ -1638,7 +1642,8 @@ ax2.set_xlim(xlims)
 ax2.set_xticks(np.arange(-75,-45,5))
 ax2.set_xticklabels(['75$^\circ$S', '70$^\circ$S', '65$^\circ$S', \
                     '60$^\circ$S', '55$^\circ$S', '50$^\circ$S'],fontsize=18)
-ax2.set_title(casenamep2)
+#ax2.set_title(casenamep2)
+ax2.set_title('GHGrem',fontsize=18)
 cbar_ax = fig.add_axes([.91,.15, .02,.7])
 fig.colorbar(CF,cax=cbar_ax)
 
@@ -1828,7 +1833,7 @@ printtofile=False #True
 sec2yr = s2day*365
 
 mediumblue = ccm.get_linecolor('mediumblue') # Sulf
-#dodgerblue = ccm.get_linecolor('dodgerblue') # GHGrem
+dodgerblue = ccm.get_linecolor('dodgerblue') # GHGrem
 darkolivegreen3 = ccm.get_linecolor('darkolivegreen3') # GHGrem
 firebrick = ccm.get_linecolor('firebrick') # RCP8.5
 
@@ -2056,22 +2061,22 @@ if pig:
     fig2.set_size_inches(14,4)
     ax = axs[0] #fig2.add_subplot(131,sharey=True)
 
-    ax.plot(totwreg,zt[1:]/100.,color=mediumblue,linewidth=4)
-    ax.plot(totw2reg,zt[1:]/100.,color=darkolivegreen3,linewidth=4) # GHGrem
-    ax.plot(totwvreg,zt[1:]/100.,color=mediumblue,linewidth=2,linestyle='--')
-    ax.plot(totwv2reg,zt[1:]/100.,color=darkolivegreen3,linewidth=2,linestyle='--')
-    ax.plot(totwireg,zt[1:]/100.,color=mediumblue,linewidth=2)#,linestyle=':')
-    ax.plot(totwi2reg,zt[1:]/100.,color=darkolivegreen3,linewidth=2)#3,linestyle=':')
+    ax.plot(-1*totwreg,zt[1:]/100.,color=mediumblue,linewidth=4)
+    ax.plot(-1*totw2reg,zt[1:]/100.,color=darkolivegreen3,linewidth=4) # GHGrem
+    ax.plot(-1*totwvreg,zt[1:]/100.,color=mediumblue,linewidth=2,linestyle='--')
+    ax.plot(-1*totwv2reg,zt[1:]/100.,color=darkolivegreen3,linewidth=2,linestyle='--')
+    ax.plot(-1*totwireg,zt[1:]/100.,color=mediumblue,linewidth=2)#,linestyle=':')
+    ax.plot(-1*totwi2reg,zt[1:]/100.,color=darkolivegreen3,linewidth=2)#3,linestyle=':')
 
     ax.plot([0,0],[0,1000],'k')
-    ax.legend(('sulfate','ghgrem'),loc='best')
+    ax.legend(('Sulf','GHGrem'),loc='best',fancybox=True,framealpha=0.5)
     ax.set_ylim((0,ylim))
     ax.set_xlim(-.15,.15)
     ax.set_xticks([-0.15,-0.10,-0.05, 0, 0.05, 0.1, 0.15])
     ax.set_xticklabels([-0.15,'',-0.05, 0, .05,'', 0.15], fontsize=18)
     ax.set_yticks([0,100,200,300,400])
     ax.set_yticklabels([0,100,200,300,400],fontsize=18)
-    ax.set_title('VHT ($W/m^2$)',fontsize=18)
+    ax.set_title('VHT (W/m$^2$)',fontsize=18)
     ax.set_ylabel('Depth (m)',fontsize=18)
     #plt.title(region + ' Avg vert heat trans (W/m2) ' + str(np.abs(Slim)) + 'S-' + str(np.abs(Nlim)) + 'S at e/ lev')
     ax.invert_yaxis()
@@ -2092,32 +2097,32 @@ if pig:
     #ax2.set_yticks([0,100,200,300,400])
     #ax2.set_yticklabels([0,100,200,300,400],fontsize=18)
     #plt.title('Vert velocity (m/yr) ' + str(np.abs(Slim)) + 'S-' + str(np.abs(Nlim)) + 'S at e/ lev')
-    ax2.set_title('$\omega  (m/yr)$',fontsize=20)
+    ax2.set_title('w (m/yr)',fontsize=18)
     ax2.invert_yaxis()
 
     ax3=axs[2] #fig2.add_subplot(133)
 #    # POSITIVE means getting warmer with depth
 #    plt.plot(dTbaravgreg,zt[1:]/100.,color='k',linewidth=3)
     # NEGATIVE means getting warmer with depth (if mult by -1)
-    ax3.plot(dTbaravgreg,zt[1:]/100.,color='k',linewidth=3) 
+    ax3.plot(-1*dTbaravgreg,zt[1:]/100.,color='k',linewidth=3) 
 
     ax3.plot([0,0],[0,1000],'k')
     ax3.set_ylim((0,ylim))
     #plt.xlim(-10,8)
-    #ax3.set_xticks([-0.3,-0.2,-0.1,0,0.1]) # for when dT/dz is neg for warm with depth
-    #ax3.set_xticklabels([-0.3,-0.2,-0.1,0,0.1], fontsize=18)
-    ax3.set_xticks([-0.1,0,0.1,0.2,0.3])
-    ax3.set_xticklabels([-0.1,0,0.1,0.2,0.3], fontsize=18)
+    ax3.set_xticks([-0.3,-0.2,-0.1,0,0.1]) # for when dT/dz is neg for warm with depth
+    ax3.set_xticklabels([-0.3,-0.2,-0.1,0,0.1], fontsize=18)
+    #ax3.set_xticks([-0.1,0,0.1,0.2,0.3]) # for when dT/dz is pos for warm wiht depth
+    #ax3.set_xticklabels([-0.1,0,0.1,0.2,0.3], fontsize=18)
 
     #ax3.set_yticks([0,100,200,300,400])
     #ax3.set_yticklabels([0,100,200,300,400],fontsize=18)
 
     #ax3.set_title('dTbar ' + str(np.abs(Slim)) + 'S-' + str(np.abs(Nlim)) + 'S at e/ lev')
-    ax3.set_title('$d\overline{T}/dz$ $(^\circ C/m)$',fontsize=18)
+    ax3.set_title('d$\overline{T}$/dz ($^\circ$C/m)',fontsize=18)
     ax3.invert_yaxis()
 
     if printtofile:
-        fig2.savefig('vertheattrans_wvels_dTbarposwrmwithdepth_' + str(np.abs(Slim)) + 'S-' + str(np.abs(Nlim)) + 
+        fig2.savefig('vertheattrans_wvels_dTbarnegwrmwithdepth_' + str(np.abs(Slim)) + 'S-' + str(np.abs(Nlim)) + 
                      'S_ylim' + str(ylim) + '_' + region + '_b.pdf')
 
 
