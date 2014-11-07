@@ -570,6 +570,7 @@ def get_regiondict():
                           nthatl: latlims=[35,60]; lonlims=[300,360]
                           bks: latlims=[65,80], lonlims=[27,96] Barents-Kara Seas
                           soo: latlims=[46,61], lonlims=[136,158] Sea of Okhotsk
+                          etroppac: latlims=[-15, 15], lonlims=[180,280] Eastern tropical Pacific
 
                           pig: untested, Pine Island Glacier, CCSM4 ocean grid
     """
@@ -592,6 +593,7 @@ def get_regiondict():
     regdict['bks'] = {'latlims': [65,80], 'lonlims': [27,96]} # Barents-Kara Seas 65N-80N,27E-96E
     regdict['bksmori'] = {'latlims': [65,85], 'lonlims': [30,90]} # Barents-Kara Seas 65N-85N,30E-90E
     regdict['soo'] = {'latlims': [46,61], 'lonlims': [136,158]} # Sea of Okhotsk 46N-61N,136E-158E
+    regdict['etroppac'] = {'latlims': [-15, 15], 'lonlims': [180,280]} # eastern trop pacific 15S-15N, 180W-80W
 
     regdict['pig'] = {'latlims':[0,384], 'lonlims': [230,280]} # CCSM4 OCEAN!!! @@@ untested 10/6/2014
     
