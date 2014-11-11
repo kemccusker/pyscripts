@@ -1,13 +1,7 @@
 
-# @@@@ Double check the wind vectors are correct
-#   with the projection. Over the pacific, the zonal wind direction
-#   seems reversed when compared to SLP (ie the winds go clockwise
-#   around a low! They are correct on the Atlantic side though, where
-#   the winds go clockwise around a high.
-#  Also, when plot robinson, it all looks right. So, potentially
-#  half the globe has uvel flipped?   10/29/14
-from mpl_toolkits.basemap import Basemap, shiftgrid
 
+from mpl_toolkits.basemap import Basemap, shiftgrid
+import constants as con
 
 printtofile=True
 
@@ -16,11 +10,13 @@ plt.close('all')
 ufield='su'; uncfield='SU'
 vfield='sv'; vncfield='SV'
 
-level=50000 # for when threed is True
-threed=False
+level=30000 # for when threed is True
+threed=True
+climo=True
 
-sim = 'ESPR'
-sea = 'DJF' #1 #'DJF'
+
+sim = 'ENSE'
+sea = 'SON' #1 #'DJF'
 
 
 if threed:
@@ -40,7 +36,7 @@ lon=cnc.getNCvar(fuc,'lon')
 uc=cnc.getNCvar(fuc,uncfield,timesel='0002-01-01,0121-12-31',seas=sea)
 up=cnc.getNCvar(fup,uncfield,timesel='0002-01-01,0121-12-31',seas=sea)
 
-ucm=np.mean(uc,axis=0)
+ucm=np.mean(uc,axis=0) # time mean
 upm=np.mean(up,axis=0)
 ud=upm-ucm
 
@@ -52,6 +48,35 @@ vp=cnc.getNCvar(fvp,vncfield,timesel='0002-01-01,0121-12-31',seas=sea)
 vcm=np.mean(vc,axis=0)
 vpm=np.mean(vp,axis=0)
 vd=vpm-vcm
+
+
+# Plot climo U
+lons, lats = np.meshgrid(lon,lat)
+if climo:
+    
+    cmap='Spectral_r';
+    if level=='500':
+        cmin=-10;cmax=35 # U500
+        cmind=-1;cmaxd=1 # difference caxis
+    elif level=='300':
+        cmin=-10;cmax=50 # U300
+        cmind=-2;cmaxd=2
+        
+    incr = (cmax-cmin) /20. # cmlen=20
+    conts = np.arange(cmin,cmax+incr,incr) # for climo, not diff
+
+    fig,axs=plt.subplots(1,2)
+    fig.set_size_inches(12,10)
+    ax=axs[0]
+    bm,cf = cplt.kemmap(ucm,lat,lon,cmap=cmap,cmin=cmin,cmax=cmax,type='nh',axis=ax)
+    bm.contour(lons,lats,ucm,levels=conts,colors='k',latlon=True)
+    
+    ax=axs[1]
+    bm,cf = cplt.kemmap(upm-ucm,lat,lon,cmin=cmind,cmax=cmaxd,type='nh',axis=ax)
+    bm.contour(lons,lats,ucm,15,colors='k',latlon=True) #levels=conts
+    if printtofile:
+        fig.savefig(ufield + 'diffclimocont_' + str(sea) + '_' + sim + '_nh.pdf')
+    
 
 #  From: http://matplotlib.org/basemap/users/examples.html
 # shift grid so it goes from -180 to 180 (instead of 0 to 360
@@ -228,7 +253,6 @@ cbar_ax = fig.add_axes([.91,.25, .02,.5])
 fig.colorbar(cf,cax=cbar_ax)
 if printtofile:
     plt.savefig('st_windvecs' + level + '_DJFMsbplt_' + sim + '.png')
-
 
 
 
