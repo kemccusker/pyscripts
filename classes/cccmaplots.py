@@ -438,12 +438,19 @@ def plotvert_allseas(fld, lev, lat,title='',units='',cmap='blue2red_w20',type=No
     return fig
         
 
-def plot_region(regname,type='nh',axis=None,latlim=None): 
-    """ plot_region(regname,type='nh',axis=None,latlim=None):
+def plot_region(regname,type='nh',axis=None,latlim=None,limsdict=None): 
+    """ plot_region(regname,type='nh',axis=None,latlim=None,limsdict=None):
                      Given a region name, plot it for reference.
+
+                     latlims is unused right now
+                     if passing limsdict (to override regname), set regname='other'
     """
 
-    reglims = con.get_regionlims(regname)
+    if regname=='other':
+        reglims=limsdict
+    else:
+        reglims = con.get_regionlims(regname)
+
     latlims = reglims['latlims']
     lonlims = reglims['lonlims']
 
