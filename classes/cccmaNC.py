@@ -69,6 +69,8 @@ def getNCvar(filename,field,timesel=None,levsel=None,monsel=None,seas=None,calc=
                     print 'On mac, use files in timsel/ subdirectory! @@ NEEDS TESTING'
 
             fld = getNCvar_old(filename,field,seas=seas,monsel=monsel,level=level,calc=calc) # doesn't work with all arguments yet @@
+
+        
         return fld
 
     else:  # on linux workstation in Vic
@@ -280,6 +282,8 @@ def getNCvar_old(filename,field,timechunk=None,monsel=None,level=None,seas=None,
             fld = ncfile.variables[field][:,level,...]
         else:
             fld = ncfile.variables[field][...]
+
+        fld=fld.squeeze() # remove spurious dimensions of 1
     else:
         if len(timechunk)==1: # start time until end
             print timechunk # @@
@@ -297,6 +301,9 @@ def getNCvar_old(filename,field,timechunk=None,monsel=None,level=None,seas=None,
                 fld = ncfile.variables[field][timechunk[0]:timechunk[1],level,...]
             else:
                 fld = ncfile.variables[field][timechunk[0]:timechunk[1],...]
+
+        fld=fld.squeeze() # remove spurious dimensions of 1
+
         ## #print 'chunking time. ndims= ' + str(ndims) + ' styr,enyr: ' + str(timechunk[0]) + ',' + str(timechunk[1])
         ## if ndims==4: # must be a better way!@@
         ##     if len(timechunk)==1: # start time until end
