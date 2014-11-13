@@ -25,15 +25,15 @@ plt.ion()
        # coords = {'lat': con.get_t63lat(), 'lon': con.get_t63lon()}
 
 
-printtofile=False
+printtofile=True
 
-field = 'st'
+field = 'pcp'
 smclim=False
-level=50000 # for threed
+level=30000 # for threed
 nonstandardlev=False # standards are 700,500,300
 
 # Choose type of plot =========================
-seasonalmap=False # seasonal maps (SON, DJF, MAM, JJA)
+seasonalmap=True # seasonal maps (SON, DJF, MAM, JJA)
 seasonalvert=False # seasonal vertical zonal means instead of maps
 screen=False # whether to have screen-style vertical zonal means
 
@@ -48,7 +48,7 @@ withlat=False # plot the seasonal cycle with latitude dimension too (only for pl
 pattcorrwithtime=False # plot pattern correlation with time for each ens member
 pattcorryr=False # if True, do a yearly anomaly pattern rather than time-integrated
 
-plotregmean=True
+plotregmean=False
 region = 'polcap60' # None, polcap60, polcap65, polcap70, eurasia, eurasiamori, ntham, nthatl, bks, bksmori, soo
 
 testhadisst=0 # check which ens member most similar to hadisst
@@ -66,12 +66,12 @@ allens=False # this is ONLY the ensemble means, plus superensemble
 sensruns=False # sensruns only: addr4ct=1,addsens=1. others=0 no meanBC, r mean, or obs
 ivar=False # this will show ENS (TOT) and ENSE (ANTH) and their difference = internal var
 
-addobs=True # add mean of kemhad* & kemnsidc* runs to line plots, seasonal maps. 
+addobs=False # add mean of kemhad* & kemnsidc* runs to line plots, seasonal maps. 
 addr4ct=False # add kem1pert2r4ct (constant thickness version of ens4)
 addsens=False # add sensitivity runs (kem1pert1b, kem1pert3)
 addrcp=False # add kem1rcp85a simulation (and others if we do more)
-simsforpaper=False # meanBC, HAD, NSIDC only. best for maps and zonal mean figs (not line plots)
-addcanens=True # add "initial condition" ensemble of kemctl1/kem1pert2
+simsforpaper=True # meanBC, HAD, NSIDC only. best for maps and zonal mean figs (not line plots)
+addcanens=False # add "initial condition" ensemble of kemctl1/kem1pert2
 addsuper=False # add superensemble mean
 
 latlim = None # None #45 # lat limit for NH plots. Set to None otherwise. use 45 for BC-type maps
@@ -104,8 +104,8 @@ seasons = ('SON','DJF','MAM','JJA')
 
 if simsforpaper: # best for maps only
     #sims = ('HAD','NSIDC','E1')
-    sims = ('HAD','NSIDC','ENSE')
-    savestr = '_forpap2'
+    sims = ('HAD','NSIDC','ENSE','ENS')
+    savestr = '_forpap3' # add ENS
     seasons=('SON','DJF')
     
 elif sensruns: # add sensitivity runs. with Shaded ENS. don't plot meanBC, mean of ens
