@@ -11,8 +11,8 @@ ufield='su'; uncfield='SU'
 vfield='sv'; vncfield='SV'
 
 level=30000 # for when threed is True
-threed=True
-climo=True
+threed=False
+climo=False
 
 
 sim = 'ENSE'
@@ -150,7 +150,13 @@ fuc,fup=con.build_filepathpair(sim,ufield)
 fvc,fvp=con.build_filepathpair(sim,vfield)
 
 monstr=con.get_mon()
-months=[12,1,2,3]
+if sea=='DJF':
+    months=[12,1,2,3]
+    prstr='DJFM'
+elif sea=='SON':
+    months=[9,10,11,12]
+    prstr='SOND'
+    
 
 fig,axs=plt.subplots(2,2) # D, J, F, M
 fig.set_size_inches(10,8)
@@ -200,7 +206,7 @@ for aii,ax in enumerate(axs.flat):
 cbar_ax = fig.add_axes([.91,.25, .02,.5])
 fig.colorbar(cf,cax=cbar_ax)
 if printtofile:
-    plt.savefig('pmsl_windvecs' + level + '_DJFMsbplt_' + sim + '.png')
+    plt.savefig('pmsl_windvecs' + level + '_' + prstr + 'sbplt_' + sim + '.png')
 
 
 
@@ -252,7 +258,7 @@ for aii,ax in enumerate(axs.flat):
 cbar_ax = fig.add_axes([.91,.25, .02,.5])
 fig.colorbar(cf,cax=cbar_ax)
 if printtofile:
-    plt.savefig('st_windvecs' + level + '_DJFMsbplt_' + sim + '.png')
+    plt.savefig('st_windvecs' + level + '_' + prstr + 'sbplt_' + sim + '.png')
 
 
 
