@@ -1560,7 +1560,7 @@ if printtofile:
 # # ===================== paper ======
 # #  Zonal mean TEMP --- NO MOC
 
-printtofile=True
+printtofile=False
 
 # plot MOC contours over T anomaly
 rho_sw=cnc.getNCvar(filenamec,'rho_sw')
@@ -1657,7 +1657,7 @@ if printtofile:
 # ======= Climo Temp with total MOC anom =========
 # <codecell>
 
-printtofile=True
+printtofile=False
 
 # plot MOC contours over T
 rho_sw=cnc.getNCvar(filenamec,'rho_sw')
@@ -1740,7 +1740,7 @@ if printtofile:
 
 # === test fig 2: dTbar / dz with total MOC contours ===
 
-printtofile=True
+printtofile=False
 
 # plot MOC contours over T
 rho_sw=cnc.getNCvar(filenamec,'rho_sw')
@@ -1938,7 +1938,7 @@ if pig:
 # # =================== paper =======
 # #  PIG vertical heat trans and velocity
 
-    printtofile=True
+    printtofile=False
 
     ylim=450
     totwL1reg = np.squeeze(wtransreg[dep,...]) 
@@ -2054,6 +2054,7 @@ if pig:
         fig2.savefig('vertheattrans_wvels_' + str(np.abs(Slim)) + 'S-' + str(np.abs(Nlim)) + 
                      'S_lev' + str(np.round(zlevs[dep,1])) + '_ylim' + str(ylim) + '_' + region + '_b.pdf')
 
+    printtofile=True
 
     # VERSION 2 has dTbar instead of vert heat through a layer ======= PAPER
     #fig2 = plt.figure()
@@ -2076,7 +2077,8 @@ if pig:
     ax.set_xticklabels([-0.15,'',-0.05, 0, .05,'', 0.15], fontsize=18)
     ax.set_yticks([0,100,200,300,400])
     ax.set_yticklabels([0,100,200,300,400],fontsize=18)
-    ax.set_title('VHT (W/m$^2$)',fontsize=18)
+    #ax.set_title('VHT (W/m$^2$)',fontsize=18)
+    ax.set_title('w$^{\prime}$*d$\overline{T}$/dz (W/m$^2$)',fontsize=18)
     ax.set_ylabel('Depth (m)',fontsize=18)
     #plt.title(region + ' Avg vert heat trans (W/m2) ' + str(np.abs(Slim)) + 'S-' + str(np.abs(Nlim)) + 'S at e/ lev')
     ax.invert_yaxis()
@@ -2097,7 +2099,7 @@ if pig:
     #ax2.set_yticks([0,100,200,300,400])
     #ax2.set_yticklabels([0,100,200,300,400],fontsize=18)
     #plt.title('Vert velocity (m/yr) ' + str(np.abs(Slim)) + 'S-' + str(np.abs(Nlim)) + 'S at e/ lev')
-    ax2.set_title('w (m/yr)',fontsize=18)
+    ax2.set_title('w$^{\prime}$ (m/yr)',fontsize=18)
     ax2.invert_yaxis()
 
     ax3=axs[2] #fig2.add_subplot(133)
