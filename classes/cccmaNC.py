@@ -283,7 +283,7 @@ def getNCvar_old(filename,field,timechunk=None,monsel=None,level=None,seas=None,
         else:
             fld = ncfile.variables[field][...]
 
-        fld=fld.squeeze() # remove spurious dimensions of 1
+        # @@@shit, caused problems with MOC. fld=fld.squeeze() # remove spurious dimensions of 1
     else:
         if len(timechunk)==1: # start time until end
             print timechunk # @@
@@ -302,7 +302,7 @@ def getNCvar_old(filename,field,timechunk=None,monsel=None,level=None,seas=None,
             else:
                 fld = ncfile.variables[field][timechunk[0]:timechunk[1],...]
 
-        fld=fld.squeeze() # remove spurious dimensions of 1
+        # @@@shit, caused problems with MOC. fld=fld.squeeze() # remove spurious dimensions of 1
 
         ## #print 'chunking time. ndims= ' + str(ndims) + ' styr,enyr: ' + str(timechunk[0]) + ',' + str(timechunk[1])
         ## if ndims==4: # must be a better way!@@
