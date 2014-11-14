@@ -214,15 +214,17 @@ def vert_plot(fld, lev, lat, title='',units='',cmap='blue2red_w20',cmin='',cmax=
         cmap='blue2red_w20'
         
     incmap = plt.cm.get_cmap(cmap)
+    
+    cmlen=float(incmap.N) # or: from __future__ import division
+
+    if cmlen>200:
+        cmlen = float(15) # ie. if using a built in colormap that is continuous, want smaller # of colors
 
     if cmin =='':
         # parameters for plot
         pparams = dict(cmap=incmap)
+        
     else:
-        cmlen=float(incmap.N) # or: from __future__ import division
-
-        if cmlen>200:
-            cmlen = float(15) # ie. if using a built in colormap that is continuous, want smaller # of colors
         
         incr = (cmax-cmin) /cmlen
         conts = np.arange(cmin,cmax+incr,incr)
@@ -233,13 +235,19 @@ def vert_plot(fld, lev, lat, title='',units='',cmap='blue2red_w20',cmin='',cmax=
         ax=axis
     else:
         ax=plt.gca()
-    
-    cf = ax.contourf(lats,levs,fld,**pparams)
+
+    if cmin=='':
+        cf = ax.contourf(lats,levs,fld,**pparams) #cmlen autolevels@@removed
+    else:
+        cf = ax.contourf(lats,levs,fld,**pparams)
 
     if addcontlines:
-        ax.contour(lats,levs,fld,levels=conts,colors='.3') # may have to make a dict for levels key
+        if cmin=='':
+            ax.contour(lats,levs,fld,colors='.3') #cmlen autolevels@@removed
+        else:
+            ax.contour(lats,levs,fld,levels=conts,colors='.3') # may have to make a dict for levels key
 
-    ax.set_ylim(levlim,1000)
+    #ax.set_ylim(levlim,1000)
     ax.invert_yaxis()
 
     if screen==True:
@@ -272,16 +280,18 @@ def vert_plot(fld, lev, lat, title='',units='',cmap='blue2red_w20',cmin='',cmax=
         else:
             ax.set_yticklabels('')
 
+    ax.set_ylim(levlim,1000)
+    ax.invert_yaxis()
     if suppylab==False:
         ax.set_ylabel('Pressure (hPa)')
     ax.set_xlabel('Latitude')
     ax.set_title(title)
 
     if suppcb==False:
-        cbar = ax.colorbar(cf)
+        #cbar = ax.colorbar(cf)
         
-        #cbar_ax = fig4.add_axes([.91,.15, .02,.7])
-        #fig4.colorbar(pc,cax=cbar_ax)
+        #cbar_ax = plt.add_axes([.91,.15, .02,.7])
+        plt.colorbar(cf) #pc,cax=cbar_ax)
 
     return cf
 
