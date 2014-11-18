@@ -248,7 +248,7 @@ def vert_plot(fld, lev, lat, title='',units='',cmap='blue2red_w20',cmin='',cmax=
             ax.contour(lats,levs,fld,levels=conts,colors='.3') # may have to make a dict for levels key
 
     #ax.set_ylim(levlim,1000)
-    ax.invert_yaxis()
+    #ax.invert_yaxis()
 
     if screen==True:
         ax.set_yticks([900, 700, 500, 300])
