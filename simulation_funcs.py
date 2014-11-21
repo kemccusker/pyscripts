@@ -32,17 +32,26 @@ ccm = reload(ccm)
 cnc = reload(cnc)
 
 
-def plot_seasonal_maps(fielddict,coords,sims,pparams,vert=False,loctimesel=None,info=None,printtofile=False,seas=None):
-    """ plot_seasonal_maps(fielddict,coords,sims,pparams,vert=False,loctimesel=None,info=None,printtofile=False):
+def plot_seasonal_maps(fielddict,coords,sims,pparams,vert=False,loctimesel=None,info=None,printtofile=False,seas=None,addflds=None,addpparams=None):
+    """ plot_seasonal_maps(fielddict,coords,sims,pparams,vert=False,loctimesel=None,info=None,printtofile=False,seas=None, addflds=None):
     
               info should be a dict of catch-all keywords/info
+              addflds,addpparams are tuples of fdicts and pparams for field contours to be overlain
     """
+    addcont=False # overlay with contours. Start with one extra field.
     
     field=fielddict['field']
     ncfield=fielddict['ncfield']
     fieldstr=fielddict['fieldstr']
     conv=fielddict['conv']
 
+    if addflds:
+        addcont=True
+        fdictadd = addflds[0]
+        fieldadd = fdictadd['field']
+        fieldaddstr = fdictadd['fieldstr']
+        ncfieldadd = fdictadd['ncfield']
+        print 'add: ' + fieldadd
     if seas != None:
         seasons=seas
     else: # standard seasons
@@ -77,7 +86,9 @@ def plot_seasonal_maps(fielddict,coords,sims,pparams,vert=False,loctimesel=None,
     pval = np.zeros(theshape)
     fldcallseas = np.zeros(theshape)
     fldpallseas = np.zeros(theshape)
-
+    fldcallseasadd = np.zeros(theshape)
+    fldpallseasadd = np.zeros(theshape)
+    
     latlim=pparams['latlim']
     cmap=pparams['cmap']
     cmin=pparams['cmin']; cmax=pparams['cmax']
@@ -85,6 +96,13 @@ def plot_seasonal_maps(fielddict,coords,sims,pparams,vert=False,loctimesel=None,
     incr = (cmax-cmin) / (cmlen)
     conts = np.arange(cmin,cmax+incr,incr)
 
+    if addcont:
+        #cmapadd=addpparams[0]['cmap']
+        cminadd=addpparams[0]['cmin']; cmaxadd=addpparams[0]['cmax']
+        cmlen=float( plt.cm.get_cmap(cmap).N)
+        incradd = (cmaxadd-cminadd) / (cmlen)
+        contsadd = np.arange(cminadd,cmaxadd+incradd,incradd)
+        
     fig6,ax6 = plt.subplots(len(seasons),len(sims)) # 1 row for e/ of 5 ens members, plus mean, plus meanBC
     fig6.set_size_inches(12,8)  
     fig6.subplots_adjust(hspace=.15,wspace=.05)
@@ -101,6 +119,7 @@ def plot_seasonal_maps(fielddict,coords,sims,pparams,vert=False,loctimesel=None,
         timstrp = simpair['pert']['timestr']
         frootc = basepath + simctl + subdir + simctl + '_' + field + '_'
         frootp = basepath + simpt + subdir + simpt + '_' + field + '_'
+
         rowl=sim
 
         if loctimesel !=None: # e.g. for when want to look at half of a run...
@@ -110,6 +129,11 @@ def plot_seasonal_maps(fielddict,coords,sims,pparams,vert=False,loctimesel=None,
         
         fnamec = frootc + timstr + '_ts.nc'
         fnamep = frootp + timstrp + '_ts.nc'
+        if addcont:
+            fnamecadd,fnamepadd = con.build_filepathpair(sim,fieldadd)
+            print fnamecadd
+            print fnamepadd
+
         # @@@ I *think* I don't need this anymore since processing the 3D files more
         # @@  although getting a nonstandard lev is not supported
         if nonstandardlev:
@@ -157,7 +181,19 @@ def plot_seasonal_maps(fielddict,coords,sims,pparams,vert=False,loctimesel=None,
                 ##     fldpsea = np.append(cnc.getNCvar(fnamep,ncfield,timesel='0002-01-01,061-12-31',levsel=level,
                 ##                                    seas=sea)*conv,
                 ##                         cnc.getNCvar(fnamep2,ncfield,levsel=level,seas=sea)*conv,axis=0)
-                    
+
+            if addcont:
+                fldcseaadd=cnc.getNCvar(fnamecadd,ncfieldadd,timesel=timesel,
+                                               seas=sea)*fdictadd['conv']
+                fldpseaadd = cnc.getNCvar(fnamepadd,ncfieldadd,timesel=timesel,
+                                               seas=sea)*fdictadd['conv']
+                fldcallseasadd[rowidx,:,:] = np.mean(fldcseaadd,axis=0)
+                fldpallseasadd[rowidx,:,:] = np.mean(fldpseaadd,axis=0)
+                if pct:
+                    plotfldadd = (fldpallseasadd[rowidx,:,:]-fldcallseasadd[rowidx,:,:]) / fldcallseasadd[rowidx,:,:] *100
+                else:
+                    plotfldadd = fldpallseasadd[rowidx,:,:] - fldcallseasadd[rowidx,:,:]
+                
             tstat[rowidx,:,:],pval[rowidx,:,:] = sp.stats.ttest_ind(fldpsea,fldcsea,axis=0)
             fldcallseas[rowidx,:,:] = np.mean(fldcsea,axis=0)
             fldpallseas[rowidx,:,:] = np.mean(fldpsea,axis=0)
@@ -170,6 +206,7 @@ def plot_seasonal_maps(fielddict,coords,sims,pparams,vert=False,loctimesel=None,
             pparams['axis']=ax
             
             if vert: # zonal mean with height
+                
                 pparams['suppcb'] = True
                 #pparams['levlim'] = levlim
                 pparams['screen'] = screen
@@ -179,9 +216,12 @@ def plot_seasonal_maps(fielddict,coords,sims,pparams,vert=False,loctimesel=None,
                 
                     
                 pc = cplt.vert_plot(plotfld,lev,lat,**pparams)
-                if sigoff==0:
+                if sigoff==False: # add sig
                      cplt.addtsig(ax,pval[rowidx,...],lat,lev/100.,type=sigtype) # @@ dims?
-
+                if addcont:
+                    lats,levs = np.meshgrid(lat,lev/100.)
+                    ax.contour(lats,levs,plotfldadd,levels=contsadd,colors='0.5',linewidths=2)
+                
                 if colidx==lastcol:
                     # put season label on right side.
                     ax.yaxis.set_label_position("right")
@@ -191,9 +231,14 @@ def plot_seasonal_maps(fielddict,coords,sims,pparams,vert=False,loctimesel=None,
                 pparams['suppcb'] = 1
                 bm,pc = cplt.kemmap(plotfld,lat,lon,**pparams)#@@
 
-                if sigoff==0:
+                if sigoff==False:
                     cplt.addtsigm(bm,pval[rowidx,:,:],lat,lon,type=sigtype)
-
+                    
+                if addcont:
+                    lons, lats = np.meshgrid(lon,lat)
+                    bm.contour(lons,lats,plotfldadd,levels=contsadd,colors='0.5',linewidths=2,latlon=True)
+                    # @@@@ eventually add more contours?
+                    
                 if colidx==0: # when col index is 0, set season
                     ax.set_ylabel(sea)
 
@@ -207,18 +252,24 @@ def plot_seasonal_maps(fielddict,coords,sims,pparams,vert=False,loctimesel=None,
     plt.suptitle(fieldstr)
 
     if printtofile:
-    ##     if sigoff==0:
-    ##         sigstr='sig' + sigtype
-    ##     else:
-    ##         sigstr=''
-        sigstr='sigcont' #@@ hard code
-        suff='pdf'
+        if sigoff==False:
+            sigstr='sig' + sigtype
+        else:
+            sigstr=''
+        #sigstr='sigcont' #@@ hard code
+        if sigoff==False and sigtype=='hatch':
+            suff='png'
+        else:
+            suff='pdf'
 
         if latlim!= None:
             latstr=str(latlim)
         else:
             latstr=''
-
+            
+        if addcont:
+            savestr=savestr+'_' + fieldaddstr + 'cont'
+            
         if vert:
             if screen:
                 style = 'screen'
