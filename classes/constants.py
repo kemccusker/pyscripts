@@ -14,6 +14,22 @@ import platform as platform
 import cccmaNC as cnc
 
 
+def is_standardlev(level):
+    """ is_standardlev(level)
+             Checks whether specified pressure level is
+             'standard' in that files exist in which that level
+             has been selected.
+
+             level should be in Pa
+             returns True or False
+
+             Standard levels are 500, 700, 300 hPa
+    """
+    if level not in (50000, 70000, 30000):
+        return True
+    else:
+        return False
+    
 def get_basepath():
     """ get_basepath():
            returns path to data, depending on what machine we're running on
