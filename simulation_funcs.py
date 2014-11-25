@@ -102,6 +102,9 @@ def plot_seasonal_maps(fielddict,coords,sims,pparams,vert=False,loctimesel=None,
         cmlen=float( plt.cm.get_cmap(cmap).N)
         incradd = (cmaxadd-cminadd) / (cmlen)
         contsadd = np.arange(cminadd,cmaxadd+incradd,incradd)
+        contsadd = contsadd[::2]
+        print 'added contours: ' + str(contsadd)
+        
         
     fig6,ax6 = plt.subplots(len(seasons),len(sims)) # 1 row for e/ of 5 ens members, plus mean, plus meanBC
     fig6.set_size_inches(12,8)  
@@ -131,8 +134,8 @@ def plot_seasonal_maps(fielddict,coords,sims,pparams,vert=False,loctimesel=None,
         fnamep = frootp + timstrp + '_ts.nc'
         if addcont:
             fnamecadd,fnamepadd = con.build_filepathpair(sim,fieldadd)
-            print fnamecadd
-            print fnamepadd
+            #print fnamecadd
+            #print fnamepadd
 
         # @@@ I *think* I don't need this anymore since processing the 3D files more
         # @@  although getting a nonstandard lev is not supported
@@ -220,7 +223,7 @@ def plot_seasonal_maps(fielddict,coords,sims,pparams,vert=False,loctimesel=None,
                      cplt.addtsig(ax,pval[rowidx,...],lat,lev/100.,type=sigtype) # @@ dims?
                 if addcont:
                     lats,levs = np.meshgrid(lat,lev/100.)
-                    ax.contour(lats,levs,plotfldadd,levels=contsadd,colors='0.5',linewidths=2)
+                    ax.contour(lats,levs,plotfldadd,levels=contsadd,colors='0.3',linewidths=1)
                 
                 if colidx==lastcol:
                     # put season label on right side.
@@ -236,7 +239,7 @@ def plot_seasonal_maps(fielddict,coords,sims,pparams,vert=False,loctimesel=None,
                     
                 if addcont:
                     lons, lats = np.meshgrid(lon,lat)
-                    bm.contour(lons,lats,plotfldadd,levels=contsadd,colors='0.5',linewidths=2,latlon=True)
+                    bm.contour(lons,lats,plotfldadd,levels=contsadd,colors='0.3',linewidths=1,latlon=True)
                     # @@@@ eventually add more contours?
                     
                 if colidx==0: # when col index is 0, set season
@@ -268,7 +271,7 @@ def plot_seasonal_maps(fielddict,coords,sims,pparams,vert=False,loctimesel=None,
             latstr=''
             
         if addcont:
-            savestr=savestr+'_' + fieldaddstr + 'cont'
+            savestr=savestr+'_' + fieldaddstr + 'cont3'
             
         if vert:
             if screen:
