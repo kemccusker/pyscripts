@@ -27,12 +27,12 @@ plt.ion()
 
 printtofile=True
 
-field = 'st'
+field = 'sicn'
 smclim=False
 level=50000 # for threed
 
 addcont=True # overlay map with contours
-field2='gz' 
+field2='pmsl' 
 
 # seasonalmap, seasonalvert, plotzonmean, plotseacyc, pattcorrwithtime, plotregmean
 plottype='seasonalmap' 
@@ -45,7 +45,7 @@ withlat=False
 pattcorryr=False
 latlim = None # None #45 # lat limit for NH plots. Set to None otherwise. use 45 for BC-type maps
 levlim= 100 # level limit for vertical ZM plots (in hPa). ignored if screen=True
-
+fallwin=False # just SON and DJF
 
 # Choose how to handle the data ==============
 normbystd=False
@@ -55,16 +55,17 @@ halftime2=False # get only the last 60yrs. make sure to set the other flag the o
 
 # Choose what simulations to add =============
 #  default is R1-5, ENS
-canens=False # just the CAN ensemble (E1-E5) plus mean, plus mean of R ensemble. option to addobs only.
+canens=True # just the CAN ensemble (E1-E5) plus mean, plus mean of R ensemble. option to addobs only.
 allens=False # this is ONLY the ensemble means, plus superensemble
 sensruns=False # sensruns only: addr4ct=1,addsens=1. others=0 no meanBC, r mean, or obs
 ivar=False # this will show ENS (TOT) and ENSE (ANTH) and their difference = internal var
+simsforpaper=False # meanBC, HAD, NSIDC only. best for maps and zonal mean figs (not line plots)
+
 
 addobs=False # add mean of kemhad* & kemnsidc* runs to line plots, seasonal maps. 
 addr4ct=False # add kem1pert2r4ct (constant thickness version of ens4)
 addsens=False # add sensitivity runs (kem1pert1b, kem1pert3)
 addrcp=False # add kem1rcp85a simulation (and others if we do more)
-simsforpaper=False # meanBC, HAD, NSIDC only. best for maps and zonal mean figs (not line plots)
 addcanens=False # add "initial condition" ensemble of kemctl1/kem1pert2
 addsuper=False # add superensemble mean
 
@@ -132,6 +133,10 @@ corrlim=45 # southern lat limit for pattern correlation with time
 # set up simulations and figure filename strings
 sims = 'R1','R4','R3','R5','R2','ENS'#,'ENSE'#,'CAN' # R's in order of sea ice loss
 seasons = ('SON','DJF','MAM','JJA')
+
+if fallwin:
+    seasons=('SON','DJF')
+    savestr = '_SONDJF'
 
 if simsforpaper: # best for maps only
     #sims = ('HAD','NSIDC','E1')
