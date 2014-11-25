@@ -353,8 +353,14 @@ def getNCvar_old(filename,field,timechunk=None,monsel=None,level=None,seas=None,
     #  (time,lev,lat) or (time,lat,lon)
     if seas != None:
         if fld.ndim != 3:
-            print 'data must be 3 dimensional to seasonalize()'
-            return
+            if 1 in fld.shape:
+                fld=fld.squeeze() # attempting to deal with spurious dims of 1 @@@
+                if fld.ndim != 3:
+                    print 'data must be 3 dimensional to seasonalize()'
+                    return
+            else:
+                print 'data must be 3 dimensional to seasonalize()'
+                return
         if monsel != None:
             print "Can't do seasonal average when monsel != None"
             return
