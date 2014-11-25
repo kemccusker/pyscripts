@@ -133,7 +133,7 @@ def get_t63lev(): # prob isn't tied to t63..
     if plat == "Linux":
         basepath = '/home/rkm/work/DATA/CanAM4/constants/'
     else:
-        basepath = '/Users/kelly/CCCma/CanSISE/DATA/constants/' #@@
+        basepath = '/Users/kelly/CCCma/CanSISE/DATA/constants/'
 
     fname = basepath + 'kem1rcp85a_v_001-061_climo.nc'
     
@@ -541,6 +541,24 @@ def build_filepathpair(simpairkey,field,timeper=None):
 
     return (fnamec,fnamep)
 
+def build_ensemblesims(ensname):
+    """ build_ensemblesims(ensname):
+               takes ensname. must match ensemble key name in sims meta dict
+                  e.g. 'HistBC', 'HistIC'
+               returns tuple of diffkeys
+    """
+    simpairs = get_simpairsdict()
+    enssims=list()
+    print enssims
+    for skey in simpairs.iterkeys():
+        ename=simpairs[skey]['pert']['ensname']
+        
+        if ename !=None:
+            if ename == ensname:
+                print skey
+                enssims.append(skey)
+
+    return enssims
 
 def getBCfilenames(field,sim=None):
 
