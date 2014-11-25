@@ -13,7 +13,7 @@
 # 9/25/14: taken from ipython notebook.
 # Goal is to add new ensemble (E*)
 # Other goal is to remove the ensemble member from
-#   the ens average when correlating with it.
+#   the ens average when correlating with it. (not done 11/24/14)
 ##################################
 
 # useful discussion of correlations and significance of them:
@@ -1098,6 +1098,113 @@ ax.grid(True)
 if printtofile:
     fig.savefig(fieldstr + 'pattcorr_nof' + str(latlim) + 'N_' + etype + 'bothcmps_' + cmptype + 'BARS_SEAS_sqfirst.pdf')
     
+# # =====================================================
+# # ==== Plot Just E1-E5 and R1-R5, WITH TOTbar vs ANTbar corrs and OBS somehow?
+# # =====================================================
+
+fig,axs = plt.subplots(1,1)
+fig.set_size_inches(6,4) # more squat
+
+ax = axs #[0]
+
+legtpl=()
+
+wi=0.1 # width of bar
+incr=0.3 # how much to shift in b/w the 2 sets of data
+xxsea2=np.arange(1,6)
+xboxmin=xxsea2-.2
+
+ax.axhspan(-1*rmin,rmin,color='orange',alpha=.3) # shade where corr is NOT significant
+
+fillcol='0.7'
+fillcol2=ccm.get_linecolor('dodgerblue')
+for boxii in range(0,4): # loop through seasons
+    # shaded bars/boxes
+    ax.fill_between((xboxmin[boxii],xboxmin[boxii]+wi),ensminsea[boxii],ensmaxsea[boxii],color=fillcol)
+    ax.fill_between((xboxmin[boxii]+incr,xboxmin[boxii]+incr+wi),mnsea[boxii], mxsea[boxii],color=fillcol2, alpha=.5)
+    
+    # markers
+    ax.plot(xboxmin[boxii]+wi/2.,ensmeansea[boxii],color='k',marker='_',linestyle='none',markersize=15)#,alpha=.9)
+    ax.plot(xboxmin[boxii]+wi/2.+incr,avgsea[boxii],color='b',marker='_',linestyle='none',markersize=15)#,alpha=.7)   
+    
+    # mean values (text)
+    #val = '$%.0f$'%(ensmeansea2[boxii]*ensmeansea2[boxii]*100)
+    val = '$%.0f$'%(ensmeanseasq[boxii]*100)# @@ square the corrs before taking mean
+    #print val
+    #print ensmeansea2[boxii]*ensmeansea2[boxii]*100
+    ax.annotate(val+'%', xy=(xboxmin[boxii]-.07, .95),  xycoords='data')
+    #val = '$%.0f$'%(avgsea[boxii]*avgsea[boxii]*100)
+    val = '$%.0f$'%(avgseasq[boxii]*100) # @@ square the corrs before taking mean
+    #print val
+    #print avgsea[boxii]*avgsea[boxii]*100
+    ax.annotate(val+'%', xy=(xboxmin[boxii]+wi/2.+incr -.07, .95),  xycoords='data')
+
+boxii=boxii+1
+
+# add annual mean
+# w/ mean BC
+# pcstackseasq is 10x4 
+annwgtst = np.tile(annwgts,(5,1)) # tile
+
+# pcseameandfsq is 5x4
+ann2sq = np.average(np.transpose(np.array(pcseameandfsq),(1,0)),weights=annwgtst,axis=1) # ann mean squared per patt corr
+annensmean2sq = np.mean(ann2sq)
+print annensmean2sq
+#
+ann2 = np.average(np.transpose(np.array(pcseameandf),(1,0)),weights=annwgtst,axis=1) # ann mean per patt corr
+ann2max = np.max(ann2)
+ann2min = np.min(ann2)
+ann2ensmean = np.mean(ann2)
+print ann2ensmean
+
+# each ens w/ each other
+# pcstackseasq is 10x4 
+annwgtst = np.tile(annwgts,(10,1)) # tile
+ann = np.average(pcstacksea,weights=annwgts,axis=1) # ann mean per patt corr
+annmax = np.max(ann)
+annmin = np.min(ann)
+avgann = np.mean(ann)
+print avgann
+#
+annsq = np.average(pcstackseasq,weights=annwgts,axis=1) # ann mean per patt corr
+avgannsq = np.mean(annsq)
+print avgannsq
+
+# plot annual mean markers
+ax.fill_between((xboxmin[boxii],xboxmin[boxii]+wi),ann2min,ann2max,color=fillcol)
+ax.fill_between((xboxmin[boxii]+incr,xboxmin[boxii]+incr+wi),annmin,annmax,color=fillcol2,alpha=.5)
+
+ax.plot(xboxmin[boxii]+wi/2.,ann2ensmean,color='k',marker='_',linestyle='none',markersize=15)#,alpha=.9)
+ax.plot(xboxmin[boxii]+wi/2.+incr,avgann,color='b',marker='_',linestyle='none',markersize=15)#,alpha=.9)
+
+val = '$%.0f$'%(annensmean2sq*100)# @@ square the corrs before taking mean
+ax.annotate(val+'%', xy=(xboxmin[boxii]-.07, .95),  xycoords='data')
+
+val = '$%.0f$'%(avgannsq*100) # @@ square the corrs before taking mean
+ax.annotate(val+'%', xy=(xboxmin[boxii]+wi/2.+incr -.07, .95),  xycoords='data')
+
+
+#ax.plot(xxsea[3]+.8,annensmean2,color=fillcol,marker='s',markersize=6) # @@ add each ann mean (max/min)
+#ax.plot((xxsea[3]+.8,xxsea[3]+.8),(ann2min,ann2max),color=fillcol)
+#ax.plot(xxsea[3]+.9,avgann,color=fillcol2,marker='s',markersize=6) # @@ add each ann mean (max/min)
+#ax.plot((xxsea[3]+.9,xxsea[3]+.9),(annmin,annmax),color=fillcol2)
+
+ax.set_ylabel('Pattern Correlation')
+#ax.set_xlabel('season')
+ax.set_xlim((.5,5.5))
+ax.set_xticks(xxsea2)
+ax.set_xticklabels((seasons)+('ANN',))
+#ax.set_title('Compare E1-5 with CAN')
+ax.set_ylim((0,1))
+ax.grid(True)
+
+
+if printtofile:
+    fig.savefig(fieldstr + 'pattcorr_nof' + str(latlim) + 'N_' + etype + 'bothcmps_' + cmptype + 'BARS_SEAS_sqfirst.pdf')
+
+
+# # ============== END just E1-E5, R1-R5, etc
+
 
 # <codecell>
 
