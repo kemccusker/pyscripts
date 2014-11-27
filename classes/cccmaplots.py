@@ -584,3 +584,155 @@ def kemscatter(fldx,fldy,weights=None,axis=None,xlims=None,ylims=None,suppregres
 
 
     return ax
+
+
+def plot_pattcorrs(pcdf, pcdf2=None, rmin=None, axis=None, type='seasonal'):
+    """ plot_pattcorrs(pcdf, axis):
+                          this figure plots range of pattern correlations
+                          as bars, with mean patt corr marker, plus % common
+                          variation annotated.
+
+             pcdf: DataFrame of pattern correlations
+             pcdf2: second set of data to plot
+             rmin: minimum r value (pattern correlation) that is significant for the data
+             axis: plot axis
+             type: 'seasonal' or 'monthly'
+    """
+    import math as math
+    
+    if type=='seasonal':
+        numt=4
+        seasons=('SON','DJF','MAM','JJA')
+    else:
+        print 'ONLY SEASONAL IMPLEMENTED @@ 11/25/14'
+        numt=12 # monthly
+        seasons=con.get_mon()
+
+    # within ensemble pattern correlation combinations
+    # number of combinations: n choose k (here k=2)
+    #    n! / (k! *(n-k)!)
+    ncomb = math.factorial(len(pcdf)) / (2 * math.factorial(len(pcdf)-2) )
+    
+    # first, create matrix of data to take mean, max, min, etc
+    pcstack = np.zeros((ncomb,numt)) # ncomb combos x 4 seasons (or 12 mon)
+    stackii=0
+    keys=pcdf.keys()
+    for eii,skey1 in enumerate(keys):
+        for ineii,skey2 in enumerate(keys[eii+1:len(keys)]):
+            # stack the pc's so I can take max/min, etc
+            pcstack[stackii] = pcdf[skey1][skey2]
+            stackii+=1
+    mxsea = np.max(pcstack,axis=0)
+    mnsea = np.min(pcstack,axis=0)
+    avgsea = np.mean(pcstack,axis=0)
+    tmpstack=copy.copy(pcstack)
+    tmpstack[pcstack<0] = 0 # get rid of negative correlations. they are zero for all intents & purposes in this case
+    pcstacksq = np.power(tmpstack,2) # square the patt corr (the ones that are positive)
+    avgseasq = np.mean(pcstacksq,axis=0) # average squared patt corr (coef of determination)
+
+    if not pcdf2.empty:
+        ncomb2 = math.factorial(len(pcdf2)) / (2 * math.factorial(len(pcdf2)-2) )
+        pcstack2 = np.zeros((ncomb2,numt)) # ncomb combos x 4 seasons
+        stackii=0
+        keys=pcdf2.keys()
+        for eii,skey1 in enumerate(keys):
+            for ineii,skey2 in enumerate(keys[eii+1:len(keys)]):
+                # stack the pc's so I can take max/min, etc
+                pcstack2[stackii] = pcdf2[skey1][skey2]           
+                stackii+=1   
+        mxsea2 = np.max(pcstack2,axis=0)
+        mnsea2 = np.min(pcstack2,axis=0)
+        avgsea2 = np.mean(pcstack2,axis=0)
+        tmpstack2=copy.copy(pcstack2)
+        tmpstack2[pcstack2<0] = 0 # get rid of negative correlations. they are zero for all intents & purposes in this case
+        pcstacksq2 = np.power(tmpstack2,2) # square the patt corr (the ones that are positive)
+        avgseasq2 = np.mean(pcstacksq2,axis=0) # average squared patt corr (coef of determination)
+
+    # add annual mean
+    annwgts = np.array((91,90,92,92))/365.
+    print annwgts
+
+    #fig,axs = plt.subplots(1,1)
+    #fig.set_size_inches(6,4) # more squat
+
+    ax = axis #[0]
+
+    legtpl=()
+
+    wi=0.1 # width of bar
+    incr=0.3 # how much to shift in b/w the 2 sets of data
+    xxsea2=np.arange(1,6)
+    xboxmin=xxsea2-.2
+
+    if rmin!=None:
+        ax.axhspan(-1*rmin,rmin,color='orange',alpha=.3) # shade where corr is NOT significant
+
+    fillcol='0.7'
+    fillcol2=ccm.get_linecolor('dodgerblue')
+    for boxii in range(0,4): # loop through seasons
+        # shaded bars/boxes
+        ax.fill_between((xboxmin[boxii],xboxmin[boxii]+wi),mnsea[boxii],mxsea[boxii],color=fillcol, alpha=.5)
+        if not pcdf2.empty:
+            ax.fill_between((xboxmin[boxii]+incr,xboxmin[boxii]+incr+wi),mnsea2[boxii], mxsea2[boxii],color=fillcol2, alpha=.5)
+
+        # markers
+        ax.plot(xboxmin[boxii]+wi/2.,avgsea[boxii],color='k',marker='_',linestyle='none',markersize=15)#,alpha=.7)
+        if not pcdf2.empty:
+            ax.plot(xboxmin[boxii]+wi/2.+incr,avgsea2[boxii],color='b',marker='_',linestyle='none',markersize=15)#,alpha=.7)   
+
+        # mean values (text)
+        val = '$%.0f$'%(avgseasq[boxii]*100) # @@ square the corrs before taking mean
+        ax.annotate(val+'%', xy=(xboxmin[boxii]+wi/2. -.09, .95),  xycoords='data')
+        if not pcdf2.empty:
+            val = '$%.0f$'%(avgseasq2[boxii]*100) # @@ square the corrs before taking mean
+            ax.annotate(val+'%', xy=(xboxmin[boxii]+wi/2.+incr -.06, .95),  xycoords='data')
+
+    boxii=boxii+1
+
+    # add annual mean -----------
+    annwgtst = np.tile(annwgts,(len(pcdf),1)) # tile
+    # each ens w/ each other
+    # pcstacksq is ncomb x numt
+    annwgtst = np.tile(annwgts,(ncomb,1)) # tile
+    ann = np.average(pcstack,weights=annwgts,axis=1) # ann mean per patt corr
+    annmax = np.max(ann)
+    annmin = np.min(ann)
+    avgann = np.mean(ann)
+    annsq = np.average(pcstacksq,weights=annwgts,axis=1) # ann mean per patt corr
+    avgannsq = np.mean(annsq)
+
+    if not pcdf2.empty:
+        # add annual mean
+        annwgtst = np.tile(annwgts,(len(pcdf2),1)) # tile
+        # each ens w/ each other
+        # pcstacksq is ncomb x numt
+        annwgtst = np.tile(annwgts,(ncomb2,1)) # tile
+        ann = np.average(pcstack2,weights=annwgts,axis=1) # ann mean per patt corr
+        annmax2 = np.max(ann)
+        annmin2 = np.min(ann)
+        avgann2 = np.mean(ann)
+        annsq2 = np.average(pcstacksq2,weights=annwgts,axis=1) # ann mean per patt corr
+        avgannsq2 = np.mean(annsq2)
+
+    # plot annual mean markers
+    ax.fill_between((xboxmin[boxii],xboxmin[boxii]+wi),annmin,annmax,color=fillcol,alpha=.5)
+    if not pcdf2.empty:
+        ax.fill_between((xboxmin[boxii]+incr,xboxmin[boxii]+incr+wi),annmin2,annmax2,color=fillcol2,alpha=.5)
+
+    ax.plot(xboxmin[boxii]+wi/2.,avgann,color='k',marker='_',linestyle='none',markersize=15)#,alpha=.9)
+    if not pcdf2.empty:
+        ax.plot(xboxmin[boxii]+wi/2.+incr,avgann2,color='b',marker='_',linestyle='none',markersize=15)#,alpha=.9)
+
+    val = '$%.0f$'%(avgannsq*100) # @@ square the corrs before taking mean
+    ax.annotate(val+'%', xy=(xboxmin[boxii]+wi/2. -.09, .95),  xycoords='data')
+    if not pcdf2.empty:
+        val = '$%.0f$'%(avgannsq2*100) # @@ square the corrs before taking mean
+        ax.annotate(val+'%', xy=(xboxmin[boxii]+wi/2.+incr -.06, .95),  xycoords='data')
+
+    ax.set_ylabel('Pattern Correlation')
+    ax.set_xlim((.5,5.5))
+    ax.set_xticks(xxsea2)
+    ax.set_xticklabels((seasons)+('ANN',))
+    ax.set_ylim((0,1))
+    ax.grid(True)
+
