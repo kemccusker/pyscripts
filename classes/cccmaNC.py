@@ -240,7 +240,8 @@ def getNCvar(filename,field,timesel=None,levsel=None,monsel=None,seas=None,calc=
                 return
             elif seas == 'climo':
                 fld,stddev = cutl.climatologize3d(fld)
-            elif seas not in ('ANN','DJF','JJA','MAM','SON','NDJ'):
+            elif type(seas) == 'int': # @@ does this work?
+                #elif seas not in ('ANN','DJF','JJA','MAM','SON','NDJ'):
                 # means seas is an int value for a month
                 fld = cutl.seasonalize_monthlyts(fld,mo=seas)
             else:
