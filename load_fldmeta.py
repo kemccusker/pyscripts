@@ -4,6 +4,9 @@
 #   11/20/2014
 import constants as con
 
+# @@@@ really need to have two funcs, one that does just field metadata
+#      like ncfield, conversion factor, units
+#      And another that does plot meta data for that field....
 def loadfldmeta(field,infodict,plottype,ptparams,level=None):
     """ NOTE not all Fields are implemented into fdict and infodict, etc!
         11/20/2014
@@ -26,7 +29,8 @@ def loadfldmeta(field,infodict,plottype,ptparams,level=None):
     sia=False # is the requested field sea ice area
     conv=1
     isflux=False
-
+    leglocs='best','best','best','best'
+    
     if level!=None:
         nonstandardlev = con.is_standardlev(level)
     else:
@@ -34,7 +38,7 @@ def loadfldmeta(field,infodict,plottype,ptparams,level=None):
 
 
     # initialize flags
-    seasonalmap = seasonalvert = plotzonmean = plotseacyc = pattcorrwithtime = plotregmean = False
+    seasonalmap = seasonalvert = plotzonmean = plotseacyc = pattcorrwithtime = plotregmean = timetosig = timetosigsuper = False
 
     if plottype=='seasonalmap':
         seasonalmap=True
@@ -53,6 +57,10 @@ def loadfldmeta(field,infodict,plottype,ptparams,level=None):
         pattcorryr = ptparams['pattcorryr']
     elif plottype=='plotregmean':
         plotregmean=True
+    elif plottype=='timetosig':
+        timetosig=True
+    elif plottype=='timetosigsuper':
+        timetosigsuper=True
     else:
         print 'Plottype not recognized!'
         return
@@ -383,7 +391,7 @@ def loadfldmeta(field,infodict,plottype,ptparams,level=None):
 
         if level == 30000:
             #cmin = -2; cmax = 2
-            pparams['cmin'] = -3; pparams['cmax'] = 3
+            pparams['cmin'] = -2; pparams['cmax'] = 2
             #cminsea = -3; cmaxsea = 3
         else:
             #cmin = -1; cmax = 1
@@ -450,6 +458,7 @@ def loadfldmeta(field,infodict,plottype,ptparams,level=None):
     infodict['seacycylim'] = seacycylim
     fdict['isflux'] = isflux
     fdict['threed'] = threed
+
     ###################### end copy to load_fldmeta.py
 
     return fdict,pparams
