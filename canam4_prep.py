@@ -27,15 +27,17 @@ plt.ion()
 
 printtofile=True
 
-field = 'sicn'
+field = 'pmsl'
 smclim=False
 level=50000 # for threed
 
-addcont=True # overlay map with contours
-field2='pmsl' 
+addcont=False # overlay map with contours
+sigoff=False # if True, don't add significance
+field2='gz' 
+level2=50000
 
-# seasonalmap, seasonalvert, plotzonmean, plotseacyc, pattcorrwithtime, plotregmean
-plottype='seasonalmap' 
+# seasonalmap, seasonalvert, plotzonmean, plotseacyc, pattcorrwithtime, plotregmean, timetosig, timetosigsuper
+plottype='timetosigsuper' 
 
 # None, polcap60, polcap65, polcap70, eurasia, eurasiamori, ntham, nthatl, bks, bksmori, soo
 region='ntham'
@@ -46,6 +48,9 @@ pattcorryr=False
 latlim = None # None #45 # lat limit for NH plots. Set to None otherwise. use 45 for BC-type maps
 levlim= 100 # level limit for vertical ZM plots (in hPa). ignored if screen=True
 fallwin=False # just SON and DJF
+bimon=False # do bi-montly seasons instead
+figtrans=False # for maps: make seasons the cols and sims the rows if True. auto True for simsforpaper
+
 
 # Choose how to handle the data ==============
 normbystd=False
@@ -55,12 +60,13 @@ halftime2=False # get only the last 60yrs. make sure to set the other flag the o
 
 # Choose what simulations to add =============
 #  default is R1-5, ENS
-canens=True # just the CAN ensemble (E1-E5) plus mean, plus mean of R ensemble. option to addobs only.
+canens=False # just the CAN ensemble (E1-E5) plus mean, plus mean of R ensemble. option to addobs only.
 allens=False # this is ONLY the ensemble means, plus superensemble
 sensruns=False # sensruns only: addr4ct=1,addsens=1. others=0 no meanBC, r mean, or obs
 ivar=False # this will show ENS (TOT) and ENSE (ANTH) and their difference = internal var
 simsforpaper=False # meanBC, HAD, NSIDC only. best for maps and zonal mean figs (not line plots)
-
+antcat=False # this is the concatenation of ens members within each ensemble (really only useful for ANT)
+bothcat=True
 
 addobs=False # add mean of kemhad* & kemnsidc* runs to line plots, seasonal maps. 
 addr4ct=False # add kem1pert2r4ct (constant thickness version of ens4)
@@ -72,7 +78,6 @@ addsuper=False # add superensemble mean
 
 # not sure these flags are in use?
 sigtype = 'cont' # significance: 'cont' or 'hatch' which is default
-sigoff=True # if True, don't add significance
 siglevel=0.05
 
 
@@ -133,20 +138,28 @@ corrlim=45 # southern lat limit for pattern correlation with time
 # set up simulations and figure filename strings
 sims = 'R1','R4','R3','R5','R2','ENS'#,'ENSE'#,'CAN' # R's in order of sea ice loss
 seasons = ('SON','DJF','MAM','JJA')
+biseas = ('SO','ND','JF') # @@@ so far only these implemented. expecting to add all 11/25/14
 
 if fallwin:
     seasons=('SON','DJF')
     savestr = '_SONDJF'
 
 if simsforpaper: # best for maps only
-    #sims = ('HAD','NSIDC','E1')
     sims = ('HAD','NSIDC','ENSE','ENS')
-    savestr = '_forpap3' # add ENS
-    seasons=('SON','DJF')
+    savestr = '_forpap4' # add ENS. # 4 means fig is transposed
+    if bimon:
+        seasons=('SO','ND','JF')
+        savestr = savestr + 'bimon'
+    else:
+        seasons=('SON','DJF')
+    figtrans=True
     
 elif sensruns: # add sensitivity runs. with Shaded ENS. don't plot meanBC, mean of ens
     sims = sims[0:5] + ('R4ct','CANnosst','CANnothk') # @@ change to E1nosst, etc?
     savestr = '_sensruns'
+    if bimon:
+        seasons=biseas
+        savestr = savestr + 'bimon'
     
 elif canens: # do canens instead of r ens. Useful for maps.
     sims = ('E1','E2','E3','E4','E5','ENSE','ENS')
@@ -158,14 +171,37 @@ elif canens: # do canens instead of r ens. Useful for maps.
     if addsuper:
         sims = sims + ('ESPR',)
         savestr = savestr + 'spr'
+    if bimon:
+        seasons=biseas
+        savestr = savestr + 'bimon'    
 elif allens: # just do the ens means and superensemble mean
     sims = ('ENS','ENSE','ESPR')
     savestr = '_allens'
+    if bimon:
+        seasons=biseas
+        savestr = savestr + 'bimon'  
     # addobs? @@@
 elif ivar:
-    sims = sims = ('ENS','ENSE','IVAR')
+    sims = ('ENS','ENSE','IVAR')
     savestr = '_ivar'
     smclim=True # @@
+    if bimon:
+        seasons=biseas
+        savestr = savestr + 'bimon'
+elif antcat: # eventually add totcat @@@
+    sims = ('ENSECAT',)
+    savestr = '_antcat'
+    figtrans=True
+    if bimon:
+        seasons=biseas
+        savestr = savestr + 'bimon'
+elif bothcat: # both antcat and totcat
+    sims = ('ENSECAT','ENSCAT')
+    savestr = '_anttotcat'
+    figtrans=True
+    if bimon:
+        seasons=biseas
+        savestr = savestr + 'bimon'
 else:
     if addcanens:
         sims = sims + ('E1','E2','E3','E4','E5','ENSE') # E1=CAN
@@ -188,6 +224,9 @@ else:
     if addrcp:
         sims = sims + ('RCPa',) # control is kemctl1
         savestr = savestr + 'rcpa'
+    if bimon:
+        seasons=biseas
+        savestr = savestr + 'bimon'  
     
 import load_fldmeta as ld
 ld=reload(ld)
@@ -229,13 +268,13 @@ infodict ={'cmapclimo': 'Spectral_r','leglocs': None,
            'seacycylim': None, 'savestr': savestr,
            'model': model, 'sigtype': sigtype, 'sigoff': sigoff,
            'pct': pct, 'seacyclatlim': seacyclatlim, 'region': region,
-           'shadeens': shadeens, 'corrlim': corrlim} # random other info
+           'shadeens': shadeens, 'corrlim': corrlim, 'figtrans':figtrans} # random other info
 
 fdict,pparams=ld.loadfldmeta(field,infodict,plottype,ptparams,level=level)
 
 if addcont: # overlay map with another field in contours
     # start with just anomaly contours. @@later add option for climo
-    fdict2,pparams2=ld.loadfldmeta(field2,infodict,plottype,ptparams,level=level)
+    fdict2,pparams2=ld.loadfldmeta(field2,infodict,plottype,ptparams,level=level2)
 
     
 ## if field == 'st':
@@ -594,24 +633,32 @@ coords = {'lev': con.get_t63lev(), 'lat': con.get_t63lat(), 'lon': con.get_t63lo
 ## ###################### end copy to load_fldmeta.py
 
 # do an if elif elif ....
-
+if plottype=='seasonalvert':
+    infodict['screen']=screen
+else:
+    infodict['screen'] = None
+        
 if plottype in ('seasonalmap','seasonalvert'):
 
     print fdict
     print sims
     print pparams
 
-    if plottype=='seasonalvert':
-        infodict['screen']=screen
-    else:
-        infodict['screen'] = None
+    
         
     # this one does data processing and plotting together
     # some stuff in the function need to be removed or set differently.@@
     # marked in the function @@
-    sfnc.plot_seasonal_maps(fdict,coords,sims,pparams,vert=seasonalvert,
+    if addcont:
+        addflds=(fdict2,)
+        addpparams=(pparams2,)
+    else:
+        addflds=None
+        addpparams=None
+
+    sfnc.calc_plot_seasonal_maps(fdict,coords,sims,pparams,vert=seasonalvert,
                             loctimesel=timesel,info=infodict,seas=seasons,
-                            printtofile=printtofile,addflds=(fdict2,),addpparams=(pparams2,))
+                            printtofile=printtofile,addflds=addflds,addpparams=addpparams)
     
 
 if plottype=='plotseacyc':
@@ -640,6 +687,23 @@ if plottype=='plotregmean':
 
     dblob = sfnc.calc_seasons(fdict,coords,sims,loctimesel=timesel,info=infodict,calctype='regmean')
     sfnc.plot_regmean_byseas(dblob,fdict,sims,info=infodict,printtofile=printtofile)
+
+if plottype=='timetosig' or plottype=='timetosigsuper':
+
+    calctype='timetosig'
+    pparams['cmin'] = 0; pparams['cmax'] = 120 # same clims for all runs/vars in this project
+    pparams['cmap'] = 'Spectral_r' #'YlGnBu'
+    
+    if plottype=='timetosigsuper':
+        calctype='timetosigsuper'
+        pparams['cmax'] = 600
+        
+    dblob = sfnc.calc_seasons(fdict,coords,sims,loctimesel=timesel,info=infodict,calctype=calctype,seas=seasons)
+  
+    sfnc.plot_seasonal_maps(dblob,fdict,coords,sims,pparams,plottype='timetosig',vert=False,seas=seasons,info=infodict,printtofile=printtofile)
+    
+    
+
 
 if testhadisst:
     print '@@testhadisst not implemented'
