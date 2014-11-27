@@ -2,17 +2,17 @@
        11/24/2014
        first function: pattern correlate within ensemble
 """
+import numpy as np
+import pandas as pd
 import constants as con
 import cccmautils as cutl
-import numpy as np
 import cccmaNC as cnc
 
 con = reload(con)
 cutl = reload(cutl)
 cnc = reload(cnc)
 
-# @@ working on pattcorr_withinensemble(). current error: ncfield not defined.
-def pattcorr_withinensemble(ename,field,latlim=60):
+def pattcorr_withinensemble(ename,fdict,latlim=60,timesel='0002-01-01,0121-12-31'):
     """ pattcorr_withinensemble(ename,field,latlim=60)
             pattern corr each member of ensemble with each other one
 
@@ -20,15 +20,24 @@ def pattcorr_withinensemble(ename,field,latlim=60):
     """
     # @@ need diffdict
 
-
+    field=fdict['field']
+    ncfield=fdict['ncfield']
+    conv=fdict['conv']
+    
+    seasons=('SON','DJF','MAM','JJA')
+    
+    
     if ename=='ANT':
-        ename='HistIC'
+        ename='histIC'
     elif ename=='TOT':
-        ename='HistBC'
+        ename='histBC'
 
     enssims = con.build_ensemblesims(ename)
     ensnum=len(enssims)
 
+    print 'ENSSIMS: ' # @@@
+    print enssims # @@
+    
     # generate weights for the pattern corr
     lat = con.get_t63lat()
     lon = con.get_t63lon()
@@ -38,7 +47,8 @@ def pattcorr_withinensemble(ename,field,latlim=60):
     weights = areas / np.sum(np.sum(areas,axis=1),axis=0)
 
     # ========= create diffdict first =====
-    # Monthly
+    diffdict={}
+    seadiffdict={}
     for skey in enssims:
         fnamec,fnamep = con.build_filepathpair(skey,field)
 
@@ -47,21 +57,22 @@ def pattcorr_withinensemble(ename,field,latlim=60):
         fldp = cnc.getNCvar(fnamep,ncfield,timesel=timesel)*conv
         fldd = fldp-fldc
 
-        # take the pattern correlation
+        # Monthly
         flddclimo,flddstd = cutl.climatologize(fldd) # climo first (don't need to do for BCs technically)
         #flddcclimo,flddcstd = cutl.climatologize(flddc) # climo first. baseline diff data
 
         diffdict[skey] = flddclimo
+        print skey + ' ' + str(flddclimo.shape) # @@@
 
-    # Seasonal
-    flddsea = np.zeros((4,len(lat),len(lon)))
+        # Seasonal
+        flddsea = np.zeros((4,len(lat),len(lon)))
 
-    for seaii,sea in enumerate(seasons):
-        fldcsea = np.mean(cnc.getNCvar(fnamec,ncfield,timesel=timesel,seas=sea)*conv,axis=0)
-        fldpsea = np.mean(cnc.getNCvar(fnamep,ncfield,timesel=timesel,seas=sea)*conv,axis=0)
-        flddsea[seaii,...] = fldpsea-fldcsea
+        for seaii,sea in enumerate(seasons):
+            fldcsea = np.mean(cnc.getNCvar(fnamec,ncfield,timesel=timesel,seas=sea)*conv,axis=0)
+            fldpsea = np.mean(cnc.getNCvar(fnamep,ncfield,timesel=timesel,seas=sea)*conv,axis=0)
+            flddsea[seaii,...] = fldpsea-fldcsea
 
-    seadiffdict[skey] = flddsea
+        seadiffdict[skey] = flddsea
 
     # ======= Now do pattern corrs within ensemble ====
 
