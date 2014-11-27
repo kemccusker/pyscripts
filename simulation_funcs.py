@@ -32,8 +32,8 @@ ccm = reload(ccm)
 cnc = reload(cnc)
 
 
-def plot_seasonal_maps(fielddict,coords,sims,pparams,vert=False,loctimesel=None,info=None,printtofile=False,seas=None,addflds=None,addpparams=None):
-    """ plot_seasonal_maps(fielddict,coords,sims,pparams,vert=False,loctimesel=None,info=None,printtofile=False,seas=None, addflds=None):
+def calc_plot_seasonal_maps(fielddict,coords,sims,pparams,vert=False,loctimesel=None,info=None,printtofile=False,seas=None,addflds=None,addpparams=None):
+    """ calc_plot_seasonal_maps(fielddict,coords,sims,pparams,vert=False,loctimesel=None,info=None,printtofile=False,seas=None, addflds=None,addpparams=None):
     
               info should be a dict of catch-all keywords/info
               addflds,addpparams are tuples of fdicts and pparams for field contours to be overlain
@@ -64,6 +64,7 @@ def plot_seasonal_maps(fielddict,coords,sims,pparams,vert=False,loctimesel=None,
     nonstandardlev=fielddict['nonstandardlev']
     savestr=info['savestr']
     screen = info['screen']
+    figtrans = info['figtrans'] # boolean specifying whether to switch rows/cols
     
     bp=con.get_basepath()
     basepath=bp['basepath'] + model + '/'; subdir=bp['subdir'] # @@ move out of function?
@@ -105,12 +106,18 @@ def plot_seasonal_maps(fielddict,coords,sims,pparams,vert=False,loctimesel=None,
         contsadd = contsadd[::2]
         print 'added contours: ' + str(contsadd)
         
-        
-    fig6,ax6 = plt.subplots(len(seasons),len(sims)) # 1 row for e/ of 5 ens members, plus mean, plus meanBC
-    fig6.set_size_inches(12,8)  
-    fig6.subplots_adjust(hspace=.15,wspace=.05)
+    if figtrans:
+        fig6,ax6 = plt.subplots(len(sims),len(seasons)) # 1 row for e/ simulation, 1 col per season
+        fig6.set_size_inches(7,13)
+        lastcol=len(seasons)-1
+        fig6.subplots_adjust(hspace=.02,wspace=.02)
+    else:
+        fig6,ax6 = plt.subplots(len(seasons),len(sims)) # 1 col for e/ simulation, 1 row per season
+        fig6.set_size_inches(12,8)
+        lastcol=len(sims)-1
+        fig6.subplots_adjust(hspace=.15,wspace=.05)
 
-    lastcol=len(sims)-1
+    
     
     for colidx,sim in enumerate(sims): # traverse cols
 
@@ -122,6 +129,7 @@ def plot_seasonal_maps(fielddict,coords,sims,pparams,vert=False,loctimesel=None,
         timstrp = simpair['pert']['timestr']
         frootc = basepath + simctl + subdir + simctl + '_' + field + '_'
         frootp = basepath + simpt + subdir + simpt + '_' + field + '_'
+
 
         rowl=sim
 
@@ -153,7 +161,10 @@ def plot_seasonal_maps(fielddict,coords,sims,pparams,vert=False,loctimesel=None,
                 
         for sea in seasons: # traverse rows (or use map_allseas() ?? @@)
             #ax = ax6[ridx][cidx]
-            ax = ax6[rowidx][colidx] # swapped row and col index positions in subplot
+            if figtrans:
+                ax=ax6[colidx][rowidx]
+            else:
+                ax = ax6[rowidx][colidx] # swapped row and col index positions in subplot
             
             if field=='turb':
                 field='hfl'; fieldb='hfs'
@@ -243,15 +254,28 @@ def plot_seasonal_maps(fielddict,coords,sims,pparams,vert=False,loctimesel=None,
                     # @@@@ eventually add more contours?
                     
                 if colidx==0: # when col index is 0, set season
-                    ax.set_ylabel(sea)
+                    if figtrans:
+                        ax.set_title(sea,fontsize=18)
+                    else:
+                        ax.set_ylabel(sea,fontsize=18)
 
             if rowidx==0: # when row index is 0, set simulation
-                ax.set_title(rowl)     
+                if figtrans:
+                    ax.set_ylabel(rowl,fontsize=18)
+                else:
+                    ax.set_title(rowl,fontsize=18)     
 
             rowidx = rowidx+1
 
-    cbar_ax = fig6.add_axes([.91,.25, .02,.5])
-    fig6.colorbar(pc,cax=cbar_ax) # or do bm.colorbar....
+    if figtrans:
+        cbar_ax = fig6.add_axes([.25,0.07, 0.5, .02])
+        cbor='horizontal'
+    else:
+        cbar_ax = fig6.add_axes([.91,.25, .02,.5])
+        cbor='vertical'
+        
+    cbar_ax.tick_params(labelsize=15)
+    fig6.colorbar(pc,cax=cbar_ax, orientation=cbor) # or do bm.colorbar....
     plt.suptitle(fieldstr)
 
     if printtofile:
@@ -294,11 +318,12 @@ def plot_seasonal_maps(fielddict,coords,sims,pparams,vert=False,loctimesel=None,
                              + latstr + '2.' + suff)
 
 def calc_seasons(fielddict,coords,sims,loctimesel=None,info=None,siglevel=0.05,
-                 calctype=None):
+                 calctype=None,seas=None):
     """ calc_seasons(fielddict,coords,sims,withlat=False,loctimesel=None,info=None,siglevel=0.05)
 
               info: a dict which specifies lots of things, but in particular, which region to average
               calctype: 'zonmean', 'regmean', 'pattcorrwithtime', 'pattcorrwithtimeyr', None
+              @@ seasons default to 'SON','DJF','MAM','JJA' for now.
               
               returns a data blob:
                    blob['ctl'] = fldcdict
@@ -312,8 +337,11 @@ def calc_seasons(fielddict,coords,sims,loctimesel=None,info=None,siglevel=0.05,
                    blob['mask'] = flddmaskdict
                    blob['pcorr'] = fldpcorrdict # pattern corr with time only
     """
-
-    seasons='SON','DJF','MAM','JJA'
+    if seas==None:
+        seasons='SON','DJF','MAM','JJA'
+    else:
+        seasons=seas
+        
     sia = False
 
     field=fielddict['field']
@@ -336,22 +364,32 @@ def calc_seasons(fielddict,coords,sims,loctimesel=None,info=None,siglevel=0.05,
     lon=coords['lon']
     nlon=len(lon)
 
-    plotzonmean=False; plotregmean=False; pattcorrwithtime=False; pattcorryr=False
+    plotzonmean = plotregmean = pattcorrwithtime = pattcorryr = timetosig = timetosigsuper = False
 
-    if calctype!=None and calctype=='zonmean':
+    if calctype==None:
+        return -1
+    elif calctype=='zonmean':
         plotzonmean=True
-    elif calctype!=None and calctype=='regmean':
+    elif calctype=='regmean':
         plotregmean=True
         region=info['region']
-    elif calctype!=None and calctype=='pattcorrwithtime':
+    elif calctype=='pattcorrwithtime':
          # note that this is pattern correlating a run's
          # pattern in time (cumulative avg) w/ its final pattern
         pattcorrwithtime=True
-    elif  calctype!=None and calctype=='pattcorrwithtimeyr':
+    elif calctype=='pattcorrwithtimeyr':
          # note that this is pattern correlating a run's
          # pattern each year in time w/ its final pattern, then sorted
         pattcorrwithtime=True
         pattcorryr=True
+    elif calctype=='timetosig':
+        timetosig=True
+    elif calctype=='timetosigsuper':
+        timetosig=True
+        timetosigsuper=True
+    else:
+        print 'calctype not recognized!'
+        return -1
         
     # note that pattern corr with time will be a 2D processed field -->
     #    for each season, fld.shape = ntime
@@ -369,7 +407,7 @@ def calc_seasons(fielddict,coords,sims,loctimesel=None,info=None,siglevel=0.05,
     fldcdict = dict.fromkeys(sims,{}); fldpdict = dict.fromkeys(sims,{})
     fldcstddict = dict.fromkeys(sims,{}); fldpstddict = dict.fromkeys(sims,{})
     flddiffdict = dict.fromkeys(sims,{}); flddmaskdict = dict.fromkeys(sims,{})
-    fldpcorrdict = dict.fromkeys(sims,{});
+    fldpcorrdict = dict.fromkeys(sims,{}); fldtimetosigdict = dict.fromkeys(sims,{})
     cidict = dict.fromkeys(sims,{})
 
     for ridx,sim in enumerate(sims):    
@@ -379,7 +417,8 @@ def calc_seasons(fielddict,coords,sims,loctimesel=None,info=None,siglevel=0.05,
         seadiffdict=dict.fromkeys(seasons); seadmaskdict=dict.fromkeys(seasons)
         seapcorrdict=dict.fromkeys(seasons)
         seacidict=dict.fromkeys(seasons)
-
+        seatimetosigdict=dict.fromkeys(seasons)
+        
         simpair = con.get_simpair(sim)
         simctl = simpair['ctl']['fullname']
         timstr = simpair['ctl']['timestr']
@@ -401,7 +440,8 @@ def calc_seasons(fielddict,coords,sims,loctimesel=None,info=None,siglevel=0.05,
         else:
             fnamec = frootc + field + '_' + timstr + '_ts.nc'
             fnamep = frootp + field + '_' + timstrp + '_ts.nc'
-        
+
+
         for sii,sea in enumerate(seasons):
 
             ncparams = {'seas': sea}  
@@ -490,6 +530,33 @@ def calc_seasons(fielddict,coords,sims,loctimesel=None,info=None,siglevel=0.05,
 
                 seapcorrdict[sea] = pcorr
 
+            elif timetosig: # @@@@@ time to become significant
+                # use the control climo as the baseline (rather than 1 year), and give
+                #   the full control timeseries to the ttest every time
+                nyr,nlat,nlon = fldc.shape
+                years = np.arange(0,nyr)
+                plotd = np.zeros(fldc.shape)
+                tstat = np.zeros(fldc.shape)
+                pval = np.zeros(fldc.shape)
+                
+                fldctm = np.mean(fldc,axis=0) # time mean of control
+                for yr in years:
+
+                    plotd[yr,...] = np.mean(fldp[0:yr,...]-fldctm,axis=0)
+                    if yr>5:
+                        tstat[yr,...],pval[yr,...] = sp.stats.ttest_ind(fldp[0:yr,...],fldc,axis=0)
+                    else:
+                        pval[yr,...] = np.ones((1,nlat,nlon))
+                # this should be a map of first year of significance.        
+                firstsigyr = np.argmax(pval<=siglevel,axis=0) # returns index of first occurrence (True)
+                #firstsigyr = ma.masked_where(firstsigyr==0,firstsigyr) # somehow the mask doesn't get carried on?
+                firstsigyr = firstsigyr.astype(float) # in order to set nans below, need to convert to floats.
+                # if first sig year is 0 that mean there was never a True. set to a year past sim length
+                firstsigyr[firstsigyr==0] = np.nan  #nyr+1 @@@ 
+                
+                #print firstsigyr.shape # @@
+                seatimetosigdict[sea] = firstsigyr
+                
             elif plotregmean:
                 
                 #limsdict = con.get_regionlims(region)
@@ -527,6 +594,7 @@ def calc_seasons(fielddict,coords,sims,loctimesel=None,info=None,siglevel=0.05,
             seafldpdict[sea] =  np.mean(fldp,axis=0)
             seadiffdict[sea] = np.mean(fldp,axis=0)- np.mean(fldc,axis=0)
             seadmaskdict[sea] = ma.masked_where(pvtmp>siglevel,seadiffdict[sea])
+            
 
             # end loop through seasons
 
@@ -541,6 +609,8 @@ def calc_seasons(fielddict,coords,sims,loctimesel=None,info=None,siglevel=0.05,
         flddmaskdict[sim] = seadmaskdict
         if pattcorrwithtime==1:
             fldpcorrdict[sim] = seapcorrdict
+        if timetosig:
+            fldtimetosigdict[sim] = seatimetosigdict
 
         # end loop through simulations
     if sia:
@@ -558,6 +628,8 @@ def calc_seasons(fielddict,coords,sims,loctimesel=None,info=None,siglevel=0.05,
     blob['mask'] = flddmaskdict
     if pattcorrwithtime:
         blob['pcorr'] = fldpcorrdict
+    if timetosig:
+        blob['timetosig'] = fldtimetosigdict
 
     return blob # datablob
 
@@ -1643,4 +1715,213 @@ def plot_pattcorrwithtime_byseas(datablob,fielddict,sims,pparams=None,info=None,
         else:
             fig.savefig(fieldstr + 'diffpattcorr_ens_meanBC' + savestr + '_allseassp_nhshade.pdf')
 
+
+
+def plot_timetosig(dblob,fielddict,sims,pparams=None,info=None,printtofile=False):
+
+
+    t2s = dblob['timetosig']['NSIDC']['DJF']
+    t2spval = dblob['pval']['NSIDC']['DJF']
+
+    plt.figure()
+    bm,pc=cplt.kemmap(t2s,lat,lon,cmin=-80,cmax=120,cmap='blue2red_w20',type='nh')
+    cplt.addtsigm(bm,t2spval,lat,lon,type='cont')
+
+
+
+def plot_seasonal_maps(dblob,fielddict,coords,sims,pparams,plottype='diff',vert=False,info=None,seas=None,addflds=None,adddata=None,addpparams=None,printtofile=False):
+
+    data=dblob[plottype]
+    pvaldata=dblob['pval']
     
+    addcont=False # overlay with contours. Start with one extra field.
+    
+    field=fielddict['field']
+    fieldstr=fielddict['fieldstr']
+    conv=fielddict['conv']
+
+    if addflds:
+        addcont=True
+        fdictadd = addflds[0]
+        fieldadd = fdictadd['field']
+        fieldaddstr = fdictadd['fieldstr']
+        dataadd = adddata[0] # data blob
+        
+        print 'add: ' + fieldadd
+    if seas != None:
+        seasons=seas
+    else: # standard seasons
+        seasons=('SON','DJF','MAM','JJA')
+
+    pct=info['pct'] 
+    sigtype=info['sigtype'] # specify sig marking type
+    sigoff=info['sigoff']  # turn off significance marking?
+    savestr=info['savestr']
+    screen = info['screen']
+    figtrans = info['figtrans'] # boolean specifying whether to transpose rows/cols
+
+    lat=coords['lat']
+    nlat=len(lat)
+    if vert==True:
+        lev=coords['lev']
+        nlev=len(lev)
+        theshape=(len(seasons),nlev,nlat)      
+    else:
+        lon=coords['lon']
+        nlon=len(lon)
+        theshape=(len(seasons),nlat,nlon)
+
+    latlim=pparams['latlim']
+    cmap=pparams['cmap']
+    cmin=pparams['cmin']; cmax=pparams['cmax']
+    cmlen=float( plt.cm.get_cmap(cmap).N)
+    incr = (cmax-cmin) / (cmlen)
+    conts = np.arange(cmin,cmax+incr,incr)
+
+    if addcont:
+        #cmapadd=addpparams[0]['cmap']
+        cminadd=addpparams[0]['cmin']; cmaxadd=addpparams[0]['cmax']
+        cmlen=float( plt.cm.get_cmap(cmap).N)
+        incradd = (cmaxadd-cminadd) / (cmlen)
+        contsadd = np.arange(cminadd,cmaxadd+incradd,incradd)
+        contsadd = contsadd[::2]
+        print 'added contours: ' + str(contsadd)
+
+
+
+    if figtrans:
+        fig6,ax6 = plt.subplots(len(sims),len(seasons)) # 1 row for e/ simulation, 1 col per season
+        fig6.set_size_inches(7,13)
+        lastcol=len(seasons)-1
+        fig6.subplots_adjust(hspace=.02,wspace=.02)
+    else:
+        fig6,ax6 = plt.subplots(len(seasons),len(sims)) # 1 col for e/ simulation, 1 row per season
+        fig6.set_size_inches(12,8)
+        lastcol=len(sims)-1
+        fig6.subplots_adjust(hspace=.15,wspace=.05)
+
+    for colidx,sim in enumerate(sims): # traverse cols
+
+        rowidx=0
+        rowl=sim
+        simdata=data[sim]
+        simpval=pvaldata[sim]
+        if addcont:
+            simdataadd=dataadd[sim]
+
+        for sea in seasons: # traverse rows (or use map_allseas() ?? @@)
+
+            plotfld = simdata[sea]
+            pval = simpval[sea]
+            if addcont:
+                plotfldadd = simdataadd[sea]
+                
+            if figtrans:
+                if len(sims)==1:
+                    ax=ax6[colidx]
+                else:
+                    ax=ax6[colidx][rowidx]
+            else:
+                if len(sims)==1:
+                    ax=ax6[rowidx]
+                else:
+                    ax = ax6[rowidx][colidx] # swapped row and col index positions in subplot
+
+
+            pparams['axis']=ax
+            
+            if vert: # zonal mean with height
+                
+                pparams['suppcb'] = True
+                pparams['screen'] = screen
+                pparams['addcontlines'] = True
+                if colidx!=0: # if not the first column, suppress y labels @@ may not work with transposed fig
+                    pparams['suppylab'] = True
+                
+                    
+                pc = cplt.vert_plot(plotfld,lev,lat,**pparams)
+                if sigoff==False: # add sig
+                     cplt.addtsig(ax,pval,lat,lev/100.,type=sigtype) # @@ dims?
+                if addcont:
+                    lats,levs = np.meshgrid(lat,lev/100.)
+                    ax.contour(lats,levs,plotfldadd,levels=contsadd,colors='0.3',linewidths=1)
+                
+                if colidx==lastcol:
+                    # put season label on right side.
+                    ax.yaxis.set_label_position("right")
+                    ax.set_ylabel(sea)
+                    
+            else: # maps
+                pparams['suppcb'] = 1
+                bm,pc = cplt.kemmap(plotfld,lat,lon,**pparams)#@@
+
+                if sigoff==False:
+                    cplt.addtsigm(bm,pval,lat,lon,type=sigtype)
+                    
+                if addcont:
+                    lons, lats = np.meshgrid(lon,lat)
+                    bm.contour(lons,lats,plotfldadd,levels=contsadd,colors='0.3',linewidths=1,latlon=True)
+                    # @@@@ eventually add more contours?
+                    
+                if colidx==0: # when col index is 0, set season
+                    if figtrans:
+                        ax.set_title(sea,fontsize=18)
+                    else:
+                        ax.set_ylabel(sea,fontsize=18)
+
+            if rowidx==0: # when row index is 0, set simulation
+                if figtrans:
+                    ax.set_ylabel(rowl,fontsize=18)
+                else:
+                    ax.set_title(rowl,fontsize=18)     
+
+            rowidx = rowidx+1
+
+    if figtrans:
+        cbar_ax = fig6.add_axes([.25,0.07, 0.5, .02])
+        cbor='horizontal'
+    else:
+        cbar_ax = fig6.add_axes([.91,.25, .02,.5])
+        cbor='vertical'
+        
+    cbar_ax.tick_params(labelsize=15)
+    fig6.colorbar(pc,cax=cbar_ax, orientation=cbor) # or do bm.colorbar....
+    plt.suptitle(fieldstr)
+
+    if printtofile:
+        if sigoff==False:
+            sigstr='sig' + sigtype
+        else:
+            sigstr=''
+        if sigoff==False and sigtype=='hatch':
+            suff='png'
+        else:
+            suff='pdf'
+
+        if latlim!= None:
+            latstr=str(latlim)
+        else:
+            latstr=''
+            
+        if addcont:
+            savestr=savestr+'_' + fieldaddstr + 'cont3'
+            
+        if vert:
+            if screen:
+                style = 'screen'
+            else:
+                style = str(latlim) + 'N' + str(levlim) + 'hPa'
+                
+            if pct:
+                fig6.savefig(fieldstr + 'pct' + plottype + sigstr + '_enssubplot' + savestr +
+                             '_seas_' + style + '2.' + suff)
+            else:
+                fig6.savefig(fieldstr + plottype + sigstr + '_enssubplot' + savestr +
+                             '_seas_' + style + '2.' + suff)
+        else: # maps
+            if pct: # version 2 has new season order, new filename/key org
+                fig6.savefig(fieldstr + 'pct' + plottype + '_' + sigstr + '_enssubplot' + savestr +
+                             '_seas_nh' + latstr + '2.' + suff)
+            else:
+                fig6.savefig(fieldstr + plottype + '_' + sigstr + '_enssubplot' + savestr + '_seas_nh'
+                             + latstr + '2.' + suff)
