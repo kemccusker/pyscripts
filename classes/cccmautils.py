@@ -330,6 +330,18 @@ def seasonalize_monthlyts(input,season=None,includenan=0,mo=0,climo=0):
     elif season=='SON':
         subwgts = wgts[8:11]
         start=8
+    elif season=='ND':
+        subwgts = wgts[10:]
+        start=10
+        incr=2
+    elif season=='JF':
+        subwgts = wgts[0:2]
+        start=0
+        incr=2
+    elif season=='SO':
+        subwgts = wgts[8:10]
+        start=8
+        incr=2
     else:
         print "Season not supported!"
         return None
