@@ -1,3 +1,10 @@
+"""
+  scatter_regions.py
+      This script makes scatter plots of regional means. Can do two
+      variables, two regions, two seasons. There are figures of just the simulation mean
+      values with confidence intervals, and figures with all regional averages
+      in time with regression lines. 10/10/2014
+"""
 
 import cccmautils as cutl
 import constants as con
@@ -5,24 +12,26 @@ import cccmaplots as cplt
 import cccmacmaps as ccm
 import pandas as pd
 
-printtofile=True
+printtofile=False
 plt.close('all')
 
 conv1=1; conv2=1
 
-field1='st'; ncfield1='ST'
-#field1='sia'; ncfield1='SICN'
-#field1='gz50000'; ncfield1='PHI'; conv1=1/con.get_g()
-#field1='pmsl'; ncfield1='PMSL'
-region1='polcap60' #'bksmori' #'polcap65'
-sea1='SON'
+plotscatter=False
 
-#field2='st'; ncfield2='ST'
+#field1='st'; ncfield1='ST'
+#field1='sia'; ncfield1='SICN'
+field1='gz50000'; ncfield1='PHI'; conv1=1/con.get_g()
+#field1='pmsl'; ncfield1='PMSL'
+region1='bksmori' #'bksmori' #'polcap65'
+sea1='ND' #'DJF'
+
+field2='st'; ncfield2='ST'
 #field2='sia'; ncfield2='SICN'
-field2='pmsl'; ncfield2='PMSL'
+#field2='pmsl'; ncfield2='PMSL'
 #field2='gz50000'; ncfield2='PHI'; conv2=1/con.get_g()
-region2= 'polcap60' #'eurasiamori'
-sea2='SON'
+region2= 'eurasiamori' #'eurasiamori'
+sea2='ND' #'DJF'
 
 sims = ('E1','E2','E3','E4','E5','R1','R2','R3','R4','R5','HAD','NSIDC','ENS','ENSE')
 TOT = ('R1','R2','R3','R4','R5')
@@ -36,27 +45,35 @@ flddregtsdt2 = {}
 ciregdt = {}
 ciregdt2 = {}
 
-alltotcr1=np.zeros(120*5)
-alltotcr2=np.zeros(120*5)
-alltotpr1=np.zeros(120*5)
-alltotpr2=np.zeros(120*5)
-alltotr1=np.zeros(120*5)
-alltotr2=np.zeros(120*5)
+ntime=120
+# if one of the scatter vars is winter, need to remove a year from the other one
+#  if it's not winter too
+if sea1 in ('DJF','NDJ') or sea2 in ('DJF','NDJ'):
+    ntime=ntime-1
+    
+nsim=len(TOT)
+timesel='0002-01-01,0121-12-31'
+alltotcr1=np.zeros(ntime*nsim)
+alltotcr2=np.zeros(ntime*nsim)
+alltotpr1=np.zeros(ntime*nsim)
+alltotpr2=np.zeros(ntime*nsim)
+alltotr1=np.zeros(ntime*nsim)
+alltotr2=np.zeros(ntime*nsim)
 
-allantcr1=np.zeros(120*5)
-allantcr2=np.zeros(120*5)
-allantpr1=np.zeros(120*5)
-allantpr2=np.zeros(120*5)
-allantr1=np.zeros(120*5)
-allantr2=np.zeros(120*5)
+allantcr1=np.zeros(ntime*nsim)
+allantcr2=np.zeros(ntime*nsim)
+allantpr1=np.zeros(ntime*nsim)
+allantpr2=np.zeros(ntime*nsim)
+allantr1=np.zeros(ntime*nsim)
+allantr2=np.zeros(ntime*nsim)
 tallii=0 # index to keep track of time in accumulated TOT ensemble
 aallii=0 # index to keep track of time in accumulated ANT ensemble
 for sim in sims:
 
     fnamec,fnamep=con.build_filepathpair(sim,field1)
 
-    fldc=cnc.getNCvar(fnamec,ncfield1,timesel='0002-01-01,0121-12-31',seas=sea1)*conv1
-    fldp=cnc.getNCvar(fnamep,ncfield1,timesel='0002-01-01,0121-12-31',seas=sea1)*conv1
+    fldc=cnc.getNCvar(fnamec,ncfield1,timesel=timesel,seas=sea1)*conv1
+    fldp=cnc.getNCvar(fnamep,ncfield1,timesel=timesel,seas=sea1)*conv1
 
 
     lat=cnc.getNCvar(fnamec,'lat')
@@ -70,18 +87,18 @@ for sim in sims:
         fldpreg=cutl.calc_regmean(fldp,lat,lon,region1)
         
     flddregdt[sim] = np.mean(fldpreg-fldcreg,axis=0) # time mean
-    if sea2 is 'DJF' and sea1 is not 'DJF': # have to shorten other timeseries
+    if sea2 in ('DJF','NDJ') and sea1 not in ('DJF','NDJ'): # have to shorten other timeseries
         flddregtsdt[sim] = fldpreg[:-1,...]-np.mean(fldcreg[:-1,...],axis=0) # anomaly timeseries from ctl mean
     else:
         flddregtsdt[sim] = fldpreg-np.mean(fldcreg,axis=0)
 
     if field2 != field1:
         fnamec,fnamep=con.build_filepathpair(sim,field2)
-        fldc2=cnc.getNCvar(fnamec,ncfield2,timesel='0002-01-01,0121-12-31',seas=sea2)*conv2
-        fldp2=cnc.getNCvar(fnamep,ncfield2,timesel='0002-01-01,0121-12-31',seas=sea2)*conv2
+        fldc2=cnc.getNCvar(fnamec,ncfield2,timesel=timesel,seas=sea2)*conv2
+        fldp2=cnc.getNCvar(fnamep,ncfield2,timesel=timesel,seas=sea2)*conv2
     elif sea2 != sea1:
-        fldc2=cnc.getNCvar(fnamec,ncfield2,timesel='0002-01-01,0121-12-31',seas=sea2)*conv2
-        fldp2=cnc.getNCvar(fnamep,ncfield2,timesel='0002-01-01,0121-12-31',seas=sea2)*conv2
+        fldc2=cnc.getNCvar(fnamec,ncfield2,timesel=timesel,seas=sea2)*conv2
+        fldp2=cnc.getNCvar(fnamep,ncfield2,timesel=timesel,seas=sea2)*conv2
     else:
         fldc2=fldc
         fldp2=fldp
@@ -94,31 +111,32 @@ for sim in sims:
         fldpreg2=cutl.calc_regmean(fldp2,lat,lon,region2)
         
     flddregdt2[sim] = np.mean(fldpreg2-fldcreg2,axis=0)
-    if sea1 is 'DJF' and sea2 is not 'DJF':
+    if sea2 in ('DJF','NDJ') and sea1 not in ('DJF','NDJ'): # have to shorten other timeseries
         flddregtsdt2[sim] = fldpreg2[:-1,...]-np.mean(fldcreg2[:-1,...],axis=0)
     else:
         flddregtsdt2[sim] = fldpreg2-np.mean(fldcreg2,axis=0) # anomaly timeseries from ctl mean
 
+    # @@@ there are files with concated ensembles now: e.g. sim name kemctl1enscat, diffname ENSCAT
     if sim in TOT:
         #print 'concat tot ens members'
-        alltotcr1[tallii:tallii+120] = fldcreg
-        alltotcr2[tallii:tallii+120] = fldcreg2
-        alltotpr1[tallii:tallii+120] = fldpreg
-        alltotpr2[tallii:tallii+120] = fldpreg2
-        alltotr1[tallii:tallii+120] = flddregtsdt[sim]
-        alltotr2[tallii:tallii+120] = flddregtsdt2[sim]
-        tallii+=120
+        alltotcr1[tallii:tallii+ntime] = fldcreg # control reg1
+        alltotcr2[tallii:tallii+ntime] = fldcreg2 # control reg2
+        alltotpr1[tallii:tallii+ntime] = fldpreg # pert reg1
+        alltotpr2[tallii:tallii+ntime] = fldpreg2 # pert reg2
+        alltotr1[tallii:tallii+ntime] = flddregtsdt[sim] # diff reg1
+        alltotr2[tallii:tallii+ntime] = flddregtsdt2[sim] # diff reg2
+        tallii+=ntime
         #totser.append(pd.Series(flddregtsdt))
         #totser2.append(pd.Series(flddregtsdt2))
     elif sim in ANT:
         #print 'concat ant ens members'
-        allantcr1[aallii:aallii+120] = fldcreg
-        allantcr2[aallii:aallii+120] = fldcreg2
-        allantpr1[aallii:aallii+120] = fldpreg
-        allantpr2[aallii:aallii+120] = fldpreg2
-        allantr1[aallii:aallii+120] = flddregtsdt[sim]
-        allantr2[aallii:aallii+120] = flddregtsdt2[sim]
-        aallii+=120
+        allantcr1[aallii:aallii+ntime] = fldcreg
+        allantcr2[aallii:aallii+ntime] = fldcreg2
+        allantpr1[aallii:aallii+ntime] = fldpreg
+        allantpr2[aallii:aallii+ntime] = fldpreg2
+        allantr1[aallii:aallii+ntime] = flddregtsdt[sim]
+        allantr2[aallii:aallii+ntime] = flddregtsdt2[sim]
+        aallii+=ntime
         
     # calculate confidence interval
     # double-check the scale setting
@@ -141,225 +159,416 @@ ciregallantr2 = sp.stats.t.interval(1-siglevel,len(allantpr2)-1,loc=np.mean(alla
                          scale=np.std(allantpr2,axis=0)/np.sqrt(len(allantpr2)))
 
 
-# super ensembles
-plt.figure();
-plt.scatter(allantr1,allantr2,color='r')
-plt.scatter(alltotr1,alltotr2,color='k')
-antr1std=allantr1.std()
-antr2std=allantr2.std()
-totr1std=alltotr1.std()
-totr2std=alltotr2.std()
+if plotscatter:
+    # SCATTER SUPER ENSEMBLES IN TIME
+    # super ensembles
+    fig,ax= plt.subplots(1,1) #plt.figure();
+    plt.scatter(allantr1,allantr2,color='r')
+    plt.scatter(alltotr1,alltotr2,color='k')
+    antr1std=allantr1.std()
+    antr2std=allantr2.std()
+    totr1std=alltotr1.std()
+    totr2std=alltotr2.std()
+    axylims = ax.get_ylim()
+    if axylims[0]<=0 and axylims[1]>=0:
+        ax.axhline(y=0,color='k',linewidth=.5)
+    axxlims = ax.get_xlim()
+    if axxlims[0]<=0 and axxlims[1]>=0:
+        ax.axvline(x=0,color='k',linewidth=.5)
 
-print 'really should be printing the conf int range on the figure@@'
-plt.figure();
-ant=plt.scatter(allantr1.mean(),allantr2.mean(),color='r',marker='s',s=8**2)
-tot=plt.scatter(alltotr1.mean(),alltotr2.mean(),color='k',marker='s',s=8**2)
-plt.plot(ciregalltotr1,(alltotr2.mean(),alltotr2.mean()),
-        color='k',linewidth=2,marker='_',markersize=6)
-plt.plot((alltotr1.mean(),alltotr1.mean()),ciregalltotr2,
-        color='k',linewidth=2,marker='_',markersize=6)
-plt.plot(ciregallantr1,(allantr2.mean(),allantr2.mean()),
-        color='r',linewidth=2,marker='_',markersize=6)
-plt.plot((allantr1.mean(),allantr1.mean()),ciregallantr2,
-        color='r',linewidth=2,marker='_',markersize=6)
-plt.xlabel(str(sea1) + ' ' + field1 + ' ' + region1)
-plt.ylabel(str(sea2) + ' ' + field2 + ' ' + region2)
-plt.legend((ant,tot),('ANT','TOT'),loc='best',fancybox=True,framealpha=0.5)
-if printtofile:
-    plt.savefig('scatterCI_' + field1 + region1 + str(sea1) + '_v_' + field2 + region2 + str(sea2) + '_ANTTOTsuperens.pdf')
-
-
-
-ser1 = pd.Series(flddregdt)
-ser2 = pd.Series(flddregdt2)
-serts1=pd.Series(flddregtsdt) 
-serts2=pd.Series(flddregtsdt2)
-serci1 = pd.Series(ciregdt)
-serci2 = pd.Series(ciregdt2)
-
-
-df = pd.DataFrame([ser1,ser2],index=(region1,region2))
-dfts = pd.DataFrame([serts1,serts2],index=(region1,region2))
-cidf = pd.DataFrame([serci1,serci2],index=(region1,region2))
-print df
-
-
-cd = ccm.get_colordict()
-
-# SCATTER PLOT OF SIM MEANS
-fig,ax = plt.subplots(1) #plt.figure()
-plt.scatter(df.filter(regex='R').values[0],df.filter(regex='R').values[1],color='k',marker='s',s=8**2)
-plt.scatter(df.filter(regex='E').values[0],df.filter(regex='E').values[1],color='0.5',marker='o',s=8**2)
-plt.scatter(df['HAD'].values[0],df['HAD'].values[1],color=cd['HAD'],marker='s',s=8**2)
-plt.scatter(df['NSIDC'].values[0],df['NSIDC'].values[1],color=cd['NSIDC'],marker='s',s=8**2)
-plt.scatter(df['ENS'].values[0],df['ENS'].values[1],color=cd['ENS'],marker='s',s=10**2)
-plt.scatter(df['ENSE'].values[0],df['ENSE'].values[1],color=cd['ENSE'],marker='o',s=10**2)
-plt.legend(('TOT','ANT','HAD','NSIDC','$\overline{TOT}$','$\overline{ANT}$'),loc='best',fancybox=True,framealpha=0.5)
-plt.xlabel(str(sea1) + ' ' + field1 + ' ' + region1)
-plt.ylabel(str(sea2) + ' ' + field2 + ' ' + region2)
-axylims = ax.get_ylim()
-if axylims[0]<=0 and axylims[1]>=0:
-    ax.axhline(y=0,color='k',linewidth=.5)
-axxlims = ax.get_xlim()
-if axxlims[0]<=0 and axxlims[1]>=0:
-    ax.axvline(x=0,color='k',linewidth=.5)
-
-if printtofile:
-    fig.savefig('scatter_' + field1 + region1 + str(sea1) + '_v_' + field2 + region2 + str(sea2) + '.pdf')
-
-
-# SCATTER PLOT OF SIM MEANS v2
-fig,ax = plt.subplots(1) #plt.figure()
-for sim in ('R1','R2','R3','R4','R5'): #,'ENS','HAD','NSIDC'):
-    rs = ax.scatter(df[sim].values[0],df[sim].values[1],color='k',marker='s',s=8**2,alpha=0.5)
-    ax.plot(cidf[sim].values[0],
-            (df[sim].values[1],df[sim].values[1]),
+    #SCATTER SUPER ENSEMBLE MEANS with conf interval
+    fig,ax= plt.subplots(1,1) #plt.figure();
+    ant=plt.scatter(allantr1.mean(),allantr2.mean(),color='r',marker='s',s=8**2)
+    tot=plt.scatter(alltotr1.mean(),alltotr2.mean(),color='k',marker='s',s=8**2)
+    plt.plot(ciregalltotr1,(alltotr2.mean(),alltotr2.mean()),
             color='k',linewidth=2,marker='_',markersize=6)
-    ax.plot((df[sim].values[0],df[sim].values[0]),
-        cidf[sim].values[1],
-        color='k',linewidth=2,marker='_',markersize=6)
-for sim in ('E1','E2','E3','E4','E5'):#,'ENSE','HAD','NSIDC'):
-    es = ax.scatter(df[sim].values[0],df[sim].values[1],color='0.5',marker='o',s=8**2,alpha=0.5)
-    ax.plot(cidf[sim].values[0],
-            (df[sim].values[1],df[sim].values[1]),
+    plt.plot((alltotr1.mean(),alltotr1.mean()),ciregalltotr2,
+            color='k',linewidth=2,marker='_',markersize=6)
+    plt.plot(ciregallantr1,(allantr2.mean(),allantr2.mean()),
+            color='r',linewidth=2,marker='_',markersize=6)
+    plt.plot((allantr1.mean(),allantr1.mean()),ciregallantr2,
+            color='r',linewidth=2,marker='_',markersize=6)
+    plt.xlabel(str(sea1) + ' ' + field1 + ' ' + region1)
+    plt.ylabel(str(sea2) + ' ' + field2 + ' ' + region2)
+    plt.legend((ant,tot),('ANT','TOT'),loc='best',fancybox=True,framealpha=0.5)
+    axylims = ax.get_ylim()
+    if axylims[0]<=0 and axylims[1]>=0:
+        ax.axhline(y=0,color='k',linewidth=.5)
+    axxlims = ax.get_xlim()
+    if axxlims[0]<=0 and axxlims[1]>=0:
+        ax.axvline(x=0,color='k',linewidth=.5)
+    if printtofile:
+        plt.savefig('scatterCI_' + field1 + region1 + str(sea1) + '_v_' + field2 + region2 + str(sea2) + '_ANTTOTsuperens.pdf')
+
+
+
+    ser1 = pd.Series(flddregdt)
+    ser2 = pd.Series(flddregdt2)
+    serts1=pd.Series(flddregtsdt) 
+    serts2=pd.Series(flddregtsdt2)
+    serci1 = pd.Series(ciregdt)
+    serci2 = pd.Series(ciregdt2)
+
+
+    df = pd.DataFrame([ser1,ser2],index=(region1,region2))
+    dfts = pd.DataFrame([serts1,serts2],index=(region1,region2))
+    cidf = pd.DataFrame([serci1,serci2],index=(region1,region2))
+    print df
+
+
+    cd = ccm.get_colordict()
+
+    # SCATTER PLOT OF SIM MEANS
+    fig,ax = plt.subplots(1) #plt.figure()
+    plt.scatter(df.filter(regex='R').values[0],df.filter(regex='R').values[1],color='k',marker='s',s=8**2)
+    plt.scatter(df.filter(regex='E').values[0],df.filter(regex='E').values[1],color='0.5',marker='o',s=8**2)
+    plt.scatter(df['HAD'].values[0],df['HAD'].values[1],color=cd['HAD'],marker='s',s=8**2)
+    plt.scatter(df['NSIDC'].values[0],df['NSIDC'].values[1],color=cd['NSIDC'],marker='s',s=8**2)
+    plt.scatter(df['ENS'].values[0],df['ENS'].values[1],color=cd['ENS'],marker='s',s=10**2)
+    plt.scatter(df['ENSE'].values[0],df['ENSE'].values[1],color=cd['ENSE'],marker='o',s=10**2)
+    plt.legend(('TOT','ANT','HAD','NSIDC','$\overline{TOT}$','$\overline{ANT}$'),loc='best',fancybox=True,framealpha=0.5)
+    plt.xlabel(str(sea1) + ' ' + field1 + ' ' + region1)
+    plt.ylabel(str(sea2) + ' ' + field2 + ' ' + region2)
+    axylims = ax.get_ylim()
+    if axylims[0]<=0 and axylims[1]>=0:
+        ax.axhline(y=0,color='k',linewidth=.5)
+    axxlims = ax.get_xlim()
+    if axxlims[0]<=0 and axxlims[1]>=0:
+        ax.axvline(x=0,color='k',linewidth=.5)
+
+    if printtofile:
+        fig.savefig('scatter_' + field1 + region1 + str(sea1) + '_v_' + field2 + region2 + str(sea2) + '.pdf')
+
+
+    # SCATTER PLOT OF SIM MEANS v2 (with conf intervals)
+    fig,ax = plt.subplots(1) #plt.figure()
+    for sim in ('R1','R2','R3','R4','R5'): #,'ENS','HAD','NSIDC'):
+        rs = ax.scatter(df[sim].values[0],df[sim].values[1],color='k',marker='s',s=8**2,alpha=0.5)
+        ax.plot(cidf[sim].values[0],
+                (df[sim].values[1],df[sim].values[1]),
+                color='k',linewidth=2,marker='_',markersize=6)
+        ax.plot((df[sim].values[0],df[sim].values[0]),
+            cidf[sim].values[1],
+            color='k',linewidth=2,marker='_',markersize=6)
+    for sim in ('E1','E2','E3','E4','E5'):#,'ENSE','HAD','NSIDC'):
+        es = ax.scatter(df[sim].values[0],df[sim].values[1],color='0.5',marker='o',s=8**2,alpha=0.5)
+        ax.plot(cidf[sim].values[0],
+                (df[sim].values[1],df[sim].values[1]),
+                color='0.5',linewidth=2,marker='_',markersize=6)
+        ax.plot((df[sim].values[0],df[sim].values[0]),
+            cidf[sim].values[1],
             color='0.5',linewidth=2,marker='_',markersize=6)
-    ax.plot((df[sim].values[0],df[sim].values[0]),
-        cidf[sim].values[1],
-        color='0.5',linewidth=2,marker='_',markersize=6)
-for sim in ('HAD',):
-    had = ax.scatter(df[sim].values[0],df[sim].values[1],color=cd[sim],marker='s',s=8**2,alpha=0.5)
-    ax.plot(cidf[sim].values[0],
-            (df[sim].values[1],df[sim].values[1]),
+    for sim in ('HAD',):
+        had = ax.scatter(df[sim].values[0],df[sim].values[1],color=cd[sim],marker='s',s=8**2,alpha=0.5)
+        ax.plot(cidf[sim].values[0],
+                (df[sim].values[1],df[sim].values[1]),
+                color=cd[sim],linewidth=2,marker='_',markersize=6)
+        ax.plot((df[sim].values[0],df[sim].values[0]),
+            cidf[sim].values[1],
             color=cd[sim],linewidth=2,marker='_',markersize=6)
-    ax.plot((df[sim].values[0],df[sim].values[0]),
-        cidf[sim].values[1],
-        color=cd[sim],linewidth=2,marker='_',markersize=6)
-for sim in ('NSIDC',):
-    ns = ax.scatter(df[sim].values[0],df[sim].values[1],color=cd[sim],marker='s',s=8**2,alpha=0.5)
-    ax.plot(cidf[sim].values[0],
-            (df[sim].values[1],df[sim].values[1]),
+    for sim in ('NSIDC',):
+        ns = ax.scatter(df[sim].values[0],df[sim].values[1],color=cd[sim],marker='s',s=8**2,alpha=0.5)
+        ax.plot(cidf[sim].values[0],
+                (df[sim].values[1],df[sim].values[1]),
+                color=cd[sim],linewidth=2,marker='_',markersize=6)
+        ax.plot((df[sim].values[0],df[sim].values[0]),
+            cidf[sim].values[1],
             color=cd[sim],linewidth=2,marker='_',markersize=6)
-    ax.plot((df[sim].values[0],df[sim].values[0]),
-        cidf[sim].values[1],
-        color=cd[sim],linewidth=2,marker='_',markersize=6)
-for sim in ('ENSE',): # different marker
-    em = ax.scatter(df[sim].values[0],df[sim].values[1],color=cd[sim],marker='o',s=8**2,alpha=0.5)
-    ax.plot(cidf[sim].values[0],
-            (df[sim].values[1],df[sim].values[1]),
+    for sim in ('ENSE',): # different marker
+        em = ax.scatter(df[sim].values[0],df[sim].values[1],color=cd[sim],marker='o',s=8**2,alpha=0.5)
+        ax.plot(cidf[sim].values[0],
+                (df[sim].values[1],df[sim].values[1]),
+                color=cd[sim],linewidth=2,marker='_',markersize=6)
+        ax.plot((df[sim].values[0],df[sim].values[0]),
+            cidf[sim].values[1],
             color=cd[sim],linewidth=2,marker='_',markersize=6)
-    ax.plot((df[sim].values[0],df[sim].values[0]),
-        cidf[sim].values[1],
-        color=cd[sim],linewidth=2,marker='_',markersize=6)
-for sim in ('ENS',):
-    rm = ax.scatter(df[sim].values[0],df[sim].values[1],color=cd[sim],marker='s',s=8**2,alpha=0.5)
-    ax.plot(cidf[sim].values[0],
-            (df[sim].values[1],df[sim].values[1]),
+    for sim in ('ENS',):
+        rm = ax.scatter(df[sim].values[0],df[sim].values[1],color=cd[sim],marker='s',s=8**2,alpha=0.5)
+        ax.plot(cidf[sim].values[0],
+                (df[sim].values[1],df[sim].values[1]),
+                color=cd[sim],linewidth=2,marker='_',markersize=6)
+        ax.plot((df[sim].values[0],df[sim].values[0]),
+            cidf[sim].values[1],
             color=cd[sim],linewidth=2,marker='_',markersize=6)
-    ax.plot((df[sim].values[0],df[sim].values[0]),
-        cidf[sim].values[1],
-        color=cd[sim],linewidth=2,marker='_',markersize=6)
-plt.legend((rs,es,had,ns,rm,em),
-           ('TOT','ANT','HAD','NSIDC','$\overline{TOT}$','$\overline{ANT}$'),
-           loc='best',fancybox=True,framealpha=0.5)
-plt.xlabel(str(sea1) + ' ' + field1 + ' ' + region1)
-plt.ylabel(str(sea2) + ' ' + field2 + ' ' + region2)
-axylims = ax.get_ylim()
-if axylims[0]<=0 and axylims[1]>=0:
-    ax.axhline(y=0,color='k',linewidth=.5)
-axxlims = ax.get_xlim()
-if axxlims[0]<=0 and axxlims[1]>=0:
-    ax.axvline(x=0,color='k',linewidth=.5)
-if printtofile:
-    fig.savefig('scatterCI_' + field1 + region1 + str(sea1) + '_v_' + field2 + region2 + str(sea2) + '.pdf')
+    plt.legend((rs,es,had,ns,rm,em),
+               ('TOT','ANT','HAD','NSIDC','$\overline{TOT}$','$\overline{ANT}$'),
+               loc='best',fancybox=True,framealpha=0.5)
+    plt.xlabel(str(sea1) + ' ' + field1 + ' ' + region1)
+    plt.ylabel(str(sea2) + ' ' + field2 + ' ' + region2)
+    axylims = ax.get_ylim()
+    if axylims[0]<=0 and axylims[1]>=0:
+        ax.axhline(y=0,color='k',linewidth=.5)
+    axxlims = ax.get_xlim()
+    if axxlims[0]<=0 and axxlims[1]>=0:
+        ax.axvline(x=0,color='k',linewidth=.5)
+    if printtofile:
+        fig.savefig('scatterCI_' + field1 + region1 + str(sea1) + '_v_' + field2 + region2 + str(sea2) + '.pdf')
 
 
 
-## fig,ax = plt.subplots(1) #plt.figure()
-## plt.scatter(dfts['R4'].values[0],dfts['R4'].values[1],color=cd['R4'],marker='s',s=3**2,alpha=0.5)
-## plt.scatter(dfts['R3'].values[0],dfts['R3'].values[1],color=cd['R3'],marker='s',s=3**2,alpha=0.5)
-## plt.scatter(dfts['ENS'].values[0],dfts['ENS'].values[1],color=cd['ENS'],marker='s',s=3**2,alpha=0.5)
-## plt.scatter(dfts['ENSE'].values[0],dfts['ENSE'].values[1],color=cd['ENSE'],marker='s',s=3**2,alpha=0.5)
+    ## fig,ax = plt.subplots(1) #plt.figure()
+    ## plt.scatter(dfts['R4'].values[0],dfts['R4'].values[1],color=cd['R4'],marker='s',s=3**2,alpha=0.5)
+    ## plt.scatter(dfts['R3'].values[0],dfts['R3'].values[1],color=cd['R3'],marker='s',s=3**2,alpha=0.5)
+    ## plt.scatter(dfts['ENS'].values[0],dfts['ENS'].values[1],color=cd['ENS'],marker='s',s=3**2,alpha=0.5)
+    ## plt.scatter(dfts['ENSE'].values[0],dfts['ENSE'].values[1],color=cd['ENSE'],marker='s',s=3**2,alpha=0.5)
 
-## plt.scatter(df['R4'].values[0],df['R4'].values[1],color=cd['R4'],marker='s',s=8**2,edgecolor='k',alpha=0.3)
-## plt.scatter(df['R3'].values[0],df['R3'].values[1],color=cd['R3'],marker='s',s=8**2,edgecolor='k',alpha=0.3)
-## plt.scatter(df['ENS'].values[0],df['ENS'].values[1],color=cd['ENS'],marker='s',s=8**2,edgecolor='k',alpha=0.3)
-## plt.scatter(df['ENSE'].values[0],df['ENSE'].values[1],color=cd['ENSE'],marker='s',s=8**2,edgecolor='k',alpha=0.3)
+    ## plt.scatter(df['R4'].values[0],df['R4'].values[1],color=cd['R4'],marker='s',s=8**2,edgecolor='k',alpha=0.3)
+    ## plt.scatter(df['R3'].values[0],df['R3'].values[1],color=cd['R3'],marker='s',s=8**2,edgecolor='k',alpha=0.3)
+    ## plt.scatter(df['ENS'].values[0],df['ENS'].values[1],color=cd['ENS'],marker='s',s=8**2,edgecolor='k',alpha=0.3)
+    ## plt.scatter(df['ENSE'].values[0],df['ENSE'].values[1],color=cd['ENSE'],marker='s',s=8**2,edgecolor='k',alpha=0.3)
 
-## plt.xlabel(sea1 + ' ' + field1 + ' ' + region1)
-## plt.ylabel(sea2 + ' ' + field2 + ' ' + region2)
-## axylims = ax.get_ylim()
-## if axylims[0]<=0 and axylims[1]>=0:
-##     ax.axhline(y=0,color='k',linewidth=.5)
-## axxlims = ax.get_xlim()
-## if axxlims[0]<=0 and axxlims[1]>=0:
-##     ax.axvline(x=0,color='k',linewidth=.5)
+    ## plt.xlabel(sea1 + ' ' + field1 + ' ' + region1)
+    ## plt.ylabel(sea2 + ' ' + field2 + ' ' + region2)
+    ## axylims = ax.get_ylim()
+    ## if axylims[0]<=0 and axylims[1]>=0:
+    ##     ax.axhline(y=0,color='k',linewidth=.5)
+    ## axxlims = ax.get_xlim()
+    ## if axxlims[0]<=0 and axxlims[1]>=0:
+    ##     ax.axvline(x=0,color='k',linewidth=.5)
 
 
 
-# SCATTER PLOT IN TIME AND SIM
-fig,axs = plt.subplots(1,2,sharey=True,sharex=True) #plt.figure()
-fig.set_size_inches(9,5)
-ax=axs[0]
-for sim in ('R1','R2','R3','R4','R5','ENS'):#,'HAD','NSIDC'):
-    ax.scatter(dfts[sim].values[0],dfts[sim].values[1],color=cd[sim],marker='s',s=3**2,alpha=0.5)
-for sim in ('R1','R2','R3','R4','R5','ENS'): # means
-    ax.scatter(df[sim].values[0],df[sim].values[1],color=cd[sim],marker='s',s=8**2,edgecolor='k',alpha=0.7)
+    # SCATTER PLOT IN TIME AND SIM
+    fig,axs = plt.subplots(1,2,sharey=True,sharex=True) #plt.figure()
+    fig.set_size_inches(9,5)
+    ax=axs[0]
+    for sim in ('R1','R2','R3','R4','R5','ENS'):#,'HAD','NSIDC'):
+        ax.scatter(dfts[sim].values[0],dfts[sim].values[1],color=cd[sim],marker='s',s=3**2,alpha=0.5)
+    for sim in ('R1','R2','R3','R4','R5','ENS'): # means
+        ax.scatter(df[sim].values[0],df[sim].values[1],color=cd[sim],marker='s',s=8**2,edgecolor='k',alpha=0.7)
 
-ax.set_xlabel(str(sea1) + ' ' + field1 + ' ' + region1)
-ax.set_ylabel(str(sea2) + ' ' + field2 + ' ' + region2)
-if axylims[0]<=0 and axylims[1]>=0:
-    ax.axhline(y=0,color='k',linewidth=.5)
-if axxlims[0]<=0 and axxlims[1]>=0:
-    ax.axvline(x=0,color='k',linewidth=.5)
-ax.set_title('TOT')
+    ax.set_xlabel(str(sea1) + ' ' + field1 + ' ' + region1)
+    ax.set_ylabel(str(sea2) + ' ' + field2 + ' ' + region2)
+    if axylims[0]<=0 and axylims[1]>=0:
+        ax.axhline(y=0,color='k',linewidth=.5)
+    if axxlims[0]<=0 and axxlims[1]>=0:
+        ax.axvline(x=0,color='k',linewidth=.5)
+    ax.set_title('TOT')
 
-ax=axs[1]
-for sim in ('E1','E2','E3','E4','E5','ENSE'):#,'HAD','NSIDC'):
-    ax.scatter(dfts[sim].values[0],dfts[sim].values[1],color=cd[sim],marker='s',s=3**2,alpha=0.5)
-for sim in ('E1','E2','E3','E4','E5','ENSE'):
-    ax.scatter(df[sim].values[0],df[sim].values[1],color=cd[sim],marker='s',s=8**2,edgecolor='k',alpha=0.7)
-axylims = ax.get_ylim()
-axxlims = ax.get_xlim()
-onex=np.linspace(axxlims[0],axxlims[1])
-ax=axs[0]
-for sim in ('R1','R2','R3','R4','R5','ENS'):#,'HAD','NSIDC'):
-    mm, bb, rval, pval, std_err = sp.stats.linregress(dfts[sim].values[0],dfts[sim].values[1])
-    #mm, bb = np.polyfit(dfts[sim].values[0],dfts[sim].values[1], 1)
-    ax.plot(onex,mm*onex + bb, color=cd[sim],linewidth=2)#,linestyle='--')
-    #rr = np.corrcoef(dfts[sim].values[0],dfts[sim].values[1] )[0,1]
-    rsq = rval**2
-    print 'TOT: R: ' + str(rval) + ', R squared: ' + str(rsq)
-    ## val = '$%.2f$'%(rsq)
-    ## ax.annotate('$R^2$= ' + val, xy=(axxlims[0]+.1*axxlims[1], axylims[1]-.2*axylims[1]),
-    ##             xycoords='data') # upper left?
-ax=axs[1]
-for sim in ('E1','E2','E3','E4','E5','ENSE'):#,'HAD','NSIDC'):
-    mm, bb, rval, pval, std_err = sp.stats.linregress(dfts[sim].values[0],dfts[sim].values[1])
-    #mm, bb = np.polyfit(dfts[sim].values[0],dfts[sim].values[1], 1)
-    ax.plot(onex,mm*onex + bb, color=cd[sim],linewidth=2)#,linestyle='--')
-    #rr = np.corrcoef(dfts[sim].values[0],dfts[sim].values[1] )[0,1]
-    rsq = rval**2
-    print 'ANT: R: ' + str(rval) + ', R squared: ' + str(rsq)
+    ax=axs[1]
+    for sim in ('E1','E2','E3','E4','E5','ENSE'):#,'HAD','NSIDC'):
+        ax.scatter(dfts[sim].values[0],dfts[sim].values[1],color=cd[sim],marker='s',s=3**2,alpha=0.5)
+    for sim in ('E1','E2','E3','E4','E5','ENSE'):
+        ax.scatter(df[sim].values[0],df[sim].values[1],color=cd[sim],marker='s',s=8**2,edgecolor='k',alpha=0.7)
+    axylims = ax.get_ylim()
+    axxlims = ax.get_xlim()
+    onex=np.linspace(axxlims[0],axxlims[1])
+    ax=axs[0]
+    for sim in ('R1','R2','R3','R4','R5','ENS'):#,'HAD','NSIDC'):
+        mm, bb, rval, pval, std_err = sp.stats.linregress(dfts[sim].values[0],dfts[sim].values[1])
+        #mm, bb = np.polyfit(dfts[sim].values[0],dfts[sim].values[1], 1)
+        ax.plot(onex,mm*onex + bb, color=cd[sim],linewidth=2)#,linestyle='--')
+        #rr = np.corrcoef(dfts[sim].values[0],dfts[sim].values[1] )[0,1]
+        rsq = rval**2
+        print 'TOT: R: ' + str(rval) + ', R squared: ' + str(rsq)
+        ## val = '$%.2f$'%(rsq)
+        ## ax.annotate('$R^2$= ' + val, xy=(axxlims[0]+.1*axxlims[1], axylims[1]-.2*axylims[1]),
+        ##             xycoords='data') # upper left?
+    ax=axs[1]
+    for sim in ('E1','E2','E3','E4','E5','ENSE'):#,'HAD','NSIDC'):
+        mm, bb, rval, pval, std_err = sp.stats.linregress(dfts[sim].values[0],dfts[sim].values[1])
+        #mm, bb = np.polyfit(dfts[sim].values[0],dfts[sim].values[1], 1)
+        ax.plot(onex,mm*onex + bb, color=cd[sim],linewidth=2)#,linestyle='--')
+        #rr = np.corrcoef(dfts[sim].values[0],dfts[sim].values[1] )[0,1]
+        rsq = rval**2
+        print 'ANT: R: ' + str(rval) + ', R squared: ' + str(rsq)
 
-ax.set_xlabel(str(sea1) + ' ' + field1 + ' ' + region1)
-ax.set_ylabel(str(sea2) + ' ' + field2 + ' ' + region2)
-axylims = ax.get_ylim()
-if axylims[0]<=0 and axylims[1]>=0:
-    ax.axhline(y=0,color='k',linewidth=.5)
-axxlims = ax.get_xlim()
-if axxlims[0]<=0 and axxlims[1]>=0:
-    ax.axvline(x=0,color='k',linewidth=.5)
-ax.set_title('ANT')
+    ax.set_xlabel(str(sea1) + ' ' + field1 + ' ' + region1)
+    ax.set_ylabel(str(sea2) + ' ' + field2 + ' ' + region2)
+    axylims = ax.get_ylim()
+    if axylims[0]<=0 and axylims[1]>=0:
+        ax.axhline(y=0,color='k',linewidth=.5)
+    axxlims = ax.get_xlim()
+    if axxlims[0]<=0 and axxlims[1]>=0:
+        ax.axvline(x=0,color='k',linewidth=.5)
+    ax.set_title('ANT')
 
-if printtofile:
-    fig.savefig('scatterregress_' + field1 + region1 + str(sea1) +\
-                '_v_' + field2 + region2 + str(sea2) + '_ANTTOTobssbplt.pdf')
+    if printtofile:
+        fig.savefig('scatterregress_' + field1 + region1 + str(sea1) +\
+                    '_v_' + field2 + region2 + str(sea2) + '_ANTTOTobssbplt.pdf')
 
-#flddregdf = pd.DataFrame(flddregdt,i)
+    #flddregdf = pd.DataFrame(flddregdt,i)
 
-## plt.figure()
-## cplt.kemscatter(flddreg,flddreg2)
-## plt.xlabel(region1)
-## plt.ylabel(region2)
-## plt.title(sea)
+    ## plt.figure()
+    ## cplt.kemscatter(flddreg,flddreg2)
+    ## plt.xlabel(region1)
+    ## plt.ylabel(region2)
+    ## plt.title(sea)
+
+
+
+# ###### HISTOGRAMS #########
+
+print 'HISTOGRAMS' # @@@
+print allantr2.shape
+
+## fig,ax=plt.subplots(1,1)
+## nna,binsa,patchesa = ax.hist(allantr2,color='.5',alpha=0.5,normed=True,histtype='stepfilled')#,orientation='horizontal')#,cumulative=True)
+## nnt, binst, patchest = ax.hist(alltotr2,color='b',alpha=0.5,normed=True,histtype='stepfilled')#,orientation='horizontal')#,cumulative=True)
+
+from scipy.stats import norm
+
+## anormed=norm.fit(allantr2)
+## amean=anormed[0]
+## asd=anormed[1]
+## #Generate X points
+## axlims = [-6*asd+amean, 6*asd+amean] # large limits
+## axx = np.linspace(axlims[0],axlims[1],500)
+## #Get Y points via Normal PDF with fitted parameters
+## apdf_fitted = norm.pdf(axx,loc=amean,scale=asd)
+
+## tnormed=norm.fit(alltotr2)
+## tmean=tnormed[0]
+## tsd=tnormed[1]
+## #Generate X points
+## txlims = [-6*tsd+tmean, 6*tsd+tmean] # large limits
+## txx = np.linspace(txlims[0],txlims[1],500)
+## #Get Y points via Normal PDF with fitted parameters
+## tpdf_fitted = norm.pdf(txx,loc=tmean,scale=tsd)
+
+
+## ant=ax.plot(axx,apdf_fitted,'k')
+## tot=ax.plot(txx,tpdf_fitted,'b')
+## ax.set_xlabel((field2 + region2 + '_' + str(sea2)))
+## ax.set_title('Anomalies')
+## ax.legend(('ANT','TOT'))
+## if printtofile:
+##     fig.savefig('histpdf_' + (field2 + region2 + '_' + str(sea2)) + '_ANTTOTanom.pdf')
+## print 'ANT: ' + str(anormed)
+## print 'TOT: ' + str(tnormed)
+
+
+def plot_anttotanom_histpdf(antdata,totdata,printtofile=False,label=''):
+    
+    fig,ax=plt.subplots(1,1)
+    nna,binsa,patchesa = ax.hist(antdata,color='.5',alpha=0.5,normed=True,histtype='stepfilled')#,orientation='horizontal')#,cumulative=True)
+    nnt, binst, patchest = ax.hist(totdata,color='b',alpha=0.5,normed=True,histtype='stepfilled')#,orientation='horizontal')#,cumulative=True)
+
+    anormed=norm.fit(antdata)
+    amean=anormed[0]
+    asd=anormed[1]
+    #Generate X points
+    axlims = [-4*asd+amean, 4*asd+amean] # large limits
+    axx = np.linspace(axlims[0],axlims[1],500)
+    #Get Y points via Normal PDF with fitted parameters
+    apdf_fitted = norm.pdf(axx,loc=amean,scale=asd)
+
+    tnormed=norm.fit(totdata)
+    tmean=tnormed[0]
+    tsd=tnormed[1]
+    #Generate X points
+    txlims = [-4*tsd+tmean, 4*tsd+tmean] # large limits
+    txx = np.linspace(txlims[0],txlims[1],500)
+    #Get Y points via Normal PDF with fitted parameters
+    tpdf_fitted = norm.pdf(txx,loc=tmean,scale=tsd)
+
+    ax.plot(axx,apdf_fitted,'k')
+    ax.plot(txx,tpdf_fitted,'b')
+    ax.set_xlabel(label)
+    ax.set_title('Anomalies')
+    ax.legend(('ANT','TOT'))
+    if printtofile:
+        fig.savefig('histpdf_' + label + '_ANTTOTanom.pdf')
+
+    print '\n'
+    print label
+    print 'ANT: ' + str(anormed)
+    print 'TOT: ' + str(tnormed)
+
+
+def plot_anttotsbplt_histpdf(antdata,totdata,printtofile=False,label=''):
+
+    """ antdata and totdata must be tuples of CTL, PERT !!
+    """
+    
+    allantc=antdata[0]
+    allantp=antdata[1]
+    alltotc=totdata[0]
+    alltotp=totdata[1]
+    
+    antcfld = allantc-np.mean(allantc)
+    antpfld = allantp-np.mean(allantc) # subtract its own mean or control mean??
+    print '\n'
+    print label
+    print 'antcfld mean ' + str(antcfld.mean())
+    print 'antpfld mean ' + str(antpfld.mean())
+    
+    totcfld = alltotc-np.mean(alltotc)
+    totpfld = alltotp-np.mean(alltotc)
+    
+    fig,axs=plt.subplots(1,2) ########### SUBPLOT
+    fig.set_size_inches(10,5)
+    ax=axs[0]
+    nnac,binsac,patchesac = ax.hist(antcfld,color='.5',alpha=0.5,normed=True,histtype='stepfilled')#,orientation='horizontal')#,cumulative=True)
+    nnap, binsap, patchesap = ax.hist(antpfld,color='r',alpha=0.5,normed=True,histtype='stepfilled')#,orientation='horizontal')#,cumulative=True)
+
+    acnormed=norm.fit(antcfld)
+    amean=acnormed[0]
+    asd=acnormed[1]
+    #Generate X points
+    axlims = [-4*asd+amean, 4*asd+amean] # large limits
+    axx = np.linspace(axlims[0],axlims[1],500)
+    #Get Y points via Normal PDF with fitted parameters
+    acpdf_fitted = norm.pdf(axx,loc=amean,scale=asd)
+
+    apnormed=norm.fit(antpfld)
+    apmean=apnormed[0]
+    apsd=apnormed[1]
+    #Generate X points
+    apxlims = [-4*apsd+apmean, 4*apsd+apmean] # large limits
+    apxx = np.linspace(apxlims[0],apxlims[1],500)
+    #Get Y points via Normal PDF with fitted parameters
+    appdf_fitted = norm.pdf(apxx,loc=apmean,scale=apsd)
+
+    ax.plot(axx,acpdf_fitted,'k')
+    ax.plot(apxx,appdf_fitted,'r')
+    ax.set_xlabel(label)
+    ax.set_title('ANT')
+    ax.legend(('CTL','PERT'))
+
+    print label
+    print 'ANT CTL: ' + str(acnormed)
+    print 'ANT PERT: ' + str(apnormed)
+
+    ax=axs[1]
+    nntc, binstc, patchestc = ax.hist(totcfld,color='0.5',alpha=0.5,normed=True,histtype='stepfilled')
+    nntp, binstp, patchestp = ax.hist(totpfld,color='r',alpha=0.5,normed=True,histtype='stepfilled')
+
+    tcnormed=norm.fit(totcfld)
+    tmean=tcnormed[0]
+    tsd=tcnormed[1]
+    #Generate X points
+    txlims = [-4*tsd+tmean, 4*tsd+tmean] # large limits
+    txx = np.linspace(txlims[0],txlims[1],500)
+    #Get Y points via Normal PDF with fitted parameters
+    tcpdf_fitted = norm.pdf(txx,loc=tmean,scale=tsd)
+
+    tpnormed=norm.fit(totpfld)
+    tpmean=tpnormed[0]
+    tpsd=tpnormed[1]
+    #Generate X points
+    tpxlims = [-4*tpsd+tpmean, 4*tpsd+tpmean] # large limits
+    tpxx = np.linspace(tpxlims[0],tpxlims[1],500)
+    #Get Y points via Normal PDF with fitted parameters
+    tppdf_fitted = norm.pdf(tpxx,loc=tpmean,scale=tpsd)
+
+    ax.plot(txx,tcpdf_fitted,'k')
+    ax.plot(tpxx,tppdf_fitted,'r')
+    ax.set_xlabel(label)
+    ax.set_title('TOT')
+    ax.legend(('CTL','PERT'))
+
+    print label
+    print 'TOT CTL: ' + str(tcnormed)
+    print 'TOT PERT: ' + str(tpnormed)
+    if printtofile:
+        fig.savefig('histpdf_' + label + '_ANTTOTsbplt.pdf')
+
+
+
+plot_anttotanom_histpdf(allantr2,alltotr2,label=(field2 + region2 + '_' + str(sea2)),printtofile=True)
+plot_anttotanom_histpdf(allantr1,alltotr1,label=(field1 + region1 + '_' + str(sea1)),printtofile=True)
+
+plot_anttotsbplt_histpdf((allantcr2,allantpr2),(alltotcr2,alltotpr2),label=(field2 + region2 + '_' + str(sea2)),printtofile=True)
+plot_anttotsbplt_histpdf((allantcr1,allantpr1),(alltotcr1,alltotpr1),label=(field1 + region1 + '_' + str(sea1)),printtofile=True)
 
