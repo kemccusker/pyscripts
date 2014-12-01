@@ -37,7 +37,7 @@ field2='gz'
 level2=50000
 
 # seasonalmap, seasonalvert, plotzonmean, plotseacyc, pattcorrwithtime, plotregmean, timetosig, timetosigsuper
-plottype='timetosigsuper' 
+plottype='seasonalmap' 
 
 # None, polcap60, polcap65, polcap70, eurasia, eurasiamori, ntham, nthatl, bks, bksmori, soo
 region='ntham'
@@ -66,7 +66,7 @@ sensruns=False # sensruns only: addr4ct=1,addsens=1. others=0 no meanBC, r mean,
 ivar=False # this will show ENS (TOT) and ENSE (ANTH) and their difference = internal var
 simsforpaper=False # meanBC, HAD, NSIDC only. best for maps and zonal mean figs (not line plots)
 antcat=False # this is the concatenation of ens members within each ensemble (really only useful for ANT)
-bothcat=True
+bothcat=False # can do concatenation of both ensembles if want to. These are useful for timetosig
 
 addobs=False # add mean of kemhad* & kemnsidc* runs to line plots, seasonal maps. 
 addr4ct=False # add kem1pert2r4ct (constant thickness version of ens4)

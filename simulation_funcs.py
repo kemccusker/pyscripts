@@ -178,7 +178,7 @@ def calc_plot_seasonal_maps(fielddict,coords,sims,pparams,vert=False,loctimesel=
             elif field=='net':
                 print '@@ not implemented for seasonal maps'
             else:
-                    
+                print fnamec # @@@@
                 fldcsea = cnc.getNCvar(fnamec,ncfield,timesel=timesel,
                                                seas=sea)*conv
                 fldpsea = cnc.getNCvar(fnamep,ncfield,timesel=timesel,
