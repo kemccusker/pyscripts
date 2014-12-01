@@ -253,6 +253,7 @@ if pig:  # 80W to 120W. Or 280 to 230
     temppreg = ma.masked_where(rmask,tempp)
     tempp2reg = ma.masked_where(rmask,tempp2)
 
+    # do I need to also take ocean fraction into account?!
     tempcreg=np.squeeze(np.mean(tempcreg,axis=2))
     temppreg=np.squeeze(np.mean(temppreg,axis=2))
     tempp2reg=np.squeeze(np.mean(tempp2reg,axis=2))
