@@ -110,11 +110,14 @@ def calc_plot_seasonal_maps(fielddict,coords,sims,pparams,vert=False,loctimesel=
         fig6,ax6 = plt.subplots(len(sims),len(seasons)) # 1 row for e/ simulation, 1 col per season
         fig6.set_size_inches(7,13)
         lastcol=len(seasons)-1
-        fig6.subplots_adjust(hspace=.02,wspace=.02)
+        lastrow=len(sims)-1
+        if not vert:
+            fig6.subplots_adjust(hspace=.02,wspace=.02)
     else:
         fig6,ax6 = plt.subplots(len(seasons),len(sims)) # 1 col for e/ simulation, 1 row per season
         fig6.set_size_inches(12,8)
         lastcol=len(sims)-1
+        lastrow=len(seasons)-1
         fig6.subplots_adjust(hspace=.15,wspace=.05)
 
     
@@ -161,28 +164,33 @@ def calc_plot_seasonal_maps(fielddict,coords,sims,pparams,vert=False,loctimesel=
                 
         for sea in seasons: # traverse rows (or use map_allseas() ?? @@)
             #ax = ax6[ridx][cidx]
+
             if figtrans:
-                ax=ax6[colidx][rowidx]
+                if len(sims)==1:
+                    ax=ax6[colidx]
+                else:
+                    ax=ax6[colidx][rowidx]
             else:
-                ax = ax6[rowidx][colidx] # swapped row and col index positions in subplot
+                if len(sims)==1:
+                    ax=ax6[rowidx]
+                else:
+                    ax = ax6[rowidx][colidx]
+            ncparams={'timesel':timesel, 'seas': sea}
             
             if field=='turb':
                 field='hfl'; fieldb='hfs'
-                fldcsea = cnc.getNCvar(fnamec,field.upper(),timesel=timesel,
-                                               seas=sea)*conv + cnc.getNCvar(fnamecb,fieldb.upper(),
-                                               timesel=timesel,seas=sea)*conv
-                fldpsea = cnc.getNCvar(fnamep,field.upper(),timesel=timesel,
-                                               seas=seas)*conv + cnc.getNCvar(fnamepb,fieldb.upper(),
-                                               timesel=timesel,seas=sea)*conv 
+                fldcsea = cnc.getNCvar(fnamec,field.upper(),**ncparams)*conv + cnc.getNCvar(fnamecb,fieldb.upper(),
+                                               **ncparams)*conv
+                fldpsea = cnc.getNCvar(fnamep,field.upper(),**ncparams)*conv + cnc.getNCvar(fnamepb,fieldb.upper(),
+                                               **ncparams)*conv 
                 field='turb'
             elif field=='net':
                 print '@@ not implemented for seasonal maps'
             else:
                 print fnamec # @@@@
-                fldcsea = cnc.getNCvar(fnamec,ncfield,timesel=timesel,
-                                               seas=sea)*conv
-                fldpsea = cnc.getNCvar(fnamep,ncfield,timesel=timesel,
-                                               seas=sea)*conv
+                #print ncparams
+                fldcsea = cnc.getNCvar(fnamec,ncfield,**ncparams)*conv
+                fldpsea = cnc.getNCvar(fnamep,ncfield,**ncparams)*conv
                 ## if threed==0:
                 ##     fldcsea = cnc.getNCvar(fnamec,field.upper(),timesel=timesel,
                 ##                                    seas=sea)*conv
@@ -196,11 +204,10 @@ def calc_plot_seasonal_maps(fielddict,coords,sims,pparams,vert=False,loctimesel=
                 ##                                    seas=sea)*conv,
                 ##                         cnc.getNCvar(fnamep2,ncfield,levsel=level,seas=sea)*conv,axis=0)
 
+               
             if addcont:
-                fldcseaadd=cnc.getNCvar(fnamecadd,ncfieldadd,timesel=timesel,
-                                               seas=sea)*fdictadd['conv']
-                fldpseaadd = cnc.getNCvar(fnamepadd,ncfieldadd,timesel=timesel,
-                                               seas=sea)*fdictadd['conv']
+                fldcseaadd=cnc.getNCvar(fnamecadd,ncfieldadd,**ncparams)*fdictadd['conv']
+                fldpseaadd = cnc.getNCvar(fnamepadd,ncfieldadd,**ncparams)*fdictadd['conv']
                 fldcallseasadd[rowidx,:,:] = np.mean(fldcseaadd,axis=0)
                 fldpallseasadd[rowidx,:,:] = np.mean(fldpseaadd,axis=0)
                 if pct:
@@ -226,21 +233,40 @@ def calc_plot_seasonal_maps(fielddict,coords,sims,pparams,vert=False,loctimesel=
                 pparams['screen'] = screen
                 pparams['addcontlines'] = True
                 if colidx!=0: # if not the first column, suppress y labels
-                    pparams['suppylab'] = True
+                    if figtrans:
+                        pass
+                    else:
+                        pparams['suppylab'] = True
                 
-                    
+                if rowidx!=0: # if not first column when figtrans=True, suppress y labels
+                    if figtrans:
+                        pparams['suppylab'] = True
+                        
+                if rowidx==lastrow:
+                    if figtrans:
+                        pparams['suppxlab'] = True
+                     
                 pc = cplt.vert_plot(plotfld,lev,lat,**pparams)
                 if sigoff==False: # add sig
                      cplt.addtsig(ax,pval[rowidx,...],lat,lev/100.,type=sigtype) # @@ dims?
                 if addcont:
                     lats,levs = np.meshgrid(lat,lev/100.)
                     ax.contour(lats,levs,plotfldadd,levels=contsadd,colors='0.3',linewidths=1)
+
                 
                 if colidx==lastcol:
-                    # put season label on right side.
-                    ax.yaxis.set_label_position("right")
-                    ax.set_ylabel(sea)
-                    
+                    print 'lastcol ' + str(lastcol) # @@@
+                    if figtrans: # last row?
+                        pass
+                    else:
+                        # put season label on right side.
+                        ax.yaxis.set_label_position("right")
+                        ax.set_ylabel(sea)
+                if colidx==0:
+                    if figtrans:
+                        # if first row
+                        ax.set_title(sea,fontsize=18)
+                        
             else: # maps
                 pparams['suppcb'] = 1
                 bm,pc = cplt.kemmap(plotfld,lat,lon,**pparams)#@@
@@ -260,7 +286,7 @@ def calc_plot_seasonal_maps(fielddict,coords,sims,pparams,vert=False,loctimesel=
                         ax.set_ylabel(sea,fontsize=18)
 
             if rowidx==0: # when row index is 0, set simulation
-                if figtrans:
+                if figtrans:# first column
                     ax.set_ylabel(rowl,fontsize=18)
                 else:
                     ax.set_title(rowl,fontsize=18)     
@@ -1093,7 +1119,7 @@ def plot_seasonal_cycle(datablob,fielddict,sims,pparams=None,ptypes=('anom',),wi
             for skey in sims:
                 axs.plot(moidxs,fldmaskdf[skey],linestyle='none',color=colordict[skey],marker='s')
 
-            plt.legend(sims,leglocs[1], fancybox=True, prop=fontP, framealpha=0.5,ncol=2)
+            plt.legend(sims,loc=leglocs[1], fancybox=True, prop=fontP, framealpha=0.5,ncol=2)
             plt.xlim((1,12))
             if seacycylim!=None:
                 plt.ylim(seacycylim)
@@ -1793,7 +1819,8 @@ def plot_seasonal_maps(dblob,fielddict,coords,sims,pparams,plottype='diff',vert=
         fig6,ax6 = plt.subplots(len(sims),len(seasons)) # 1 row for e/ simulation, 1 col per season
         fig6.set_size_inches(7,13)
         lastcol=len(seasons)-1
-        fig6.subplots_adjust(hspace=.02,wspace=.02)
+        if not vert:
+            fig6.subplots_adjust(hspace=.02,wspace=.02)
     else:
         fig6,ax6 = plt.subplots(len(seasons),len(sims)) # 1 col for e/ simulation, 1 row per season
         fig6.set_size_inches(12,8)
@@ -1836,8 +1863,14 @@ def plot_seasonal_maps(dblob,fielddict,coords,sims,pparams,plottype='diff',vert=
                 pparams['screen'] = screen
                 pparams['addcontlines'] = True
                 if colidx!=0: # if not the first column, suppress y labels @@ may not work with transposed fig
-                    pparams['suppylab'] = True
-                
+                    if figtrans:
+                        pass # need to suppress x labels @@ if not last row
+                    else:
+                        pparams['suppylab'] = True
+                        
+                if rowidx!=0: # if not first column when figtrans=True, suppress y labels
+                    if figtrans:
+                        pparams['suppylab'] = True
                     
                 pc = cplt.vert_plot(plotfld,lev,lat,**pparams)
                 if sigoff==False: # add sig
@@ -1847,10 +1880,20 @@ def plot_seasonal_maps(dblob,fielddict,coords,sims,pparams,plottype='diff',vert=
                     ax.contour(lats,levs,plotfldadd,levels=contsadd,colors='0.3',linewidths=1)
                 
                 if colidx==lastcol:
-                    # put season label on right side.
-                    ax.yaxis.set_label_position("right")
-                    ax.set_ylabel(sea)
-                    
+                    print 'lastcol ' + str(lastcol) # @@@
+                    if figtrans: # last row?
+                        #ax.set_title(sea,fontsize=18)
+                        pass
+                    else:
+                        # put season label on right side.
+                        ax.yaxis.set_label_position("right")
+                        ax.set_ylabel(sea)
+
+                if colidx==0:
+                    if figtrans:
+                        # if first row
+                        ax.set_title(sea,fontsize=18)
+                                          
             else: # maps
                 pparams['suppcb'] = 1
                 bm,pc = cplt.kemmap(plotfld,lat,lon,**pparams)#@@
@@ -1870,7 +1913,7 @@ def plot_seasonal_maps(dblob,fielddict,coords,sims,pparams,plottype='diff',vert=
                         ax.set_ylabel(sea,fontsize=18)
 
             if rowidx==0: # when row index is 0, set simulation
-                if figtrans:
+                if figtrans: # first column
                     ax.set_ylabel(rowl,fontsize=18)
                 else:
                     ax.set_title(rowl,fontsize=18)     
