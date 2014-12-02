@@ -202,7 +202,7 @@ def addtsig(ploth, pvals, dim1, dim2, siglevel=0.05,color='k',type='hatch',cmap=
 
 def vert_plot(fld, lev, lat, title='',units='',cmap='blue2red_w20',cmin='',cmax='', type=None,
               axis=None, suppcb=False, latlim=None, levlim=None,addcontlines=False,screen=False,
-              suppylab=False):
+              suppylab=False,suppxlab=False):
     """ screen=False: this flag tells whether the plot should be after Screen et al. 2013, ClimDyn
                           1000-300hPa, 20-90N. Ignores latlim/levlim
         suppylab=False: suppress the y labels
@@ -258,33 +258,48 @@ def vert_plot(fld, lev, lat, title='',units='',cmap='blue2red_w20',cmin='',cmax=
             ax.set_yticklabels('')
         ax.set_xlim(20,90)
         ax.set_xticks([40, 60, 80])
-        ax.set_xticklabels((40, 60, 80))
+        if suppxlab==False:
+            ax.set_xticklabels((40, 60, 80))
+        else:
+            ax.set_xticklabels('')
     else:
         ax.set_yscale('log')
         ax.set_yticks([1000,800, 500, 300, 100, 10])
         if type=='nh':
             ax.set_xlim(latlim,90)
             ax.set_xticks([20, 45, 70])
-            ax.set_xticklabels((20, 45, 70))
+            if suppxlab:
+                ax.set_xticklabels((20, 45, 70))
+            else:
+                ax.set_xticklabels('')
         elif type=='sh':
             ax.set_xlim(-90,latlim)
             ax.set_xticks([-70,-45,-20])
-            ax.set_xticklabels((-70,-45,-20))
+            if suppxlab==False:
+                ax.set_xticklabels((-70,-45,-20))
+            else:
+                ax.set_xticklabels('')
         else:
             ax.set_xlim(-90,90)
             ax.set_xticks([-45, 0, 45])
-            ax.set_xticklabels((-45, 0, 45))
+            if suppxlab==False:
+                ax.set_xticklabels((-45, 0, 45))
+            else:
+                ax.set_xticklabels('')
             
         if suppylab==False:
             ax.set_yticklabels((1000,800,500,300,100,10))
         else:
             ax.set_yticklabels('')
 
+            
+
     ax.set_ylim(levlim,1000)
     ax.invert_yaxis()
     if suppylab==False:
         ax.set_ylabel('Pressure (hPa)')
-    ax.set_xlabel('Latitude')
+    if suppxlab==False:
+        ax.set_xlabel('Latitude')
     ax.set_title(title)
 
     if suppcb==False:
