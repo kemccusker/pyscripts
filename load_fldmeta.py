@@ -170,7 +170,8 @@ def loadfldmeta(field,infodict,plottype,ptparams,level=None):
         fdict['ncfield'] = field.upper()
         fdict['fieldstr'] = field
 
-        pparams['cmin'] = -2; pparams['cmax'] = 2 # seasonal/monthly
+        #pparams['cmin'] = -2; pparams['cmax'] = 2 # seasonal/monthly
+        pparams['cmin'] = -1.8; pparams['cmax'] = 1.8 # seasonal/monthly
         if smclim:
             pparams['cmin'] = -1; pparams['cmax'] = 1 # seasonal/monthly
             savestr= savestr + '_smclim'
