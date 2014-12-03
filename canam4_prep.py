@@ -8,7 +8,9 @@
 """
 import constants as con
 import simulation_funcs as sfnc
+import statshelper as sh
 
+sh=reload(sh)
 sfnc = reload(sfnc)
 con = reload(con)
 #ccm = reload(ccm)
@@ -27,29 +29,29 @@ plt.ion()
 
 printtofile=True
 
-field = 't'
-smclim=True
+field = 'st'
+smclim=False
 level=50000 # for threed
 
 addcont=False # overlay map with contours
 sigoff=False # if True, don't add significance
-field2='pmsl' 
+field2='gz' 
 level2=50000
 
 # seasonalmap, seasonalvert, plotzonmean, plotseacyc, pattcorrwithtime, plotregmean, timetosig, timetosigsuper
-plottype='seasonalvert' 
+plottype='plotregmean' 
 
 # None, polcap60, polcap65, polcap70, eurasia, eurasiamori, ntham, nthatl, bks, bksmori, soo
-region=None#'ntham'
+region='eurasiamori'
 screen=True
 seacyclatlim=60
 withlat=False
-pattcorryr=False
+pattcorryr=False # need anymore?
 latlim = None # None #45 # lat limit for NH plots. Set to None otherwise. use 45 for BC-type maps
 levlim= 100 # level limit for vertical ZM plots (in hPa). ignored if screen=True
 fallwin=False # just SON and DJF
-bimon=False # do bi-montly seasons instead
-figtrans=False # for maps: make seasons the cols and sims the rows if True. auto True for simsforpaper
+bimon=True # do bi-montly seasons instead
+figtrans=False # for maps/vert: make seasons the cols and sims the rows if True. auto True for simsforpaper
 
 
 # Choose how to handle the data ==============
@@ -64,15 +66,16 @@ canens=False # just the CAN ensemble (E1-E5) plus mean, plus mean of R ensemble.
 allens=False # this is ONLY the ensemble means, plus superensemble
 sensruns=False # sensruns only: addr4ct=1,addsens=1. others=0 no meanBC, r mean, or obs
 ivar=False # this will show ENS (TOT) and ENSE (ANTH) and their difference = internal var
-simsforpaper=True # meanBC, HAD, NSIDC only. best for maps and zonal mean figs (not line plots)
+simsforpaper=False # ANT, TOT, HAD, NSIDC only. best for maps and zonal mean figs (not line plots)
 antcat=False # this is the concatenation of ens members within each ensemble (really only useful for ANT)
 bothcat=False # can do concatenation of both ensembles if want to. These are useful for timetosig
+onlyens=False # just do ensemble means ANT and TOT
 
-addobs=False # add mean of kemhad* & kemnsidc* runs to line plots, seasonal maps. 
+addobs=True # add mean of kemhad* & kemnsidc* runs to line plots, seasonal maps. 
 addr4ct=False # add kem1pert2r4ct (constant thickness version of ens4)
 addsens=False # add sensitivity runs (kem1pert1b, kem1pert3)
 addrcp=False # add kem1rcp85a simulation (and others if we do more)
-addcanens=False # add "initial condition" ensemble of kemctl1/kem1pert2
+addcanens=True # add "initial condition" ensemble of kemctl1/kem1pert2
 addsuper=False # add superensemble mean
 
 
@@ -202,6 +205,13 @@ elif bothcat: # both antcat and totcat
     if bimon:
         seasons=biseas
         savestr = savestr + 'bimon'
+
+elif onlyens:
+    sims = ('ENSE','ENS')
+    savestr = '_onlyens'
+    if bimon:
+        seasons=biseas
+        savestr = savestr + 'bimon'    
 else:
     if addcanens:
         sims = sims + ('E1','E2','E3','E4','E5','ENSE') # E1=CAN
@@ -685,9 +695,14 @@ if plottype=='pattcorrwithtime':
 
 if plottype=='plotregmean':
 
-    dblob = sfnc.calc_seasons(fdict,coords,sims,loctimesel=timesel,info=infodict,calctype='regmean')
-    sfnc.plot_regmean_byseas(dblob,fdict,sims,info=infodict,printtofile=printtofile)
+    dblob = sfnc.calc_seasons(fdict,coords,sims,seas=seasons,loctimesel=timesel,info=infodict,calctype='regmean')
+    sfnc.plot_regmean_byseas(dblob,fdict,sims,info=infodict,seas=seasons,printtofile=printtofile)
 
+    # calc whether ens means are sig different @@@@
+    if shadeens != None: # right now, will never be none. Should change that. @@@
+        if len(shadeens)>1:
+            sh.calc_ensemblestats(dblob,shadeens,seas=seasons)
+    
 if plottype=='timetosig' or plottype=='timetosigsuper':
 
     calctype='timetosig'
