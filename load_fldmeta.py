@@ -381,6 +381,9 @@ def loadfldmeta(field,infodict,plottype,ptparams,level=None):
                 pparams['levlim']=300
                 pparams['cmin']=-2.5; pparams['cmax']=2.5
                 #cminm=-2.5; cmaxm=2.5
+                if smclim:
+                    pparams['cmin']=-1.5; pparams['cmax']=1.5
+                    savestr= savestr + '_smclim'
             else:
                 cmin = -.5; cmax = .5
                 pparams['cmin'] = -.8; pparams['cmax'] = .8 
@@ -428,10 +431,15 @@ def loadfldmeta(field,infodict,plottype,ptparams,level=None):
                 #cminm=-25; cmaxm=25
                 pparams['cmin'] = -25; pparams['cmax'] = 25 # seasonal/monthly
                 pparams['levlim'] = 300
+                if smclim:
+                    pparams['cmin'] = -20; pparams['cmax'] = 20
+                    savestr= savestr + '_smclim'
             else:
                 #cmin = -10; cmax = 10
                 #cminm = -15; cmaxm = 15
                 pparams['cmin'] = -15; pparams['cmax'] = 15 # seasonal/monthly
+            
+                
 
         pparams['cmap'] = 'blue2red_w20'
 
