@@ -109,17 +109,22 @@ def calc_plot_seasonal_maps(fielddict,coords,sims,pparams,vert=False,loctimesel=
     if figtrans:
         fig6,ax6 = plt.subplots(len(sims),len(seasons)) # 1 row for e/ simulation, 1 col per season
         fig6.set_size_inches(7,13)
-        lastcol=len(seasons)-1
-        lastrow=len(sims)-1
-        if not vert:
+        #lastcol=len(seasons)-1
+        #lastrow=len(sims)-1
+        #print 'lastrow ' + str(lastrow) # @@@
+        print 'figtrans ' + str(figtrans)
+        if vert:
+            fig6.subplots_adjust(hspace=.03,wspace=.03)
+        else:
             fig6.subplots_adjust(hspace=.02,wspace=.02)
     else:
         fig6,ax6 = plt.subplots(len(seasons),len(sims)) # 1 col for e/ simulation, 1 row per season
         fig6.set_size_inches(12,8)
-        lastcol=len(sims)-1
-        lastrow=len(seasons)-1
+        #lastcol=len(sims)-1
+        #lastrow=len(seasons)-1
         fig6.subplots_adjust(hspace=.15,wspace=.05)
-
+    lastcol=len(sims)-1
+    lastrow=len(seasons)-1
     
     
     for colidx,sim in enumerate(sims): # traverse cols
@@ -233,19 +238,28 @@ def calc_plot_seasonal_maps(fielddict,coords,sims,pparams,vert=False,loctimesel=
                 pparams['screen'] = screen
                 pparams['addcontlines'] = True
                 if colidx!=0: # if not the first column, suppress y labels
-                    if figtrans:
-                        pass
-                    else:
+                    if not figtrans: 
                         pparams['suppylab'] = True
                 
-                if rowidx!=0: # if not first column when figtrans=True, suppress y labels
-                    if figtrans:
+                if rowidx!=0:
+                    if figtrans: # if not first column, suppress y labels
                         pparams['suppylab'] = True
-                        
-                if rowidx==lastrow:
+                else:
                     if figtrans:
+                        pparams['suppylab'] = False
+                        
+                if rowidx==lastrow:                    
+                    if figtrans: # if last col
+                        ax.set_ylabel(rowl,fontsize=18)
+                        ax.yaxis.set_label_position("right")
+
+                if colidx==lastcol:
+                    if figtrans: # if last row, don't suppress xlabels
+                        pparams['suppxlab'] = False
+                else:
+                    if figtrans: # otherwise, do suppress xlabels
                         pparams['suppxlab'] = True
-                     
+                        
                 pc = cplt.vert_plot(plotfld,lev,lat,**pparams)
                 if sigoff==False: # add sig
                      cplt.addtsig(ax,pval[rowidx,...],lat,lev/100.,type=sigtype) # @@ dims?
@@ -262,6 +276,7 @@ def calc_plot_seasonal_maps(fielddict,coords,sims,pparams,vert=False,loctimesel=
                         # put season label on right side.
                         ax.yaxis.set_label_position("right")
                         ax.set_ylabel(sea)
+                        
                 if colidx==0:
                     if figtrans:
                         # if first row
@@ -280,7 +295,7 @@ def calc_plot_seasonal_maps(fielddict,coords,sims,pparams,vert=False,loctimesel=
                     # @@@@ eventually add more contours?
                     
                 if colidx==0: # when col index is 0, set season
-                    if figtrans:
+                    if figtrans: # if first row
                         ax.set_title(sea,fontsize=18)
                     else:
                         ax.set_ylabel(sea,fontsize=18)
@@ -294,14 +309,17 @@ def calc_plot_seasonal_maps(fielddict,coords,sims,pparams,vert=False,loctimesel=
             rowidx = rowidx+1
 
     if figtrans:
-        cbar_ax = fig6.add_axes([.25,0.07, 0.5, .02])
+        if vert:
+            cbar_ax = fig6.add_axes([.25,0.04, 0.5, .02])
+        else:
+            cbar_ax = fig6.add_axes([.25,0.07, 0.5, .02])
         cbor='horizontal'
     else:
         cbar_ax = fig6.add_axes([.91,.25, .02,.5])
         cbor='vertical'
         
     cbar_ax.tick_params(labelsize=15)
-    fig6.colorbar(pc,cax=cbar_ax, orientation=cbor) # or do bm.colorbar....
+    fig6.colorbar(pc,cax=cbar_ax, orientation=cbor,format='%.1f') 
     plt.suptitle(fieldstr)
 
     if printtofile:
@@ -349,7 +367,8 @@ def calc_seasons(fielddict,coords,sims,loctimesel=None,info=None,siglevel=0.05,
 
               info: a dict which specifies lots of things, but in particular, which region to average
               calctype: 'zonmean', 'regmean', 'pattcorrwithtime', 'pattcorrwithtimeyr', None
-              @@ seasons default to 'SON','DJF','MAM','JJA' for now.
+              seasons default to 'SON','DJF','MAM','JJA'
+              @@@@ should add a regular anomaly calc here. make it default?
               
               returns a data blob:
                    blob['ctl'] = fldcdict
@@ -417,13 +436,14 @@ def calc_seasons(fielddict,coords,sims,loctimesel=None,info=None,siglevel=0.05,
         print 'calctype not recognized!'
         return -1
         
-    # note that pattern corr with time will be a 2D processed field -->
+    # note that pattern corr with time will be a 1D processed field -->
     #    for each season, fld.shape = ntime
-    # zonal mean will be a 2D processed field -->
+    # zonal mean will be a 1D processed field -->
     #    for each season, fld.shape = nlat
-    # regional mean will be a 1D processed field -->
+    # regional mean will be a scalar processed field -->
     #    for each season, fld.shape = 1 (regional mean)
-    
+    # time to significance is a map for each season
+    #    for each season, fld.shape = nlat x nlon
 
     if field=='sia':
         sia=True
@@ -1506,15 +1526,17 @@ def plot_zonmean_byseas(datablob,fielddict,coords,sims,pparams=None,ptypes=('ano
 
     # =========================================
 
-def plot_regmean_byseas(datablob,fielddict,sims,pparams=None,info=None,printtofile=False):
+def plot_regmean_byseas(datablob,fielddict,sims,pparams=None,info=None,seas=None,printtofile=False):
     """
     def plot_regmean_byseas(datablob,fielddict,sims,pparams=None,info=None,printtofile=False):
         
         plot the regional mean by season, like a box and whisker plot, with confidence intervals
         
     """
-
-    seasons='SON','DJF','MAM','JJA'
+    if seas==None:
+        seasons='SON','DJF','MAM','JJA'
+    else:
+        seasons=seas
     
     colordict=ccm.get_colordict()
 
@@ -1540,8 +1562,15 @@ def plot_regmean_byseas(datablob,fielddict,sims,pparams=None,info=None,printtofi
     fldpstddf = pd.DataFrame(datablob['pertstd'])
     cidf = pd.DataFrame(datablob['ci'])
 
-    fig,axs = plt.subplots(4,1)
-    fig.set_size_inches(10,8)
+    if len(sims)> 2:
+        multby=1.1
+    else:
+        multby=1.7
+    figwi = len(sims)*multby # figure width...
+    print figwi
+    
+    fig,axs = plt.subplots(len(seasons),1)
+    fig.set_size_inches(figwi,len(seasons)*2.1) # was 10,8
     for sii,sea in enumerate(seasons):
 
         ax=axs[sii]
@@ -1565,7 +1594,7 @@ def plot_regmean_byseas(datablob,fielddict,sims,pparams=None,info=None,printtofi
         ax.set_xticks(np.arange(0,len(sims)))
         ax.set_xticklabels(sims)
         ax.set_ylabel(sea)
-        ax.set_xlim(-.5,len(sims)+.5)
+        ax.set_xlim(-.3,len(sims)-1+.3)
         ax.grid()
 
     if printtofile:
@@ -1818,15 +1847,19 @@ def plot_seasonal_maps(dblob,fielddict,coords,sims,pparams,plottype='diff',vert=
     if figtrans:
         fig6,ax6 = plt.subplots(len(sims),len(seasons)) # 1 row for e/ simulation, 1 col per season
         fig6.set_size_inches(7,13)
-        lastcol=len(seasons)-1
+        #lastcol=len(seasons)-1
         if not vert:
             fig6.subplots_adjust(hspace=.02,wspace=.02)
     else:
         fig6,ax6 = plt.subplots(len(seasons),len(sims)) # 1 col for e/ simulation, 1 row per season
         fig6.set_size_inches(12,8)
-        lastcol=len(sims)-1
+        #lastcol=len(sims)-1
         fig6.subplots_adjust(hspace=.15,wspace=.05)
 
+    # lastcol should be same for both figure configurations but it means something diff
+    lastcol=len(sims)-1
+    lastrow=len(seasons)-1
+    
     for colidx,sim in enumerate(sims): # traverse cols
 
         rowidx=0
@@ -1907,7 +1940,7 @@ def plot_seasonal_maps(dblob,fielddict,coords,sims,pparams,plottype='diff',vert=
                     # @@@@ eventually add more contours?
                     
                 if colidx==0: # when col index is 0, set season
-                    if figtrans:
+                    if figtrans: # if first row
                         ax.set_title(sea,fontsize=18)
                     else:
                         ax.set_ylabel(sea,fontsize=18)
@@ -1915,7 +1948,8 @@ def plot_seasonal_maps(dblob,fielddict,coords,sims,pparams,plottype='diff',vert=
             if rowidx==0: # when row index is 0, set simulation
                 if figtrans: # first column
                     ax.set_ylabel(rowl,fontsize=18)
-                else:
+                    print "setting ylabel " + rowl                    
+                else: # first row
                     ax.set_title(rowl,fontsize=18)     
 
             rowidx = rowidx+1
