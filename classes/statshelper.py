@@ -3,6 +3,8 @@
        first function: pattern correlate within ensemble
 """
 import numpy as np
+import scipy as sp
+import scipy.stats
 import pandas as pd
 import constants as con
 import cccmautils as cutl
@@ -139,8 +141,80 @@ def pattcorr_withinensemble(ename,fdict,latlim=60,timesel='0002-01-01,0121-12-31
     # ======= end copy Canam4_BCpatterncorr-Copy0.py ===========
 
 
-def pattcorr_ensemble(ename, field, latlim=60):
+def calc_ensemblestats(datablob,ensnames, seas=None,siglevel=0.05):
+    """ ensnames must be a tuple of ensemble names in the datablob.
+        they must match ensname in sims dictionary. e.g. histIC, histBC
+    """
+    
+    diffdt = datablob['diff']
+    sims=diffdt.keys()
+    simspdt = con.get_simpairsdict()
 
+    if seas==None:
+        seasons=('SON','DJF','MAM','JJA')
+    else:
+        seasons=seas
+        
+    # two blobs, one for each ensemble
+    # Need all members of ensemble, plus mean to do ttest between
+    # ensemble means. This ttest is NOT in time, but across
+    # ensemble members. Thus, n=5 for TOT and ANT.
+
+    # return tstat, pval, stddev # all across ensemble, not in time.
+
+   
+    allensdt={}; allensmdt={};
+            
+    for ensname in ensnames:
+        ensdt={}; ensmdt={}
+        print ensname
+        for skey in sims: # for each simulation check if it's in the ensemble
+
+            if simspdt[skey]['pert']['ensname']==ensname:
+                # create an ensemble dict
+                ensdt[skey] = datablob['diff'][skey]
+            if simspdt[skey]['pert']['ensname']==ensname+'mean':
+                ensmdt[skey] = datablob['diff'][skey]
+
+        allensdt[ensname] = ensdt # dict of ens -> dict of sims in ens --> data
+        allensmdt[ensname] = ensmdt # just the ensemble mean
+        
+    # end loop through ens
+    ensdf1 = pd.DataFrame(allensdt[ensnames[0]])
+    ensdf2 = pd.DataFrame(allensdt[ensnames[1]])
+    ensm1 = allensmdt[ensnames[0]] # need DataFrame for this? should just be a val for each season
+    ensm2 = allensmdt[ensnames[1]]
+                    
+    for sea in seasons:
+         print sea
+         
+         e1 = ensdf1.loc[sea]
+         e2 = ensdf2.loc[sea]
+         print sea
+         print ensnames[0] + ' MEAN: ' + str(e1.mean()) + ' STD: ' + str(e1.std())
+         print ensnames[1] + ' MEAN: ' + str(e2.mean()) + ' STD: ' + str(e2.std())
+
+         tstat, pval = sp.stats.ttest_ind(e1,e2)
+         print 'TSTAT: ' + str(tstat) + ' PVAL: ' + str(pval)
+         if pval<=siglevel:
+             print 'The ensemble means are significantly different (' + str(1-siglevel) + ')'
+
+         fstat, fpval = sp.stats.f_oneway(e1,e2)
+         print 'FSTAT: ' + str(fstat) + ' PVAL: ' + str(fpval)
+         if fpval<=siglevel:
+             print 'The ensemble means are significantly different (' + str(1-siglevel) + ')'
+
+         lstat, lpval = sp.stats.levene(e1,e2)
+         print 'LSTAT: ' + str(lstat) + ' PVAL: ' + str(lpval)
+         if lpval<=siglevel:
+             print 'The ensemble variances are significantly different (' + str(1-siglevel) + ')'
+
+
+    print '@@@@ not done, still need to add return vals'
+    
+def pattcorr_ensemble(ename, field, latlim=60):
+    # @@@@@@@@@@@@ is this fully implemented? Don't think so. 12/2/14
+    
     if ename=='ANT':
         ename='HistIC'
     elif ename=='TOT':
