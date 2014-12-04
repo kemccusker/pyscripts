@@ -38,11 +38,11 @@ sigoff=False # if True, don't add significance
 field2='gz' 
 level2=50000
 
-# seasonalmap, seasonalvert, plotzonmean, plotseacyc, pattcorrwithtime, plotregmean, timetosig, timetosigsuper
-plottype='plotregmean' 
+# seasonalmap, seasonalvert, plotzonmean, plotseacyc, pattcorrwithtime, plotregmean,calcregmeanwithtime, timetosig, timetosigsuper
+plottype='calcregmeanwithtime' 
 
 # None, polcap60, polcap65, polcap70, eurasia, eurasiamori, ntham, nthatl, bks, bksmori, soo
-region='eurasiamori'
+region='ntham' #'eurasiamori'
 screen=True
 seacyclatlim=60
 withlat=False
@@ -50,7 +50,7 @@ pattcorryr=False # need anymore?
 latlim = None # None #45 # lat limit for NH plots. Set to None otherwise. use 45 for BC-type maps
 levlim= 100 # level limit for vertical ZM plots (in hPa). ignored if screen=True
 fallwin=False # just SON and DJF
-bimon=True # do bi-montly seasons instead
+bimon=False # do bi-montly seasons instead
 figtrans=False # for maps/vert: make seasons the cols and sims the rows if True. auto True for simsforpaper
 
 
@@ -62,7 +62,7 @@ halftime2=False # get only the last 60yrs. make sure to set the other flag the o
 
 # Choose what simulations to add =============
 #  default is R1-5, ENS
-canens=False # just the CAN ensemble (E1-E5) plus mean, plus mean of R ensemble. option to addobs only.
+canens=True # just the CAN ensemble (E1-E5) plus mean, plus mean of R ensemble. option to addobs only.
 allens=False # this is ONLY the ensemble means, plus superensemble
 sensruns=False # sensruns only: addr4ct=1,addsens=1. others=0 no meanBC, r mean, or obs
 ivar=False # this will show ENS (TOT) and ENSE (ANTH) and their difference = internal var
@@ -75,7 +75,7 @@ addobs=True # add mean of kemhad* & kemnsidc* runs to line plots, seasonal maps.
 addr4ct=False # add kem1pert2r4ct (constant thickness version of ens4)
 addsens=False # add sensitivity runs (kem1pert1b, kem1pert3)
 addrcp=False # add kem1rcp85a simulation (and others if we do more)
-addcanens=True # add "initial condition" ensemble of kemctl1/kem1pert2
+addcanens=False # add "initial condition" ensemble of kemctl1/kem1pert2
 addsuper=False # add superensemble mean
 
 
@@ -140,6 +140,7 @@ corrlim=45 # southern lat limit for pattern correlation with time
 
 # set up simulations and figure filename strings
 sims = 'R1','R4','R3','R5','R2','ENS'#,'ENSE'#,'CAN' # R's in order of sea ice loss
+defaultsims=sims
 seasons = ('SON','DJF','MAM','JJA')
 biseas = ('SO','ND','JF') # @@@ so far only these implemented. expecting to add all 11/25/14
 
@@ -213,6 +214,8 @@ elif onlyens:
         seasons=biseas
         savestr = savestr + 'bimon'    
 else:
+    savestr=savestr+'_ens' # default sims
+    
     if addcanens:
         sims = sims + ('E1','E2','E3','E4','E5','ENSE') # E1=CAN
         savestr = savestr + 'canens'
@@ -717,8 +720,40 @@ if plottype=='timetosig' or plottype=='timetosigsuper':
   
     sfnc.plot_seasonal_maps(dblob,fdict,coords,sims,pparams,plottype='timetosig',vert=False,seas=seasons,info=infodict,printtofile=printtofile)
     
+if plottype=='calcregmeanwithtime':
+    dblob = sfnc.calc_seasons(fdict,coords,sims,seas=seasons,loctimesel=timesel,info=infodict,calctype='regmeanwithtime')
+
+    # dblob should have regional means *with* time dimension
+    # want to test sig different mean and variance b/w ctl and pert
+    allstats=sh.calc_runstats(dblob,sims, seas=seasons,siglevel=siglevel)
+
+    fpvaldf=pd.DataFrame(allstats['fpval']) # pval of f statistic for variance significance
+    fpvaldft=fpvaldf.transpose()
+    tpvaldf=pd.DataFrame(allstats['tpval']) # pval of t statistic for mean significance
+    tpvaldft=tpvaldf.transpose()
+
+    import cccmacmaps as ccm
     
+    # Plot pvals for mean anomaly and standard dev
+    # @@ for some reason if all sims are in dataframe, only some are plotted..??
+    fig,axs=plt.subplots(1,2)
+    fig.set_size_inches(12,4)
+    ax=axs[0]
+    tpvaldft.plot(linestyle='None',colors=ccm.get_colordict().values(),marker='s',markersize=6,ax=ax)
+    ax.axhline(y=siglevel,color='k')
+    ax.set_ylabel('PVAL of T statistic for mean')
+    ax.set_title(fdict['fieldstr'] + ' ' + region)
+    ax.set_ylim((0,1))
 
-
+    ax=axs[1]
+    fpvaldft.plot(linestyle='None',colors=ccm.get_colordict().values(),marker='s',markersize=6,ax=ax)#make legend better@@
+    ax.axhline(y=0.05,color='k')
+    ax.set_ylabel('PVAL of F statistic for variance')
+    ax.set_title(fdict['fieldstr'] + ' ' + region)
+    ax.set_ylim((0,1))
+  
+    if printtofile:
+        fig.savefig(fdict['fieldstr']+'_ftpvals' + savestr + '_' + region + '.pdf')
+        
 if testhadisst:
     print '@@testhadisst not implemented'
