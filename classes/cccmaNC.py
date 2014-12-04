@@ -19,7 +19,7 @@ def openNC(filename):
     return ncfile
 
 
-def getNCvar(filename,field,timesel=None,levsel=None,monsel=None,seas=None,calc=None,remlon=1):
+def getNCvar(filename,field,timesel=None,levsel=None,monsel=None,seas=None,calc=None,remlon=1,sqz=True):
     """ gets a variable from netcdf file.
         Time is assumed to be the 1st dimension, Lon is assumed to be the last.
         If any calculations are requested to be performed on the data, the user
@@ -35,6 +35,9 @@ def getNCvar(filename,field,timesel=None,levsel=None,monsel=None,seas=None,calc=
         calc: zm (zonal mean),
         remlon: removes extra wrap-around longitude for zonal mean.
                 default is 1, remove it
+        sqz:  squeeze the data if 'getting all data'. Default True.
+                   Trying to avoid situation where need singular dims and squeeze them out
+                   (e.g. MOC variable in CCSM4)
         
         returns fld
         """
@@ -59,7 +62,7 @@ def getNCvar(filename,field,timesel=None,levsel=None,monsel=None,seas=None,calc=
 
         if timesel == '0002-01-01,0061-12-31':
             print 'hard-coded skipping of first year of 61-yr chunk @@'
-            fld = getNCvar_old(filename,field,seas=seas, monsel=monsel,timechunk=(12,),level=level,calc=calc)
+            fld = getNCvar_old(filename,field,seas=seas, monsel=monsel,timechunk=(12,),level=level,calc=calc,sqz=sqz)
         else:
             # if timesel=='0002-01-01,0121-12-31' then just don't set timechunk because 
             #     files on the mac are already selected to skip first year, and they reside
@@ -68,7 +71,7 @@ def getNCvar(filename,field,timesel=None,levsel=None,monsel=None,seas=None,calc=
                 if 'timsel/' not in filename:
                     print 'On mac, use files in timsel/ subdirectory! @@ NEEDS TESTING'
 
-            fld = getNCvar_old(filename,field,seas=seas,monsel=monsel,level=level,calc=calc) # doesn't work with all arguments yet @@
+            fld = getNCvar_old(filename,field,seas=seas,monsel=monsel,level=level,calc=calc,sqz=sqz) # doesn't work with all arguments yet @@
 
         
         return fld
@@ -77,7 +80,7 @@ def getNCvar(filename,field,timesel=None,levsel=None,monsel=None,seas=None,calc=
 
         ncfile = openNC(filename)
         ndims = len(ncfile.dimensions)
-
+        
         #### READ VARIABLE FROM NC FILE ########
         if timesel == None and calc == None:
 
@@ -94,7 +97,12 @@ def getNCvar(filename,field,timesel=None,levsel=None,monsel=None,seas=None,calc=
                     #print fld.shape
                     os.system('rm -rf /tmp/cdoPy*')
                 else: # get everything
-                    fld = ncfile.variables[field][...]
+                    if sqz:
+                        print field + ': squeezing data upon read all' # @@@
+                        # for most situations, this is what we want. @@@@
+                        fld=np.squeeze(ncfile.variables[field][...])
+                    else:
+                        fld = ncfile.variables[field][...]
 
         elif timesel != None and calc == 'zm':
             # have to remove the lon before zonal mean, which means have to separate the
@@ -232,9 +240,18 @@ def getNCvar(filename,field,timesel=None,levsel=None,monsel=None,seas=None,calc=
         # fld has to be 3d by the time it is passed to func
         #  (time,lev,lat) or (time,lat,lon)
         if seas != None:
+            #print 'getNCvar(): seas!=None: fld.shape: ' + str(fld.shape) # @@@
+            
             if fld.ndim != 3:
+                ## if 1 in fld.shape:
+                ##     fld=fld.squeeze() # attempting to deal with spurious dims of 1 @@@
+                ##     if fld.ndim != 3:
+                ##         print 'data must be 3 dimensional to seasonalize()'
+                ##         return
+                ## else:
                 print 'data must be 3 dimensional to seasonalize()'
                 return
+            
             elif monsel != None:
                 print "Can't do seasonal average when monsel != None"
                 return
@@ -253,7 +270,7 @@ def getNCvar(filename,field,timesel=None,levsel=None,monsel=None,seas=None,calc=
 
 
 
-def getNCvar_old(filename,field,timechunk=None,monsel=None,level=None,seas=None,calc=None,remlon=1):
+def getNCvar_old(filename,field,timechunk=None,monsel=None,level=None,seas=None,calc=None,remlon=1,sqz=True):
     """ gets a variable from netcdf file.
         Time is assumed to be the 1st dimension, Lon is assumed to be the last.
         If any calculations are requested to be performed on the data, the user
@@ -269,7 +286,10 @@ def getNCvar_old(filename,field,timechunk=None,monsel=None,level=None,seas=None,
         calc: zm (zonal mean),
         remlon: removes extra wrap-around longitude for zonal mean.
                 default is 1, remove it
-        
+        sqz:  squeeze the data if 'getting all data'. Default True.
+                   Trying to avoid situation where need singular dims and squeeze them out
+                   (e.g. MOC variable in CCSM4)
+                   
         returns fld
         """
 #    chunk = None
@@ -284,7 +304,9 @@ def getNCvar_old(filename,field,timechunk=None,monsel=None,level=None,seas=None,
         else:
             fld = ncfile.variables[field][...]
 
-        # @@@shit, caused problems with MOC. fld=fld.squeeze() # remove spurious dimensions of 1
+        # @@@shit, caused problems with MOC.
+        if sqz:
+            fld=fld.squeeze() # remove spurious dimensions of 1
     else:
         if len(timechunk)==1: # start time until end
             print timechunk # @@
@@ -303,7 +325,9 @@ def getNCvar_old(filename,field,timechunk=None,monsel=None,level=None,seas=None,
             else:
                 fld = ncfile.variables[field][timechunk[0]:timechunk[1],...]
 
-        # @@@shit, caused problems with MOC. fld=fld.squeeze() # remove spurious dimensions of 1
+        # @@@shit, caused problems with MOC.
+        if sqz:
+            fld=fld.squeeze() # remove spurious dimensions of 1
 
         ## #print 'chunking time. ndims= ' + str(ndims) + ' styr,enyr: ' + str(timechunk[0]) + ',' + str(timechunk[1])
         ## if ndims==4: # must be a better way!@@
@@ -354,14 +378,14 @@ def getNCvar_old(filename,field,timechunk=None,monsel=None,level=None,seas=None,
     #  (time,lev,lat) or (time,lat,lon)
     if seas != None:
         if fld.ndim != 3:
-            if 1 in fld.shape:
-                fld=fld.squeeze() # attempting to deal with spurious dims of 1 @@@
-                if fld.ndim != 3:
-                    print 'data must be 3 dimensional to seasonalize()'
-                    return
-            else:
-                print 'data must be 3 dimensional to seasonalize()'
-                return
+            ## if 1 in fld.shape:
+            ##     fld=fld.squeeze() # attempting to deal with spurious dims of 1 @@@
+            ##     if fld.ndim != 3:
+            ##         print 'data must be 3 dimensional to seasonalize()'
+            ##         return
+            ## else:
+            print 'data must be 3 dimensional to seasonalize()'
+            return
         if monsel != None:
             print "Can't do seasonal average when monsel != None"
             return
