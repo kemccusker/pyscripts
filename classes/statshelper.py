@@ -142,8 +142,13 @@ def pattcorr_withinensemble(ename,fdict,latlim=60,timesel='0002-01-01,0121-12-31
 
 
 def calc_ensemblestats(datablob,ensnames, seas=None,siglevel=0.05):
-    """ ensnames must be a tuple of ensemble names in the datablob.
-        they must match ensname in sims dictionary. e.g. histIC, histBC
+    """         
+           datablob: 'diff' should be scalar regional mean anomalies
+           ensnames: a tuple of ensemble names in the datablob.
+                     must match ensname in sims dictionary. e.g. histIC, histBC
+           seas: 2 or 3 month seasons
+
+           @@ add return vals
     """
     
     diffdt = datablob['diff']
@@ -155,7 +160,6 @@ def calc_ensemblestats(datablob,ensnames, seas=None,siglevel=0.05):
     else:
         seasons=seas
         
-    # two blobs, one for each ensemble
     # Need all members of ensemble, plus mean to do ttest between
     # ensemble means. This ttest is NOT in time, but across
     # ensemble members. Thus, n=5 for TOT and ANT.
@@ -211,6 +215,82 @@ def calc_ensemblestats(datablob,ensnames, seas=None,siglevel=0.05):
 
 
     print '@@@@ not done, still need to add return vals'
+
+
+
+def calc_runstats(datablob,sims, seas=None,siglevel=0.05):
+    """         
+           datablob: 'ctl','pert','diff' should be timeseries of regional means
+           sims: a tuple of sim names in the datablob. (prob unnecessary)
+           seas: 2 or 3 month seasons
+
+           @@ add return vals
+
+    """
+    ctldt = datablob['ctl']
+    pertdt = datablob['pert']
+    
+    diffdt = datablob['diff']
+    simspdt = con.get_simpairsdict()
+
+    if seas==None:
+        seasons=('SON','DJF','MAM','JJA')
+    else:
+        seasons=seas
+
+    allstats={}; alltpval={}; allfpval={}
+    
+    for sim in sims:
+        ctlsim=ctldt[sim]
+        pertsim=pertdt[sim]
+        seatpval={}; seafpval={}
+        
+        for sea in seasons:
+            thestats={}
+            print sim + ' ' + sea
+            ctl=ctlsim[sea]
+            pert=pertsim[sea]
+
+            ## thestats['ctlmean']=ctl.mean()
+            ## thestats['pertmean']=pert.mean()
+            ## thestats['meandiff'] = pert.mean()-ctl.mean()
+            ## thestats['ctlstd']=ctl.std()
+            ## thestats['pertstd']=pert.std()
+            ## thestats['stddiff']=pert.std()-ctl.std()
+            
+            print '    DIFF: ' + str(pert.mean()-ctl.mean()) + ', CTL mean: ' + str(ctl.mean()) + ', PERT mean: ' + str(pert.mean())
+            tstat, tpval = sp.stats.ttest_ind(pert,ctl) # add autocorr @@
+            print '    TSTAT: ' + str(tstat) + ' PVAL: ' + str(tpval)
+            if tpval<=siglevel:
+                print '  **The ensemble means are significantly different (' + str(1-siglevel) + ')'
+            #thestats['tpval'] = pval
+            
+            #fstat, fpval = sp.stats.f_oneway(pert,ctl) # same as t statistic
+            #print '    FSTAT: ' + str(fstat) + ' PVAL: ' + str(fpval)
+            #if fpval<=siglevel:
+            #    print '  **The ensemble means are significantly different (' + str(1-siglevel) + ')'
+
+            print '    CTL std: ' + str(ctl.std()) + ', PERT std: ' + str(pert.std())
+            lstat, lpval = sp.stats.levene(pert,ctl)
+            print '    LSTAT: ' + str(lstat) + ' PVAL: ' + str(lpval)
+            if lpval<=siglevel:
+                print '  **The ensemble variances are significantly different (' + str(1-siglevel) + ')'
+            #thestats['fpval'] = lpval
+
+            seatpval[sea]=tpval
+            seafpval[sea]=lpval
+            
+        alltpval[sim]=seatpval
+        allfpval[sim]=seafpval
+
+    allstats['tpval']=alltpval
+    allstats['fpval']=allfpval
+    
+    return allstats
+    # @@@@ add return vals
+
+
+
     
 def pattcorr_ensemble(ename, field, latlim=60):
     # @@@@@@@@@@@@ is this fully implemented? Don't think so. 12/2/14
