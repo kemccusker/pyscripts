@@ -409,7 +409,7 @@ def calc_seasons(fielddict,coords,sims,loctimesel=None,info=None,siglevel=0.05,
     lon=coords['lon']
     nlon=len(lon)
 
-    plotzonmean = plotregmean = pattcorrwithtime = pattcorryr = timetosig = timetosigsuper = False
+    plotzonmean = plotregmean = pattcorrwithtime = pattcorryr = timetosig = timetosigsuper = calcregmeanwithtime = False
 
     if calctype==None:
         return -1
@@ -417,6 +417,9 @@ def calc_seasons(fielddict,coords,sims,loctimesel=None,info=None,siglevel=0.05,
         plotzonmean=True
     elif calctype=='regmean':
         plotregmean=True
+        region=info['region']
+    elif calctype=='regmeanwithtime':
+        calcregmeanwithtime=True
         region=info['region']
     elif calctype=='pattcorrwithtime':
          # note that this is pattern correlating a run's
@@ -478,6 +481,9 @@ def calc_seasons(fielddict,coords,sims,loctimesel=None,info=None,siglevel=0.05,
         else:
             timesel = simpair['ctl']['timesel']
 
+        if timesel!=None:
+            print 'calc_seasons(): selecting time ' + timesel # @@@@@@
+
         if threed and nonstandardlev:
             fnamec = frootc + field + '_' + '001-061_ts.nc'
             fnamec2 = frootc + field + '_' + '062-121_ts.nc'
@@ -534,6 +540,8 @@ def calc_seasons(fielddict,coords,sims,loctimesel=None,info=None,siglevel=0.05,
                                         axis=0)
                 else:
                     print fnamec
+                    print 'ncparams: ' + str(ncparams)
+                    
                     fldc = cnc.getNCvar(fnamec,ncfield,timesel=timesel,
                                           **ncparams)*conv
                     fldp = cnc.getNCvar(fnamep,ncfield,timesel=timesel,
@@ -603,7 +611,7 @@ def calc_seasons(fielddict,coords,sims,loctimesel=None,info=None,siglevel=0.05,
                 #print firstsigyr.shape # @@
                 seatimetosigdict[sea] = firstsigyr
                 
-            elif plotregmean:
+            elif plotregmean or calcregmeanwithtime:
                 
                 #limsdict = con.get_regionlims(region)
                 if sia:
@@ -613,7 +621,7 @@ def calc_seasons(fielddict,coords,sims,loctimesel=None,info=None,siglevel=0.05,
                     fldp = cutl.calc_regtotseaicearea(fldp,lat,lon,region,isarea=True)
                 else:
                     fldc = cutl.calc_regmean(fldc,lat,lon,region)#limsdict)
-                    fldp = cutl.calc_regmean(fldp,lat,lon,region)#limsdict)
+                    fldp = cutl.calc_regmean(fldp,lat,lon,region)#limsdict)           
                 
             else: # just calculate a polar mean
                 if sia:
@@ -636,9 +644,15 @@ def calc_seasons(fielddict,coords,sims,loctimesel=None,info=None,siglevel=0.05,
                 
             seatstatdict[sea] = ttmp
             seapvaldict[sea] = pvtmp
-            seafldcdict[sea] =  np.mean(fldc,axis=0) # time mean
-            seafldpdict[sea] =  np.mean(fldp,axis=0)
-            seadiffdict[sea] = np.mean(fldp,axis=0)- np.mean(fldc,axis=0)
+            if calcregmeanwithtime:
+                seafldcdict[sea] =  fldc # keep time dim
+                seafldpdict[sea] =  fldp
+                seadiffdict[sea] = fldp-np.mean(fldc,axis=0)
+            else:
+                seafldcdict[sea] =  np.mean(fldc,axis=0) # time mean
+                seafldpdict[sea] =  np.mean(fldp,axis=0)
+                seadiffdict[sea] = np.mean(fldp,axis=0)- np.mean(fldc,axis=0)
+                
             seadmaskdict[sea] = ma.masked_where(pvtmp>siglevel,seadiffdict[sea])
             
 
