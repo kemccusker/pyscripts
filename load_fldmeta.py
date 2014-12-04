@@ -38,7 +38,7 @@ def loadfldmeta(field,infodict,plottype,ptparams,level=None):
 
 
     # initialize flags
-    seasonalmap = seasonalvert = plotzonmean = plotseacyc = pattcorrwithtime = plotregmean = timetosig = timetosigsuper = False
+    seasonalmap = seasonalvert = plotzonmean = plotseacyc = pattcorrwithtime = plotregmean = calregmeanwithtime = timetosig = timetosigsuper = False
 
     if plottype=='seasonalmap':
         seasonalmap=True
@@ -57,6 +57,8 @@ def loadfldmeta(field,infodict,plottype,ptparams,level=None):
         pattcorryr = ptparams['pattcorryr']
     elif plottype=='plotregmean':
         plotregmean=True
+    elif plottype=='calcregmeanwithtime':
+        calcregmeanwithtime=True
     elif plottype=='timetosig':
         timetosig=True
     elif plottype=='timetosigsuper':
