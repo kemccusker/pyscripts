@@ -73,10 +73,10 @@ pig=True # do pine island glacier region # @@@ testing
 
 # <codecell>
 
-latauxgrid = cnc.getNCvar(filenamec,'lat_aux_grid')
-transreg = cnc.getNCvar(filenamec, 'transport_regions')
-moccomp = cnc.getNCvar(filenamec, 'moc_components')
-mocz = cnc.getNCvar(filenamec,'moc_z')
+latauxgrid = cnc.getNCvar(filenamec,'lat_aux_grid',sqz=False)
+transreg = cnc.getNCvar(filenamec, 'transport_regions',sqz=False)
+moccomp = cnc.getNCvar(filenamec, 'moc_components',sqz=False)
+mocz = cnc.getNCvar(filenamec,'moc_z',sqz=False)
 
 
 """ float MOC(time, transport_reg, moc_comp, moc_z, lat_aux_grid) ;
@@ -112,8 +112,8 @@ mocz = cnc.getNCvar(filenamec,'moc_z')
     425052.5, 450026.1, 475012, 500004.7, 525000.9, 549999.1 ;
 """
 
-totmocc = cnc.getNCvar(filenamec,'MOC')
-totmocp = cnc.getNCvar(filenamep,'MOC')
+totmocc = cnc.getNCvar(filenamec,'MOC',sqz=False)
+totmocp = cnc.getNCvar(filenamep,'MOC',sqz=False)
 
 print totmocc.shape 
 mocc=totmocc[0,0,0,...]
@@ -178,7 +178,7 @@ casenamep2 = 'rcp8_5GHGrem1850' # or 'rcp8_5GHGrem1850'
 filenamep2 = basepath + casenamep2 + '/' + casenamep2 + '.pop.ANN.2045-2054.nc'
 
 print filenamep
-totmocp2 = cnc.getNCvar(filenamep2,'MOC')
+totmocp2 = cnc.getNCvar(filenamep2,'MOC',sqz=False)
 mocp2=totmocp2[0,0,0,...]
 
 contspd = np.arange(.2,5,.2)
@@ -233,6 +233,21 @@ for lii,zz in enumerate(zt):
     
 if pig:  # 80W to 120W. Or 280 to 230
     printtofile=False
+
+    """ @@@@ need to weight the grid cells by area, even for zonal means. @@@@
+    piglon = range(230,281) # lon indices
+    piglat = range(0,187) # lat indices
+    kmtpig=kmt[piglat,:]
+    kmtpig=kmtpig[:,piglon]
+    tareapig=tarea[piglat,:]
+    tareapig=tareapig[:,piglon]
+
+    kmtpigt = np.tile(kmtpig,(fld.shape[0],1,1))
+
+    tareapigt = np.tile(tareapig,(len(zt),1,1))
+    tareat = np.tile(tarea,(len(zt),1,1))
+    """
+
     lonlims = [230,280]; region = 'PIG'; strlims='80W-120W'
     #lonlims = [230,260]; region='PIG2'; strlims='100W-120W'
     
@@ -287,7 +302,7 @@ if pig:  # 80W to 120W. Or 280 to 230
     
 
     printtofile= True
-
+    ylim=1000
     #cmlen=float( plt.cm.get_cmap(cmap).N) # or: from __future__ import division
     cmlen=float(20)
     incr = (cmax-cmin) / (cmlen)
@@ -304,7 +319,7 @@ if pig:  # 80W to 120W. Or 280 to 230
     contspd = np.arange(.1,5,.3)
     contsnd = np.arange(-5,-.1,.3)
 
-    ax.set_ylim((0,800))
+    ax.set_ylim((0,ylim))
     ax.invert_yaxis()
     ax.set_xlim((-75,-50))
     ax.set_yticks(np.arange(0,900,100))
@@ -323,7 +338,7 @@ if pig:  # 80W to 120W. Or 280 to 230
     ax2=axs[1]
     CF2 = ax2.contourf(tlats,zlevs,tempp2reg-tempcreg,cmap=cmap,vmin=cmin,vmax=cmax,levels=conts,extend='both')
 
-    ax2.set_ylim((0,800))
+    ax2.set_ylim((0,ylim))
     ax2.invert_yaxis()
     ax2.set_xlim((-75,-50))
     ax2.set_yticks(np.arange(0,900,100))
@@ -339,7 +354,7 @@ if pig:  # 80W to 120W. Or 280 to 230
     fig.colorbar(CF2,cax=cbar_ax)
 
     if printtofile:
-        fig.savefig('TEMPanom_subplotSHzm_' + region + '_c.pdf')
+        fig.savefig('TEMPanom_subplotSHzm_' + region + '_c_ylim' + str(ylim) + '.pdf')
 
 
     # ===== TEST figure showing the difference b/w Sulf and GHGrem differences
@@ -363,7 +378,7 @@ if pig:  # 80W to 120W. Or 280 to 230
     contspd = np.arange(.1,5,.3)
     contsnd = np.arange(-5,-.1,.3)
 
-    ax.set_ylim((0,800))
+    ax.set_ylim((0,ylim))
     ax.invert_yaxis()
     ax.set_xlim((-75,-50))
     ax.set_title(casenamep + '-' + casenamep2 + ' ' + region + ' anom TEMP')
@@ -1483,9 +1498,9 @@ printtofile=False
 rho_sw=cnc.getNCvar(filenamec,'rho_sw')
 cp_sw = cnc.getNCvar(filenamec,'cp_sw')
 rhocp = 1e-1*cp_sw*rho_sw # [J/K/m^3]
-
+ylim=1000
 xlims=(-77,-50)
-ylims=(0,800)
+ylims=(0,ylim)
 
 cmlen=float(20)
 
@@ -1561,15 +1576,16 @@ if printtofile:
 # # ===================== paper ======
 # #  Zonal mean TEMP --- NO MOC
 
-printtofile=False
+printtofile=True
 
 # plot MOC contours over T anomaly
 rho_sw=cnc.getNCvar(filenamec,'rho_sw')
 cp_sw = cnc.getNCvar(filenamec,'cp_sw')
 rhocp = 1e-1*cp_sw*rho_sw # [J/K/m^3]
 
+ylim=1000
 xlims=(-77,-50)
-ylims=(0,800)
+ylims=(0,ylim)
 
 cmlen=float(20)
 
@@ -1941,7 +1957,8 @@ if pig:
 
     printtofile=False
 
-    ylim=450
+    #ylim=450
+    ylim=1000
     totwL1reg = np.squeeze(wtransreg[dep,...]) 
     totw2L1reg = np.squeeze(wtrans2reg[dep,...])
     totwvL1reg = np.squeeze(wtranswvreg[dep,...]) 
@@ -2070,14 +2087,15 @@ if pig:
     ax.plot(-1*totwireg,zt[1:]/100.,color=mediumblue,linewidth=2)#,linestyle=':')
     ax.plot(-1*totwi2reg,zt[1:]/100.,color=darkolivegreen3,linewidth=2)#3,linestyle=':')
 
+    yticks=np.arange(0,ylim,100)
     ax.plot([0,0],[0,1000],'k')
     ax.legend(('Sulf','GHGrem'),loc='best',fancybox=True,framealpha=0.5)
     ax.set_ylim((0,ylim))
     ax.set_xlim(-.15,.15)
     ax.set_xticks([-0.15,-0.10,-0.05, 0, 0.05, 0.1, 0.15])
     ax.set_xticklabels([-0.15,'',-0.05, 0, .05,'', 0.15], fontsize=18)
-    ax.set_yticks([0,100,200,300,400])
-    ax.set_yticklabels([0,100,200,300,400],fontsize=18)
+    ax.set_yticks(yticks)
+    ax.set_yticklabels(yticks,fontsize=18)
     #ax.set_title('VHT (W/m$^2$)',fontsize=18)
     ax.set_title('w$^{\prime}$*d$\overline{T}$/dz (W/m$^2$)',fontsize=18)
     ax.set_ylabel('Depth (m)',fontsize=18)
