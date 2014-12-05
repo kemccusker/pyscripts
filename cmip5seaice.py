@@ -24,7 +24,7 @@ import cccmacmaps as ccm
 plt.close('all')
 plt.ion()
 
-printtofile=True
+printtofile=False
 
 
 df = pd.DataFrame.from_csv('/raid/ra40/data/ncs/for_edhawkins_sic/rcp45/cmip5_rcp45_sie.csv')
@@ -98,7 +98,8 @@ for monii,mo in enumerate(mons):
      mndt = dict.fromkeys(models)
      mxdt = dict.fromkeys(models)
      avgdt = dict.fromkeys(models)
-    
+
+     enumdt={} # number of ensemble members
      for mod in models:
 
          onemod = df.filter(regex=mod)[styr:endyr] #DataFrame of DataFrames where e/ sub DF is one model's ensemble
@@ -107,6 +108,7 @@ for monii,mo in enumerate(mons):
          
          modensdt[mod] = modata # shape of values is # months x # ens mems
          ensnum = modata.values.shape[-1]
+         enumdt[mod] = ensnum
          xx = np.arange(0,modata.values.shape[0])
 
          slope= np.zeros((ensnum,))
@@ -331,3 +333,102 @@ if printtofile:
 ## #mondf[8].plot()
 
 
+
+###### want cmip5 multi-model mean sea ice concentration maps for
+# 2002-12 minus 1979-89   @@@
+# will have to concatenate rcp4.5 too
+
+othermodels=('CMCC-CMS','CMCC-CM','EC-EARTH','FGOALS-g2',
+             'GFDL-CM2p1','GFDL-CM3','GFDL-ESM2M','GFDL-ESM2G',
+             'MIROC4h')
+
+field='sic'
+comp='OImon'
+bp='/rd40/data/CMIP5/historical/' + field + '/'
+timeselc='1979-01-01,1989-12-31'
+timeselp1='2002-01-01,2005-12-31'
+timeselp2='2006-01-01,2012-12-31'
+
+ctldt = dict.fromkeys(models)
+p1dt = dict.fromkeys(models) # 2002-2005
+
+for model in models:
+     enum=enumdt[model] # number of ens members
+     ctlmoddt={}; p1moddt={}
+     for eii in range(1,enum+1):
+          if model in (othermodels): # these models have 5 or 10-year files
+               print 'skipping ' + model
+          else: # add filenames to 
+               if model in ('HadCM3',):
+                    fname=bp+model+'/r'+str(eii)+'i1p1/' + field + '_' + comp + '_' +\
+                      model + '_historical_r' + str(eii)+'i1p1_195912-198411.nc'
+               elif model in ('HadGEM2-AO',):
+                    fname=bp+model+'/r'+str(eii)+'i1p1/' + field + '_' + comp + '_' +\
+                           model + '_historical_r' + str(eii)+'i1p1_186001-200512.nc'
+               elif model in ('HadGEM2-CC',):
+                    fname=bp+model+'/r'+str(eii)+'i1p1/' + field + '_' + comp + '_' +\
+                           model + '_historical_r' + str(eii)+'i1p1_195912-200511.nc'
+               elif model in ('HadGEM2-ES',):
+                    fname=bp+model+'/r'+str(eii)+'i1p1/' + field + '_' + comp + '_' +\
+                           model + '_historical_r' + str(eii)+'i1p1_195912-200512.nc'
+               elif model in ('MIROC5',):
+                    fname=bp+model+'/r'+str(eii)+'i1p1/' + field + '_' + comp + '_' +\
+                           model + '_historical_r' + str(eii)+'i1p1_185001-201212.nc'
+               elif model in ('MPI-ESM-MR',):
+                    fname=bp+model+'/r'+str(eii)+'i1p1/' + field + '_' + comp + '_' +\
+                           model + '_historical_r' + str(eii)+'i1p1_190001-199912.nc'
+               elif model in ('MRI-ESM1',):
+                    fname=bp+model+'/r'+str(eii)+'i1p1/' + field + '_' + comp + '_' +\
+                           model + '_historical_r' + str(eii)+'i1p1_185101-200512.nc'
+               elif model in ('GISS-E2-H',) and eii==6:
+                    fname=bp+model+'/r'+str(eii)+'i1p1/' + field + '_' + comp + '_' +\
+                           model + '_historical_r' + str(eii)+'i1p1_195101-200012.nc'
+               else:
+                    fname=bp+model+'/r'+str(eii)+'i1p1/' + field + '_' + comp + '_' +\
+                           model + '_historical_r' + str(eii)+'i1p1_185001-200512.nc'
+
+               print fname
+               ctlmoddt[eii],junk = cutl.climatologize(cnc.getNCvar(fname,field,timesel=timeselc))
+               p1moddt[eii],junk = cutl.climatologize(cnc.getNCvar(fname,field,timesel=timeselp1))
+          
+     ctldt[model]=ctlmoddt
+     p1dt[model]=p1moddt
+
+    
+
+
+
+import cmip4meta as cm5
+
+print len(cm5.models)
+
+
+ctldt = dict.fromkeys(models)
+#p1dt = dict.fromkeys(models) # 2002-2005
+
+for mod in cm5.models:
+
+     print mod
+     meta=cm5.allmodeldt[mod]
+     if meta==None:
+          print model + ' not yet implemented!' # @@@
+
+     elif type(meta['fyears'])!=str:
+          # skip
+          print ' skipping models w/ annoying years for now'
+     else:
+          fyears=meta['fyears']
+          enum=meta['numens'] # number of ens members
+          ctlmoddt={}; p1moddt={}
+          for eii in range(1,enum+1):
+               if 'skipens' in meta.keys() and eii in meta['skipens']:
+                    print 'skipping ensemble: ' + str(eii)
+               else:
+                    fname=bp+mod+'/r'+str(eii)+'i1p1/' + field + '_' + comp + '_' +\
+                                mod + '_historical_r' + str(eii)+'i1p1_' + fyears +'.nc'
+                    print fname
+                    ctlmoddt[eii],junk = cutl.climatologize(cnc.getNCvar(fname,field,timesel=timeselc))
+                    #p1moddt[eii],junk = cutl.climatologize(cnc.getNCvar(fname,field,timesel=timeselp1))
+          
+     ctldt[mod]=ctlmoddt
+     #p1dt[model]=p1moddt
