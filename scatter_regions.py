@@ -19,19 +19,19 @@ conv1=1; conv2=1
 
 plotscatter=False
 
-#field1='st'; ncfield1='ST'
+field1='st'; ncfield1='ST'
 #field1='sia'; ncfield1='SICN'
-field1='gz50000'; ncfield1='PHI'; conv1=1/con.get_g()
+#field1='gz50000'; ncfield1='PHI'; conv1=1/con.get_g()
 #field1='pmsl'; ncfield1='PMSL'
-region1='bksmori' #'bksmori' #'polcap65'
-sea1='ND' #'DJF'
+region1='polcap60' #'bksmori' #'polcap65'
+sea1='DJF' #'DJF'
 
 field2='st'; ncfield2='ST'
 #field2='sia'; ncfield2='SICN'
 #field2='pmsl'; ncfield2='PMSL'
 #field2='gz50000'; ncfield2='PHI'; conv2=1/con.get_g()
 region2= 'eurasiamori' #'eurasiamori'
-sea2='ND' #'DJF'
+sea2='DJF' #'DJF'
 
 sims = ('E1','E2','E3','E4','E5','R1','R2','R3','R4','R5','HAD','NSIDC','ENS','ENSE')
 TOT = ('R1','R2','R3','R4','R5')
