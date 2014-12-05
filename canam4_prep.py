@@ -27,7 +27,7 @@ plt.ion()
        # coords = {'lat': con.get_t63lat(), 'lon': con.get_t63lon()}
 
 
-printtofile=True
+printtofile=False
 
 field = 'st'
 smclim=False
@@ -39,10 +39,10 @@ field2='gz'
 level2=50000
 
 # seasonalmap, seasonalvert, plotzonmean, plotseacyc, pattcorrwithtime, plotregmean,calcregmeanwithtime, timetosig, timetosigsuper
-plottype='calcregmeanwithtime' 
+plottype='plotregmean' 
 
 # None, polcap60, polcap65, polcap70, eurasia, eurasiamori, ntham, nthatl, bks, bksmori, soo
-region='ntham' #'eurasiamori'
+region='polcap60' #'eurasiamori'
 screen=True
 seacyclatlim=60
 withlat=False
@@ -62,7 +62,7 @@ halftime2=False # get only the last 60yrs. make sure to set the other flag the o
 
 # Choose what simulations to add =============
 #  default is R1-5, ENS
-canens=True # just the CAN ensemble (E1-E5) plus mean, plus mean of R ensemble. option to addobs only.
+canens=False # just the CAN ensemble (E1-E5) plus mean, plus mean of R ensemble. option to addobs only.
 allens=False # this is ONLY the ensemble means, plus superensemble
 sensruns=False # sensruns only: addr4ct=1,addsens=1. others=0 no meanBC, r mean, or obs
 ivar=False # this will show ENS (TOT) and ENSE (ANTH) and their difference = internal var
@@ -75,7 +75,7 @@ addobs=True # add mean of kemhad* & kemnsidc* runs to line plots, seasonal maps.
 addr4ct=False # add kem1pert2r4ct (constant thickness version of ens4)
 addsens=False # add sensitivity runs (kem1pert1b, kem1pert3)
 addrcp=False # add kem1rcp85a simulation (and others if we do more)
-addcanens=False # add "initial condition" ensemble of kemctl1/kem1pert2
+addcanens=True # add "initial condition" ensemble of kemctl1/kem1pert2
 addsuper=False # add superensemble mean
 
 
