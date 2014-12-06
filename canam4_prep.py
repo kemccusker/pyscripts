@@ -27,10 +27,10 @@ plt.ion()
        # coords = {'lat': con.get_t63lat(), 'lon': con.get_t63lon()}
 
 
-printtofile=False
+printtofile=True
 
 field = 'st'
-smclim=False
+smclim=True
 level=50000 # for threed
 
 addcont=False # overlay map with contours
@@ -39,10 +39,11 @@ field2='gz'
 level2=50000
 
 # seasonalmap, seasonalvert, plotzonmean, plotseacyc, pattcorrwithtime, plotregmean,calcregmeanwithtime, timetosig, timetosigsuper
-plottype='plotregmean' 
+plottype='seasonalmap' 
+projtype='nastere' # 'nh','sh','sq','eastere','nastere'
 
-# None, polcap60, polcap65, polcap70, eurasia, eurasiamori, ntham, nthatl, bks, bksmori, soo
-region='polcap60' #'eurasiamori'
+# None, polcap60, polcap65, polcap70, eurasia, eurasiamori, eurasiasth,eurasiathin,eurasiathinw,eurasiathine,ntham, nthatl, bks, bksmori, soo
+region=None #'eurasiamori'
 screen=True
 seacyclatlim=60
 withlat=False
@@ -62,7 +63,7 @@ halftime2=False # get only the last 60yrs. make sure to set the other flag the o
 
 # Choose what simulations to add =============
 #  default is R1-5, ENS
-canens=False # just the CAN ensemble (E1-E5) plus mean, plus mean of R ensemble. option to addobs only.
+canens=True # just the CAN ensemble (E1-E5) plus mean, plus mean of R ensemble. option to addobs only.
 allens=False # this is ONLY the ensemble means, plus superensemble
 sensruns=False # sensruns only: addr4ct=1,addsens=1. others=0 no meanBC, r mean, or obs
 ivar=False # this will show ENS (TOT) and ENSE (ANTH) and their difference = internal var
@@ -71,11 +72,11 @@ antcat=False # this is the concatenation of ens members within each ensemble (re
 bothcat=False # can do concatenation of both ensembles if want to. These are useful for timetosig
 onlyens=False # just do ensemble means ANT and TOT
 
-addobs=True # add mean of kemhad* & kemnsidc* runs to line plots, seasonal maps. 
+addobs=False # add mean of kemhad* & kemnsidc* runs to line plots, seasonal maps. 
 addr4ct=False # add kem1pert2r4ct (constant thickness version of ens4)
 addsens=False # add sensitivity runs (kem1pert1b, kem1pert3)
 addrcp=False # add kem1rcp85a simulation (and others if we do more)
-addcanens=True # add "initial condition" ensemble of kemctl1/kem1pert2
+addcanens=False # add "initial condition" ensemble of kemctl1/kem1pert2
 addsuper=False # add superensemble mean
 
 
@@ -281,7 +282,8 @@ infodict ={'cmapclimo': 'Spectral_r','leglocs': None,
            'seacycylim': None, 'savestr': savestr,
            'model': model, 'sigtype': sigtype, 'sigoff': sigoff,
            'pct': pct, 'seacyclatlim': seacyclatlim, 'region': region,
-           'shadeens': shadeens, 'corrlim': corrlim, 'figtrans':figtrans} # random other info
+           'shadeens': shadeens, 'corrlim': corrlim, 'figtrans':figtrans,
+           'type': projtype} # random other info. projtype for maps only
 
 fdict,pparams=ld.loadfldmeta(field,infodict,plottype,ptparams,level=level)
 
@@ -719,6 +721,7 @@ if plottype=='timetosig' or plottype=='timetosigsuper':
     dblob = sfnc.calc_seasons(fdict,coords,sims,loctimesel=timesel,info=infodict,calctype=calctype,seas=seasons)
   
     sfnc.plot_seasonal_maps(dblob,fdict,coords,sims,pparams,plottype='timetosig',vert=False,seas=seasons,info=infodict,printtofile=printtofile)
+
     
 if plottype=='calcregmeanwithtime':
     dblob = sfnc.calc_seasons(fdict,coords,sims,seas=seasons,loctimesel=timesel,info=infodict,calctype='regmeanwithtime')
