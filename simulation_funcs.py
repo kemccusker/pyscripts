@@ -65,6 +65,7 @@ def calc_plot_seasonal_maps(fielddict,coords,sims,pparams,vert=False,loctimesel=
     savestr=info['savestr']
     screen = info['screen']
     figtrans = info['figtrans'] # boolean specifying whether to switch rows/cols
+    pltype= info['type'] # plot projection type for kemmap
     
     bp=con.get_basepath()
     basepath=bp['basepath'] + model + '/'; subdir=bp['subdir'] # @@ move out of function?
@@ -283,6 +284,9 @@ def calc_plot_seasonal_maps(fielddict,coords,sims,pparams,vert=False,loctimesel=
                         ax.set_title(sea,fontsize=18)
                         
             else: # maps
+                if pltype !=None:
+                    pparams['type']=pltype
+                    
                 pparams['suppcb'] = 1
                 bm,pc = cplt.kemmap(plotfld,lat,lon,**pparams)#@@
 
@@ -358,7 +362,7 @@ def calc_plot_seasonal_maps(fielddict,coords,sims,pparams,vert=False,loctimesel=
                 fig6.savefig(fieldstr + 'pctdiff' + sigstr + '_enssubplot' + savestr +
                              '_seas_nh' + latstr + '2.' + suff)
             else:
-                fig6.savefig(fieldstr + 'diff' + sigstr + '_enssubplot' + savestr + '_seas_nh'
+                fig6.savefig(fieldstr + 'diff' + sigstr + '_enssubplot' + savestr + '_seas_' + pltype
                              + latstr + '2.' + suff)
 
 def calc_seasons(fielddict,coords,sims,loctimesel=None,info=None,siglevel=0.05,
