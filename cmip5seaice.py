@@ -20,6 +20,8 @@ import collections as coll
 import scipy as sp
 import scipy.stats
 import cccmacmaps as ccm
+import cccmautils as cutl
+import cmip5meta as cm5
 
 plt.close('all')
 plt.ion()
@@ -349,69 +351,66 @@ timeselc='1979-01-01,1989-12-31'
 timeselp1='2002-01-01,2005-12-31'
 timeselp2='2006-01-01,2012-12-31'
 
-ctldt = dict.fromkeys(models)
-p1dt = dict.fromkeys(models) # 2002-2005
+## ctldt = dict.fromkeys(models)
+## p1dt = dict.fromkeys(models) # 2002-2005
 
-for model in models:
-     enum=enumdt[model] # number of ens members
-     ctlmoddt={}; p1moddt={}
-     for eii in range(1,enum+1):
-          if model in (othermodels): # these models have 5 or 10-year files
-               print 'skipping ' + model
-          else: # add filenames to 
-               if model in ('HadCM3',):
-                    fname=bp+model+'/r'+str(eii)+'i1p1/' + field + '_' + comp + '_' +\
-                      model + '_historical_r' + str(eii)+'i1p1_195912-198411.nc'
-               elif model in ('HadGEM2-AO',):
-                    fname=bp+model+'/r'+str(eii)+'i1p1/' + field + '_' + comp + '_' +\
-                           model + '_historical_r' + str(eii)+'i1p1_186001-200512.nc'
-               elif model in ('HadGEM2-CC',):
-                    fname=bp+model+'/r'+str(eii)+'i1p1/' + field + '_' + comp + '_' +\
-                           model + '_historical_r' + str(eii)+'i1p1_195912-200511.nc'
-               elif model in ('HadGEM2-ES',):
-                    fname=bp+model+'/r'+str(eii)+'i1p1/' + field + '_' + comp + '_' +\
-                           model + '_historical_r' + str(eii)+'i1p1_195912-200512.nc'
-               elif model in ('MIROC5',):
-                    fname=bp+model+'/r'+str(eii)+'i1p1/' + field + '_' + comp + '_' +\
-                           model + '_historical_r' + str(eii)+'i1p1_185001-201212.nc'
-               elif model in ('MPI-ESM-MR',):
-                    fname=bp+model+'/r'+str(eii)+'i1p1/' + field + '_' + comp + '_' +\
-                           model + '_historical_r' + str(eii)+'i1p1_190001-199912.nc'
-               elif model in ('MRI-ESM1',):
-                    fname=bp+model+'/r'+str(eii)+'i1p1/' + field + '_' + comp + '_' +\
-                           model + '_historical_r' + str(eii)+'i1p1_185101-200512.nc'
-               elif model in ('GISS-E2-H',) and eii==6:
-                    fname=bp+model+'/r'+str(eii)+'i1p1/' + field + '_' + comp + '_' +\
-                           model + '_historical_r' + str(eii)+'i1p1_195101-200012.nc'
-               else:
-                    fname=bp+model+'/r'+str(eii)+'i1p1/' + field + '_' + comp + '_' +\
-                           model + '_historical_r' + str(eii)+'i1p1_185001-200512.nc'
+## for model in models:
+##      enum=enumdt[model] # number of ens members
+##      ctlmoddt={}; p1moddt={}
+##      for eii in range(1,enum+1):
+##           if model in (othermodels): # these models have 5 or 10-year files
+##                print 'skipping ' + model
+##           else: # add filenames to 
+##                if model in ('HadCM3',):
+##                     fname=bp+model+'/r'+str(eii)+'i1p1/' + field + '_' + comp + '_' +\
+##                       model + '_historical_r' + str(eii)+'i1p1_195912-198411.nc'
+##                elif model in ('HadGEM2-AO',):
+##                     fname=bp+model+'/r'+str(eii)+'i1p1/' + field + '_' + comp + '_' +\
+##                            model + '_historical_r' + str(eii)+'i1p1_186001-200512.nc'
+##                elif model in ('HadGEM2-CC',):
+##                     fname=bp+model+'/r'+str(eii)+'i1p1/' + field + '_' + comp + '_' +\
+##                            model + '_historical_r' + str(eii)+'i1p1_195912-200511.nc'
+##                elif model in ('HadGEM2-ES',):
+##                     fname=bp+model+'/r'+str(eii)+'i1p1/' + field + '_' + comp + '_' +\
+##                            model + '_historical_r' + str(eii)+'i1p1_195912-200512.nc'
+##                elif model in ('MIROC5',):
+##                     fname=bp+model+'/r'+str(eii)+'i1p1/' + field + '_' + comp + '_' +\
+##                            model + '_historical_r' + str(eii)+'i1p1_185001-201212.nc'
+##                elif model in ('MPI-ESM-MR',):
+##                     fname=bp+model+'/r'+str(eii)+'i1p1/' + field + '_' + comp + '_' +\
+##                            model + '_historical_r' + str(eii)+'i1p1_190001-199912.nc'
+##                elif model in ('MRI-ESM1',):
+##                     fname=bp+model+'/r'+str(eii)+'i1p1/' + field + '_' + comp + '_' +\
+##                            model + '_historical_r' + str(eii)+'i1p1_185101-200512.nc'
+##                elif model in ('GISS-E2-H',) and eii==6:
+##                     fname=bp+model+'/r'+str(eii)+'i1p1/' + field + '_' + comp + '_' +\
+##                            model + '_historical_r' + str(eii)+'i1p1_195101-200012.nc'
+##                else:
+##                     fname=bp+model+'/r'+str(eii)+'i1p1/' + field + '_' + comp + '_' +\
+##                            model + '_historical_r' + str(eii)+'i1p1_185001-200512.nc'
 
-               print fname
-               ctlmoddt[eii],junk = cutl.climatologize(cnc.getNCvar(fname,field,timesel=timeselc))
-               p1moddt[eii],junk = cutl.climatologize(cnc.getNCvar(fname,field,timesel=timeselp1))
+##                print fname
+##                ctlmoddt[eii],junk = cutl.climatologize(cnc.getNCvar(fname,field,timesel=timeselc))
+##                p1moddt[eii],junk = cutl.climatologize(cnc.getNCvar(fname,field,timesel=timeselp1))
           
-     ctldt[model]=ctlmoddt
-     p1dt[model]=p1moddt
+##      ctldt[model]=ctlmoddt
+##      p1dt[model]=p1moddt
 
     
 
-
-
-import cmip4meta as cm5
-
 print len(cm5.models)
+#bp='/ra40/data/ncs/sic/'
 
 
 ctldt = dict.fromkeys(models)
-#p1dt = dict.fromkeys(models) # 2002-2005
+p1dt = dict.fromkeys(models) # 2002-2005
 
 for mod in cm5.models:
 
      print mod
      meta=cm5.allmodeldt[mod]
      if meta==None:
-          print model + ' not yet implemented!' # @@@
+          print mod + ' not yet implemented!' # @@@
 
      elif type(meta['fyears'])!=str:
           # skip
@@ -428,7 +427,7 @@ for mod in cm5.models:
                                 mod + '_historical_r' + str(eii)+'i1p1_' + fyears +'.nc'
                     print fname
                     ctlmoddt[eii],junk = cutl.climatologize(cnc.getNCvar(fname,field,timesel=timeselc))
-                    #p1moddt[eii],junk = cutl.climatologize(cnc.getNCvar(fname,field,timesel=timeselp1))
+                    p1moddt[eii],junk = cutl.climatologize(cnc.getNCvar(fname,field,timesel=timeselp1))
           
      ctldt[mod]=ctlmoddt
-     #p1dt[model]=p1moddt
+     p1dt[mod]=p1moddt
