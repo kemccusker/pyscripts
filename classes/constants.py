@@ -638,6 +638,11 @@ def get_regiondict():
     regdict['eurasiathinw'] = {'latlims': [35,55], 'lonlims': [40,80]}
     regdict['eurasiathine'] = {'latlims': [35,50], 'lonlims': [80,120]}
     regdict['ntham'] = {'latlims': [35,60], 'lonlims': [240,280]}
+    regdict['nthamsth'] = {'latlims': [32,55], 'lonlims': [240,280]}
+    regdict['nthamthick'] = {'latlims': [32,60], 'lonlims': [238,282]}
+    regdict['nthamw'] = {'latlims': [32,60], 'lonlims': [235,265]}
+    regdict['nthame'] = {'latlims': [34,60], 'lonlims': [265,295]}
+    regdict['usa'] = {'latlims': [32,49], 'lonlims': [235,285]}
     regdict['nthatl'] = {'latlims': [35,60], 'lonlims': [300,360]}
     regdict['bks'] = {'latlims': [65,80], 'lonlims': [27,96]} # Barents-Kara Seas 65N-80N,27E-96E
     regdict['bksmori'] = {'latlims': [65,85], 'lonlims': [30,90]} # Barents-Kara Seas 65N-85N,30E-90E
@@ -663,7 +668,6 @@ def get_regionlims(regname):
                           soo: latlims=[46,61], lonlims=[136,158] Sea of Okhotsk 46N-61N,136E-158E
 
     """
-
 
     regdict = get_regiondict()
 
