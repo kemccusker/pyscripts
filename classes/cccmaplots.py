@@ -29,7 +29,8 @@ kemmap(fld, lat, lon, title='', units='', cmap='blue2red_w20', type='sq', cmin='
             units: data units (colorbar label)
             cmap: map colormap. default blue to red, continuous
             type: type of map. default 'sq' for Robinson projection. 
-                  else: 'nh', 'sh' orthographic projections
+                  else: 'nh', 'sh' orthographic projections,
+                        'eastere' is Eurasia 'stere' projection
             cmin, cmax: color scale limits
             axis: handle to the axes instance to give to basemap. default None.
             suppcb: suppress colorbar. default = 0 (do not suppress)
@@ -37,6 +38,7 @@ kemmap(fld, lat, lon, title='', units='', cmap='blue2red_w20', type='sq', cmin='
             flipmask: a hack to flip the lat direction of lmask (e.g. for HURRELL data)
             latlim: if polar projection, it will be the equatorward limit (so far only
                     works if do a stereographic proj, not ortho 5/13/2014
+            drawgrid: if True, draw parallels and meridians
 
     Returns: basemap handle (to add to bm after function call),
              pcolormesh handle (typically to add colorbar after func call)
@@ -44,7 +46,7 @@ kemmap(fld, lat, lon, title='', units='', cmap='blue2red_w20', type='sq', cmin='
 """
 
 def kemmap(fld, lat, lon,title='',units='',cmap='blue2red_w20',type='sq',
-           cmin='',cmax='',axis=None, suppcb=0,lmask=0,flipmask=0,latlim=None):
+           cmin='',cmax='',axis=None, suppcb=0,lmask=0,flipmask=0,latlim=None,drawgrid=False):
 
     if cmap =='' or cmap==None:
         cmap='blue2red_w20'
@@ -56,7 +58,7 @@ def kemmap(fld, lat, lon,title='',units='',cmap='blue2red_w20',type='sq',
     if type == 'sq':
         mapparams = dict(projection='robin',lon_0=180,lat_0=0, resolution='c')
     elif type == 'nh':
-        if latlim != None:
+        if latlim != None: # try 'round=True' !@@@
             mapparams = dict(projection='npstere',boundinglat=latlim,lon_0=0,resolution='c')
         else:
             # try mill, hammer, merc
@@ -66,14 +68,24 @@ def kemmap(fld, lat, lon,title='',units='',cmap='blue2red_w20',type='sq',
         # AttributeError: 'Basemap' object has no attribute '_height'
         # 5/12/14 -- don't know why. same goes for lat_0=0.
     elif type == 'sh':
-        if latlim != None:
+        if latlim != None: # try 'round=True' !@@@
             mapparams = dict(projection='spstere',boundinglat=latlim,lon_0=0,resolution='c')
         else:
             mapparams = dict(projection='ortho',lon_0=0.,lat_0=-90., resolution='c')
             # same error if add: llcrnrlon='-180',llcrnrlat='-90',urcrnrlon='180',urcrnrlat='-45'
+    elif type == 'eastere': # Eurasia stere projection
+        #mapparams = dict(width=2500000,height=2700000,resolution='i',projection='laea',\
+        #    lat_ts=62.5,lat_0=62.5,lon_0=77.0)
+        mapparams = dict(llcrnrlon=40.,llcrnrlat=10.,urcrnrlon=160.,urcrnrlat=50.,
+                         resolution='c',projection='stere',lat_0=45.,lon_0=80.) #'laea'
+        #mapparams = dict(width=3000000,height=3000000,resolution='c',projection='laea',\
+        #                 lat_0=55.,lon_0=80.)# can't get width/height big enough -- errors
+    elif type == 'nastere': # North America stere projection
+        mapparams = dict(llcrnrlon=220.,llcrnrlat=20.,urcrnrlon=320.,urcrnrlat=50.,
+                         resolution='c',projection='stere',lat_0=45.,lon_0=230.)
     else:
-        print "Incorrect map type. Choose sq,nh,sh"
-        exit
+        print "Incorrect map type. Choose sq,nh,sh,eastere"
+        return -1
         
     # default pcolormesh dictionary
     if cmin =='':
@@ -120,6 +132,12 @@ def kemmap(fld, lat, lon,title='',units='',cmap='blue2red_w20',type='sq',
         pc = bm.contourf(lons,lats,fld,20,**pcparams) # 20 auto levels
     else:
         pc = bm.contourf(lons,lats,fld,**pcparams)
+
+    if drawgrid:
+        bm.drawparallels(np.arange(-90.,90.,20.),labels=[1,0,0,0])
+        bm.drawmeridians(np.arange(0.,360.,30.),labels=[0,0,0,1])
+
+
     bm.drawcoastlines(color='0.7')
     #bm.drawmapboundary(fill_color='#99ffff')
 
@@ -129,8 +147,8 @@ def kemmap(fld, lat, lon,title='',units='',cmap='blue2red_w20',type='sq',
 
     # I think drawlsmask puts the mask on the bottom
     #bm.drawlsmask(land_color='0.7',lsmask=con.get_t63landmask(),ax=axis)
-    #bm.drawparallels(np.arange(-90.,120.,30.))
-    #bm.drawmeridians(np.arange(0.,360.,30.))
+    
+        
     if axis!=None:
         axis.set_title(title,fontsize=10)
     else:
@@ -495,7 +513,8 @@ def plot_region(regname,type='nh',axis=None,latlim=None,limsdict=None):
     dummym = ma.masked_where(regmask,dummy)
 
     plt.figure()
-    kemmap(dummym,lat,lon,type=type,axis=axis,latlim=latlim,suppcb=1,cmin=-11,cmax=2,cmap='blue2blue_w10')
+    kemmap(dummym,lat,lon,type=type,axis=axis,latlim=latlim,suppcb=1,
+           cmin=-11,cmax=2,cmap='blue2blue_w10',drawgrid=True)
 
     
 
@@ -513,7 +532,7 @@ def plot_allregions(type='nh'):
     else:
         cols = nreg/rows + rem # rem will always be 1 if dividing by 2
 
-    if cols>8:
+    if cols>8: 
         rows = 3
         cols = nreg/rows + np.mod(nreg,rows)/2
 
@@ -523,6 +542,7 @@ def plot_allregions(type='nh'):
     lon = con.get_t63lon()
     
     fig,spax = plt.subplots(rows,cols)
+    fig.set_size_inches(cols*2,rows*3)
     
     for aii,ax in enumerate(spax.flat):
 
@@ -531,10 +551,11 @@ def plot_allregions(type='nh'):
         regkey = regdict.keys()[aii]
         limsdict = regdict[regkey]
         # mask the dummy data
-        dummym,dmask = cutl.mask_region(dummy,lat,lon,limsdict)
+        dummym,dmask = cutl.mask_region(dummy,lat,lon,regkey,limsdict=limsdict)
                 
         kemmap(dummym,lat,lon,type=type,axis=ax,suppcb=1,cmin=-11,cmax=2,cmap='blue2blue_w10')        
         ax.set_title(regkey)
+        ax.set_xlabel(str(limsdict['latlims']) + ',' +str(limsdict['lonlims']) )
         
         if aii==nreg-1: break # get out of loop if done with regions
         
