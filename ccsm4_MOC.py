@@ -219,6 +219,7 @@ tlat = cnc.getNCvar(filenamec,'TLAT')
 tlon = cnc.getNCvar(filenamec,'TLONG')
 tarea=cnc.getNCvar(filenamec,'TAREA')
 
+tareat = np.tile(tarea,(len(zt),1,1))
 
 import numpy.ma as ma
 
@@ -230,6 +231,15 @@ for lii,zz in enumerate(zt):
     tempc[lii,...] = ma.masked_where(kmt <= lii,tempc[lii,...])
     tempp[lii,...] = ma.masked_where(kmt <= lii,tempp[lii,...])
     tempp2[lii,...] = ma.masked_where(kmt <= lii,tempp2[lii,...])
+    tareat[lii,...] = ma.masked_where(kmt <= lii,tareat[lii,...]) # @@ not working??
+
+tareat = ma.masked_where(tempp.mask,tareat)
+
+totzonalarea= ma.sum(tareat,axis=2)
+totzonalareat=np.tile(totzonalarea,(tareat.shape[2],1,1))
+totzonalareat=np.transpose(totzonalareat,(1,2,0))
+fullzonalwgts= tareat/totzonalareat
+fullzonalwgts=ma.masked_where(tareat.mask,fullzonalwgts) # remember have to use fld.mask !
     
 if pig:  # 80W to 120W. Or 280 to 230
     printtofile=False
@@ -267,11 +277,44 @@ if pig:  # 80W to 120W. Or 280 to 230
     tempcreg = ma.masked_where(rmask,tempc)
     temppreg = ma.masked_where(rmask,tempp)
     tempp2reg = ma.masked_where(rmask,tempp2)
+    tareatreg = ma.masked_where(rmask,tareat)
 
-    # do I need to also take ocean fraction into account?!
-    tempcreg=np.squeeze(np.mean(tempcreg,axis=2))
-    temppreg=np.squeeze(np.mean(temppreg,axis=2))
-    tempp2reg=np.squeeze(np.mean(tempp2reg,axis=2))
+    # now also mask out cells below ocean floor:
+    for lii,zz in enumerate(zt):
+        # mask out levels below sea floor
+        tempcreg[lii,...] = ma.masked_where(kmt <= lii,tempcreg[lii,...]) # @@@ do the masks combine? hope so.
+        temppreg[lii,...] = ma.masked_where(kmt <= lii,temppreg[lii,...])
+        tempp2reg[lii,...] = ma.masked_where(kmt <= lii, tempp2reg[lii,...])
+        tareatreg[lii,...] = ma.masked_where(kmt <= lii, tareatreg[lii,...])
+
+    # @@@ test plot again
+    #testagain=tareatreg # @@ hopefully doubley-masked. YES works.
+    #plt.figure()
+    #ret=cplt.kemmap(testagain[0,...],tlat[:,0],tlon[0,:],title='double masked field?',type='sh')
+    #plt.figure()
+    #ret=cplt.kemmap(testagain[50,...],tlat[:,0],tlon[0,:],title='double masked field?',type='sh')
+
+
+    regzonalarea= ma.sum(tareatreg,axis=2) # only want to sum where there isn't land
+    regzonalareat=np.tile(regzonalarea,(tareatreg.shape[2],1,1))
+    regzonalareat=np.transpose(regzonalareat,(1,2,0))
+    regzonalwgts= tareatreg/regzonalareat
+    regzonalwgts=ma.masked_where(tareatreg.mask,regzonalwgts)
+    #plt.figure()
+    #ret=cplt.kemmap(regzonalwgts[0,...],tlat[:,0],tlon[0,:],title='regzonmask: double masked field?',type='sh')
+    #plt.figure()
+    #ret=cplt.kemmap(regzonalwgts[50,...],tlat[:,0],tlon[0,:],title='regzonmask: double masked field?',type='sh')
+
+
+    #tempcreg=np.squeeze(np.mean(tempcreg,axis=2))    
+    #temppreg=np.squeeze(np.mean(temppreg,axis=2))
+    #tempp2reg=np.squeeze(np.mean(tempp2reg,axis=2))
+    # don't actually need weights in zonal mean, but can't hurt. 
+    # need weights in area average for SLR and vert heat trans
+    # @@@@ but I still can't figure out what's wrong with vert heat trans calc at depth.
+    tempcreg=np.squeeze(ma.average(tempcreg,axis=2,weights=regzonalwgts))
+    temppreg=np.squeeze(ma.average(temppreg,axis=2,weights=regzonalwgts))
+    tempp2reg=np.squeeze(ma.average(tempp2reg,axis=2,weights=regzonalwgts))  
 
     tlats,zlevs = np.meshgrid(np.squeeze(tlat[:,1]),zt/100.)
     cmap='jet'
@@ -301,8 +344,8 @@ if pig:  # 80W to 120W. Or 280 to 230
     cmin=-.5; cmax=.5
     
 
-    printtofile= True
-    ylim=1000
+    printtofile=True
+    ylim=800
     #cmlen=float( plt.cm.get_cmap(cmap).N) # or: from __future__ import division
     cmlen=float(20)
     incr = (cmax-cmin) / (cmlen)
@@ -390,9 +433,9 @@ if pig:  # 80W to 120W. Or 280 to 230
     # #########################
 
 
-tempc=np.squeeze(np.mean(tempc,axis=2))
-tempp=np.squeeze(np.mean(tempp,axis=2))
-tempp2=np.squeeze(np.mean(tempp2,axis=2))
+tempc=np.squeeze(ma.mean(tempc,axis=2))
+tempp=np.squeeze(ma.mean(tempp,axis=2))
+tempp2=np.squeeze(ma.mean(tempp2,axis=2))
 
 print tempc.shape
 
@@ -839,45 +882,56 @@ if pig:
     wisopprimereg = ma.masked_where(rmask,wisopprime)
     wisopprime2reg = ma.masked_where(rmask,wisopprime2)
 
+    # test masks again @@@@ works fine
+    #testmaskxx = wprimereg
+    #plt.figure()
+    #ret=cplt.kemmap(testmaskxx[0,...],tlat[:,0],tlon[0,:],type='sh',title='wprimereg mask test')
+    #plt.figure()
+    #ret=cplt.kemmap(testmaskxx[50,...],tlat[:,0],tlon[0,:],type='sh',title='wprimereg mask test')
+
+
     wbarreg = ma.masked_where(rmask,wbar)
     wvelbarreg = ma.masked_where(rmask,wvelbar)
     wisopbarreg = ma.masked_where(rmask,wisopbar)
     
-    wprimereg = np.squeeze(np.mean(wprimereg,axis=2))
-    wprime2reg = np.squeeze(np.mean(wprime2reg,axis=2))
-    wvelprimereg = np.squeeze(np.mean(wvelprimereg,axis=2))
-    wvelprime2reg = np.squeeze(np.mean(wvelprime2reg,axis=2))
-    wisopprimereg = np.squeeze(np.mean(wisopprimereg,axis=2))
-    wisopprime2reg = np.squeeze(np.mean(wisopprime2reg,axis=2))
+    #zonal mean
+    # @@@ change to ma.mean
+    wprimereg = np.squeeze(ma.mean(wprimereg,axis=2))
+    wprime2reg = np.squeeze(ma.mean(wprime2reg,axis=2))
+    wvelprimereg = np.squeeze(ma.mean(wvelprimereg,axis=2))
+    wvelprime2reg = np.squeeze(ma.mean(wvelprime2reg,axis=2))
+    wisopprimereg = np.squeeze(ma.mean(wisopprimereg,axis=2))
+    wisopprime2reg = np.squeeze(ma.mean(wisopprime2reg,axis=2))
 
-    wbarreg = np.squeeze(np.mean(wbarreg,axis=2))
-    wvelbarreg = np.squeeze(np.mean(wvelbarreg,axis=2))
-    wisopbarreg = np.squeeze(np.mean(wisopbarreg,axis=2))
+    wbarreg = np.squeeze(ma.mean(wbarreg,axis=2))
+    wvelbarreg = np.squeeze(ma.mean(wvelbarreg,axis=2))
+    wisopbarreg = np.squeeze(ma.mean(wisopbarreg,axis=2))
 
 
     tbarreg = tempcreg# already zonal meaned MEAN T
-    dtbarreg = np.diff(tbarreg,axis=0) # delta of MEAN T with height
+    dtbarreg = ma.diff(tbarreg,axis=0) # delta of MEAN T with height
 
     tprimereg = temppreg-tempcreg
     tprime2reg = tempp2reg-tempcreg
-    dtprimereg = np.diff(tprimereg, axis=0) # delta of ANOM T with height
-    dtprime2reg = np.diff(tprime2reg, axis=0)
+    dtprimereg = ma.diff(tprimereg, axis=0) # delta of ANOM T with height
+    dtprime2reg = ma.diff(tprime2reg, axis=0)
 
     # thickness of each layer
     dzt = np.diff(zt/100.) # convert to m
-    wtransreg = np.zeros((len(dzt),wprimereg.shape[1]))
-    wtrans2reg = np.zeros((len(dzt),wprime2reg.shape[1]))
-    wtranswvreg = np.zeros((len(dzt),wprimereg.shape[1]))
-    wtranswv2reg = np.zeros((len(dzt),wprime2reg.shape[1]))
-    wtranswireg = np.zeros((len(dzt),wprimereg.shape[1]))
-    wtranswi2reg = np.zeros((len(dzt),wprime2reg.shape[1]))
+    # @@@@ switch to ma.zeros
+    wtransreg = ma.zeros((len(dzt),wprimereg.shape[1]))
+    wtrans2reg = ma.zeros((len(dzt),wprime2reg.shape[1]))
+    wtranswvreg = ma.zeros((len(dzt),wprimereg.shape[1]))
+    wtranswv2reg = ma.zeros((len(dzt),wprime2reg.shape[1]))
+    wtranswireg = ma.zeros((len(dzt),wprimereg.shape[1]))
+    wtranswi2reg = ma.zeros((len(dzt),wprime2reg.shape[1]))
 
-    wbartransreg = np.zeros((len(dzt),wbarreg.shape[1])) # mean w time anom dT
-    wbartrans2reg = np.zeros((len(dzt),wbarreg.shape[1])) # mean w time anom dT
-    wbartranswvreg = np.zeros((len(dzt),wbarreg.shape[1]))
-    wbartranswv2reg = np.zeros((len(dzt),wbarreg.shape[1]))
-    wbartranswireg = np.zeros((len(dzt),wbarreg.shape[1]))
-    wbartranswi2reg = np.zeros((len(dzt),wbarreg.shape[1]))
+    wbartransreg = ma.zeros((len(dzt),wbarreg.shape[1])) # mean w time anom dT
+    wbartrans2reg = ma.zeros((len(dzt),wbarreg.shape[1])) # mean w time anom dT
+    wbartranswvreg = ma.zeros((len(dzt),wbarreg.shape[1]))
+    wbartranswv2reg = ma.zeros((len(dzt),wbarreg.shape[1]))
+    wbartranswireg = ma.zeros((len(dzt),wbarreg.shape[1]))
+    wbartranswi2reg = ma.zeros((len(dzt),wbarreg.shape[1]))
 
     # calc heat transport (heating rate) for each level
     for lii,dz in enumerate(dzt):
@@ -1081,22 +1135,22 @@ if pig:
 ##### end if pig region
 
 
-wprime = np.squeeze(np.mean(wprime,axis=2))
-wprime2 = np.squeeze(np.mean(wprime2,axis=2))
-wvelprime = np.squeeze(np.mean(wvelprime,axis=2))
-wvelprime2 = np.squeeze(np.mean(wvelprime2,axis=2))
-wisopprime = np.squeeze(np.mean(wisopprime,axis=2))
-wisopprime2 = np.squeeze(np.mean(wisopprime2,axis=2))
+wprime = np.squeeze(ma.mean(wprime,axis=2))
+wprime2 = np.squeeze(ma.mean(wprime2,axis=2))
+wvelprime = np.squeeze(ma.mean(wvelprime,axis=2))
+wvelprime2 = np.squeeze(ma.mean(wvelprime2,axis=2))
+wisopprime = np.squeeze(ma.mean(wisopprime,axis=2))
+wisopprime2 = np.squeeze(ma.mean(wisopprime2,axis=2))
 
 print wprime.shape
 
 tbar = tempc# already zonal meaned 
 tmptbar=np.flipud(tbar)
 print tmptbar.shape
-tmpdtbar = np.diff(tmptbar,axis=0) # lower level minus upper level
+tmpdtbar = ma.diff(tmptbar,axis=0) # lower level minus upper level
 tmpdtbar = np.flipud(tmpdtbar) # positive T gradient sfc to seafloor
 
-dtbarsave = np.diff(tbar,axis=0)
+dtbarsave = ma.diff(tbar,axis=0)
 #dtbar=tmpdtbar
 dtbar=dtbarsave # negative T gradient sfc to seafloor globally -- original way, correct way
 
@@ -1104,12 +1158,12 @@ print dtbar.shape
 
 # thickness of each layer
 dzt = np.diff(zt/100.) # convert to m
-wtrans = np.zeros((len(dzt),wprime.shape[1]))
-wtrans2 = np.zeros((len(dzt),wprime2.shape[1]))
-wtranswv = np.zeros((len(dzt),wprime.shape[1]))
-wtranswv2 = np.zeros((len(dzt),wprime2.shape[1]))
-wtranswi = np.zeros((len(dzt),wprime.shape[1]))
-wtranswi2 = np.zeros((len(dzt),wprime2.shape[1]))
+wtrans = ma.zeros((len(dzt),wprime.shape[1]))
+wtrans2 = ma.zeros((len(dzt),wprime2.shape[1]))
+wtranswv = ma.zeros((len(dzt),wprime.shape[1]))
+wtranswv2 = ma.zeros((len(dzt),wprime2.shape[1]))
+wtranswi = ma.zeros((len(dzt),wprime.shape[1]))
+wtranswi2 = ma.zeros((len(dzt),wprime2.shape[1]))
 
 
 print dzt.shape
@@ -1583,7 +1637,7 @@ rho_sw=cnc.getNCvar(filenamec,'rho_sw')
 cp_sw = cnc.getNCvar(filenamec,'cp_sw')
 rhocp = 1e-1*cp_sw*rho_sw # [J/K/m^3]
 
-ylim=1000
+ylim=800
 xlims=(-77,-50)
 ylims=(0,ylim)
 
@@ -1855,7 +1909,7 @@ darkolivegreen3 = ccm.get_linecolor('darkolivegreen3') # GHGrem
 firebrick = ccm.get_linecolor('firebrick') # RCP8.5
 
                   
-onelat = tlat[:,1]
+onelat = tlat[:,1] # note this is actually one lon. values from -79 to +72
 totw = wtrans*rhocp*dzttile
 totw2 = wtrans2*rhocp*dzttile
 totwv = wtranswv*rhocp*dzttile
@@ -1922,13 +1976,14 @@ tareay = tarea[:,0] # because we are dealing w/ SH only, doesn't matter what lon
 # now tile tareay for each depth
 tareayt = np.tile(tareay,(len(zt)-1,1)) # for transport (or when a dt or dz is involved)
 # create weights:
-totareay = np.sum(tareayt[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1)
+totareay = ma.sum(tareayt[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1)
 totareayt = np.tile(totareay,(len(tareayt[0,np.logical_and(onelat<= Nlim,onelat>Slim)]),1))
 totareayt = np.transpose(totareayt,(1,0))
 wgts = tareayt[:,np.logical_and(onelat<= Nlim,onelat>Slim)] / totareayt
 
-tareaytw = np.tile(tareay,(len(zt),1)) # for all 60 levels
-totareayw = np.sum(tareaytw[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1)
+#tareaytw = np.tile(tareay,(len(zt),1)) # for all 60 levels
+tareaytw = tareat[...,0] # already tile to 60 levels @@@@
+totareayw = ma.sum(tareaytw[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1) # @@@@ change to ma.sum
 totareaytw = np.tile(totareayw,(len(tareaytw[0,np.logical_and(onelat<= Nlim,onelat>Slim)]),1))
 totareaytw = np.transpose(totareaytw,(1,0))
 wgtsw = tareaytw[:,np.logical_and(onelat<= Nlim,onelat>Slim)] / totareaytw
@@ -1936,20 +1991,22 @@ wgtsw = tareaytw[:,np.logical_and(onelat<= Nlim,onelat>Slim)] / totareaytw
 
 # try area-weighting:
 #  vertical heat trans
-totw = np.average(totw[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgts)
-totw2 = np.average(totw2[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgts)
-totwv = np.average(totwv[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgts)
-totwv2 = np.average(totwv2[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgts)
-totwi = np.average(totwi[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgts)
-totwi2 = np.average(totwi2[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgts)
+#  @@@@ change to ma.average
+totw = ma.average(totw[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgts)
+totw2 = ma.average(totw2[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgts)
+totwv = ma.average(totwv[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgts)
+totwv2 = ma.average(totwv2[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgts)
+totwi = ma.average(totwi[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgts)
+totwi2 = ma.average(totwi2[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgts)
 
 #  vertical velocity
-wavg=np.average(wprime[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgtsw)
-wavg2=np.average(wprime2[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgtsw)
-wvavg=np.average(wvelprime[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgtsw)
-wvavg2=np.average(wvelprime2[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgtsw)
-wiavg=np.average(wisopprime[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgtsw)
-wiavg2=np.average(wisopprime2[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgtsw)
+#  @@@@ change to ma.average
+wavg=ma.average(wprime[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgtsw)
+wavg2=ma.average(wprime2[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgtsw)
+wvavg=ma.average(wvelprime[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgtsw)
+wvavg2=ma.average(wvelprime2[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgtsw)
+wiavg=ma.average(wisopprime[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgtsw)
+wiavg2=ma.average(wisopprime2[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgtsw)
 
 if pig:
 # # =================== paper =======
@@ -1958,7 +2015,7 @@ if pig:
     printtofile=False
 
     #ylim=450
-    ylim=1000
+    ylim=450
     totwL1reg = np.squeeze(wtransreg[dep,...]) 
     totw2L1reg = np.squeeze(wtrans2reg[dep,...])
     totwvL1reg = np.squeeze(wtranswvreg[dep,...]) 
@@ -1967,41 +2024,47 @@ if pig:
     totwi2L1reg = np.squeeze(wtranswi2reg[dep,...])
 
     # meridional average with depth: vertical heat transport
-    totwreg = np.average(totwreg[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgts)
-    totw2reg = np.average(totw2reg[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgts)
-    totwvreg = np.average(totwvreg[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgts)
-    totwv2reg = np.average(totwv2reg[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgts)
-    totwireg = np.average(totwireg[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgts)
-    totwi2reg = np.average(totwi2reg[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgts)
+    #  @@@@ change to ma.average
+    totwreg = ma.average(totwreg[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgts)
+    totw2reg = ma.average(totw2reg[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgts)
+    totwvreg = ma.average(totwvreg[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgts)
+    totwv2reg = ma.average(totwv2reg[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgts)
+    totwireg = ma.average(totwireg[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgts)
+    totwi2reg = ma.average(totwi2reg[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgts)
 
     # meridional average WBAR*dTPRIME with depth: vertical heat transport
-    totwbarreg = np.average(totwbarreg[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgts)
-    totwbar2reg = np.average(totwbar2reg[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgts)
-    totwbarwvreg = np.average(totwbarwvreg[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgts)
-    totwbarwv2reg = np.average(totwbarwv2reg[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgts)
-    totwbarwireg = np.average(totwbarwireg[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgts)
-    totwbarwi2reg = np.average(totwbarwi2reg[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgts)
+    #  @@@@ change to ma.average
+    totwbarreg = ma.average(totwbarreg[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgts)
+    totwbar2reg = ma.average(totwbar2reg[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgts)
+    totwbarwvreg = ma.average(totwbarwvreg[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgts)
+    totwbarwv2reg = ma.average(totwbarwv2reg[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgts)
+    totwbarwireg = ma.average(totwbarwireg[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgts)
+    totwbarwi2reg = ma.average(totwbarwi2reg[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgts)
 
     # meridional average w PRIME with depth
-    wavgreg=np.average(wprimereg[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgtsw)
-    wavg2reg=np.average(wprime2reg[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgtsw)
-    wvavgreg=np.average(wvelprimereg[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgtsw)
-    wvavg2reg=np.average(wvelprime2reg[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgtsw)
-    wiavgreg=np.average(wisopprimereg[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgtsw)
-    wiavg2reg=np.average(wisopprime2reg[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgtsw)
+    #  @@@@ change to ma.average
+    wavgreg=ma.average(wprimereg[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgtsw)
+    wavg2reg=ma.average(wprime2reg[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgtsw)
+    wvavgreg=ma.average(wvelprimereg[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgtsw)
+    wvavg2reg=ma.average(wvelprime2reg[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgtsw)
+    wiavgreg=ma.average(wisopprimereg[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgtsw)
+    wiavg2reg=ma.average(wisopprime2reg[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgtsw)
 
     # meridional average w BAR with depth
-    wbaravgreg = np.average(wbarreg[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgtsw)
-    wbarwvavgreg = np.average(wvelbarreg[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgtsw)
-    wbarwiavgreg = np.average(wisopbarreg[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgtsw)
+    #  @@@@ change to ma.average
+    wbaravgreg = ma.average(wbarreg[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgtsw)
+    wbarwvavgreg = ma.average(wvelbarreg[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgtsw)
+    wbarwiavgreg = ma.average(wisopbarreg[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgtsw)
 
     
     # climo dTbar, averaged meridionally
-    dTbaravgreg=np.average(dtbarreg[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgts)
+    #  @@@@ change to ma.average
+    dTbaravgreg=ma.average(dtbarreg[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgts)
 
     # anom dTprime, averaged meridionally
-    dTprimeavgreg = np.average(dtprimereg[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgts)
-    dTprime2avgreg = np.average(dtprime2reg[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgts)
+    #  @@@@ change to ma.average
+    dTprimeavgreg = ma.average(dtprimereg[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgts)
+    dTprime2avgreg = ma.average(dtprime2reg[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgts)
 
 
     fig2 = plt.figure()
@@ -2164,7 +2227,7 @@ if pig:
     plt.plot([0,0],[0,1000],'k')
     plt.legend(('sulfate','ghgrem'),loc='best')
     plt.ylim((0,ylim))
-    plt.xlim(-15,15)
+    plt.xlim(-.15,.20)
     plt.title(region + ' Avg vert heat trans wbar*dTprime (W/m2) ' + str(np.abs(Slim)) + 'S-' + str(np.abs(Nlim)) + 'S at e/ lev')
     ax.invert_yaxis()
 
