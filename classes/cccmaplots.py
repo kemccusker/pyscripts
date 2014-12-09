@@ -39,6 +39,8 @@ kemmap(fld, lat, lon, title='', units='', cmap='blue2red_w20', type='sq', cmin='
             latlim: if polar projection, it will be the equatorward limit (so far only
                     works if do a stereographic proj, not ortho 5/13/2014
             drawgrid: if True, draw parallels and meridians
+            round: default True. Used if type 'nh' or 'sh' and latlim provided
+                   otherwise the zoomed in figure will be square
 
     Returns: basemap handle (to add to bm after function call),
              pcolormesh handle (typically to add colorbar after func call)
@@ -46,7 +48,8 @@ kemmap(fld, lat, lon, title='', units='', cmap='blue2red_w20', type='sq', cmin='
 """
 
 def kemmap(fld, lat, lon,title='',units='',cmap='blue2red_w20',type='sq',
-           cmin='',cmax='',axis=None, suppcb=0,lmask=0,flipmask=0,latlim=None,drawgrid=False):
+           cmin='',cmax='',axis=None, suppcb=0,lmask=0,flipmask=0,latlim=None,drawgrid=False,
+           round=True):
 
     if cmap =='' or cmap==None:
         cmap='blue2red_w20'
@@ -60,6 +63,9 @@ def kemmap(fld, lat, lon,title='',units='',cmap='blue2red_w20',type='sq',
     elif type == 'nh':
         if latlim != None: # try 'round=True' !@@@
             mapparams = dict(projection='npstere',boundinglat=latlim,lon_0=0,resolution='c')
+            if round==True:
+                mapparams['round'] = True
+            
         else:
             # try mill, hammer, merc
             mapparams = dict(projection='ortho',lon_0=0.,lat_0=90.,\
@@ -70,6 +76,8 @@ def kemmap(fld, lat, lon,title='',units='',cmap='blue2red_w20',type='sq',
     elif type == 'sh':
         if latlim != None: # try 'round=True' !@@@
             mapparams = dict(projection='spstere',boundinglat=latlim,lon_0=0,resolution='c')
+            if round==True:
+                mapparams['round'] = True
         else:
             mapparams = dict(projection='ortho',lon_0=0.,lat_0=-90., resolution='c')
             # same error if add: llcrnrlon='-180',llcrnrlat='-90',urcrnrlon='180',urcrnrlat='-45'
@@ -77,7 +85,7 @@ def kemmap(fld, lat, lon,title='',units='',cmap='blue2red_w20',type='sq',
         #mapparams = dict(width=2500000,height=2700000,resolution='i',projection='laea',\
         #    lat_ts=62.5,lat_0=62.5,lon_0=77.0)
         mapparams = dict(llcrnrlon=40.,llcrnrlat=10.,urcrnrlon=160.,urcrnrlat=50.,
-                         resolution='c',projection='stere',lat_0=45.,lon_0=80.) #'laea'
+                         resolution='c',projection='stere',lat_0=45.,lon_0=80.)
         #mapparams = dict(width=3000000,height=3000000,resolution='c',projection='laea',\
         #                 lat_0=55.,lon_0=80.)# can't get width/height big enough -- errors
     elif type == 'nastere': # North America stere projection
@@ -101,10 +109,16 @@ def kemmap(fld, lat, lon,title='',units='',cmap='blue2red_w20',type='sq',
         conts = np.arange(cmin,cmax+incr,incr)
 
         #pcparams = dict(shading='gouraud',latlon=True,cmap=incmap,vmin=cmin,vmax=cmax)
-        pcparams = dict(latlon=True,cmap=incmap,levels=conts,vmin=cmin,vmax=cmax,extend='both')
+        pcparams = dict(latlon=True,cmap=incmap,vmin=cmin,vmax=cmax)
+        if type not in ('eastere','nastere'):
+            pcparams['levels']=conts
+            pcparams['extend']='both'
 
     if axis != None: # if an axis is given, add to dict for basemap
         mapparams['ax'] = axis
+    
+    if type in ('eastere','nastere'):
+        pcparams['shading']='flat' #'gouraud' # @@ gouraud pdf files fail/crash. flat and interp are same??
 
     """ m = Basemap(projection='ortho',lon_0=lon_0,lat_0=lat_0,resolution='l',\
     llcrnrx=0.,llcrnry=0.,urcrnrx=m1.urcrnrx/2.,urcrnry=m1.urcrnry/2.)
@@ -129,9 +143,16 @@ def kemmap(fld, lat, lon,title='',units='',cmap='blue2red_w20',type='sq',
 
 #    pc = bm.pcolormesh(lons,lats,fld,**pcparams)
     if cmin=='':
-        pc = bm.contourf(lons,lats,fld,20,**pcparams) # 20 auto levels
+        if type in ('eastere','nastere'):
+            # for some reason these projections don't plot colors correctly so have to use pcolormesh()@@@
+            pc=bm.pcolormesh(lons,lats,fld,**pcparams) 
+        else:
+            pc = bm.contourf(lons,lats,fld,20,**pcparams) # 20 auto levels
     else:
-        pc = bm.contourf(lons,lats,fld,**pcparams)
+        if type in ('eastere','nastere'):
+            pc=bm.pcolormesh(lons,lats,fld,**pcparams)
+        else:
+            pc = bm.contourf(lons,lats,fld,**pcparams)
 
     if drawgrid:
         bm.drawparallels(np.arange(-90.,90.,20.),labels=[1,0,0,0])
