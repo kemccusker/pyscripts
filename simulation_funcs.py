@@ -370,7 +370,7 @@ def calc_seasons(fielddict,coords,sims,loctimesel=None,info=None,siglevel=0.05,
     """ calc_seasons(fielddict,coords,sims,withlat=False,loctimesel=None,info=None,siglevel=0.05)
 
               info: a dict which specifies lots of things, but in particular, which region to average
-              calctype: 'zonmean', 'regmean', 'pattcorrwithtime', 'pattcorrwithtimeyr', None
+              calctype: 'zonmean', 'regmean', 'pattcorrwithtime', 'pattcorrwithtimeyr', 'timetosig', 'timetosigsuper',None
               seasons default to 'SON','DJF','MAM','JJA'
               @@@@ should add a regular anomaly calc here. make it default?
               
@@ -416,7 +416,8 @@ def calc_seasons(fielddict,coords,sims,loctimesel=None,info=None,siglevel=0.05,
     plotzonmean = plotregmean = pattcorrwithtime = pattcorryr = timetosig = timetosigsuper = calcregmeanwithtime = False
 
     if calctype==None:
-        return -1
+        print 'calctype is None. Just doing regular diff of means for full grid'
+        #return -1
     elif calctype=='zonmean':
         plotzonmean=True
     elif calctype=='regmean':
@@ -440,8 +441,8 @@ def calc_seasons(fielddict,coords,sims,loctimesel=None,info=None,siglevel=0.05,
         timetosig=True
         timetosigsuper=True
     else:
-        print 'calctype not recognized!'
-        return -1
+        print 'calctype not recognized! Just doing regular diff of means'
+        #return -1
         
     # note that pattern corr with time will be a 1D processed field -->
     #    for each season, fld.shape = ntime
@@ -628,13 +629,19 @@ def calc_seasons(fielddict,coords,sims,loctimesel=None,info=None,siglevel=0.05,
                     fldp = cutl.calc_regmean(fldp,lat,lon,region)#limsdict)           
                 
             else: # just calculate a polar mean
-                if sia:
-                    print 'should isarea=True here? @@@ 10/28/2014' # I think so...
-                    fldc,sh = cutl.calc_totseaicearea(fldc,lat,lon,isarea=True)
-                    fldp,sh = cutl.calc_totseaicearea(fldp,lat,lon,isarea=True)
-                else:
-                    fldc = cutl.polar_mean_areawgted3d(fldc,lat,lon,latlim=seacyclatlim)
-                    fldp = cutl.polar_mean_areawgted3d(fldp,lat,lon,latlim=seacyclatlim)
+                print '@@@ no calctype flags are True. '
+                print '@@@ Previous behavior calculated '
+                print '@@@ polar mean (seacyclatlim) or SIA'
+                print '@@@ New behavior is to do nothing and '
+                print '@@@ simply return the full grid '
+                print '@@@ difference, std, pvals, etc'
+                #if sia:
+                #    print 'should isarea=True here? @@@ 10/28/2014' # I think so...
+                #    fldc,sh = cutl.calc_totseaicearea(fldc,lat,lon,isarea=True)
+                #    fldp,sh = cutl.calc_totseaicearea(fldp,lat,lon,isarea=True)
+                #else:
+                #    fldc = cutl.polar_mean_areawgted3d(fldc,lat,lon,latlim=seacyclatlim)
+                #    fldp = cutl.polar_mean_areawgted3d(fldp,lat,lon,latlim=seacyclatlim)
 
             seafldcstddict[sea] = np.std(fldc,axis=0)
             seafldpstddict[sea] = np.std(fldp,axis=0)
