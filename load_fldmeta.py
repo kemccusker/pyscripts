@@ -20,6 +20,7 @@ def loadfldmeta(field,infodict,plottype,ptparams,level=None):
     
     smclim=ptparams['smclim']
     latlim=ptparams['latlim']
+    round=ptparams['round']
     levlim=ptparams['levlim']
     region = ptparams['region'] 
     savestr=infodict['savestr'] # string for plot filenames
@@ -100,7 +101,7 @@ def loadfldmeta(field,infodict,plottype,ptparams,level=None):
 
     # reserved for expansion into the plotfunction call
     pparams = {'cmin': None, 'cmax': None, 'cmap': 'blue2red_20',              
-               'type':'nh', 'latlim': latlim} # plotparams
+               'type':'nh', 'latlim': latlim,'round': round} # plotparams
     ## seacycylim=None
     ## infodict ={'cmapclimo': 'Spectral_r','leglocs': None,
     ##            'seacycylim': None, 'savestr': None,
@@ -116,7 +117,7 @@ def loadfldmeta(field,infodict,plottype,ptparams,level=None):
         pparams['cmin'] = -3; pparams['cmax'] = 3 # seasonal/monthly
         pparams['cmap'] = 'blue2red_w20'
         if smclim:
-            pparams['cmin'] = -1.5; pparams['cmax'] = 1.5 # seasonal/monthly
+            pparams['cmin'] = -1; pparams['cmax'] = 1 # seasonal/monthly
             pparams['cmap'] = 'blue2red_20'
             savestr= savestr + '_smclim'
 
