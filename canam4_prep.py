@@ -29,7 +29,7 @@ plt.ion()
 
 printtofile=True
 
-field = 'st'
+field = 'pmsl'
 smclim=True
 level=50000 # for threed
 
@@ -40,7 +40,7 @@ level2=50000
 
 # seasonalmap, seasonalvert, plotzonmean, plotseacyc, pattcorrwithtime, plotregmean,calcregmeanwithtime, timetosig, timetosigsuper
 plottype='seasonalmap' 
-projtype='nastere' # 'nh','sh','sq','eastere','nastere'
+projtype='nh' # 'nh','sh','sq','eastere','nastere'
 
 # None, polcap60, polcap65, polcap70, eurasia, eurasiamori, eurasiasth,eurasiathin,eurasiathinw,eurasiathine,ntham, nthatl, bks, bksmori, soo
 region=None #'eurasiamori'
@@ -49,6 +49,7 @@ seacyclatlim=60
 withlat=False
 pattcorryr=False # need anymore?
 latlim = None # None #45 # lat limit for NH plots. Set to None otherwise. use 45 for BC-type maps
+round=False # if latlim is not None, this specifies whether the polar stereographic figure should be square or round
 levlim= 100 # level limit for vertical ZM plots (in hPa). ignored if screen=True
 fallwin=False # just SON and DJF
 bimon=False # do bi-montly seasons instead
@@ -63,11 +64,11 @@ halftime2=False # get only the last 60yrs. make sure to set the other flag the o
 
 # Choose what simulations to add =============
 #  default is R1-5, ENS
-canens=True # just the CAN ensemble (E1-E5) plus mean, plus mean of R ensemble. option to addobs only.
+canens=False # just the CAN ensemble (E1-E5) plus mean, plus mean of R ensemble. option to addobs only.
 allens=False # this is ONLY the ensemble means, plus superensemble
 sensruns=False # sensruns only: addr4ct=1,addsens=1. others=0 no meanBC, r mean, or obs
 ivar=False # this will show ENS (TOT) and ENSE (ANTH) and their difference = internal var
-simsforpaper=False # ANT, TOT, HAD, NSIDC only. best for maps and zonal mean figs (not line plots)
+simsforpaper=True # ANT, TOT, HAD, NSIDC only. best for maps and zonal mean figs (not line plots)
 antcat=False # this is the concatenation of ens members within each ensemble (really only useful for ANT)
 bothcat=False # can do concatenation of both ensembles if want to. These are useful for timetosig
 onlyens=False # just do ensemble means ANT and TOT
@@ -86,9 +87,10 @@ siglevel=0.05
 
 
 
-ptparams={}
+ptparams#1={}
 ptparams['smclim'] = smclim # for maps typically
 ptparams['latlim'] = latlim
+ptparams['round'] = round
 ptparams['levlim'] = levlim
 ptparams['region'] = region # plotregmean
 ptparams['screen'] = screen # seasonalvert
@@ -145,9 +147,7 @@ defaultsims=sims
 seasons = ('SON','DJF','MAM','JJA')
 biseas = ('SO','ND','JF') # @@@ so far only these implemented. expecting to add all 11/25/14
 
-if fallwin:
-    seasons=('SON','DJF')
-    savestr = '_SONDJF'
+
 
 if simsforpaper: # best for maps only
     sims = ('HAD','NSIDC','ENSE','ENS')
@@ -165,6 +165,9 @@ elif sensruns: # add sensitivity runs. with Shaded ENS. don't plot meanBC, mean 
     if bimon:
         seasons=biseas
         savestr = savestr + 'bimon'
+    if fallwin:
+        seasons=('SON','DJF')
+        savestr = savestr + '_SONDJF'
     
 elif canens: # do canens instead of r ens. Useful for maps.
     sims = ('E1','E2','E3','E4','E5','ENSE','ENS')
@@ -178,13 +181,19 @@ elif canens: # do canens instead of r ens. Useful for maps.
         savestr = savestr + 'spr'
     if bimon:
         seasons=biseas
-        savestr = savestr + 'bimon'    
+        savestr = savestr + 'bimon'   
+    if fallwin:
+        seasons=('SON','DJF')
+        savestr = savestr + '_SONDJF' 
 elif allens: # just do the ens means and superensemble mean
     sims = ('ENS','ENSE','ESPR')
     savestr = '_allens'
     if bimon:
         seasons=biseas
         savestr = savestr + 'bimon'  
+    if fallwin:
+        seasons=('SON','DJF')
+        savestr = savestr + '_SONDJF'
     # addobs? @@@
 elif ivar:
     sims = ('ENS','ENSE','IVAR')
@@ -193,6 +202,9 @@ elif ivar:
     if bimon:
         seasons=biseas
         savestr = savestr + 'bimon'
+    if fallwin:
+        seasons=('SON','DJF')
+        savestr = savestr + '_SONDJF'
 elif antcat: # eventually add totcat @@@
     sims = ('ENSECAT',)
     savestr = '_antcat'
@@ -200,6 +212,9 @@ elif antcat: # eventually add totcat @@@
     if bimon:
         seasons=biseas
         savestr = savestr + 'bimon'
+    if fallwin:
+        seasons=('SON','DJF')
+        savestr = savestr + '_SONDJF'
 elif bothcat: # both antcat and totcat
     sims = ('ENSECAT','ENSCAT')
     savestr = '_anttotcat'
@@ -207,13 +222,19 @@ elif bothcat: # both antcat and totcat
     if bimon:
         seasons=biseas
         savestr = savestr + 'bimon'
+    if fallwin:
+        seasons=('SON','DJF')
+        savestr = savestr + '_SONDJF'
 
 elif onlyens:
     sims = ('ENSE','ENS')
     savestr = '_onlyens'
     if bimon:
         seasons=biseas
-        savestr = savestr + 'bimon'    
+        savestr = savestr + 'bimon'   
+    if fallwin:
+        seasons=('SON','DJF')
+        savestr = savestr + '_SONDJF' 
 else:
     savestr=savestr+'_ens' # default sims
     
@@ -241,6 +262,9 @@ else:
     if bimon:
         seasons=biseas
         savestr = savestr + 'bimon'  
+    if fallwin:
+        seasons=('SON','DJF')
+        savestr = savestr + '_SONDJF'
     
 import load_fldmeta as ld
 ld=reload(ld)
