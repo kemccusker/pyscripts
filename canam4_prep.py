@@ -29,7 +29,7 @@ plt.ion()
 
 printtofile=True
 
-field = 'pmsl'
+field = 'gz'
 smclim=True
 level=50000 # for threed
 
@@ -39,7 +39,7 @@ field2='gz'
 level2=50000
 
 # seasonalmap, seasonalvert, plotzonmean, plotseacyc, pattcorrwithtime, plotregmean,calcregmeanwithtime, timetosig, timetosigsuper
-plottype='seasonalmap' 
+plottype='seasonalvert' 
 projtype='nh' # 'nh','sh','sq','eastere','nastere'
 
 # None, polcap60, polcap65, polcap70, eurasia, eurasiamori, eurasiasth,eurasiathin,eurasiathinw,eurasiathine,ntham, nthatl, bks, bksmori, soo
@@ -87,7 +87,7 @@ siglevel=0.05
 
 
 
-ptparams#1={}
+ptparams={}
 ptparams['smclim'] = smclim # for maps typically
 ptparams['latlim'] = latlim
 ptparams['round'] = round
