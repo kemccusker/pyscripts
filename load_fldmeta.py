@@ -101,7 +101,10 @@ def loadfldmeta(field,infodict,plottype,ptparams,level=None):
 
     # reserved for expansion into the plotfunction call
     pparams = {'cmin': None, 'cmax': None, 'cmap': 'blue2red_20',              
-               'type':'nh', 'latlim': latlim,'round': round} # plotparams
+               'type':'nh', 'latlim': latlim} # plotparams
+    if seasonalmap:
+        pparams['round'] = round
+        
     ## seacycylim=None
     ## infodict ={'cmapclimo': 'Spectral_r','leglocs': None,
     ##            'seacycylim': None, 'savestr': None,
@@ -435,8 +438,8 @@ def loadfldmeta(field,infodict,plottype,ptparams,level=None):
                 pparams['cmin'] = -25; pparams['cmax'] = 25 # seasonal/monthly
                 pparams['levlim'] = 300
                 if smclim:
-                    pparams['cmin'] = -20; pparams['cmax'] = 20
-                    savestr= savestr + '_smclim'
+                    pparams['cmin'] = -12; pparams['cmax'] = 12
+                    savestr= savestr + '_smclim2'
             else:
                 #cmin = -10; cmax = 10
                 #cminm = -15; cmaxm = 15
