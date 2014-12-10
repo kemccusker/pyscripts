@@ -777,3 +777,43 @@ def calc_monthlysigarea(input1,input2,siglevel=0.05,latlim=60,region=None):
     return sigarea/(totarea)*100 # as a percent of total area
     
     
+
+def calc_pvals(pert,ctl,axis=0,center='mean',verb=True,siglevel=0.05):
+    """ calc_pvals(pert,ctl, verb=True,siglevel=0.05):
+               Calculate whether dataset means and variances are
+                 significantly different from each other.
+                 
+               pert and ctl are the data that will be tested.
+               Ttest will be tested over axis=0 by default.
+               center='mean' is for f-test (levene())
+                  from the doc: 'center : {'mean', 'median', 'trimmed'}, optional
+                                 Which function of the data to use in the test.
+                                 The default is 'median'. Three variations of
+                                 Levene's test are possible. The possibilities
+                                 and their recommended usages are:
+                                   
+              * 'median' : Recommended for skewed (non-normal) distributions>
+              * 'mean' : Recommended for symmetric, moderate-tailed distributions.
+              * 'trimmed' : Recommended for heavy-tailed distributions. ' 
+               
+               verb: verbose or not. =True will output values and
+                     whether or not they are significant based on
+                     the input siglevel
+
+               returns: (tstat,tpval,fstat,fpval)
+    """
+
+    tstat, tpval = sp.stats.ttest_ind(pert,ctl,axis=axis) # @@ add autocorr
+    lstat, lpval = sp.stats.levene(pert,ctl,center=center)
+
+    if verb:
+        print '    DIFF: ' + str(pert.mean()-ctl.mean()) + ', CTL mean: ' + str(ctl.mean()) + ', PERT mean: ' + str(pert.mean())
+        print '    TSTAT: ' + str(tstat) + ' PVAL: ' + str(tpval)
+        if tpval<=siglevel:
+            print '  **The ensemble means are significantly different (' + str(1-siglevel) + ')'
+        print '    CTL std: ' + str(ctl.std()) + ', PERT std: ' + str(pert.std())
+        print '    LSTAT: ' + str(lstat) + ' PVAL: ' + str(lpval)
+        if lpval<=siglevel:
+            print '  **The ensemble variances are significantly different (' + str(1-siglevel) + ')'
+
+    return (tstat,tpval,lstat,lpval)
