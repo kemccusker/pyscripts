@@ -24,14 +24,14 @@ field1='st'; ncfield1='ST'
 #field1='gz50000'; ncfield1='PHI'; conv1=1/con.get_g()
 #field1='pmsl'; ncfield1='PMSL'
 region1='polcap60' #'bksmori' #'polcap65'
-sea1='DJF' #'DJF'
+sea1='SON' #'DJF'
 
 field2='st'; ncfield2='ST'
 #field2='sia'; ncfield2='SICN'
 #field2='pmsl'; ncfield2='PMSL'
 #field2='gz50000'; ncfield2='PHI'; conv2=1/con.get_g()
-region2= 'eurasiamori' #'eurasiamori'
-sea2='DJF' #'DJF'
+region2= 'eurasia' #'eurasiamori'
+sea2='SON' #'DJF'
 
 sims = ('E1','E2','E3','E4','E5','R1','R2','R3','R4','R5','HAD','NSIDC','ENS','ENSE')
 TOT = ('R1','R2','R3','R4','R5')
@@ -472,8 +472,8 @@ def plot_anttotanom_histpdf(antdata,totdata,printtofile=False,label=''):
 
     print '\n'
     print label
-    print 'ANT: ' + str(anormed)
-    print 'TOT: ' + str(tnormed)
+    print 'ANT (mean anom, anom std): ' + str(anormed)
+    print 'TOT (mean anom, anom std): ' + str(tnormed)
 
 
 def plot_anttotsbplt_histpdf(antdata,totdata,printtofile=False,label=''):
@@ -527,8 +527,8 @@ def plot_anttotsbplt_histpdf(antdata,totdata,printtofile=False,label=''):
     ax.legend(('CTL','PERT'))
 
     print label
-    print 'ANT CTL: ' + str(acnormed)
-    print 'ANT PERT: ' + str(apnormed)
+    print 'ANT CTL (mean,std): ' + str(acnormed)
+    print 'ANT PERT (mean,std): ' + str(apnormed)
 
     ax=axs[1]
     nntc, binstc, patchestc = ax.hist(totcfld,color='0.5',alpha=0.5,normed=True,histtype='stepfilled')
@@ -559,15 +559,20 @@ def plot_anttotsbplt_histpdf(antdata,totdata,printtofile=False,label=''):
     ax.legend(('CTL','PERT'))
 
     print label
-    print 'TOT CTL: ' + str(tcnormed)
-    print 'TOT PERT: ' + str(tpnormed)
+    print 'TOT CTL (mean,std): ' + str(tcnormed)
+    print 'TOT PERT (mean,std): ' + str(tpnormed)
     if printtofile:
         fig.savefig('histpdf_' + label + '_ANTTOTsbplt.pdf')
 
 
 
 plot_anttotanom_histpdf(allantr2,alltotr2,label=(field2 + region2 + '_' + str(sea2)),printtofile=True)
+cutl.calc_pvals(allantr2,alltotr2)
+print '-------------------------'
+
 plot_anttotanom_histpdf(allantr1,alltotr1,label=(field1 + region1 + '_' + str(sea1)),printtofile=True)
+cutl.calc_pvals(allantr1,alltotr1)
+
 
 plot_anttotsbplt_histpdf((allantcr2,allantpr2),(alltotcr2,alltotpr2),label=(field2 + region2 + '_' + str(sea2)),printtofile=True)
 plot_anttotsbplt_histpdf((allantcr1,allantpr1),(alltotcr1,alltotpr1),label=(field1 + region1 + '_' + str(sea1)),printtofile=True)
