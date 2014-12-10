@@ -224,7 +224,7 @@ def calc_runstats(datablob,sims, seas=None,siglevel=0.05):
            sims: a tuple of sim names in the datablob. (prob unnecessary)
            seas: 2 or 3 month seasons
 
-           @@ add return vals
+           return allstats: dictionary of 'tpvals', 'fpvals' for sim key and then sea key
 
     """
     ctldt = datablob['ctl']
@@ -251,31 +251,25 @@ def calc_runstats(datablob,sims, seas=None,siglevel=0.05):
             ctl=ctlsim[sea]
             pert=pertsim[sea]
 
-            ## thestats['ctlmean']=ctl.mean()
-            ## thestats['pertmean']=pert.mean()
-            ## thestats['meandiff'] = pert.mean()-ctl.mean()
-            ## thestats['ctlstd']=ctl.std()
-            ## thestats['pertstd']=pert.std()
-            ## thestats['stddiff']=pert.std()-ctl.std()
+            (tstat,tpval,lstat,lpval) = calc_pvals(pert,ctl)
             
-            print '    DIFF: ' + str(pert.mean()-ctl.mean()) + ', CTL mean: ' + str(ctl.mean()) + ', PERT mean: ' + str(pert.mean())
-            tstat, tpval = sp.stats.ttest_ind(pert,ctl) # add autocorr @@
-            print '    TSTAT: ' + str(tstat) + ' PVAL: ' + str(tpval)
-            if tpval<=siglevel:
-                print '  **The ensemble means are significantly different (' + str(1-siglevel) + ')'
-            #thestats['tpval'] = pval
+            ## print '    DIFF: ' + str(pert.mean()-ctl.mean()) + ', CTL mean: ' + str(ctl.mean()) + ', PERT mean: ' + str(pert.mean())
+            ## tstat, tpval = sp.stats.ttest_ind(pert,ctl) # add autocorr @@
+            ## print '    TSTAT: ' + str(tstat) + ' PVAL: ' + str(tpval)
+            ## if tpval<=siglevel:
+            ##     print '  **The ensemble means are significantly different (' + str(1-siglevel) + ')'
+            ## #thestats['tpval'] = pval
             
-            #fstat, fpval = sp.stats.f_oneway(pert,ctl) # same as t statistic
-            #print '    FSTAT: ' + str(fstat) + ' PVAL: ' + str(fpval)
-            #if fpval<=siglevel:
-            #    print '  **The ensemble means are significantly different (' + str(1-siglevel) + ')'
+            ## #fstat, fpval = sp.stats.f_oneway(pert,ctl) # same as t statistic
+            ## #print '    FSTAT: ' + str(fstat) + ' PVAL: ' + str(fpval)
+            ## #if fpval<=siglevel:
+            ## #    print '  **The ensemble means are significantly different (' + str(1-siglevel) + ')'
 
-            print '    CTL std: ' + str(ctl.std()) + ', PERT std: ' + str(pert.std())
-            lstat, lpval = sp.stats.levene(pert,ctl)
-            print '    LSTAT: ' + str(lstat) + ' PVAL: ' + str(lpval)
-            if lpval<=siglevel:
-                print '  **The ensemble variances are significantly different (' + str(1-siglevel) + ')'
-            #thestats['fpval'] = lpval
+            ## print '    CTL std: ' + str(ctl.std()) + ', PERT std: ' + str(pert.std())
+            ## lstat, lpval = sp.stats.levene(pert,ctl)
+            ## print '    LSTAT: ' + str(lstat) + ' PVAL: ' + str(lpval)
+            ## if lpval<=siglevel:
+            ##     print '  **The ensemble variances are significantly different (' + str(1-siglevel) + ')'
 
             seatpval[sea]=tpval
             seafpval[sea]=lpval
@@ -287,8 +281,6 @@ def calc_runstats(datablob,sims, seas=None,siglevel=0.05):
     allstats['fpval']=allfpval
     
     return allstats
-    # @@@@ add return vals
-
 
 
     
