@@ -12,26 +12,26 @@ import cccmaplots as cplt
 import cccmacmaps as ccm
 import pandas as pd
 
-printtofile=False
+printtofile=True
 plt.close('all')
 
 conv1=1; conv2=1
 
-plotscatter=False
+plotscatter=True
 
-field1='st'; ncfield1='ST'
+#field1='st'; ncfield1='ST'
 #field1='sia'; ncfield1='SICN'
-#field1='gz50000'; ncfield1='PHI'; conv1=1/con.get_g()
+field1='gz50000'; ncfield1='PHI'; conv1=1/con.get_g()
 #field1='pmsl'; ncfield1='PMSL'
-region1='polcap60' #'bksmori' #'polcap65'
-sea1='SON' #'DJF'
+region1='bksmori' #'bksmori' #'polcap65'
+sea1='DJF' #'DJF'
 
 field2='st'; ncfield2='ST'
 #field2='sia'; ncfield2='SICN'
 #field2='pmsl'; ncfield2='PMSL'
 #field2='gz50000'; ncfield2='PHI'; conv2=1/con.get_g()
 region2= 'eurasia' #'eurasiamori'
-sea2='SON' #'DJF'
+sea2='DJF' #'DJF'
 
 sims = ('E1','E2','E3','E4','E5','R1','R2','R3','R4','R5','HAD','NSIDC','ENS','ENSE')
 TOT = ('R1','R2','R3','R4','R5')
@@ -175,6 +175,83 @@ if plotscatter:
     axxlims = ax.get_xlim()
     if axxlims[0]<=0 and axxlims[1]>=0:
         ax.axvline(x=0,color='k',linewidth=.5)
+
+
+    # SCATTER SUPER ENS CTL and PERT separately
+    #pltc1=allantcr1; pltc2=allantcr2
+    #pltp1=allantpr1; pltp2=allantpr2
+    # or as anomaly
+    pltc1=allantcr1-allantcr1.mean(); pltc2=allantcr2-allantcr2.mean()
+    pltp1=allantpr1-allantcr1.mean(); pltp2=allantpr2-allantcr2.mean()
+    
+    fig,axs= plt.subplots(1,2,sharex=True,sharey=True) #plt.figure();
+    fig.set_size_inches(9,5)
+    ax=axs[0]
+    ax.scatter(pltc1,pltc2,color='k')
+    ax.scatter(pltp1,pltp2,color='b')    
+    ax.set_title('ANT')
+    ax.legend(('CTL','PERT'),loc='best',fancybox=True,framealpha=0.5)
+    ax.set_xlabel(field1 + region1 + str(sea1))
+    ax.set_ylabel(field2 + region2 + str(sea2))
+    
+    axylims = ax.get_ylim()
+    if axylims[0]<=0 and axylims[1]>=0:
+        ax.axhline(y=0,color='k',linewidth=.5)
+    axxlims = ax.get_xlim()
+    if axxlims[0]<=0 and axxlims[1]>=0:
+        ax.axvline(x=0,color='k',linewidth=.5)
+                 
+    onex=np.linspace(axxlims[0],axxlims[1])    
+    mm, bb, rvalc1, pval, std_err = sp.stats.linregress(pltc1,pltc2)
+    ax.plot(onex,mm*onex + bb, color='k',linewidth=2)
+    mm, bb, rvalp1, pval, std_err = sp.stats.linregress(pltp1,pltp2)
+    ax.plot(onex,mm*onex + bb, color='b',linewidth=2)
+    ## axylims = ax.get_ylim()
+    ## axxlims = ax.get_xlim()
+    ## ax.annotate('$Rctl$= ' + '$%.2f$'%(rvalc) + ',$Rctl$='+'$%.2f$'%(rvalp),
+    ##             xy=(axxlims[0]+.1*axxlims[1], axylims[1]-.1*axylims[1]),
+    ##             xycoords='data')
+    
+    ax=axs[1]
+    #pltc1=alltotcr1; pltc2=alltotcr2
+    #pltp1=alltotpr1; pltp2=alltotpr2
+    # or as anomaly
+    pltc1=alltotcr1-alltotcr1.mean(); pltc2=alltotcr2-alltotcr2.mean()
+    pltp1=alltotpr1-alltotcr1.mean(); pltp2=alltotpr2-alltotcr2.mean()
+    
+    ax.scatter(pltc1,pltc2,color='k')
+    ax.scatter(pltp1,pltp2,color='b')
+    ax.set_title('TOT')
+    ax.legend(('CTL','PERT'),loc='best',fancybox=True,framealpha=0.5)
+    ax.set_xlabel(field1 + region1 + str(sea1))
+    #ax.set_ylabel(field2 + region2 + str(sea2))
+    
+    axylims = ax.get_ylim()
+    if axylims[0]<=0 and axylims[1]>=0:
+        ax.axhline(y=0,color='k',linewidth=.5)
+    axxlims = ax.get_xlim()
+    if axxlims[0]<=0 and axxlims[1]>=0:
+        ax.axvline(x=0,color='k',linewidth=.5)
+    onex=np.linspace(axxlims[0],axxlims[1])    
+    mm, bb, rvalc, pval, std_err = sp.stats.linregress(pltc1,pltc2)
+    ax.plot(onex,mm*onex + bb, color='k',linewidth=2)
+    mm, bb, rvalp, pval, std_err = sp.stats.linregress(pltp1,pltp2)
+    ax.plot(onex,mm*onex + bb, color='b',linewidth=2)
+    axylims = ax.get_ylim()
+    axxlims = ax.get_xlim()
+    ax.annotate('$Rctl$= ' + '$%.2f$'%(rvalc) + ',$Rpt$='+ '$%.2f$'%(rvalp),
+                xy=(axxlims[0]+.1*axxlims[1], axylims[1]-.1*axylims[1]),
+                xycoords='data')
+    
+    ax=axs[0] # go back and annotate first panel
+    axylims = ax.get_ylim()
+    axxlims = ax.get_xlim()
+    ax.annotate('$Rctl$= ' + '$%.2f$'%(rvalc1) + ',$Rpt$='+ '$%.2f$'%(rvalp1),
+                xy=(axxlims[0]+.1*axxlims[1], axylims[1]-.1*axylims[1]),
+                xycoords='data')
+    if printtofile:
+        fig.savefig('scatterregress_' + field1 + region1 + str(sea1) + '_v_' + field2 + region2 + str(sea2) + '_ANTTOTsuperens_ctlpertsbplt.pdf')
+    
 
     #SCATTER SUPER ENSEMBLE MEANS with conf interval
     fig,ax= plt.subplots(1,1) #plt.figure();
@@ -565,15 +642,19 @@ def plot_anttotsbplt_histpdf(antdata,totdata,printtofile=False,label=''):
         fig.savefig('histpdf_' + label + '_ANTTOTsbplt.pdf')
 
 
-
-plot_anttotanom_histpdf(allantr2,alltotr2,label=(field2 + region2 + '_' + str(sea2)),printtofile=True)
+printtofile=False
+plot_anttotanom_histpdf(allantr2,alltotr2,
+                        label=(field2 + region2 + '_' + str(sea2)),printtofile=printtofile)
 cutl.calc_pvals(allantr2,alltotr2)
 print '-------------------------'
 
-plot_anttotanom_histpdf(allantr1,alltotr1,label=(field1 + region1 + '_' + str(sea1)),printtofile=True)
+plot_anttotanom_histpdf(allantr1,alltotr1,
+                        label=(field1 + region1 + '_' + str(sea1)),printtofile=printtofile)
 cutl.calc_pvals(allantr1,alltotr1)
 
 
-plot_anttotsbplt_histpdf((allantcr2,allantpr2),(alltotcr2,alltotpr2),label=(field2 + region2 + '_' + str(sea2)),printtofile=True)
-plot_anttotsbplt_histpdf((allantcr1,allantpr1),(alltotcr1,alltotpr1),label=(field1 + region1 + '_' + str(sea1)),printtofile=True)
+plot_anttotsbplt_histpdf((allantcr2,allantpr2),(alltotcr2,alltotpr2),
+                         label=(field2 + region2 + '_' + str(sea2)),printtofile=printtofile)
+plot_anttotsbplt_histpdf((allantcr1,allantpr1),(alltotcr1,alltotpr1),
+                         label=(field1 + region1 + '_' + str(sea1)),printtofile=printtofile)
 
