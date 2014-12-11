@@ -149,11 +149,11 @@ def calc_ensemblestats(datablob,ensnames, seas=None,siglevel=0.05):
            seas: 2 or 3 month seasons
 
            @@ add return vals
-    """
+    """    
     
-    diffdt = datablob['diff']
-    sims=diffdt.keys()
-    simspdt = con.get_simpairsdict()
+    ## diffdt = datablob['diff']
+    ## sims=diffdt.keys()
+    ## simspdt = con.get_simpairsdict()
 
     if seas==None:
         seasons=('SON','DJF','MAM','JJA')
@@ -166,22 +166,23 @@ def calc_ensemblestats(datablob,ensnames, seas=None,siglevel=0.05):
 
     # return tstat, pval, stddev # all across ensemble, not in time.
 
-   
-    allensdt={}; allensmdt={};
+    allensdt,allensmdt = con.build_ensembles(ensnames, datablob,calctype='diff')
+    
+    ## allensdt={}; allensmdt={};
             
-    for ensname in ensnames:
-        ensdt={}; ensmdt={}
-        print ensname
-        for skey in sims: # for each simulation check if it's in the ensemble
+    ## for ensname in ensnames:
+    ##     ensdt={}; ensmdt={}
+    ##     print ensname
+    ##     for skey in sims: # for each simulation check if it's in the ensemble
 
-            if simspdt[skey]['pert']['ensname']==ensname:
-                # create an ensemble dict
-                ensdt[skey] = datablob['diff'][skey]
-            if simspdt[skey]['pert']['ensname']==ensname+'mean':
-                ensmdt[skey] = datablob['diff'][skey]
+    ##         if simspdt[skey]['pert']['ensname']==ensname:
+    ##             # create an ensemble dict
+    ##             ensdt[skey] = datablob['diff'][skey]
+    ##         if simspdt[skey]['pert']['ensname']==ensname+'mean':
+    ##             ensmdt[skey] = datablob['diff'][skey]
 
-        allensdt[ensname] = ensdt # dict of ens -> dict of sims in ens --> data
-        allensmdt[ensname] = ensmdt # just the ensemble mean
+    ##     allensdt[ensname] = ensdt # dict of ens -> dict of sims in ens --> data
+    ##     allensmdt[ensname] = ensmdt # just the ensemble mean
         
     # end loop through ens
     ensdf1 = pd.DataFrame(allensdt[ensnames[0]])

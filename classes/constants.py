@@ -506,6 +506,33 @@ def get_simpair(diffkey):
     pairdict = get_simpairsdict()
     return pairdict[diffkey]
 
+def build_ensembles(ensnames,datablob,calctype='diff'):
+    """ docstring! @@@"""
+    
+    diffdt = datablob[calctype]
+    sims=diffdt.keys()
+    simspdt = get_simpairsdict()
+
+    allensdt={}; allensmdt={};
+            
+    for ensname in ensnames:
+        ensdt={}; ensmdt={}
+        print ensname
+        for skey in sims: # for each simulation check if it's in the ensemble
+
+            if simspdt[skey]['pert']['ensname']==ensname:
+                # create an ensemble dict
+                ensdt[skey] = datablob[calctype][skey]
+            if simspdt[skey]['pert']['ensname']==ensname+'mean':
+                ensmdt[skey] = datablob[calctype][skey]
+
+        allensdt[ensname] = ensdt # dict of ens -> dict of sims in ens --> data
+        allensmdt[ensname] = ensmdt # just the ensemble mean
+
+    # end loop through ens
+
+    return (allensdt,allensmdt)
+
 def build_filepath(sim,field,timeper=None):
     """ build_filename(sim,field,timeper=None)
             sim: simulation shortname (ie. 'ctl1')
@@ -611,6 +638,7 @@ def get_regiondict():
     """ get_regiondict(): return a dictionary of all defined regions
 
                  regiondict:
+                          nh: latlims=[0,89]; lonlims=[0,359]
                           polcap70: latlims=[70,89]; lonlims=[0,359]
                           polcap65: latlims=[65,89]; lonlims=[0,359]
                           polcap60: latlims=[60,89]; lonlims=[0,359]
@@ -623,11 +651,12 @@ def get_regiondict():
 
                           pig: untested, Pine Island Glacier, CCSM4 ocean grid
     """
-    regions = ('polcap70', 'polcap65', 'polcap60', 'eurasia','eurasiamori',
-               'eurasiathin','eurasiasth','eurasiathinw','eurasiathine','ntham',
-               'nthatl','bks','soo','pig')
-    regdict = dict.fromkeys(regions, {})
+    ## regions = ('polcap70', 'polcap65', 'polcap60', 'eurasia','eurasiamori',
+    ##            'eurasiathin','eurasiasth','eurasiathinw','eurasiathine','ntham',
+    ##            'nthatl','bks','soo','pig')
+    regdict = {} #dict.fromkeys(regions, {})
 
+    regdict['nh'] = {'latlims': [0,89], 'lonlims': [0,359]}
     regdict['polcap70'] = {'latlims': [70,89], 'lonlims': [0,359]}
     regdict['polcap65'] = {'latlims': [65,89], 'lonlims': [0,359]}
     regdict['polcap60'] = {'latlims': [60,89], 'lonlims': [0,359]}
