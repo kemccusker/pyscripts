@@ -140,9 +140,9 @@ def calc_totseaicearea(fld,lat,lon,isarea=False):
         sia=fld 
     else:
         sia = calc_seaicearea(fld,lat,lon)
-        
-    nh = np.sum(np.sum(sia[:,lat>0,:],axis=2),axis=1)
-    sh = np.sum(np.sum(sia[:,lat<0,:],axis=2),axis=1)
+    # Changed to ma.sum() on 12/10/14
+    nh = ma.sum(ma.sum(sia[:,lat>0,:],axis=2),axis=1)
+    sh = ma.sum(ma.sum(sia[:,lat<0,:],axis=2),axis=1)
 
     return nh,sh
 
@@ -175,9 +175,9 @@ def calc_totseaicevol(fld,sic,lat,lon,repeat=False,isarea=False):
     
     gridvoln = fld[:,lat>0,...]*sia[:,lat>0,...] # north
     gridvols = fld[:,lat<0,...]*sia[:,lat<0,...] # south
-
-    nh = np.sum(np.sum(gridvoln,2),1)
-    sh = np.sum(np.sum(gridvols,2),1)
+    # Changed to ma.sum() on 12/10/14
+    nh = ma.sum(ma.sum(gridvoln,2),1)
+    sh = ma.sum(ma.sum(gridvols,2),1)
     
     return nh,sh
     
@@ -669,7 +669,8 @@ def calc_regtotseaicearea(fld,lat,lon,region,limsdict=None,isarea=False):
     ##     weightsmt = weightsm
 
     tmp = ma.masked_where(regmask,fldm) # am I masking out twice? does it matter?
-    tmpreg = np.sum(np.sum(tmp,axis=2),axis=1)
+    #tmpreg = np.sum(np.sum(tmp,axis=2),axis=1)
+    tmpreg=ma.sum(ma.sum(tmp,axis=2),axis=1) # @@ was this a bug?
     fldreg = tmpreg # should be ndim1 of regional mean (or just one regional mean)
 
     return fldreg
