@@ -27,7 +27,7 @@ import matplotlib.font_manager as fm
 plt.close("all")
 plt.ion()
 
-printtofile=False
+printtofile=True
 zoom=True # zoom in on ~1970-2012 and add linear trend lines
 
 
@@ -79,8 +79,8 @@ elif afield == 'sicn':
     cminm = -.15; cmaxm = .15   # monthly
     cmap = 'red2blue_w20'
 
-    saylims = -0.4e13,0.4e13 # september anomaly
-    saylims = -2e12,2e12  # december anomaly
+    saylims = -3e12,2e12 # september anomaly
+    #saylims = -2e12,2e12  #  december anomaly
     maylims = -2e12,3e12
     
 elif afield == 'pmsl':
@@ -261,8 +261,8 @@ if printtofile:
 #   MINIMUM (SEPT)
 plt.figure()
 cii=0.25
-mosel=12; mostr='Dec'
-#mosel=9; mostr='Sep'
+#mosel=12; mostr='Dec'
+mosel=9; mostr='Sep'
 for ii in xrange(0,5):
     plotfld = cutl.seasonalize_monthlyts(cfldpall[ii,:],mo=mosel)
     plt.plot(years,plotfld,color=str(cii))
@@ -300,13 +300,17 @@ if printtofile:
 plt.figure()
 cii=0.25
 #mosel=9
+print mostr + ' ANOM TRENDS'
 for ii in xrange(0,5):
     plotfld = cutl.seasonalize_monthlyts(cfldpall[ii,:],mo=mosel) -\
               cutl.seasonalize_monthlyts(cfldcall[ii,:],mo=mosel,climo=1)
     plt.plot(years,plotfld,color=str(cii))
+    ax=plt.gca()
+    axylim = ax.get_ylim()
     if zoom:
         slope, intercept, r_value, p_value, std_err = sp.stats.linregress(hyears,plotfld[129:])
         plt.plot(years,slope*years+intercept,color=str(cii))
+        print str(ii) + ' SLOPE: ' + str(slope)
     cii=cii+0.15
 
 plotfld = cutl.seasonalize_monthlyts( np.mean(cfldpall,axis=0),mo=mosel ) -\
@@ -315,6 +319,7 @@ plt.plot(years,plotfld,color='k',linewidth=2)
 if zoom:
     slope, intercept, r_value, p_value, std_err = sp.stats.linregress(hyears,plotfld[129:])
     plt.plot(years,slope*years+intercept,color='k',linewidth=2)
+    print 'MEAN SLOPE: ' + str(slope)
 
 if afield=='sicn':
     plotfld=cutl.seasonalize_monthlyts(hfldp,mo=mosel)-\
@@ -323,6 +328,7 @@ if afield=='sicn':
     if zoom:
         slope, intercept, r_value, p_value, std_err = sp.stats.linregress(hyears,plotfld)
         plt.plot(hyears,slope*hyears+intercept,color='green',linewidth=2)
+        print 'HAD SLOPE: ' + str(slope)
 
     plotfld=cutl.seasonalize_monthlyts(nfldp,mo=mosel)-\
              cutl.seasonalize_monthlyts(nfldc,mo=mosel,climo=1)
@@ -330,6 +336,7 @@ if afield=='sicn':
     if zoom:
         slope, intercept, r_value, p_value, std_err = sp.stats.linregress(nyears,plotfld)
         plt.plot(nyears,slope*nyears+intercept,color=dodgerblue,linewidth=2)
+        print 'NSIDC SLOPE: ' + str(slope)
 plt.xlim(xlims)
 plt.ylim(saylims)
 plt.title(mostr + ' NH SIA anom from 1979-89')

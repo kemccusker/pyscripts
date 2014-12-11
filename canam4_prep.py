@@ -29,7 +29,7 @@ plt.ion()
 
 printtofile=True
 
-field = 'gz'
+field = 'st'
 smclim=True
 level=50000 # for threed
 
@@ -39,11 +39,11 @@ field2='gz'
 level2=50000
 
 # seasonalmap, seasonalvert, plotzonmean, plotseacyc, pattcorrwithtime, plotregmean,calcregmeanwithtime, timetosig, timetosigsuper
-plottype='seasonalvert' 
+plottype='plotregmean' 
 projtype='nh' # 'nh','sh','sq','eastere','nastere'
 
-# None, polcap60, polcap65, polcap70, eurasia, eurasiamori, eurasiasth,eurasiathin,eurasiathinw,eurasiathine,ntham, nthatl, bks, bksmori, soo
-region=None #'eurasiamori'
+# None, nh, polcap60, polcap65, polcap70, eurasia, eurasiamori, eurasiasth,eurasiathin,eurasiathinw,eurasiathine,ntham, nthatl, bks, bksmori, soo
+region='polcap60' #'eurasiamori'
 screen=True
 seacyclatlim=60
 withlat=False
@@ -68,16 +68,16 @@ canens=False # just the CAN ensemble (E1-E5) plus mean, plus mean of R ensemble.
 allens=False # this is ONLY the ensemble means, plus superensemble
 sensruns=False # sensruns only: addr4ct=1,addsens=1. others=0 no meanBC, r mean, or obs
 ivar=False # this will show ENS (TOT) and ENSE (ANTH) and their difference = internal var
-simsforpaper=True # ANT, TOT, HAD, NSIDC only. best for maps and zonal mean figs (not line plots)
+simsforpaper=False # ANT, TOT, HAD, NSIDC only. best for maps and zonal mean figs (not line plots)
 antcat=False # this is the concatenation of ens members within each ensemble (really only useful for ANT)
 bothcat=False # can do concatenation of both ensembles if want to. These are useful for timetosig
 onlyens=False # just do ensemble means ANT and TOT
 
-addobs=False # add mean of kemhad* & kemnsidc* runs to line plots, seasonal maps. 
+addobs=True # add mean of kemhad* & kemnsidc* runs to line plots, seasonal maps. 
 addr4ct=False # add kem1pert2r4ct (constant thickness version of ens4)
 addsens=False # add sensitivity runs (kem1pert1b, kem1pert3)
 addrcp=False # add kem1rcp85a simulation (and others if we do more)
-addcanens=False # add "initial condition" ensemble of kemctl1/kem1pert2
+addcanens=True # add "initial condition" ensemble of kemctl1/kem1pert2
 addsuper=False # add superensemble mean
 
 
@@ -727,8 +727,27 @@ if plottype=='plotregmean':
     dblob = sfnc.calc_seasons(fdict,coords,sims,seas=seasons,loctimesel=timesel,info=infodict,calctype='regmean')
     sfnc.plot_regmean_byseas(dblob,fdict,sims,info=infodict,seas=seasons,printtofile=printtofile)
 
+    import pandas as pd
+    
+    
+
     # calc whether ens means are sig different @@@@
     if shadeens != None: # right now, will never be none. Should change that. @@@
+
+        # calc anom range vs mean anom for the given field within given ensemble
+        allensdt,allensmdt = con.build_ensembles(shadeens,dblob,calctype='diff')
+        for ens in shadeens:
+            ensdf=pd.DataFrame(allensdt[ens])
+            #ensmdf=pd.DataFrame(allensmdt[ens])
+            ensrng = ensdf.max(axis=1)-ensdf.min(axis=1)
+            ensrat = ensrng / ensdf.mean(axis=1)
+            print ens + ' RANGE: '
+            print str(ensrng)
+            print ens + ' MEAN: '
+            print str(ensdf.mean(axis=1))
+            print ens + ' RATIO*100: '
+            print str(ensrat*100)
+            
         if len(shadeens)>1:
             sh.calc_ensemblestats(dblob,shadeens,seas=seasons)
     
