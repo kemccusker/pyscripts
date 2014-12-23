@@ -27,8 +27,9 @@ import matplotlib.font_manager as fm
 plt.close("all")
 plt.ion()
 
-printtofile=True
+printtofile=False
 zoom=True # zoom in on ~1970-2012 and add linear trend lines
+afield = 'sicn'
 
 
 amodel = 'CanAM4'
@@ -54,7 +55,6 @@ ensnum=5
 
 # # # ######## set Field info (CanAM name) ###################
 # st, sicn, gt, pmsl, pcp, hfl, hfs, turb, flg, fsg, fn, pcpn, zn, su, sv (@@later ufs,vfs)
-afield = 'sicn'
 
 if afield == 'st':
     cfield = 'tas' # coupled (CMIP) field name
@@ -80,6 +80,8 @@ elif afield == 'sicn':
     cmap = 'red2blue_w20'
 
     saylims = -3e12,2e12 # september anomaly
+    saylimspapa = -2e12,1.5e12 # september anomaly for paper
+    saylimspap = 1.2e12,4.8e12 # september climo for paper
     #saylims = -2e12,2e12  #  december anomaly
     maylims = -2e12,3e12
     
@@ -343,6 +345,123 @@ plt.title(mostr + ' NH SIA anom from 1979-89')
 plt.grid()
 if printtofile:
     plt.savefig('CanESMens_OBSanom' + ctimstr + '_' + cfield + '_' + mostr + '_timeseries' + pstr + '.pdf')
+
+
+
+# ######### for AGU talk / maybe paper ################
+yrs1=np.arange(1979,1990)
+yrs2=np.arange(2002,2013)
+cii=0.25
+import cccmacmaps as ccm
+
+coldt=ccm.get_colordict()
+print mostr + ' ANOM TRENDS'
+
+plt.figure()
+for ii in xrange(0,5):
+    plotfld = cutl.seasonalize_monthlyts(cfldpall[ii,:],mo=mosel) -\
+              cutl.seasonalize_monthlyts(cfldcall[ii,:],mo=mosel,climo=1)
+    
+    plt.plot(years,plotfld,color=str(cii)) #coldt['R'+str(ii+1)])
+    
+    ax=plt.gca()
+    axylim = ax.get_ylim()
+    if zoom:
+        slope, intercept, r_value, p_value, std_err = sp.stats.linregress(hyears,plotfld[129:])
+        #plt.plot(years,slope*years+intercept,color=str(cii))
+        
+        plotfld1=np.ones((len(plotfld[129:140]))) * np.mean(plotfld[129:140]) #1979-89
+        plotfld2=np.ones((len(plotfld[152:]))) * np.mean(plotfld[152:]) # 2002-12
+        plt.plot(yrs1,plotfld1,color=coldt['R'+str(ii+1)],linewidth=3)
+        plt.plot(yrs2,plotfld2,color=coldt['R'+str(ii+1)],linewidth=3)
+        
+        print str(ii) + ' SLOPE: ' + str(slope)
+    cii=cii+0.15
+
+# ensemble mean
+plotfld = cutl.seasonalize_monthlyts( np.mean(cfldpall,axis=0),mo=mosel ) -\
+          cutl.seasonalize_monthlyts( np.mean(cfldcall,axis=0),mo=mosel,climo=1 )
+plt.plot(years,plotfld,color='k',linewidth=2)
+if zoom:
+    slope, intercept, r_value, p_value, std_err = sp.stats.linregress(hyears,plotfld[129:])
+    #plt.plot(years,slope*years+intercept,color='k',linewidth=2)
+
+    plotfld1=np.ones((len(plotfld[129:140]))) * np.mean(plotfld[129:140]) #1979-89
+    plotfld2=np.ones((len(plotfld[152:]))) * np.mean(plotfld[152:]) # 2002-12
+    #plt.plot(yrs1,plotfld1,color='k',linewidth=3)
+    #plt.plot(yrs2,plotfld2,color='k',linewidth=3)
+
+    print 'MEAN SLOPE: ' + str(slope)
+
+plt.xlim(xlims)
+plt.ylim(saylimspapa)
+plt.title(mostr + ' NH SIA anom from 1979-89')
+plt.grid()
+if printtofile:
+    plt.savefig('CanESMens_anom' + ctimstr + '_' + cfield + '_' + mostr + '_timeseries' + pstr + '_withclimomeans.pdf')
+
+
+# NO anomalies
+
+cii=0.25
+
+print mostr + ' ABSOLUTE TRENDS'
+plt.figure()
+
+for ii in xrange(0,5):
+    plotfld = cutl.seasonalize_monthlyts(cfldpall[ii,:],mo=mosel)
+    
+    plt.plot(years,plotfld,color='.5')#str(cii)) #coldt['R'+str(ii+1)])
+    
+    ax=plt.gca()
+    axylim = ax.get_ylim()
+    if zoom:
+        slope, intercept, r_value, p_value, std_err = sp.stats.linregress(hyears,plotfld[129:])
+        #plt.plot(years,slope*years+intercept,color=str(cii))
+        
+        plotfld1=np.ones((len(plotfld[129:140]))) * np.mean(plotfld[129:140]) #1979-89
+        plotfld2=np.ones((len(plotfld[152:]))) * np.mean(plotfld[152:]) # 2002-12
+        plt.plot(yrs1,plotfld1,color=coldt['R'+str(ii+1)],linewidth=3)
+        plt.plot(yrs2,plotfld2,color=coldt['R'+str(ii+1)],linewidth=3)
+        
+        print str(ii) + ' SLOPE: ' + str(slope)
+    cii=cii+0.15
+
+# ensemble mean
+plotfld = cutl.seasonalize_monthlyts( np.mean(cfldpall,axis=0),mo=mosel )
+plt.plot(years,plotfld,color='k',linewidth=2)
+if zoom:
+    slope, intercept, r_value, p_value, std_err = sp.stats.linregress(hyears,plotfld[129:])
+    #plt.plot(years,slope*years+intercept,color='k',linewidth=2)
+
+    #plotfld1=np.ones((len(plotfld[129:140]))) * np.mean(plotfld[129:140]) #1979-89
+    #plotfld2=np.ones((len(plotfld[152:]))) * np.mean(plotfld[152:]) # 2002-12
+    #plt.plot(yrs1,plotfld1,color='k',linewidth=3)
+    #plt.plot(yrs2,plotfld2,color='k',linewidth=3)
+
+    print 'MEAN SLOPE: ' + str(slope)
+
+plt.xlim(xlims)
+plt.ylim(saylimspap)
+plt.title(mostr + ' NH SIA')
+plt.grid()
+if printtofile:
+    plt.savefig('CanESMens_' + cfield + '_' + mostr + '_timeseries' + pstr + '_withclimomeans.pdf')
+
+# can I save again w/ additional data?
+if zoom:
+    plotfld1=np.ones((len(plotfld[129:140]))) * np.mean(plotfld[129:140]) #1979-89
+    plotfld2=np.ones((len(plotfld[152:]))) * np.mean(plotfld[152:]) # 2002-12
+    plt.plot(yrs1,plotfld1,color='k',linewidth=3)
+    plt.plot(yrs2,plotfld2,color='k',linewidth=3)
+if printtofile:
+    plt.savefig('CanESMens_' + cfield + '_' + mostr + '_timeseries' + pstr + '_withclimomeanswithensmean.pdf')
+
+# #####################################################
+
+
+
+
 
 
 ## plt.figure()
