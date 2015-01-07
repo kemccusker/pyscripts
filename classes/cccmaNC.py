@@ -242,24 +242,25 @@ def getNCvar(filename,field,timesel=None,levsel=None,monsel=None,seas=None,calc=
         if seas != None:
             #print 'getNCvar(): seas!=None: fld.shape: ' + str(fld.shape) # @@@
             
-            if fld.ndim != 3:
-                ## if 1 in fld.shape:
-                ##     fld=fld.squeeze() # attempting to deal with spurious dims of 1 @@@
-                ##     if fld.ndim != 3:
-                ##         print 'data must be 3 dimensional to seasonalize()'
-                ##         return
-                ## else:
-                print 'data must be 3 dimensional to seasonalize()'
-                return
+            ## if fld.ndim != 3:
+            ##     ## if 1 in fld.shape:
+            ##     ##     fld=fld.squeeze() # attempting to deal with spurious dims of 1 @@@
+            ##     ##     if fld.ndim != 3:
+            ##     ##         print 'data must be 3 dimensional to seasonalize()'
+            ##     ##         return
+            ##     ## else:
+            ##     print 'data must be 3 dimensional to seasonalize()'
+            ##     return
             
-            elif monsel != None:
+            if monsel != None:
                 print "Can't do seasonal average when monsel != None"
                 return
             elif seas == 'climo':
-                fld,stddev = cutl.climatologize3d(fld)
-            elif type(seas) == 'int': # @@ does this work?
+                fld,stddev = cutl.climatologize(fld)
+            elif type(seas) == int: # @@ does this work?
                 #elif seas not in ('ANN','DJF','JJA','MAM','SON','NDJ'):
                 # means seas is an int value for a month
+                
                 fld = cutl.seasonalize_monthlyts(fld,mo=seas)
             else:
                 #print 'seasonalizing'
