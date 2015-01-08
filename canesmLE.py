@@ -183,6 +183,7 @@ season='ND'
 # directly from the file and doesn't do any averaging (??)
 #  Try the fix in the link if want an individual month.
 
+import cccmacmaps as ccm
 
 subyrs=np.arange(1979,1990)
 subyrs2=np.arange(2002,2013)
@@ -340,34 +341,146 @@ npdf_fitted = norm.pdf(nxx,loc=nmean,scale=nsd)
 
 # normed means: integral of the histogram will sum to 1 @@@ don't think it's right
 fig,ax=plt.subplots(1,1)
-allnatdiff.hist(normed=True,color='0.5',alpha=0.5)
-alldiff.hist(normed=True,color='r',alpha=0.5)
-plt.title(field + ' anom ' + str(season))
-ax.plot(axx,apdf_fitted,color=ccm.get_linecolor('firebrick'),linewidth=2)
+allnatdiff.hist(normed=True,color='0.5',alpha=0.5)#,histtype='stepfilled')
+alldiff.hist(normed=True,color=firebrick,alpha=0.5)#,histtype='stepfilled')
+#plt.title(field + ' anom ' + str(season))
+ax.plot(axx,apdf_fitted,color=firebrick,linewidth=2)
 ax.plot(nxx,npdf_fitted,color='k',linewidth=2)
+axylims=ax.get_ylim()
+ax.axvline(color='k',linestyle='--')
 for eii in range(1,6):
-    ax.axvline(difforig[eii],color=ccm.get_linecolor('firebrick'),linewidth=3)
-    ax.axvline(diffnatorig[eii],color='k',linewidth=3)
-ax.axvline(diffhad,color='b',linewidth=3)
-ax.axvline(diffnsidc,color='g',linewidth=3)
-ax.set_ylabel('frequency')
+    ax.plot(difforig[eii],axylims[1],marker='|',markersize=20,color=firebrick) 
+    ax.plot(diffnatorig[eii],axylims[1],marker='|',markersize=20,color='k')
+    ax.axvline(x=difforig[eii],ymin=.97,ymax=1,color=firebrick,linewidth=2)
+    ax.axvline(x=diffnatorig[eii],ymin=.97,ymax=1,color='k',linewidth=2)
+hh=ax.axvline(diffhad,color='b',linewidth=3)
+nn=ax.axvline(diffnsidc,color='g',linewidth=3)
+ax.legend((hh,nn),('HadISST','NSIDC'),loc='upper left')
+ax.set_ylabel('Density')
+ax.set_xlabel('$\Delta$ Sea Ice Area (m$^2$)')
+ax.set_xlabel('$\Delta$ Sea Ice Area (millions of km$^2$)')
+xt=ax.get_xticks()
+ax.set_xticklabels(xt/np.float(1e12))
+ax.grid('off')
 if printtofile:
     fig.savefig(field + 'diff_PDFHIST_CanESMLE_TOTNAT_' + str(season) + '.pdf')
 
 
+fig,ax=plt.subplots(1,1)
+allnatdiff.hist(normed=True,color='0.5',alpha=0.5)#,histtype='stepfilled')
+alldiff.hist(normed=True,color=firebrick,alpha=0.5)#,histtype='stepfilled')
+#plt.title(field + ' anom ' + str(season))
+ax.plot(axx,apdf_fitted,color=firebrick,linewidth=2)
+ax.plot(nxx,npdf_fitted,color='k',linewidth=2)
+axylims=ax.get_ylim()
+ax.set_ylim((axylims[0],axylims[1]+(axylims[1]*.1)))
+axylims=ax.get_ylim()
+ax.axvline(color='k',linestyle='--')
+for eii in range(1,6):
+    #ax.plot(difforig[eii],axylims[1],marker='|',markersize=20,color=firebrick) 
+    #ax.plot(diffnatorig[eii],axylims[1],marker='|',markersize=20,color='k')
+    ax.axvline(x=difforig[eii],ymin=.97,ymax=1,color=firebrick,linewidth=2)
+    ax.axvline(x=diffnatorig[eii],ymin=.97,ymax=1,color='k',linewidth=2)
+hh=ax.axvline(diffhad,color='b',linewidth=3)
+nn=ax.axvline(diffnsidc,color='g',linewidth=3)
+#ax.legend((hh,nn),('HadISST','NSIDC'),loc='upper left')
+ax.annotate('NSIDC',xy=(diffnsidc-(diffnsidc*.05),axylims[1]-(axylims[1]*.07)),xycoords='data')#,rotation=45)
+ax.annotate('HadISST',xy=(diffhad-(diffhad*.05),axylims[1]-(axylims[1]*.07)),xycoords='data')#,rotation=45)
+ax.annotate('Historical',xy=(.36,.57),xytext=(.2,.7), xycoords='figure fraction',
+            arrowprops=dict(facecolor=firebrick, edgecolor='None',shrink=0.05))
+ax.annotate('HistoricalNat',xy=(.7,.5),xytext=(.75,.6), xycoords='figure fraction',
+            arrowprops=dict(facecolor='k', edgecolor='None',shrink=0.05))
+ax.annotate('Sea Ice Loss', xy=(0,1.02), xytext=(.53,1.02),xycoords='axes fraction',
+            arrowprops=dict(facecolor='k', edgecolor='None',shrink=0.05),verticalalignment='center')
+ax.annotate('Sea Ice Gain', xy=(1,1.02), xytext=(.74,1.02),xycoords='axes fraction',
+            arrowprops=dict(facecolor='k', edgecolor='None',shrink=0.05),verticalalignment='center')
 
-printtofile=True
+ax.set_ylabel('Density')
+ax.set_xlabel('$\Delta$ Sea Ice Area (m$^2$)')
+ax.set_xlabel('$\Delta$ Sea Ice Area (millions of km$^2$)')
+xt=ax.get_xticks()
+ax.set_xticklabels(xt/np.float(1e12))
+ax.grid('off')
+if printtofile:
+    fig.savefig(field + 'diff_PDFHIST_CanESMLE_TOTNAT_' + str(season) + '_annotate.pdf')
+
+import matplotlib.patches as mpatches
+
+# # # PAPER ############
+fig,ax=plt.subplots(1,1)
+allnatdiff.hist(normed=True,color='0.5',alpha=0.5)#,histtype='stepfilled')
+alldiff.hist(normed=True,color=firebrick,alpha=0.5)#,histtype='stepfilled')
+# use proxy artist for histogram legend entries
+tot = mpatches.Patch(color=firebrick,alpha=0.5)#, label='The red data')
+nat = mpatches.Patch(color='0.5',alpha=0.5)#, label='The red data')
+ax.plot(axx,apdf_fitted,color=firebrick,linewidth=2)
+ax.plot(nxx,npdf_fitted,color='k',linewidth=2)
+axylims=ax.get_ylim()
+ax.set_ylim((axylims[0],axylims[1]+(axylims[1]*.1)))
+axylims=ax.get_ylim()
+ax.axvline(color='k',linestyle='--')
+for eii in range(1,6):
+    #ax.plot(difforig[eii],axylims[1],marker='|',markersize=20,color=firebrick) 
+    #ax.plot(diffnatorig[eii],axylims[1],marker='|',markersize=20,color='k')
+    ax.axvline(x=difforig[eii],ymin=.97,ymax=1,color=firebrick,linewidth=2)
+    ax.axvline(x=diffnatorig[eii],ymin=.97,ymax=1,color='k',linewidth=2)
+
+#nn=ax.axvline(diffnsidc,color='g',linewidth=3)
+nn = ax.axvline(x=diffnsidc,ymin=.97,ymax=1,color='g',linewidth=3)
+ax.legend((nn,tot,nat),('NSIDC','Historical','HistoricalNat'),loc='upper left',frameon=False)
+## ax.annotate('NSIDC',xy=(diffnsidc-(diffnsidc*.05),axylims[1]-(axylims[1]*.07)),xycoords='data')#,rotation=45)
+
+## ax.annotate('Historical',xy=(.36,.57),xytext=(.2,.7), xycoords='figure fraction',
+##             arrowprops=dict(facecolor=firebrick, edgecolor='None',shrink=0.05))
+## ax.annotate('HistoricalNat',xy=(.7,.5),xytext=(.75,.6), xycoords='figure fraction',
+##             arrowprops=dict(facecolor='k', edgecolor='None',shrink=0.05))
+#txtbox = dict(boxstyle='Square', fc='None', ec='None') # want a patch for the clip for arrow
+#txtbox=mpatches.Rectangle((0.3, 1.03),( # can't figure it out w/ axes fraction coordinates
+
+txt = ax.annotate('SIA Loss',xy=(0.3, 1.05),  xycoords='axes fraction')#,bbox=txtbox) # just text
+ann = ax.annotate('', xy=(0, 1.03),  xycoords='axes fraction',
+                  xytext=(0.7, 1.03), textcoords='axes fraction',
+                  arrowprops=dict(arrowstyle='<->',connectionstyle='arc3',facecolor='k',
+                                  edgecolor='k',patchB=txt,patchA=txt),
+                  verticalalignment='center')
+                ## arrowprops=dict(arrowstyle="<->",
+                ##                 connectionstyle="bar",
+                ##                 ec="k",
+                ##                 shrinkA=5, shrinkB=5,))
+ax.annotate('SIA Gain',xy=(.8,1.05), xycoords='axes fraction')
+ann = ax.annotate('', xy=(0.71, 1.03),  xycoords='axes fraction',
+                  xytext=(1, 1.03), textcoords='axes fraction',
+                  arrowprops=dict(arrowstyle='<->',connectionstyle='arc3',facecolor='k',
+                                  edgecolor='k',patchB=txt,patchA=txt),
+                  verticalalignment='center')
+## ax.annotate('SIA Loss', xy=(0,1.02), xytext=(.53,1.02),xycoords='axes fraction',
+##             arrowprops=dict(facecolor='k', edgecolor='None',shrink=0.05),verticalalignment='center')
+#ax.annotate('SIA Gain', xy=(1,1.02), xytext=(.74,1.02),xycoords='axes fraction',
+#            arrowprops=dict(facecolor='k', edgecolor='None',shrink=0.05),verticalalignment='center')
+
+ax.set_ylabel('Density')
+ax.set_yticklabels('')
+ax.set_xlabel('$\Delta$ Sea Ice Area (millions of km$^2$)')
+xt=ax.get_xticks()
+ax.set_xticklabels(xt/np.float(1e12))
+ax.grid('off')
+if printtofile:
+    fig.savefig(field + 'diff_PDFHIST_CanESMLE_TOTNAT_' + str(season) + '_paper.pdf')
+
+
+
+#printtofile=True
 fig,ax=plt.subplots(1,1)
 plt.title(field + ' anom ' + str(season))
 tot=ax.plot(axx,apdf_fitted,color=ccm.get_linecolor('firebrick'),linewidth=2)
 nat=ax.plot(nxx,npdf_fitted,color='k',linewidth=2)
 ax.fill_between(axx,apdf_fitted,color='r',alpha=0.5)
 ax.fill_between(nxx,npdf_fitted,color='k',alpha=0.5)
-ax.grid()
+#ax.grid()
 axylims=ax.get_ylim()
 
 for eii in range(1,6):
-    ax.plot(difforig[eii],axylims[1],marker='v',markersize=10,color=firebrick) # change to triangle
+    ax.plot(difforig[eii],axylims[1],marker='v',markersize=10,color=firebrick) 
     #ax.plot(diffnatorig[eii],axylims[1],marker='v',markersize=10,color='k') # want original NAT runs?
 hh=ax.axvline(diffhad,color='b',linewidth=3)
 nn=ax.axvline(diffnsidc,color='g',linewidth=3)
