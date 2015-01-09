@@ -2027,3 +2027,82 @@ def plot_seasonal_maps(dblob,fielddict,coords,sims,pparams,plottype='diff',vert=
             else:
                 fig6.savefig(fieldstr + plottype + '_' + sigstr + '_enssubplot' + savestr + '_seas_nh'
                              + latstr + '2.' + suff)
+
+
+def plot_uncertainty_cascade(dblob,fielddict,coords,sims,pparams,info=None,seas=None,printtofile=False):
+    """ This function should produce a cascade whereby each row of points is connected to
+        the previous (higher up on y axis) number of points by straight lines. A la Hawkins
+
+        Input is expected to be a dblob of an ensemble of simulations. Values should be timeseries of
+        regional means for one season. (calcregmeanwithtime) 1/7/2015
+    """
+    
+
+    # start with one ensemble
+    colordict=ccm.get_colordict()
+
+    field=fielddict['field']
+    fieldstr=fielddict['fieldstr']
+
+    shadeens = info['shadeens'] # list of ensembles
+    savestr = info['savestr']
+    region = info['region']
+
+    ensname=shadeens[0] # @@@@@@@@
+    allensdt,allensmdt = con.build_ensembles((ensname,),dblob,calctype='diff')
+    # these are dict of ens -> dict of sims in ens -> data (by season)
+
+    
+    ensdt = allensdt[ensname] # this does not include the mean
+    numsims = len(ensdt.keys()) # how many sims in the ensemble?
+
+    ensmdt = allensmdt[ensname] # the mean of ensemble
+    ekey = ensmdt.keys()[0]
+    ensmdt = ensmdt[ekey]
+    ensmdt = ensmdt[seas[0]] # now it is just an array    
+
+    fig,ax = plt.subplots(1,1)
+    
+    # ---- top point: ensemble mean:
+    lev1 = ensmdt.mean() # time and ens mean # will this work?@@
+    
+    topy=4 # there will be 3 rows
+    
+    
+    #ax.plot(lev1,topr,linestyle='none',marker='o',markersize=6) # the top point
+
+    # -------- next level down: (individual ens member means, 120yrs)
+    ens=np.zeros((numsims))
+    for sii,skey in enumerate(ensdt.keys()):
+        ens[sii] = ensdt[skey][seas[0]].mean() # time mean for each sim
+        
+    lev2 = ens
+    y2 = 3 #* np.ones(len(lev2))
+
+    cplt.plot_onecascade((lev1,),(lev2,),topy,y2,ax=ax,color='b')
+
+    # ------------ 3rd level down (split timeseries, 60yrs each)
+    ens={}
+    for sii,skey in enumerate(ensdt.keys()):
+        vals = np.squeeze(ensdt[skey][seas[0]])
+        lenvals = len(vals)
+        half1 = vals[:lenvals/2.]
+        print 'half1.mean() ' + str(half1.mean())
+        
+        half2 = vals[lenvals/2.:]
+        print 'half2.mean() ' + str(half2.mean())
+        ens[sii] = (half1.mean(),half2.mean())
+
+    
+    lev3 = ens
+    y3 = 2
+
+    print 'lev2: ' + str(lev2) + ', lev3: ' + str(lev3)
+    cplt.plot_onecascade(lev2,lev3,y2,y3,ax=ax,color='b')
+    ax.set_ylim(1.5,4.5)
+    ax.set_yticklabels('')
+    ax.axvline(color='k')
+    ax.set_xlabel(fieldstr + ' ' + region)
+    
+    if printtofile:
+        fig.savefig(fieldstr + '_' + region + '_' + seas[0] + '_unccascade.pdf')
