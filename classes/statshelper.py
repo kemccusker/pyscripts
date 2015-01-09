@@ -252,7 +252,7 @@ def calc_runstats(datablob,sims, seas=None,siglevel=0.05):
             ctl=ctlsim[sea]
             pert=pertsim[sea]
 
-            (tstat,tpval,lstat,lpval) = calc_pvals(pert,ctl)
+            (tstat,tpval,lstat,lpval) = cutl.calc_pvals(pert,ctl)
             
             ## print '    DIFF: ' + str(pert.mean()-ctl.mean()) + ', CTL mean: ' + str(ctl.mean()) + ', PERT mean: ' + str(pert.mean())
             ## tstat, tpval = sp.stats.ttest_ind(pert,ctl) # add autocorr @@
