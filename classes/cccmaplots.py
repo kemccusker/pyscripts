@@ -793,3 +793,36 @@ def plot_pattcorrs(pcdf, pcdf2=None, rmin=None, axis=None, type='seasonal'):
     ax.set_ylim((0,1))
     ax.grid(True)
 
+def plot_onecascade(topdata,bottdata,topy,botty,ax=None, mparams=None, lparams=None,color='r'):
+    """ def plot_onecascade(topdata,bottdata,topy,botty,ax=None, mparams=None, lparams=None):
+
+           mparams: dictionary of key/values for marker
+           lparams: dictionary of key/values for line
+    """
+    if ax==None:
+        ax=plt.gca()
+    if mparams ==None:
+        mparams = dict(marker='o',markersize=6,linestyle='none',color=color)
+    if lparams ==None:
+        lparams = dict(color=color,linewidth=.5)
+        
+    tlen = len(topdata) # this should match bottdata length
+    if tlen != len(bottdata):
+        print 'topdata length is not equal to bottdata length!'
+        return
+
+    for tii,td in enumerate(topdata):
+        # ?? ploty=np.ones(len(td))*topy
+        ax.plot(td,topy,**mparams) # marker
+        print 'topdata els: ' + str(td) + ', ' + str(topy)
+        
+        #for bii in np.arange(0,len(bottdata)):
+        bd=bottdata[tii]
+        print 'bottdata els: ' + str(bd) + ', ' + str(botty)
+        ploty=botty*np.ones(len(bd))
+        ax.plot(bd,ploty,**mparams) # all markers
+
+        for b in bd:
+            print 'element of bottdata: ' + str(b)
+
+            ax.plot((b,td), (botty,topy),**lparams) # individual lines
