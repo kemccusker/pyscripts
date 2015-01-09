@@ -27,7 +27,7 @@ plt.ion()
        # coords = {'lat': con.get_t63lat(), 'lon': con.get_t63lon()}
 
 
-printtofile=True
+printtofile=False
 
 field = 'st'
 smclim=True
@@ -39,11 +39,11 @@ field2='gz'
 level2=50000
 
 # seasonalmap, seasonalvert, plotzonmean, plotseacyc, pattcorrwithtime, plotregmean,calcregmeanwithtime, timetosig, timetosigsuper
-plottype='seasonalmap' 
+plottype='calcregmeanwithtime' 
 projtype='eastere' # 'nh','sh','sq','eastere','nastere'
 
 # None, nh, polcap60, polcap65, polcap70, eurasia, eurasiamori, eurasiasth,eurasiathin,eurasiathinw,eurasiathine,ntham, nthatl, bks, bksmori, soo
-region=None#'eurasiamori'
+region='eurasia' #'eurasiamori'
 screen=True
 seacyclatlim=60
 withlat=False
@@ -52,7 +52,7 @@ latlim = None # None #45 # lat limit for NH plots. Set to None otherwise. use 45
 round=False # if latlim is not None, this specifies whether the polar stereographic figure should be square or round
 levlim= 100 # level limit for vertical ZM plots (in hPa). ignored if screen=True
 fallwin=False # just SON and DJF
-bimon=False # do bi-montly seasons instead
+bimon=True # do bi-montly seasons instead
 figtrans=False # for maps/vert: make seasons the cols and sims the rows if True. auto True for simsforpaper
 
 
@@ -64,7 +64,7 @@ halftime2=False # get only the last 60yrs. make sure to set the other flag the o
 
 # Choose what simulations to add =============
 #  default is R1-5, ENS
-canens=True # just the CAN ensemble (E1-E5) plus mean, plus mean of R ensemble. option to addobs only.
+canens=False # just the CAN ensemble (E1-E5) plus mean, plus mean of R ensemble. option to addobs only.
 allens=False # this is ONLY the ensemble means, plus superensemble
 sensruns=False # sensruns only: addr4ct=1,addsens=1. others=0 no meanBC, r mean, or obs
 ivar=False # this will show ENS (TOT) and ENSE (ANTH) and their difference = internal var
@@ -146,14 +146,14 @@ sims = 'R1','R4','R3','R5','R2','ENS'#,'ENSE'#,'CAN' # R's in order of sea ice l
 defaultsims=sims
 seasons = ('SON','DJF','MAM','JJA')
 biseas = ('SO','ND','JF') # @@@ so far only these implemented. expecting to add all 11/25/14
-
+biseas = ('ND',) # @@@@
 
 
 if simsforpaper: # best for maps only
     sims = ('HAD','NSIDC','ENSE','ENS')
     savestr = '_forpap4' # add ENS. # 4 means fig is transposed
     if bimon:
-        seasons=('SO','ND','JF')
+        seasons=biseas
         savestr = savestr + 'bimon'
     else:
         seasons=('SON','DJF')
@@ -785,7 +785,7 @@ if plottype=='calcregmeanwithtime':
     fig,axs=plt.subplots(1,2)
     fig.set_size_inches(12,4)
     ax=axs[0]
-    tpvaldft.plot(linestyle='None',colors=ccm.get_colordict().values(),marker='s',markersize=6,ax=ax)
+    tpvaldft.plot(linestyle='None',color=ccm.get_colordict().values(),marker='s',markersize=6,ax=ax)
     ax.axhline(y=siglevel,color='k')
     ax.set_ylabel('PVAL of T statistic for mean')
     ax.set_title(fdict['fieldstr'] + ' ' + region)
