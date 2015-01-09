@@ -793,11 +793,12 @@ def plot_pattcorrs(pcdf, pcdf2=None, rmin=None, axis=None, type='seasonal'):
     ax.set_ylim((0,1))
     ax.grid(True)
 
-def plot_onecascade(topdata,bottdata,topy,botty,ax=None, mparams=None, lparams=None,color='r'):
+def plot_onecascade(topdata,bottdata,topy,botty,ax=None, mparams=None, lparams=None,color='r',pvalst=None,pvalsb=None,siglevel=0.05):
     """ def plot_onecascade(topdata,bottdata,topy,botty,ax=None, mparams=None, lparams=None):
 
            mparams: dictionary of key/values for marker
            lparams: dictionary of key/values for line
+           pvalst and pvalsb should be pvalues for the data in top and bottom, respectively (for the markers)
     """
     if ax==None:
         ax=plt.gca()
@@ -812,17 +813,28 @@ def plot_onecascade(topdata,bottdata,topy,botty,ax=None, mparams=None, lparams=N
         return
 
     for tii,td in enumerate(topdata):
-        # ?? ploty=np.ones(len(td))*topy
-        ax.plot(td,topy,**mparams) # marker
-        print 'topdata els: ' + str(td) + ', ' + str(topy)
+        ax.plot(td,topy,fillstyle='none',**mparams) # marker
+        # test for significance
+        if pvalst != None:
+            if pvalst[tii] <= siglevel:
+                ax.plot(td,topy,**mparams) # sig marker
+            
+        #print 'topdata els: ' + str(td) + ', ' + str(topy)
         
-        #for bii in np.arange(0,len(bottdata)):
         bd=bottdata[tii]
-        print 'bottdata els: ' + str(bd) + ', ' + str(botty)
+        
+        #print 'bottdata els: ' + str(bd) + ', ' + str(botty)
         ploty=botty*np.ones(len(bd))
-        ax.plot(bd,ploty,**mparams) # all markers
+        ax.plot(bd,ploty,fillstyle='none',**mparams) # all markers
+        if pvalsb!=None:
+            bdpv = pvalsb[tii]
+            print 'bdpv: ' + str(bdpv) # @@@@@
+            print 'bd: ' + str(bd)
+            pvmask=ma.masked_where(np.array(bdpv)>siglevel,np.array(bd))
+            print pvmask # @@@@
+            ax.plot(pvmask,ploty,**mparams) # all sig markers
 
         for b in bd:
-            print 'element of bottdata: ' + str(b)
+            #print 'element of bottdata: ' + str(b)
 
             ax.plot((b,td), (botty,topy),**lparams) # individual lines

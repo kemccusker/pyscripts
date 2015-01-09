@@ -2029,7 +2029,7 @@ def plot_seasonal_maps(dblob,fielddict,coords,sims,pparams,plottype='diff',vert=
                              + latstr + '2.' + suff)
 
 
-def plot_uncertainty_cascade(dblob,fielddict,coords,sims,pparams,info=None,seas=None,printtofile=False):
+def plot_uncertainty_cascade(dblob,fielddict,coords,sims,pparams,info=None,seas=None,xlab=None,color=None,printtofile=False):
     """ This function should produce a cascade whereby each row of points is connected to
         the previous (higher up on y axis) number of points by straight lines. A la Hawkins
 
@@ -2039,7 +2039,9 @@ def plot_uncertainty_cascade(dblob,fielddict,coords,sims,pparams,info=None,seas=
     
 
     # start with one ensemble
-    colordict=ccm.get_colordict()
+#    colordict=ccm.get_colordict()
+    col=color
+    prname = dict(histBC='Variable BC', histIC='Average BC')
 
     field=fielddict['field']
     fieldstr=fielddict['fieldstr']
@@ -2048,61 +2050,99 @@ def plot_uncertainty_cascade(dblob,fielddict,coords,sims,pparams,info=None,seas=
     savestr = info['savestr']
     region = info['region']
 
-    ensname=shadeens[0] # @@@@@@@@
-    allensdt,allensmdt = con.build_ensembles((ensname,),dblob,calctype='diff')
+    numens=len(shadeens)
+    starty=3*numens # ie 6
+    #ensname=shadeens[0] # @@@@@@@@
+    allensdt,allensmdt = con.build_ensembles(shadeens,dblob,calctype='diff')
+    allpvdt,allpvmdt = con.build_ensembles(shadeens,dblob,calctype='pval') # scalar for each sim.
+    allcdt,allcmdt = con.build_ensembles(shadeens,dblob,calctype='ctl')
+    allpdt,allpmdt = con.build_ensembles(shadeens,dblob,calctype='pert') # need for the 60yr split significance
     # these are dict of ens -> dict of sims in ens -> data (by season)
 
-    
-    ensdt = allensdt[ensname] # this does not include the mean
-    numsims = len(ensdt.keys()) # how many sims in the ensemble?
-
-    ensmdt = allensmdt[ensname] # the mean of ensemble
-    ekey = ensmdt.keys()[0]
-    ensmdt = ensmdt[ekey]
-    ensmdt = ensmdt[seas[0]] # now it is just an array    
-
     fig,ax = plt.subplots(1,1)
-    
-    # ---- top point: ensemble mean:
-    lev1 = ensmdt.mean() # time and ens mean # will this work?@@
-    
-    topy=4 # there will be 3 rows
-    
-    
-    #ax.plot(lev1,topr,linestyle='none',marker='o',markersize=6) # the top point
+    for ensname in shadeens:
 
-    # -------- next level down: (individual ens member means, 120yrs)
-    ens=np.zeros((numsims))
-    for sii,skey in enumerate(ensdt.keys()):
-        ens[sii] = ensdt[skey][seas[0]].mean() # time mean for each sim
+        ensdt = allensdt[ensname] # this does not include the mean
+        pvdt = allpvdt[ensname]
+        cdt = allcdt[ensname]
+        pdt = allpdt[ensname]
         
-    lev2 = ens
-    y2 = 3 #* np.ones(len(lev2))
+        numsims = len(ensdt.keys()) # how many sims in the ensemble?
 
-    cplt.plot_onecascade((lev1,),(lev2,),topy,y2,ax=ax,color='b')
+        ensmdt = allensmdt[ensname] # the mean of ensemble
+        pvmdt = allpvmdt[ensname]
+        ekey = ensmdt.keys()[0] # this is just the sim name, there is only one in the mean
+        ensmdt = ensmdt[ekey]
+        ensmdt = ensmdt[seas[0]] # now it is just an array
+        pvmdt =pvmdt[ekey]
+        pvmdt = pvmdt[seas[0]] # just a scalar: is supermean sig?
 
-    # ------------ 3rd level down (split timeseries, 60yrs each)
-    ens={}
-    for sii,skey in enumerate(ensdt.keys()):
-        vals = np.squeeze(ensdt[skey][seas[0]])
-        lenvals = len(vals)
-        half1 = vals[:lenvals/2.]
-        print 'half1.mean() ' + str(half1.mean())
         
-        half2 = vals[lenvals/2.:]
-        print 'half2.mean() ' + str(half2.mean())
-        ens[sii] = (half1.mean(),half2.mean())
 
-    
-    lev3 = ens
-    y3 = 2
+        # ---- top point: ensemble mean:
+        lev1 = ensmdt.mean() # time and ens mean # will this work?@@
 
-    print 'lev2: ' + str(lev2) + ', lev3: ' + str(lev3)
-    cplt.plot_onecascade(lev2,lev3,y2,y3,ax=ax,color='b')
-    ax.set_ylim(1.5,4.5)
+        topy=starty # there will be 3 rows per ens
+
+        ax.annotate(prname[ensname],xy=(lev1,topy),xycoords='data',textcoords='offset points',xytext=(3,3))
+
+        #ax.plot(lev1,topr,linestyle='none',marker='o',markersize=6) # the top point
+
+        # -------- next level down: (individual ens member means, 120yrs)
+        ens=np.zeros((numsims))
+        pvens=np.zeros((numsims))
+        for sii,skey in enumerate(ensdt.keys()):
+            ens[sii] = ensdt[skey][seas[0]].mean() # time mean for each sim
+            pvens[sii] = pvdt[skey][seas[0]]   # pval for each 120yr mean
+
+        lev2 = ens
+        lev2pv = pvens
+        print 'lev2pv: ' + str(lev2pv)
+        y2 = topy-1 #* np.ones(len(lev2))
+
+        cplt.plot_onecascade((lev1,),(lev2,),topy,y2,ax=ax,color=col,pvalst=(pvmdt,),pvalsb=(lev2pv,))
+
+        # ------------ 3rd level down (split timeseries, 60yrs each)
+        
+        ens={}
+        pvens={}
+        for sii,skey in enumerate(ensdt.keys()):
+            vals = np.squeeze(ensdt[skey][seas[0]])
+            lenvals = len(vals)
+            half1 = vals[:lenvals/2.]
+            print 'half1.mean() ' + str(half1.mean())
+
+            half2 = vals[lenvals/2.:]
+            print 'half2.mean() ' + str(half2.mean())
+            ens[sii] = (half1.mean(),half2.mean())
+
+            ctlvals = np.squeeze(cdt[skey][seas[0]])
+            pertvals = np.squeeze(pdt[skey][seas[0]])
+            (a,sigpv1,b,c) = cutl.calc_pvals(pertvals[:lenvals/2.],ctlvals[:lenvals/2.])
+            (a,sigpv2,b,c) = cutl.calc_pvals(pertvals[lenvals/2.:],ctlvals[lenvals/2.:])
+            pvens[sii] = (sigpv1,sigpv2)
+            
+
+
+        lev3 = ens
+        lev3pv = pvens
+        print 'lev3pv: ' + str(lev3pv)
+        y3 = y2-1
+
+        print 'lev2: ' + str(lev2) + ', lev3: ' + str(lev3)
+        cplt.plot_onecascade(lev2,lev3,y2,y3,ax=ax,color=col,pvalst=lev2pv,pvalsb=lev3pv)
+
+        starty=starty-3
+
+    ax.set_ylim(.5,3*numens+.5)
     ax.set_yticklabels('')
-    ax.axvline(color='k')
-    ax.set_xlabel(fieldstr + ' ' + region)
+    axxlims=ax.get_xlim()
+    if axxlims[0]<=0 and axxlims[1]>=0:
+        ax.axvline(color='k',linestyle='--')
+    if xlab!=None:
+        ax.set_xlabel(xlab)
+    else:
+        ax.set_xlabel(fieldstr + ' ' + region)
     
     if printtofile:
-        fig.savefig(fieldstr + '_' + region + '_' + seas[0] + '_unccascade.pdf')
+        fig.savefig(fieldstr + '_' + region + '_' + seas[0] + '_unccascade3.pdf')
