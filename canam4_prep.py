@@ -27,7 +27,7 @@ plt.ion()
        # coords = {'lat': con.get_t63lat(), 'lon': con.get_t63lon()}
 
 
-printtofile=False
+printtofile=True
 
 field = 'st'
 smclim=True
@@ -38,12 +38,12 @@ sigoff=True # if True, don't add significance
 field2='gz' 
 level2=50000
 
-# seasonalmap, seasonalvert, plotzonmean, plotseacyc, pattcorrwithtime, plotregmean,calcregmeanwithtime, timetosig, timetosigsuper
-plottype='calcregmeanwithtime' 
+# seasonalmap, seasonalvert, plotzonmean, plotseacyc, pattcorrwithtime, plotregmean,calcregmeanwithtime, calcregunccascade,timetosig, timetosigsuper
+plottype='calcregunccascade' 
 projtype='eastere' # 'nh','sh','sq','eastere','nastere'
 
 # None, nh, polcap60, polcap65, polcap70, eurasia, eurasiamori, eurasiasth,eurasiathin,eurasiathinw,eurasiathine,ntham, nthatl, bks, bksmori, soo
-region='eurasia' #'eurasiamori'
+region='polcap60' #'eurasia' #'eurasiamori'
 screen=True
 seacyclatlim=60
 withlat=False
@@ -77,7 +77,7 @@ addobs=False # add mean of kemhad* & kemnsidc* runs to line plots, seasonal maps
 addr4ct=False # add kem1pert2r4ct (constant thickness version of ens4)
 addsens=False # add sensitivity runs (kem1pert1b, kem1pert3)
 addrcp=False # add kem1rcp85a simulation (and others if we do more)
-addcanens=False # add "initial condition" ensemble of kemctl1/kem1pert2
+addcanens=True # add "initial condition" ensemble of kemctl1/kem1pert2
 addsuper=False # add superensemble mean
 
 
@@ -766,7 +766,7 @@ if plottype=='timetosig' or plottype=='timetosigsuper':
     sfnc.plot_seasonal_maps(dblob,fdict,coords,sims,pparams,plottype='timetosig',vert=False,seas=seasons,info=infodict,printtofile=printtofile)
 
     
-if plottype=='calcregmeanwithtime':
+if plottype=='calcregmeanwithtime' or plottype=='calcregunccascade':
     dblob = sfnc.calc_seasons(fdict,coords,sims,seas=seasons,loctimesel=timesel,info=infodict,calctype='regmeanwithtime')
 
     # dblob should have regional means *with* time dimension
@@ -779,27 +779,46 @@ if plottype=='calcregmeanwithtime':
     tpvaldft=tpvaldf.transpose()
 
     import cccmacmaps as ccm
-    
-    # Plot pvals for mean anomaly and standard dev
-    # @@ for some reason if all sims are in dataframe, only some are plotted..??
-    fig,axs=plt.subplots(1,2)
-    fig.set_size_inches(12,4)
-    ax=axs[0]
-    tpvaldft.plot(linestyle='None',color=ccm.get_colordict().values(),marker='s',markersize=6,ax=ax)
-    ax.axhline(y=siglevel,color='k')
-    ax.set_ylabel('PVAL of T statistic for mean')
-    ax.set_title(fdict['fieldstr'] + ' ' + region)
-    ax.set_ylim((0,1))
 
-    ax=axs[1]
-    fpvaldft.plot(linestyle='None',colors=ccm.get_colordict().values(),marker='s',markersize=6,ax=ax)#make legend better@@
-    ax.axhline(y=0.05,color='k')
-    ax.set_ylabel('PVAL of F statistic for variance')
-    ax.set_title(fdict['fieldstr'] + ' ' + region)
-    ax.set_ylim((0,1))
-  
-    if printtofile:
-        fig.savefig(fdict['fieldstr']+'_ftpvals' + savestr + '_' + region + '.pdf')
+    if plottype=='calcregunccascade':
+
+        if field=='st' and region=='eurasia':
+            xlab = '$\Delta$ Eurasia SAT ($^\circ$C)'
+            col = 'b'
+        elif field=='st' and region=='polcap60':
+            xlab = '$\Delta$ >60$^\circ$N SAT ($^\circ$C)'
+            col = ccm.get_linecolor('firebrick')
+        else:
+            xlab=None
+            col='k'
+            
+        sfnc.plot_uncertainty_cascade(dblob,fdict,coords,sims,pparams,
+                                      info=infodict,seas=seasons,xlab=xlab,
+                                      color=col,printtofile=printtofile)
+
+    else:
+
+        # Plot pvals for mean anomaly and standard dev
+        # @@ for some reason if all sims are in dataframe, only some are plotted..??
+        fig,axs=plt.subplots(1,2)
+        fig.set_size_inches(12,4)
+        ax=axs[0]
+        tpvaldft.plot(linestyle='None',color=ccm.get_colordict().values(),marker='s',markersize=6,ax=ax)
+        ax.axhline(y=siglevel,color='k')
+        ax.set_ylabel('PVAL of T statistic for mean')
+        ax.set_title(fdict['fieldstr'] + ' ' + region)
+        ax.set_ylim((0,1))
+
+        ax=axs[1]
+        fpvaldft.plot(linestyle='None',colors=ccm.get_colordict().values(),marker='s',markersize=6,ax=ax)#make legend better@@
+        ax.axhline(y=0.05,color='k')
+        ax.set_ylabel('PVAL of F statistic for variance')
+        ax.set_title(fdict['fieldstr'] + ' ' + region)
+        ax.set_ylim((0,1))
+
+        if printtofile:
+            fig.savefig(fdict['fieldstr']+'_ftpvals' + savestr + '_' + region + '.pdf')
+
         
 if testhadisst:
     print '@@testhadisst not implemented'
