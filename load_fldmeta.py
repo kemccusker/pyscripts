@@ -66,7 +66,7 @@ def loadfldmeta(field,infodict,plottype,ptparams,level=None):
         timetosigsuper=True
     else:
         print 'Plottype not recognized!'
-        return
+        #return
 
 
     ############################ start copy to load_fldmeta.py
