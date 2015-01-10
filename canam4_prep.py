@@ -39,11 +39,11 @@ field2='gz'
 level2=50000
 
 # seasonalmap, seasonalvert, plotzonmean, plotseacyc, pattcorrwithtime, plotregmean,calcregmeanwithtime, calcregunccascade,timetosig, timetosigsuper
-plottype='calcregunccascade' 
+plottype='plotregmean' 
 projtype='eastere' # 'nh','sh','sq','eastere','nastere'
 
 # None, nh, polcap60, polcap65, polcap70, eurasia, eurasiamori, eurasiasth,eurasiathin,eurasiathinw,eurasiathine,ntham, nthatl, bks, bksmori, soo
-region='polcap60' #'eurasia' #'eurasiamori'
+region='eurasia' #'eurasia' #'eurasiamori'
 screen=True
 seacyclatlim=60
 withlat=False
@@ -146,7 +146,7 @@ sims = 'R1','R4','R3','R5','R2','ENS'#,'ENSE'#,'CAN' # R's in order of sea ice l
 defaultsims=sims
 seasons = ('SON','DJF','MAM','JJA')
 biseas = ('SO','ND','JF') # @@@ so far only these implemented. expecting to add all 11/25/14
-biseas = ('ND',) # @@@@
+#biseas = ('ND',) # @@@@
 
 
 if simsforpaper: # best for maps only
@@ -727,6 +727,12 @@ if plottype=='plotregmean':
     dblob = sfnc.calc_seasons(fdict,coords,sims,seas=seasons,loctimesel=timesel,info=infodict,calctype='regmean')
     sfnc.plot_regmean_byseas(dblob,fdict,sims,info=infodict,seas=seasons,printtofile=printtofile)
 
+
+    # DEBUG:
+    ci=dblob['ci']
+    pv=dblob['pval']
+
+
     import pandas as pd
     
     
@@ -768,6 +774,7 @@ if plottype=='timetosig' or plottype=='timetosigsuper':
     
 if plottype=='calcregmeanwithtime' or plottype=='calcregunccascade':
     dblob = sfnc.calc_seasons(fdict,coords,sims,seas=seasons,loctimesel=timesel,info=infodict,calctype='regmeanwithtime')
+    import pandas as pd
 
     # dblob should have regional means *with* time dimension
     # want to test sig different mean and variance b/w ctl and pert

@@ -818,3 +818,131 @@ def calc_pvals(pert,ctl,axis=0,center='mean',verb=True,siglevel=0.05):
             print '  **The ensemble variances are significantly different (' + str(1-siglevel) + ')'
 
     return (tstat,tpval,lstat,lpval)
+
+
+
+
+def autocorr(input):
+
+
+    icorr = np.correlate(input, input, mode='full')
+    # from numpy.convolve(a,v,mode='full')
+    # mode : {'full', 'valid','same'}, optional
+    #   'full': This returns the convolution at each point of
+    #          overlap, with an output shape of (N+M-1,). At the end-points of the
+    #          convolution, the signals do not overlap completely, and boundary effects may be seen.
+    #   'same': Mode same returns output of length max(M, N). Boundary effects are still visible.
+    #  'valid': Mode valid returns output of length max(M, N) - min(M, N) + 1. The convolution
+    #          product is only given for points where the signals overlap completely. Values
+    #          outside the signal boundary have no effect.
+
+    icorr = icorr / icorr[icorr.argmax()]
+    icorrh = icorr[icorr.size / 2:]
+    icorrhmax = icorrh.max()
+
+    print 'icorrhmax: ' + str(icorrhmax)
+    print 'icorrh: ' + str(icorrh)
+    print 'icorr: ' + str(icorr)
+
+    return (icorr,icorrh)
+    
+
+
+
+
+
+""" Trying to figure out correct way to calc 95% confidence interval
+https://github.com/scipy/scipy/blob/v0.13.3/scipy/stats/distributions.py#L788-L819
+
+def interval(self, alpha, *args, **kwds):
+        ""
+        Confidence interval with equal areas around the median.
+        Parameters
+        ----------
+        alpha : array_like of float
+            Probability that an rv will be drawn from the returned range.
+            Each value should be in the range [0, 1].
+        arg1, arg2, ... : array_like
+            The shape parameter(s) for the distribution (see docstring of the
+            instance object for more information).
+        loc : array_like, optional
+            location parameter, Default is 0.
+        scale : array_like, optional
+            scale parameter, Default is 1.
+        Returns
+        -------
+        a, b : ndarray of float
+            end-points of range that contain ``100 * alpha %`` of the rv's possible
+            values.
+        ""
+        alpha = asarray(alpha)
+        if any((alpha > 1) | (alpha < 0)):
+            raise ValueError('alpha must be between 0 and 1 inclusive')
+        q1 = (1.0-alpha)/2
+        q2 = (1.0+alpha)/2
+        a = self.ppf(q1, *args, **kwds)
+        b = self.ppf(q2, *args, **kwds)
+        return a, b
+
+
+def ppf(self,q,*args,**kwds):
+        ""
+        Percent point function (inverse of cdf) at q of the given RV.
+        Parameters
+        ----------
+        q : array_like
+            lower tail probability
+        arg1, arg2, arg3,... : array_like
+            The shape parameter(s) for the distribution (see docstring of the
+            instance object for more information)
+        loc : array_like, optional
+            location parameter (default=0)
+        scale : array_like, optional
+            scale parameter (default=1)
+        Returns
+        -------
+        x : array_like
+            quantile corresponding to the lower tail probability q.
+        ""
+        args, loc, scale = self._parse_args(*args, **kwds)
+        q, loc, scale = map(asarray,(q, loc, scale))
+        args = tuple(map(asarray, args))
+        cond0 = self._argcheck(*args) & (scale > 0) & (loc == loc)
+        cond1 = (0 < q) & (q < 1)
+        cond2 = cond0 & (q == 0)
+        cond3 = cond0 & (q == 1)
+        cond = cond0 & cond1
+        output = valarray(shape(cond), value=self.badvalue)
+
+        lower_bound = self.a * scale + loc
+        upper_bound = self.b * scale + loc
+        place(output, cond2, argsreduce(cond2, lower_bound)[0])
+        place(output, cond3, argsreduce(cond3, upper_bound)[0])
+
+        if any(cond):  # call only if at least 1 entry
+            goodargs = argsreduce(cond, *((q,)+args+(scale,loc)))
+            scale, loc, goodargs = goodargs[-2], goodargs[-1], goodargs[:-2]
+            place(output, cond, self._ppf(*goodargs) * scale + loc)
+        if output.ndim == 0:
+            return output[()]
+        return output
+
+
+
+## autocorrelation
+
+http://stackoverflow.com/questions/12269834/is-there-any-numpy-autocorrellation-function-with-standardized-output
+
+In[1]: n = 1000
+In[2]: x = randn(n)
+In[3]: xc = correlate(x, x, mode='full')
+In[4]: xc /= xc[xc.argmax()]
+In[5]: xchalf = xc[xc.size / 2:]
+In[6]: xchalf_max = xchalf.max()
+In[7]: print xchalf_max
+Out[1]: 1.0
+
+"""
+
+
+    

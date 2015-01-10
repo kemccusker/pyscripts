@@ -649,8 +649,15 @@ def calc_seasons(fielddict,coords,sims,loctimesel=None,info=None,siglevel=0.05,
  
             # calculate confidence interval
             # double-check the scale setting
-            ci = sp.stats.t.interval(1-siglevel,len(fldp)-1,loc=np.mean(fldp,axis=0)-np.mean(fldc,axis=0),
-                                     scale=np.std(fldp,axis=0)/np.sqrt(len(fldp)))
+            # interval(alpha, df, loc=0, scale=1): Endpoints of the range that contains
+            #                                      alpha percent of the distribution
+            meananom = np.mean(fldp,axis=0)-np.mean(fldc,axis=0)
+            df = len(fldp)-1 # degrees of freedom @@@
+            #stder = np.std(fldp,axis=0)/np.sqrt(df+1) # standard error: sigma/sqrt(n)
+            #stder = np.std(fldp-fldc,axis=0)/np.sqrt(df+1) @@@
+            stder = np.std(fldp-np.mean(fldc,axis=0),axis=0)/np.sqrt(df+1)
+            
+            ci = sp.stats.t.interval(1-siglevel, df, loc= meananom, scale=stder)
             seacidict[sea] = ci
                 
             seatstatdict[sea] = ttmp
