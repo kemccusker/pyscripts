@@ -822,8 +822,15 @@ def calc_pvals(pert,ctl,axis=0,center='mean',verb=True,siglevel=0.05):
 
 
 
-def autocorr(input):
+def autocorr(input,axis=None):
+    """ autocorr(input)
+              1/11/2015
+              
+              auto correlate input with itself.
+              return all auto correlations from time 0 to time n
 
+              @@ add ability to handle multiple dimensions
+    """
 
     icorr = np.correlate(input, input, mode='full')
     # from numpy.convolve(a,v,mode='full')
@@ -837,18 +844,107 @@ def autocorr(input):
     #          outside the signal boundary have no effect.
 
     icorr = icorr / icorr[icorr.argmax()]
-    icorrh = icorr[icorr.size / 2:]
+    icorrh = icorr[icorr.size / 2:] # half of the correlations (it is symmetric)
     icorrhmax = icorrh.max()
 
     print 'icorrhmax: ' + str(icorrhmax)
-    print 'icorrh: ' + str(icorrh)
-    print 'icorr: ' + str(icorr)
+    #print 'icorrh: ' + str(icorrh)
+    #print 'icorr: ' + str(icorr)
 
-    return (icorr,icorrh)
+    return icorrh
     
 
+def lag1_autocorr(input,axis=None):
+    """ lag1_autocorr(input)
+              1/12/2015
+              auto correlate input with itself.
+              return lag-1 autocorrelation
+
+              @@ add ability to handle multiple dimensions
+    """
+
+    icorrs = autocorr(input)
+    return icorrs[1]
+    
+
+def calc_effectiveDOF(input,axis=None):
+    """ def calc_effectiveDOF(input):
+          1/12/2015
+          
+          r1 is lag-one autocorrelation of input, then n_eff:
+          
+          n_eff = n * (1-r1) / (1+r1)  [Santer el al. 2000]
+
+          return n_eff
+
+          @@ add ability to handle multiple dimensions
+          
+    """
+
+    n = input.size
+    print 'n: ' + str(n)
+    
+    r1 = lag1_autocorr(input)
+    print 'r1: ' + str(r1)
+    r1=np.abs(r1)
+    frac=(1-r1) / (1+r1)
+    print 'frac: ' + str(frac)
+    
+    n_eff = n * (1-r1) / (1+r1)
+
+    print 'n_eff: ' + str(n_eff)
+    
+    return n_eff
 
 
+def ttest_ind(input1,input2,axis=0,effdof=False,equal_var=True):
+    """ def ttest_ind(input1,input2,axis=0,effdof=False,equal_var=True):
+
+             compute the t-statistic and pvalue for the 2 populations.
+                 Assume equal variance. This is exactly the same as
+                 calling scipy.stats.ttest_ind() if effdof=False.
+
+                 if effdof = True, calculate effective degrees of freedom
+                                 in the two populations by using the lag-1
+                                 autocorrelation. See calc_effectiveDOF().
+
+         @@@as of 1/12/2015, multiple dimensions is only handled if effdof=False
+
+    """
+
+    # http://en.wikipedia.org/wiki/Student%27s_t-test#Independent_two-sample_t-test
+    #        Equal or unequal sample sizes, equal variance
+    #
+    #   test statistic
+    # t = (Xbar1 - Xbar2) / ( (s_X1X2) * sqrt(1/n1 + 1/n2) )
+    #   pooled standard dev
+    # s_X1X2 = sqrt( ( (n1-1)(s_X1)^2 + (n2-1)*(s_X2)^2 ) / (n1+n2 - 2) )
+    
+    if effdof==False:
+
+        (tstat,pval) = sp.stats.ttest_ind(input1,input2,axis=axis,equal_var=equal_var)
+
+    else:
+
+        # @@@ perhaps change this to anomaly timeseries, and difference from 0?
+        neff1 = calc_effectiveDOF(input1)
+        neff2 = calc_effectiveDOF(input2)
+        
+        Xbar1 = input1.mean(axis=axis)
+        Xbar2 = input2.mean(axis=axis)
+        s1=input1.std(axis=axis)
+        s2=input2.std(axis=axis)
+        s12 = np.sqrt( ( (neff1 - 1)*(s1**2) + (neff2-1)*(s2**2) ) / (neff1+neff2 - 2) )
+
+        tstat = (Xbar1 - Xbar2) /  (s12*np.sqrt( 1/neff1 + 1/neff2) )
+        pval = sp.stats.t.sf(np.abs(tstat),neff1+neff2-2)*2
+
+        # http://docs.scipy.org/doc/scipy/reference/tutorial/stats.html
+        # >>> tt = (sm-m)/np.sqrt(sv/float(n))  # t-statistic for mean
+        # >>> pval = stats.t.sf(np.abs(tt), n-1)*2  # two-sided pvalue = Prob(abs(t)>tt)
+        
+        
+    return (tstat,pval)
 
 
 """ Trying to figure out correct way to calc 95% confidence interval
