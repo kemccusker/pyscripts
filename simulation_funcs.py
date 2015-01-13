@@ -645,7 +645,9 @@ def calc_seasons(fielddict,coords,sims,loctimesel=None,info=None,siglevel=0.05,
 
             seafldcstddict[sea] = np.std(fldc,axis=0)
             seafldpstddict[sea] = np.std(fldp,axis=0)
-            ttmp,pvtmp = sp.stats.ttest_ind(fldp,fldc,axis=0)
+            #@@ttmp,pvtmp = sp.stats.ttest_ind(fldp,fldc,axis=0)
+            print 'calculating ttest with effective DOF @@'
+            ttmp,pvtmp = cutl.ttest_ind(fldp,fldc,axis=0,effdof=True) # @@
  
             # calculate confidence interval
             # double-check the scale setting
@@ -656,7 +658,8 @@ def calc_seasons(fielddict,coords,sims,loctimesel=None,info=None,siglevel=0.05,
             #stder = np.std(fldp,axis=0)/np.sqrt(df+1) # standard error: sigma/sqrt(n)
             #stder = np.std(fldp-fldc,axis=0)/np.sqrt(df+1) @@@
             stder = np.std(fldp-np.mean(fldc,axis=0),axis=0)/np.sqrt(df+1)
-            
+
+            # @@@ add calc_effectiveDOF() here @@@
             ci = sp.stats.t.interval(1-siglevel, df, loc= meananom, scale=stder)
             seacidict[sea] = ci
                 

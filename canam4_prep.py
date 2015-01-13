@@ -27,7 +27,7 @@ plt.ion()
        # coords = {'lat': con.get_t63lat(), 'lon': con.get_t63lon()}
 
 
-printtofile=True
+printtofile=False
 
 field = 'st'
 smclim=True
@@ -39,7 +39,7 @@ field2='gz'
 level2=50000
 
 # seasonalmap, seasonalvert, plotzonmean, plotseacyc, pattcorrwithtime, plotregmean,calcregmeanwithtime, calcregunccascade,timetosig, timetosigsuper
-plottype='plotregmean' 
+plottype='calcregunccascade' 
 projtype='eastere' # 'nh','sh','sq','eastere','nastere'
 
 # None, nh, polcap60, polcap65, polcap70, eurasia, eurasiamori, eurasiasth,eurasiathin,eurasiathinw,eurasiathine,ntham, nthatl, bks, bksmori, soo
@@ -798,7 +798,7 @@ if plottype=='calcregmeanwithtime' or plottype=='calcregunccascade':
         else:
             xlab=None
             col='k'
-            
+        seasons=('ND',)    
         sfnc.plot_uncertainty_cascade(dblob,fdict,coords,sims,pparams,
                                       info=infodict,seas=seasons,xlab=xlab,
                                       color=col,printtofile=printtofile)
