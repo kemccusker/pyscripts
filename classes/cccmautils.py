@@ -779,7 +779,7 @@ def calc_monthlysigarea(input1,input2,siglevel=0.05,latlim=60,region=None):
     
     
 
-def calc_pvals(pert,ctl,axis=0,center='mean',verb=True,siglevel=0.05):
+def calc_pvals(pert,ctl,axis=0,center='mean',verb=True,effdof=False,siglevel=0.05):
     """ calc_pvals(pert,ctl, verb=True,siglevel=0.05):
                Calculate whether dataset means and variances are
                  significantly different from each other.
@@ -800,11 +800,17 @@ def calc_pvals(pert,ctl,axis=0,center='mean',verb=True,siglevel=0.05):
                verb: verbose or not. =True will output values and
                      whether or not they are significant based on
                      the input siglevel
+               effdof: if True, use autocorrelation to calc effective degrees of
+                       freedom in each timeseries (see calc_effectiveDOF() )
+                       for use in cutl.ttest_ind()
 
                returns: (tstat,tpval,fstat,fpval)
     """
 
-    tstat, tpval = sp.stats.ttest_ind(pert,ctl,axis=axis) # @@ add autocorr
+    if effdof:
+        tstat,tpval = ttest_ind(pert,ctl,axis=axis,effdof=effdof)
+    else:
+        tstat, tpval = sp.stats.ttest_ind(pert,ctl,axis=axis) 
     lstat, lpval = sp.stats.levene(pert,ctl,center=center)
 
     if verb:
@@ -826,13 +832,15 @@ def autocorr(input,axis=None):
     """ autocorr(input)
               1/11/2015
               
-              auto correlate input with itself.
+              auto correlate input with itself. The mean will be removed first.
               return all auto correlations from time 0 to time n
 
               @@ add ability to handle multiple dimensions
     """
 
-    icorr = np.correlate(input, input, mode='full')
+    inp = input-input.mean()
+    
+    icorr = np.correlate(inp, inp, mode='full')
     # from numpy.convolve(a,v,mode='full')
     # mode : {'full', 'valid','same'}, optional
     #   'full': This returns the convolution at each point of
@@ -888,7 +896,7 @@ def calc_effectiveDOF(input,axis=None):
     print 'r1: ' + str(r1)
     r1=np.abs(r1)
     frac=(1-r1) / (1+r1)
-    print 'frac: ' + str(frac)
+    #print 'frac: ' + str(frac)
     
     n_eff = n * (1-r1) / (1+r1)
 
