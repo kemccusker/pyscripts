@@ -803,7 +803,7 @@ def plot_onecascade(topdata,bottdata,topy,botty,ax=None, mparams=None, lparams=N
     if ax==None:
         ax=plt.gca()
     if mparams ==None:
-        mparams = dict(marker='o',markersize=6,linestyle='none',color=color)
+        mparams = dict(marker='o',markersize=6,linestyle='none',color=color,mec=color)
     if lparams ==None:
         lparams = dict(color=color,linewidth=.5)
         
