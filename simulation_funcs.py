@@ -174,11 +174,15 @@ def calc_plot_seasonal_maps(fielddict,coords,sims,pparams,vert=False,loctimesel=
             if figtrans:
                 if len(sims)==1:
                     ax=ax6[colidx]
+                elif len(seasons)==1:
+                    ax=ax6[rowidx]
                 else:
                     ax=ax6[colidx][rowidx]
             else:
                 if len(sims)==1:
                     ax=ax6[rowidx]
+                elif len(seasons)==1:
+                    ax=ax6[colidx]
                 else:
                     ax = ax6[rowidx][colidx]
             ncparams={'timesel':timesel, 'seas': sea}
@@ -366,7 +370,7 @@ def calc_plot_seasonal_maps(fielddict,coords,sims,pparams,vert=False,loctimesel=
                              + latstr + '2.' + suff)
 
 def calc_seasons(fielddict,coords,sims,loctimesel=None,info=None,siglevel=0.05,
-                 calctype=None,seas=None):
+                 calctype=None,seas=None,effdof=False):
     """ calc_seasons(fielddict,coords,sims,withlat=False,loctimesel=None,info=None,siglevel=0.05)
 
               info: a dict which specifies lots of things, but in particular, which region to average
@@ -646,8 +650,8 @@ def calc_seasons(fielddict,coords,sims,loctimesel=None,info=None,siglevel=0.05,
             seafldcstddict[sea] = np.std(fldc,axis=0)
             seafldpstddict[sea] = np.std(fldp,axis=0)
             #@@ttmp,pvtmp = sp.stats.ttest_ind(fldp,fldc,axis=0)
-            print 'calculating ttest with effective DOF @@'
-            ttmp,pvtmp = cutl.ttest_ind(fldp,fldc,axis=0,effdof=True) # @@
+            #print 'calculating ttest with effective DOF @@'
+            ttmp,pvtmp = cutl.ttest_ind(fldp,fldc,axis=0,effdof=effdof) # @@
  
             # calculate confidence interval
             # double-check the scale setting
@@ -655,11 +659,15 @@ def calc_seasons(fielddict,coords,sims,loctimesel=None,info=None,siglevel=0.05,
             #                                      alpha percent of the distribution
             meananom = np.mean(fldp,axis=0)-np.mean(fldc,axis=0)
             df = len(fldp)-1 # degrees of freedom @@@
+            if effdof:
+                print 'calculating conf int with effective DOF @@'
+                df = cutl.calc_effectiveDOF(fldp-fldc)
+            
             #stder = np.std(fldp,axis=0)/np.sqrt(df+1) # standard error: sigma/sqrt(n)
-            #stder = np.std(fldp-fldc,axis=0)/np.sqrt(df+1) @@@
-            stder = np.std(fldp-np.mean(fldc,axis=0),axis=0)/np.sqrt(df+1)
+            stder = np.std(fldp-fldc,axis=0)/np.sqrt(df+1) #@@@
+            #stder = np.std(fldp-np.mean(fldc,axis=0),axis=0)/np.sqrt(df+1)
+            
 
-            # @@@ add calc_effectiveDOF() here @@@
             ci = sp.stats.t.interval(1-siglevel, df, loc= meananom, scale=stder)
             seacidict[sea] = ci
                 
@@ -1914,11 +1922,15 @@ def plot_seasonal_maps(dblob,fielddict,coords,sims,pparams,plottype='diff',vert=
             if figtrans:
                 if len(sims)==1:
                     ax=ax6[colidx]
+                elif len(seasons)==1:
+                    ax=ax6[rowidx]
                 else:
                     ax=ax6[colidx][rowidx]
             else:
                 if len(sims)==1:
                     ax=ax6[rowidx]
+                elif len(seasons)==1:
+                    ax=ax6[colidx]
                 else:
                     ax = ax6[rowidx][colidx] # swapped row and col index positions in subplot
 
@@ -2039,18 +2051,18 @@ def plot_seasonal_maps(dblob,fielddict,coords,sims,pparams,plottype='diff',vert=
                              + latstr + '2.' + suff)
 
 
-def plot_uncertainty_cascade(dblob,fielddict,coords,sims,pparams,info=None,seas=None,xlab=None,color=None,printtofile=False):
+def plot_uncertainty_cascade(dblob,fielddict,coords,sims,pparams,info=None,seas=None,
+                             xlab=None,color=None,effdof=False,printtofile=False):
     """ This function should produce a cascade whereby each row of points is connected to
         the previous (higher up on y axis) number of points by straight lines. A la Hawkins
 
         Input is expected to be a dblob of an ensemble of simulations. Values should be timeseries of
         regional means for one season. (calcregmeanwithtime) 1/7/2015
+        color should be a tuple of colors, one for each ensemble. (obs will be green/blue)
     """
     
 
-    # start with one ensemble
-#    colordict=ccm.get_colordict()
-    col=color
+#    col=color
     prname = dict(histBC='Variable BC', histIC='Average BC')
 
     field=fielddict['field']
@@ -2065,13 +2077,16 @@ def plot_uncertainty_cascade(dblob,fielddict,coords,sims,pparams,info=None,seas=
     #ensname=shadeens[0] # @@@@@@@@
     allensdt,allensmdt = con.build_ensembles(shadeens,dblob,calctype='diff')
     allpvdt,allpvmdt = con.build_ensembles(shadeens,dblob,calctype='pval') # scalar for each sim.
+    
     allcdt,allcmdt = con.build_ensembles(shadeens,dblob,calctype='ctl')
     allpdt,allpmdt = con.build_ensembles(shadeens,dblob,calctype='pert') # need for the 60yr split significance
     # these are dict of ens -> dict of sims in ens -> data (by season)
 
     fig,ax = plt.subplots(1,1)
-    for ensname in shadeens:
+    for cii,ensname in enumerate(shadeens):
 
+        col=color[cii]
+        
         ensdt = allensdt[ensname] # this does not include the mean
         pvdt = allpvdt[ensname]
         cdt = allcdt[ensname]
@@ -2086,17 +2101,14 @@ def plot_uncertainty_cascade(dblob,fielddict,coords,sims,pparams,info=None,seas=
         ensmdt = ensmdt[seas[0]] # now it is just an array
         pvmdt =pvmdt[ekey]
         pvmdt = pvmdt[seas[0]] # just a scalar: is supermean sig?
-
-        
+            
 
         # ---- top point: ensemble mean:
         lev1 = ensmdt.mean() # time and ens mean # will this work?@@
 
         topy=starty # there will be 3 rows per ens
 
-        ax.annotate(prname[ensname],xy=(lev1,topy),xycoords='data',textcoords='offset points',xytext=(3,3))
-
-        #ax.plot(lev1,topr,linestyle='none',marker='o',markersize=6) # the top point
+        #ax.annotate(prname[ensname],xy=(lev1,topy),xycoords='data',textcoords='offset points',xytext=(3,3))
 
         # -------- next level down: (individual ens member means, 120yrs)
         ens=np.zeros((numsims))
@@ -2111,6 +2123,7 @@ def plot_uncertainty_cascade(dblob,fielddict,coords,sims,pparams,info=None,seas=
         y2 = topy-1 #* np.ones(len(lev2))
 
         cplt.plot_onecascade((lev1,),(lev2,),topy,y2,ax=ax,color=col,pvalst=(pvmdt,),pvalsb=(lev2pv,))
+            
 
         # ------------ 3rd level down (split timeseries, 60yrs each)
         
@@ -2128,8 +2141,8 @@ def plot_uncertainty_cascade(dblob,fielddict,coords,sims,pparams,info=None,seas=
 
             ctlvals = np.squeeze(cdt[skey][seas[0]])
             pertvals = np.squeeze(pdt[skey][seas[0]])
-            (a,sigpv1,b,c) = cutl.calc_pvals(pertvals[:lenvals/2.],ctlvals[:lenvals/2.])
-            (a,sigpv2,b,c) = cutl.calc_pvals(pertvals[lenvals/2.:],ctlvals[lenvals/2.:])
+            (a,sigpv1,b,c) = cutl.calc_pvals(pertvals[:lenvals/2.],ctlvals[:lenvals/2.],effdof=effdof)
+            (a,sigpv2,b,c) = cutl.calc_pvals(pertvals[lenvals/2.:],ctlvals[lenvals/2.:],effdof=effdof)
             pvens[sii] = (sigpv1,sigpv2)
             
 
@@ -2141,6 +2154,47 @@ def plot_uncertainty_cascade(dblob,fielddict,coords,sims,pparams,info=None,seas=
 
         print 'lev2: ' + str(lev2) + ', lev3: ' + str(lev3)
         cplt.plot_onecascade(lev2,lev3,y2,y3,ax=ax,color=col,pvalst=lev2pv,pvalsb=lev3pv)
+
+        if ensname=='histBC':
+            # add obs runs to levels 2 and 3
+            had=dblob['diff']['HAD'][seas[0]]
+            hadpv=dblob['pval']['HAD'][seas[0]]
+            nsidc=dblob['diff']['NSIDC'][seas[0]]
+            nsidcpv=dblob['pval']['NSIDC'][seas[0]]
+
+            lev2 = (had.mean(),)
+            lev2pv = (hadpv,)
+
+            lenh=len(had)
+            hhalf1 = had[:lenh/2.]
+            hhalf2 = had[lenh/2.:]
+
+            lenn=len(nsidc)
+            nhalf1 = nsidc[:lenn/2.]
+            nhalf2 = nsidc[lenn/2.:]
+            lev3=((hhalf1.mean(),hhalf2.mean()), )
+
+            # calc significance on the halves
+            hadc = dblob['ctl']['HAD'][seas[0]]
+            hadp = dblob['pert']['HAD'][seas[0]]
+            (a,hpv1,b,c) = cutl.calc_pvals(hadp[:lenh/2.],hadc[:lenh/2.],effdof=effdof)
+            (a,hpv2,b,c) = cutl.calc_pvals(hadp[lenh/2.:],hadc[lenh/2.:],effdof=effdof)
+
+            nsidcc = dblob['ctl']['NSIDC'][seas[0]]
+            nsidcp = dblob['pert']['NSIDC'][seas[0]]
+            (a,npv1,b,c) = cutl.calc_pvals(nsidcp[:lenh/2.],nsidcc[:lenh/2.],effdof=effdof)
+            (a,npv2,b,c) = cutl.calc_pvals(nsidcp[lenh/2.:],nsidcc[lenh/2.:],effdof=effdof)
+            lev3pv = ((hpv1,hpv2),)
+            
+            cplt.plot_onecascade(lev2,lev3,y2,y3,ax=ax,color='b',pvalst=lev2pv,pvalsb=lev3pv)
+
+            lev2 = (nsidc.mean(),)
+            lev2pv = (nsidcpv,)
+            lev3 = ( (nhalf1.mean(),nhalf2.mean()), )
+            lev3pv = ((npv1,npv2), )
+            
+            cplt.plot_onecascade(lev2,lev3,y2,y3,ax=ax,color='g',pvalst=lev2pv,pvalsb=lev3pv)
+
 
         starty=starty-3
 
@@ -2155,4 +2209,7 @@ def plot_uncertainty_cascade(dblob,fielddict,coords,sims,pparams,info=None,seas=
         ax.set_xlabel(fieldstr + ' ' + region)
     
     if printtofile:
-        fig.savefig(fieldstr + '_' + region + '_' + seas[0] + '_unccascade3.pdf')
+        if effdof:
+            fig.savefig(fieldstr + '_' + region + '_' + seas[0] + '_unccascade3_effdofobs.pdf')
+        else:
+            fig.savefig(fieldstr + '_' + region + '_' + seas[0] + '_unccascade4_obs.pdf')
