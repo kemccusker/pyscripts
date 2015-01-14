@@ -232,6 +232,7 @@ hadfld=cnc.getNCvar(hadfile,field,timesel=hadsel,seas=season)
 haddf = pd.Series(hadfld,index=hadyrs)
 pasthad = haddf.loc[subyrs]
 preshad = haddf.loc[subyrs2]
+(hadtstat,hadpv) = cutl.ttest_ind(preshad,pasthad)
 diffhad=preshad.mean(axis=0) - pasthad.mean(axis=0)
 
 subdir='NSIDC/'
@@ -242,6 +243,7 @@ nsidcfld=cnc.getNCvar(nsidcfile,field,timesel=nsidcsel,seas=season)
 nsidcdf=pd.Series(nsidcfld,index=nsidcyrs)
 pastnsidc = nsidcdf.loc[subyrs]
 presnsidc = nsidcdf.loc[subyrs2[:-1]]
+(nsidctstat,nsidcpv) = cutl.ttest_ind(presnsidc,pastnsidc)
 diffnsidc=presnsidc.mean(axis=0) - pastnsidc.mean(axis=0)
 
 
@@ -263,6 +265,7 @@ for eii in np.arange(1,ensnum+1):
 origdf=pd.DataFrame(origdt,index=origyrs)
 pastorig = origdf.loc[subyrs]
 presorig = origdf.loc[subyrs2]
+(origtstat,origpv) = cutl.ttest_ind(presorig,pastorig,axis=0)
 difforig = presorig.mean(axis=0) - pastorig.mean(axis=0)
 
 # =============== original five: NAT
@@ -279,6 +282,7 @@ for eii in np.arange(1,ensnum+1):
 orignatdf=pd.DataFrame(orignatdt,index=origyrs)
 pastnatorig = orignatdf.loc[subyrs]
 presnatorig = orignatdf.loc[subyrs2]
+(natorigtstat,natorigpv) = cutl.ttest_ind(presnatorig,pastnatorig,axis=0)
 diffnatorig = presnatorig.mean(axis=0) - pastnatorig.mean(axis=0)
 
 
@@ -405,8 +409,14 @@ if printtofile:
     fig.savefig(field + 'diff_PDFHIST_CanESMLE_TOTNAT_' + str(season) + '_annotate.pdf')
 
 import matplotlib.patches as mpatches
+import matplotlib.lines as mlines
+#http://matplotlib.org/users/legend_guide.html#proxy-legend-handles
 
 # # # PAPER ############
+ms = 7 # markersize
+deffs='none' # default fillstyle
+mew=1.5
+
 fig,ax=plt.subplots(1,1)
 allnatdiff.hist(normed=True,color='0.5',alpha=0.5)#,histtype='stepfilled')
 alldiff.hist(normed=True,color=firebrick,alpha=0.5)#,histtype='stepfilled')
@@ -422,41 +432,70 @@ ax.axvline(color='k',linestyle='--')
 for eii in range(1,6):
     #ax.plot(difforig[eii],axylims[1],marker='|',markersize=20,color=firebrick) 
     #ax.plot(diffnatorig[eii],axylims[1],marker='|',markersize=20,color='k')
-    ax.axvline(x=difforig[eii],ymin=.97,ymax=1,color=firebrick,linewidth=2)
-    ax.axvline(x=diffnatorig[eii],ymin=.97,ymax=1,color='k',linewidth=2)
+    # move these to ON the pdf fit.
+    # search for difforig[eii] nearest to axx, then plot apdf_fitted[axx] as marker, filled or not based on sig.
+    plotx = difforig[eii]
+    idx = cutl.find_nearest(axx,plotx)
+    ploty = apdf_fitted[idx]
+    if origpv[eii-1]<=siglevel: #significant, fill the marker
+        fs='full'
+    else:
+        fs=deffs # defaultfs
+        
+    ax.plot(plotx,ploty,marker='o',color=firebrick,mec=firebrick,fillstyle=fs,mew=mew,markersize=ms)
+    #ax.axvline(x=difforig[eii],ymin=.97,ymax=1,color=firebrick,linewidth=2)
+
+    plotx = diffnatorig[eii]
+    idx = cutl.find_nearest(nxx,plotx)
+    ploty = npdf_fitted[idx]
+    if natorigpv[eii-1]<=siglevel: #significant, fill the marker
+        fs='full'
+    else:
+        fs=deffs # defaultfs
+    ax.plot(plotx,ploty,marker='o',color='k',mec='k',fillstyle=fs,mew=mew,markersize=ms)
+    #ax.axvline(x=diffnatorig[eii],ymin=.97,ymax=1,color='k',linewidth=2)
 
 #nn=ax.axvline(diffnsidc,color='g',linewidth=3)
-nn = ax.axvline(x=diffnsidc,ymin=.97,ymax=1,color='g',linewidth=3)
-ax.legend((nn,tot,nat),('NSIDC','Historical','HistoricalNat'),loc='upper left',frameon=False)
+plotx=diffnsidc
+idx=cutl.find_nearest(axx,plotx)
+ploty=apdf_fitted[idx]
+if nsidcpv<siglevel: #significant, fill the marker
+    fs='full'
+else:
+    fs=deffs # defaultfs
+nn=mlines.Line2D([],[],color='g',linestyle='none',marker='o',mec='g',mew=mew,markersize=ms,fillstyle=fs)
+ax.plot(plotx,ploty,marker='o',color='g',mec='g',fillstyle=fs,mew=mew,markersize=ms)
+#nn = ax.axvline(x=diffnsidc,ymin=.97,ymax=1,color='g',linewidth=3)
+
+plotx=diffhad
+idx=cutl.find_nearest(axx,plotx)
+ploty=apdf_fitted[idx]
+if hadpv<siglevel: #significant, fill the marker
+    fs='full'
+else:
+    fs=deffs # defaultfs
+hh=mlines.Line2D([],[],color='b',linestyle='none',marker='o',mec='b',mew=mew,markersize=ms,fillstyle=fs)
+ax.plot(plotx,ploty,marker='o',color='b',mec='b',fillstyle=fs,mew=mew,markersize=ms)
+#hh = ax.axvline(x=diffhad,ymin=.97,ymax=1,color='b',linewidth=3)
+
+ax.legend((nn,hh,tot,nat),('NSIDC','HadISST','Historical','HistoricalNat'),loc='upper left',frameon=False)
 ## ax.annotate('NSIDC',xy=(diffnsidc-(diffnsidc*.05),axylims[1]-(axylims[1]*.07)),xycoords='data')#,rotation=45)
 
-## ax.annotate('Historical',xy=(.36,.57),xytext=(.2,.7), xycoords='figure fraction',
-##             arrowprops=dict(facecolor=firebrick, edgecolor='None',shrink=0.05))
-## ax.annotate('HistoricalNat',xy=(.7,.5),xytext=(.75,.6), xycoords='figure fraction',
-##             arrowprops=dict(facecolor='k', edgecolor='None',shrink=0.05))
-#txtbox = dict(boxstyle='Square', fc='None', ec='None') # want a patch for the clip for arrow
-#txtbox=mpatches.Rectangle((0.3, 1.03),( # can't figure it out w/ axes fraction coordinates
+## tlaby = 0.94
+## txt = ax.annotate('SIA Loss',xy=(0.3, tlaby),  xycoords='axes fraction')#,bbox=txtbox) # just text
+## laby=0.98 # 1.03
+## ann = ax.annotate('', xy=(0, laby),  xycoords='axes fraction',
+##                   xytext=(0.7, laby), textcoords='axes fraction',
+##                   arrowprops=dict(arrowstyle='<->',connectionstyle='arc3',facecolor='k',
+##                                   edgecolor='k',patchB=txt,patchA=txt),
+##                   verticalalignment='center')
 
-txt = ax.annotate('SIA Loss',xy=(0.3, 1.05),  xycoords='axes fraction')#,bbox=txtbox) # just text
-ann = ax.annotate('', xy=(0, 1.03),  xycoords='axes fraction',
-                  xytext=(0.7, 1.03), textcoords='axes fraction',
-                  arrowprops=dict(arrowstyle='<->',connectionstyle='arc3',facecolor='k',
-                                  edgecolor='k',patchB=txt,patchA=txt),
-                  verticalalignment='center')
-                ## arrowprops=dict(arrowstyle="<->",
-                ##                 connectionstyle="bar",
-                ##                 ec="k",
-                ##                 shrinkA=5, shrinkB=5,))
-ax.annotate('SIA Gain',xy=(.8,1.05), xycoords='axes fraction')
-ann = ax.annotate('', xy=(0.71, 1.03),  xycoords='axes fraction',
-                  xytext=(1, 1.03), textcoords='axes fraction',
-                  arrowprops=dict(arrowstyle='<->',connectionstyle='arc3',facecolor='k',
-                                  edgecolor='k',patchB=txt,patchA=txt),
-                  verticalalignment='center')
-## ax.annotate('SIA Loss', xy=(0,1.02), xytext=(.53,1.02),xycoords='axes fraction',
-##             arrowprops=dict(facecolor='k', edgecolor='None',shrink=0.05),verticalalignment='center')
-#ax.annotate('SIA Gain', xy=(1,1.02), xytext=(.74,1.02),xycoords='axes fraction',
-#            arrowprops=dict(facecolor='k', edgecolor='None',shrink=0.05),verticalalignment='center')
+## ax.annotate('SIA Gain',xy=(.8,tlaby), xycoords='axes fraction')
+## ann = ax.annotate('', xy=(0.72, laby),  xycoords='axes fraction',
+##                   xytext=(1, laby), textcoords='axes fraction',
+##                   arrowprops=dict(arrowstyle='<->',connectionstyle='arc3',facecolor='k',
+##                                   edgecolor='k',patchB=txt,patchA=txt),
+##                   verticalalignment='center')
 
 ax.set_ylabel('Density')
 ax.set_yticklabels('')
@@ -464,8 +503,9 @@ ax.set_xlabel('$\Delta$ Sea Ice Area (millions of km$^2$)')
 xt=ax.get_xticks()
 ax.set_xticklabels(xt/np.float(1e12))
 ax.grid('off')
+ax.set_title('Arctic sea-ice area change (1979-89 to 2002-12)')
 if printtofile:
-    fig.savefig(field + 'diff_PDFHIST_CanESMLE_TOTNAT_' + str(season) + '_paper.pdf')
+    fig.savefig(field + 'diff_PDFHIST_CanESMLE_TOTNAT_' + str(season) + '_paper2c.pdf')
 
 
 
