@@ -27,23 +27,24 @@ plt.ion()
        # coords = {'lat': con.get_t63lat(), 'lon': con.get_t63lon()}
 
 
-printtofile=False
+printtofile=True
 
 field = 'st'
 smclim=True
 level=50000 # for threed
 
-addcont=False # overlay map with contours
+addcont=True # overlay map with contours
 sigoff=True # if True, don't add significance
+effdof=False # use effective deg of freedom or no.
 field2='gz' 
 level2=50000
 
 # seasonalmap, seasonalvert, plotzonmean, plotseacyc, pattcorrwithtime, plotregmean,calcregmeanwithtime, calcregunccascade,timetosig, timetosigsuper
-plottype='calcregunccascade' 
-projtype='eastere' # 'nh','sh','sq','eastere','nastere'
+plottype='seasonalmap' 
+projtype='nh' # 'nh','sh','sq','eastere','nastere'
 
 # None, nh, polcap60, polcap65, polcap70, eurasia, eurasiamori, eurasiasth,eurasiathin,eurasiathinw,eurasiathine,ntham, nthatl, bks, bksmori, soo
-region='eurasia' #'eurasia' #'eurasiamori'
+region='polcap60' #'eurasia' #'eurasiamori'
 screen=True
 seacyclatlim=60
 withlat=False
@@ -68,7 +69,7 @@ canens=False # just the CAN ensemble (E1-E5) plus mean, plus mean of R ensemble.
 allens=False # this is ONLY the ensemble means, plus superensemble
 sensruns=False # sensruns only: addr4ct=1,addsens=1. others=0 no meanBC, r mean, or obs
 ivar=False # this will show ENS (TOT) and ENSE (ANTH) and their difference = internal var
-simsforpaper=False # ANT, TOT, HAD, NSIDC only. best for maps and zonal mean figs (not line plots)
+simsforpaper=True # ANT, TOT, HAD, NSIDC only. best for maps and zonal mean figs (not line plots)
 antcat=False # this is the concatenation of ens members within each ensemble (really only useful for ANT)
 bothcat=False # can do concatenation of both ensembles if want to. These are useful for timetosig
 onlyens=False # just do ensemble means ANT and TOT
@@ -77,7 +78,7 @@ addobs=False # add mean of kemhad* & kemnsidc* runs to line plots, seasonal maps
 addr4ct=False # add kem1pert2r4ct (constant thickness version of ens4)
 addsens=False # add sensitivity runs (kem1pert1b, kem1pert3)
 addrcp=False # add kem1rcp85a simulation (and others if we do more)
-addcanens=True # add "initial condition" ensemble of kemctl1/kem1pert2
+addcanens=False # add "initial condition" ensemble of kemctl1/kem1pert2
 addsuper=False # add superensemble mean
 
 
@@ -152,12 +153,17 @@ biseas = ('SO','ND','JF') # @@@ so far only these implemented. expecting to add 
 if simsforpaper: # best for maps only
     sims = ('HAD','NSIDC','ENSE','ENS')
     savestr = '_forpap4' # add ENS. # 4 means fig is transposed
+    
     if bimon:
         seasons=biseas
         savestr = savestr + 'bimon'
     else:
         seasons=('SON','DJF')
     figtrans=True
+    #print '@@@ simsforpaper is WACE paper right now -- ND cold and warm extremes, R1, R5 only'
+    #savestr = '_forpapwace'; sims = ('R1','R5'); seasons=('ND',); figtrans=False # 95% stat sig
+    #print '@@@ simsforpaper is WACE B paper right now -- ND cold and warm extremes, E4, E1 only'
+    #savestr = '_forpapwaceb'; sims = ('E4','E1'); seasons=('ND',); figtrans=False # 90% stat sig
     
 elif sensruns: # add sensitivity runs. with Shaded ENS. don't plot meanBC, mean of ens
     sims = sims[0:5] + ('R4ct','CANnosst','CANnothk') # @@ change to E1nosst, etc?
@@ -709,7 +715,7 @@ if plottype=='plotseacyc':
 
 if plottype=='plotzonmean':
     
-    dblob = sfnc.calc_seasons(fdict,coords,sims,loctimesel=timesel,info=infodict,calctype='zonmean')
+    dblob = sfnc.calc_seasons(fdict,coords,sims,loctimesel=timesel,info=infodict,calctype='zonmean',effdof=effdof)
     sfnc.plot_zonmean_byseas(dblob,fdict,coords,sims,ptypes=('climo','anom','stddev','stdan'),info=infodict,printtofile=printtofile)
 
 if plottype=='pattcorrwithtime':
@@ -719,12 +725,12 @@ if plottype=='pattcorrwithtime':
     else:
         calctype='pattcorrwithtime'
         
-    dblob = sfnc.calc_seasons(fdict,coords,sims,loctimesel=timesel,info=infodict,calctype=calctype)
+    dblob = sfnc.calc_seasons(fdict,coords,sims,loctimesel=timesel,info=infodict,calctype=calctype,effdof=effdof)
     sfnc.plot_pattcorrwithtime_byseas(dblob,fdict,sims,info=infodict,calctype=calctype,printtofile=printtofile)
 
 if plottype=='plotregmean':
 
-    dblob = sfnc.calc_seasons(fdict,coords,sims,seas=seasons,loctimesel=timesel,info=infodict,calctype='regmean')
+    dblob = sfnc.calc_seasons(fdict,coords,sims,seas=seasons,loctimesel=timesel,info=infodict,calctype='regmean',effdof=effdof)
     sfnc.plot_regmean_byseas(dblob,fdict,sims,info=infodict,seas=seasons,printtofile=printtofile)
 
 
@@ -767,13 +773,13 @@ if plottype=='timetosig' or plottype=='timetosigsuper':
         calctype='timetosigsuper'
         pparams['cmax'] = 600
         
-    dblob = sfnc.calc_seasons(fdict,coords,sims,loctimesel=timesel,info=infodict,calctype=calctype,seas=seasons)
+    dblob = sfnc.calc_seasons(fdict,coords,sims,loctimesel=timesel,info=infodict,calctype=calctype,seas=seasons,effdof=effdof)
   
     sfnc.plot_seasonal_maps(dblob,fdict,coords,sims,pparams,plottype='timetosig',vert=False,seas=seasons,info=infodict,printtofile=printtofile)
 
     
 if plottype=='calcregmeanwithtime' or plottype=='calcregunccascade':
-    dblob = sfnc.calc_seasons(fdict,coords,sims,seas=seasons,loctimesel=timesel,info=infodict,calctype='regmeanwithtime')
+    dblob = sfnc.calc_seasons(fdict,coords,sims,seas=seasons,loctimesel=timesel,info=infodict,calctype='regmeanwithtime',effdof=effdof)
     import pandas as pd
 
     # dblob should have regional means *with* time dimension
@@ -788,20 +794,21 @@ if plottype=='calcregmeanwithtime' or plottype=='calcregunccascade':
     import cccmacmaps as ccm
 
     if plottype=='calcregunccascade':
+        effdof=False
 
-        if field=='st' and region=='eurasia':
+        col=('0.3',ccm.get_linecolor('firebrick'))
+        if field=='st' and region in ('eurasia','eurasiamori'):
             xlab = '$\Delta$ Eurasia SAT ($^\circ$C)'
-            col = 'b'
         elif field=='st' and region=='polcap60':
             xlab = '$\Delta$ >60$^\circ$N SAT ($^\circ$C)'
-            col = ccm.get_linecolor('firebrick')
         else:
             xlab=None
-            col='k'
-        seasons=('ND',)    
-        sfnc.plot_uncertainty_cascade(dblob,fdict,coords,sims,pparams,
-                                      info=infodict,seas=seasons,xlab=xlab,
-                                      color=col,printtofile=printtofile)
+
+        for sea in seasons:
+            seas=(sea,)
+            sfnc.plot_uncertainty_cascade(dblob,fdict,coords,sims,pparams,
+                                          info=infodict,seas=seas,xlab=xlab,
+                                          color=col,effdof=effdof,printtofile=printtofile)
 
     else:
 
