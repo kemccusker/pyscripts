@@ -37,6 +37,8 @@ def calc_plot_seasonal_maps(fielddict,coords,sims,pparams,vert=False,loctimesel=
     
               info should be a dict of catch-all keywords/info
               addflds,addpparams are tuples of fdicts and pparams for field contours to be overlain
+
+              returns figure handle
     """
     addcont=False # overlay with contours. Start with one extra field.
     
@@ -368,6 +370,8 @@ def calc_plot_seasonal_maps(fielddict,coords,sims,pparams,vert=False,loctimesel=
             else:
                 fig6.savefig(fieldstr + 'diff' + sigstr + '_enssubplot' + savestr + '_seas_' + pltype
                              + latstr + '2.' + suff)
+
+    return fig6
 
 def calc_seasons(fielddict,coords,sims,loctimesel=None,info=None,siglevel=0.05,
                  calctype=None,seas=None,effdof=False):
@@ -2051,8 +2055,8 @@ def plot_seasonal_maps(dblob,fielddict,coords,sims,pparams,plottype='diff',vert=
                              + latstr + '2.' + suff)
 
 
-def plot_uncertainty_cascade(dblob,fielddict,coords,sims,pparams,info=None,seas=None,
-                             xlab=None,color=None,effdof=False,printtofile=False):
+def plot_uncertainty_cascade(dblob,fielddict,coords,sims,pparams,info=None,seas=None,ax=None,
+                             xlab=None,annlab=None,annloc=(0.1,0.95),color=None,effdof=False,printtofile=False):
     """ This function should produce a cascade whereby each row of points is connected to
         the previous (higher up on y axis) number of points by straight lines. A la Hawkins
 
@@ -2060,7 +2064,17 @@ def plot_uncertainty_cascade(dblob,fielddict,coords,sims,pparams,info=None,seas=
         regional means for one season. (calcregmeanwithtime) 1/7/2015
         color should be a tuple of colors, one for each ensemble. (obs will be green/blue)
     """
-    
+
+    # http://stackoverflow.com/questions/12322738/how-do-i-change-the-axis-tick-font-in-a-matplotlib-plot-when-rendering-using-lat
+    from matplotlib import rc, font_manager
+    sizeOfFont = 12
+    fontProperties = {'family':'sans-serif','sans-serif':['Helvetica']}#,
+        #'weight' : 'normal', 'size' : sizeOfFont}
+    ticks_font = font_manager.FontProperties(family='Helvetica', style='normal',
+        size=sizeOfFont, weight='normal', stretch='normal')
+    #rc('text', usetex=True)
+    rc('font',**fontProperties)
+
 
 #    col=color
     prname = dict(histBC='Variable BC', histIC='Average BC')
@@ -2074,6 +2088,7 @@ def plot_uncertainty_cascade(dblob,fielddict,coords,sims,pparams,info=None,seas=
 
     numens=len(shadeens)
     starty=3*numens # ie 6
+    savey=starty
     #ensname=shadeens[0] # @@@@@@@@
     allensdt,allensmdt = con.build_ensembles(shadeens,dblob,calctype='diff')
     allpvdt,allpvmdt = con.build_ensembles(shadeens,dblob,calctype='pval') # scalar for each sim.
@@ -2082,7 +2097,9 @@ def plot_uncertainty_cascade(dblob,fielddict,coords,sims,pparams,info=None,seas=
     allpdt,allpmdt = con.build_ensembles(shadeens,dblob,calctype='pert') # need for the 60yr split significance
     # these are dict of ens -> dict of sims in ens -> data (by season)
 
-    fig,ax = plt.subplots(1,1)
+    #fig,ax = plt.subplots(1,1)
+    #fig.set_size_inches(5,6)
+    
     for cii,ensname in enumerate(shadeens):
 
         col=color[cii]
@@ -2155,61 +2172,76 @@ def plot_uncertainty_cascade(dblob,fielddict,coords,sims,pparams,info=None,seas=
         print 'lev2: ' + str(lev2) + ', lev3: ' + str(lev3)
         cplt.plot_onecascade(lev2,lev3,y2,y3,ax=ax,color=col,pvalst=lev2pv,pvalsb=lev3pv)
 
-        if ensname=='histBC':
-            # add obs runs to levels 2 and 3
-            had=dblob['diff']['HAD'][seas[0]]
-            hadpv=dblob['pval']['HAD'][seas[0]]
-            nsidc=dblob['diff']['NSIDC'][seas[0]]
-            nsidcpv=dblob['pval']['NSIDC'][seas[0]]
+        ## if ensname=='histBC':
+        ##     # add obs runs to levels 2 and 3
+        ##     had=dblob['diff']['HAD'][seas[0]]
+        ##     hadpv=dblob['pval']['HAD'][seas[0]]
+        ##     nsidc=dblob['diff']['NSIDC'][seas[0]]
+        ##     nsidcpv=dblob['pval']['NSIDC'][seas[0]]
 
-            lev2 = (had.mean(),)
-            lev2pv = (hadpv,)
+        ##     lev2 = (had.mean(),)
+        ##     lev2pv = (hadpv,)
 
-            lenh=len(had)
-            hhalf1 = had[:lenh/2.]
-            hhalf2 = had[lenh/2.:]
+        ##     lenh=len(had)
+        ##     hhalf1 = had[:lenh/2.]
+        ##     hhalf2 = had[lenh/2.:]
 
-            lenn=len(nsidc)
-            nhalf1 = nsidc[:lenn/2.]
-            nhalf2 = nsidc[lenn/2.:]
-            lev3=((hhalf1.mean(),hhalf2.mean()), )
+        ##     lenn=len(nsidc)
+        ##     nhalf1 = nsidc[:lenn/2.]
+        ##     nhalf2 = nsidc[lenn/2.:]
+        ##     lev3=((hhalf1.mean(),hhalf2.mean()), )
 
-            # calc significance on the halves
-            hadc = dblob['ctl']['HAD'][seas[0]]
-            hadp = dblob['pert']['HAD'][seas[0]]
-            (a,hpv1,b,c) = cutl.calc_pvals(hadp[:lenh/2.],hadc[:lenh/2.],effdof=effdof)
-            (a,hpv2,b,c) = cutl.calc_pvals(hadp[lenh/2.:],hadc[lenh/2.:],effdof=effdof)
+        ##     # calc significance on the halves
+        ##     hadc = dblob['ctl']['HAD'][seas[0]]
+        ##     hadp = dblob['pert']['HAD'][seas[0]]
+        ##     (a,hpv1,b,c) = cutl.calc_pvals(hadp[:lenh/2.],hadc[:lenh/2.],effdof=effdof)
+        ##     (a,hpv2,b,c) = cutl.calc_pvals(hadp[lenh/2.:],hadc[lenh/2.:],effdof=effdof)
 
-            nsidcc = dblob['ctl']['NSIDC'][seas[0]]
-            nsidcp = dblob['pert']['NSIDC'][seas[0]]
-            (a,npv1,b,c) = cutl.calc_pvals(nsidcp[:lenh/2.],nsidcc[:lenh/2.],effdof=effdof)
-            (a,npv2,b,c) = cutl.calc_pvals(nsidcp[lenh/2.:],nsidcc[lenh/2.:],effdof=effdof)
-            lev3pv = ((hpv1,hpv2),)
+        ##     nsidcc = dblob['ctl']['NSIDC'][seas[0]]
+        ##     nsidcp = dblob['pert']['NSIDC'][seas[0]]
+        ##     (a,npv1,b,c) = cutl.calc_pvals(nsidcp[:lenh/2.],nsidcc[:lenh/2.],effdof=effdof)
+        ##     (a,npv2,b,c) = cutl.calc_pvals(nsidcp[lenh/2.:],nsidcc[lenh/2.:],effdof=effdof)
+        ##     lev3pv = ((hpv1,hpv2),)
             
-            cplt.plot_onecascade(lev2,lev3,y2,y3,ax=ax,color='b',pvalst=lev2pv,pvalsb=lev3pv)
+        ##     cplt.plot_onecascade(lev2,lev3,y2,y3,ax=ax,color='b',pvalst=lev2pv,pvalsb=lev3pv)
 
-            lev2 = (nsidc.mean(),)
-            lev2pv = (nsidcpv,)
-            lev3 = ( (nhalf1.mean(),nhalf2.mean()), )
-            lev3pv = ((npv1,npv2), )
+        ##     lev2 = (nsidc.mean(),)
+        ##     lev2pv = (nsidcpv,)
+        ##     lev3 = ( (nhalf1.mean(),nhalf2.mean()), )
+        ##     lev3pv = ((npv1,npv2), )
             
-            cplt.plot_onecascade(lev2,lev3,y2,y3,ax=ax,color='g',pvalst=lev2pv,pvalsb=lev3pv)
+        ##     cplt.plot_onecascade(lev2,lev3,y2,y3,ax=ax,color='g',pvalst=lev2pv,pvalsb=lev3pv)
 
 
         starty=starty-3
 
-    ax.set_ylim(.5,3*numens+.5)
+    ax.set_xticklabels(ax.get_xticks(), fontProperties)
+    #ax.set_yticklabels(ax.get_yticks(), fontProperties)
+    ax.set_ylim(.5,3*numens+1)
     ax.set_yticklabels('')
     axxlims=ax.get_xlim()
     if axxlims[0]<=0 and axxlims[1]>=0:
-        ax.axvline(color='k',linestyle='--')
+        #ax.axvline(color='k',linestyle='--')
+        ax.plot((0,0),(0,savey),color='k',linestyle='--')
     if xlab!=None:
-        ax.set_xlabel(xlab)
+        ax.set_xlabel(xlab,family='Helvetica')
     else:
-        ax.set_xlabel(fieldstr + ' ' + region)
+        ax.set_xlabel(fieldstr + ' ' + region,family='Helvetica')
+
+    # Hide the right and top spines
+    # http://stackoverflow.com/questions/925024/how-can-i-remove-the-top-and-right-axis-in-matplotlib
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
+    ax.spines['left'].set_visible(False)
+
+    # Only show ticks on the left and bottom spines
+    ax.yaxis.set_ticks_position('none')
+    ax.xaxis.set_ticks_position('bottom')
     
-    if printtofile:
-        if effdof:
-            fig.savefig(fieldstr + '_' + region + '_' + seas[0] + '_unccascade3_effdofobs.pdf')
-        else:
-            fig.savefig(fieldstr + '_' + region + '_' + seas[0] + '_unccascade4_obs.pdf')
+    ax.annotate(annlab, xy=annloc,xycoords='axes fraction',family='Helvetica')
+    
+    ## if printtofile:
+    ##     if effdof:
+    ##         fig.savefig(fieldstr + '_' + region + '_' + seas[0] + '_unccascade3_effdofobs.pdf')
+    ##     else:
+    ##         fig.savefig(fieldstr + '_' + region + '_' + seas[0] + '_unccascade5.pdf')
