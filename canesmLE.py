@@ -421,8 +421,11 @@ fig,ax=plt.subplots(1,1)
 allnatdiff.hist(normed=True,color='0.5',alpha=0.5)#,histtype='stepfilled')
 alldiff.hist(normed=True,color=firebrick,alpha=0.5)#,histtype='stepfilled')
 # use proxy artist for histogram legend entries
-tot = mpatches.Patch(color=firebrick,alpha=0.5)#, label='The red data')
-nat = mpatches.Patch(color='0.5',alpha=0.5)#, label='The red data')
+#tot = mpatches.Patch(color=firebrick,alpha=0.5)#, label='The red data')
+#nat = mpatches.Patch(color='0.5',alpha=0.5)#, label='The red data')
+tot=mlines.Line2D([],[],color=firebrick,linewidth=2)
+nat=mlines.Line2D([],[],color='k',linewidth=2)
+
 ax.plot(axx,apdf_fitted,color=firebrick,linewidth=2)
 ax.plot(nxx,npdf_fitted,color='k',linewidth=2)
 axylims=ax.get_ylim()
@@ -503,9 +506,9 @@ ax.set_xlabel('$\Delta$ Sea Ice Area (millions of km$^2$)')
 xt=ax.get_xticks()
 ax.set_xticklabels(xt/np.float(1e12))
 ax.grid('off')
-ax.set_title('Arctic sea-ice area change (1979-89 to 2002-12)')
+ax.set_title('Arctic sea-ice area change (Nov-Dec)')
 if printtofile:
-    fig.savefig(field + 'diff_PDFHIST_CanESMLE_TOTNAT_' + str(season) + '_paper2c.pdf')
+    fig.savefig(field + 'diff_PDFHIST_CanESMLE_TOTNAT_' + str(season) + '_paper2d.pdf')
 
 
 
