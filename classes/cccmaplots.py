@@ -800,12 +800,15 @@ def plot_onecascade(topdata,bottdata,topy,botty,ax=None, mparams=None, lparams=N
            lparams: dictionary of key/values for line
            pvalst and pvalsb should be pvalues for the data in top and bottom, respectively (for the markers)
     """
+    mew=1.5 # marker edge width
+    lw=1
+    ms=7
     if ax==None:
         ax=plt.gca()
     if mparams ==None:
-        mparams = dict(marker='o',markersize=6,linestyle='none',color=color,mec=color)
+        mparams = dict(marker='o',markersize=ms,linestyle='none',color=color,mec=color,mew=mew)
     if lparams ==None:
-        lparams = dict(color=color,linewidth=.5)
+        lparams = dict(color=color,linewidth=lw)
         
     tlen = len(topdata) # this should match bottdata length
     if tlen != len(bottdata):
