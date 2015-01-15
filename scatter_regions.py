@@ -24,14 +24,14 @@ plotscatter=True
 field1='gz50000'; ncfield1='PHI'; conv1=1/con.get_g()
 #field1='pmsl'; ncfield1='PMSL'
 region1='bksmori' #'bksmori' #'polcap65'
-sea1='DJF' #'DJF'
+sea1='ND' #'DJF'
 
 field2='st'; ncfield2='ST'
 #field2='sia'; ncfield2='SICN'
 #field2='pmsl'; ncfield2='PMSL'
 #field2='gz50000'; ncfield2='PHI'; conv2=1/con.get_g()
 region2= 'eurasia' #'eurasiamori'
-sea2='DJF' #'DJF'
+sea2='ND' #'DJF'
 
 sims = ('E1','E2','E3','E4','E5','R1','R2','R3','R4','R5','HAD','NSIDC','ENS','ENSE')
 TOT = ('R1','R2','R3','R4','R5')
@@ -316,6 +316,78 @@ if plotscatter:
     if printtofile:
         fig.savefig('scatter_' + field1 + region1 + str(sea1) + '_v_' + field2 + region2 + str(sea2) + '.pdf')
 
+
+    # ################# PAPER ###############
+    
+    # SCATTER PLOT OF SIM MEANS
+    # prepare data for regression line
+    #mm, bb, rval, pval, std_err = sp.stats.linregress(dfts[sim].values[0],dfts[sim].values[1])
+    #  a way to subset: df.ix[:,'R1':'R5'] -- but it can't get both R and E data.
+    #rdf=df.ix[:,'R1':'R5']
+    #edf=df.ix[:,'E1':'E5']
+    #regressdf = rdf.append(edf) # didn't append like I expected. inserted NaNs in places
+    
+    # this will work:
+    allens=['R1','R2','R3','R4','R5','E1','E2','E3','E4','E5'] # has to be an array!
+    sub = df.loc[:,allens]
+    subx=sub.ix[0,:]
+    suby=sub.ix[1,:]
+    mm, bb, rval, pval, std_err = sp.stats.linregress(subx,suby)
+
+    
+    firebrick=ccm.get_linecolor('firebrick')
+
+    fig,ax = plt.subplots(1)
+    fig.set_size_inches(6,5)
+    rr = plt.scatter(df.filter(regex='R').values[0],df.filter(regex='R').values[1],
+                     color='0.3',marker='o',s=8**2,alpha=0.7)
+    ee = plt.scatter(df.filter(regex='E').values[0],df.filter(regex='E').values[1],
+                     color=firebrick,marker='o',s=8**2,alpha=0.7)
+    #plt.scatter(df['HAD'].values[0],df['HAD'].values[1],color=cd['HAD'],marker='s',s=8**2)
+    #plt.scatter(df['NSIDC'].values[0],df['NSIDC'].values[1],color=cd['NSIDC'],marker='s',s=8**2)
+    #plt.scatter(df['ENS'].values[0],df['ENS'].values[1],color=cd['ENS'],marker='s',s=10**2)
+    #plt.scatter(df['ENSE'].values[0],df['ENSE'].values[1],color=cd['ENSE'],marker='o',s=10**2)
+
+    axylims = ax.get_ylim()
+    axxlims = ax.get_xlim()
+    onex=np.linspace(axxlims[0],axxlims[1])
+    plt.plot(onex,mm*onex + bb, color='0.5',linewidth=1)#,linestyle='--')
+    rsq = rval**2
+    print 'PAPER --- mean sims regr info: RVAL: ' + str(rval) + ', PVAL: ' + str(pval) + ', R2: ' + str(rsq)
+    
+    plt.legend((rr,ee),('Individual SIC forcings','Average SIC forcing'),
+               loc='best',fancybox=True,framealpha=0.5)#,frameon=False)
+
+    if sea1 == 'ND' and sea2=='ND' and region1=='bksmori' and region2=='eurasia':
+        # PAPER FIG!
+        xlab = '$\Delta$ Nov-Dec Barents-Kara Seas'
+        if field1=='pmsl':
+            xlab = xlab + ' SLP (hPa)'
+        else:
+            xlab = xlab + ' Z500 (m)'
+
+        ylab = '$\Delta$ Nov-Dec Eurasian SAT ($^\circ$C)'        
+    else:
+        xlab = str(sealab1) + ' ' + field1 + ' ' + region1
+        ylab = str(sealab2) + ' ' + field2 + ' ' + region2
+        
+    plt.xlabel(xlab)
+    plt.ylabel(ylab)
+    axylims = ax.get_ylim()
+    if axylims[0]<=0 and axylims[1]>=0:
+        ax.axhline(y=0,color='k',linewidth=.5,linestyle='--')
+    axxlims = ax.get_xlim()
+    if axxlims[0]<=0 and axxlims[1]>=0:
+        ax.axvline(x=0,color='k',linewidth=.5,linestyle='--')
+
+    if printtofile:
+        fig.savefig('scatterregress_' + field1 + region1 + str(sea1) + '_v_' +
+                    field2 + region2 + str(sea2) + 'wacepap.pdf')
+
+
+
+
+    # #######################################
 
     # SCATTER PLOT OF SIM MEANS v2 (with conf intervals)
     fig,ax = plt.subplots(1) #plt.figure()
