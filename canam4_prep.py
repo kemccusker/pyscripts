@@ -36,12 +36,13 @@ level=50000 # for threed
 addcont=True # overlay map with contours
 sigoff=True # if True, don't add significance
 effdof=False # use effective deg of freedom or no.
-field2='gz' 
+#field2='gz'
+field2='pmsl'
 level2=50000
 
 # seasonalmap, seasonalvert, plotzonmean, plotseacyc, pattcorrwithtime, plotregmean,calcregmeanwithtime, calcregunccascade,timetosig, timetosigsuper
 plottype='seasonalmap' 
-projtype='nh' # 'nh','sh','sq','eastere','nastere'
+projtype='eastere' # 'nh','sh','sq','eastere','nastere'
 
 # None, nh, polcap60, polcap65, polcap70, eurasia, eurasiamori, eurasiasth,eurasiathin,eurasiathinw,eurasiathine,ntham, nthatl, bks, bksmori, soo
 region='polcap60' #'eurasia' #'eurasiamori'
@@ -69,7 +70,8 @@ canens=False # just the CAN ensemble (E1-E5) plus mean, plus mean of R ensemble.
 allens=False # this is ONLY the ensemble means, plus superensemble
 sensruns=False # sensruns only: addr4ct=1,addsens=1. others=0 no meanBC, r mean, or obs
 ivar=False # this will show ENS (TOT) and ENSE (ANTH) and their difference = internal var
-simsforpaper=True # ANT, TOT, HAD, NSIDC only. best for maps and zonal mean figs (not line plots)
+simsforpaper=False # ANT, TOT, HAD, NSIDC only. best for maps and zonal mean figs (not line plots)
+simsforpaperwace=True
 antcat=False # this is the concatenation of ens members within each ensemble (really only useful for ANT)
 bothcat=False # can do concatenation of both ensembles if want to. These are useful for timetosig
 onlyens=False # just do ensemble means ANT and TOT
@@ -160,8 +162,11 @@ if simsforpaper: # best for maps only
     else:
         seasons=('SON','DJF')
     figtrans=True
-    #print '@@@ simsforpaper is WACE paper right now -- ND cold and warm extremes, R1, R5 only'
-    #savestr = '_forpapwace'; sims = ('R1','R5'); seasons=('ND',); figtrans=False # 95% stat sig
+    
+elif simsforpaperwace:
+    
+    print '@@@ simsforpaperwace is WACE paper -- ND cold and warm extremes, R1, R5 only'
+    savestr = '_forpapwace'; sims = ('R1','R5'); seasons=('ND',); figtrans=False # 95% stat sig
     #print '@@@ simsforpaper is WACE B paper right now -- ND cold and warm extremes, E4, E1 only'
     #savestr = '_forpapwaceb'; sims = ('E4','E1'); seasons=('ND',); figtrans=False # 90% stat sig
     
@@ -701,9 +706,33 @@ if plottype in ('seasonalmap','seasonalvert'):
         addflds=None
         addpparams=None
 
-    sfnc.calc_plot_seasonal_maps(fdict,coords,sims,pparams,vert=seasonalvert,
+    thefig = sfnc.calc_plot_seasonal_maps(fdict,coords,sims,pparams,vert=seasonalvert,
                             loctimesel=timesel,info=infodict,seas=seasons,
                             printtofile=printtofile,addflds=addflds,addpparams=addpparams)
+
+    if simsforpaperwace:
+        # here I will adjust the figure for the WACE paper
+        thefig.set_size_inches((10,5))
+        theaxs = thefig.get_axes()
+        ax1=theaxs[0]
+        ax1.set_title('a. Significant cooling case')
+        ax1.set_ylabel('Latitude',fontsize=12)
+        ax1.set_xlabel('Longitude',fontsize=12)
+
+        ax2=theaxs[1]
+        ax2.set_title('b. Significant warming case')
+        ax2.set_xlabel('Longitude',fontsize=12)
+
+        axcb=theaxs[2]
+        axcb.set_position([.91,.25, .02,.5])
+
+        thefig.suptitle('')
+        if field2=='pmsl':
+            thefig.savefig('wacefigure3_slpcont.pdf')
+        else:
+            thefig.savefig('wacefigure3.pdf')
+        
+        
     
 
 if plottype=='plotseacyc':
@@ -779,7 +808,16 @@ if plottype=='timetosig' or plottype=='timetosigsuper':
 
     
 if plottype=='calcregmeanwithtime' or plottype=='calcregunccascade':
-    dblob = sfnc.calc_seasons(fdict,coords,sims,seas=seasons,loctimesel=timesel,info=infodict,calctype='regmeanwithtime',effdof=effdof)
+    
+    dblob = sfnc.calc_seasons(fdict,coords,sims,seas=seasons,
+                              loctimesel=timesel,info=infodict,calctype='regmeanwithtime',
+                              effdof=effdof)
+
+    infodict['region'] = 'eurasia'
+    dblob2 = sfnc.calc_seasons(fdict,coords,sims,seas=seasons,
+                               loctimesel=timesel,info=infodict,calctype='regmeanwithtime',
+                               effdof=effdof)
+    
     import pandas as pd
 
     # dblob should have regional means *with* time dimension
@@ -798,17 +836,52 @@ if plottype=='calcregmeanwithtime' or plottype=='calcregunccascade':
 
         col=('0.3',ccm.get_linecolor('firebrick'))
         if field=='st' and region in ('eurasia','eurasiamori'):
-            xlab = '$\Delta$ Eurasia SAT ($^\circ$C)'
+            #xlab = '$\Delta$ Eurasia SAT ($^\circ$C)'
+            xlab = '($^\circ$C)'
         elif field=='st' and region=='polcap60':
-            xlab = '$\Delta$ >60$^\circ$N SAT ($^\circ$C)'
+            #xlab = '$\Delta$ >60$^\circ$N SAT ($^\circ$C)'
+            xlab = '($^\circ$C)'
         else:
             xlab=None
 
         for sea in seasons:
             seas=(sea,)
+            fig,axs = plt.subplots(2,1)
+            fig.set_size_inches(4,8)
+            fig.set_frameon(False)
+            
+            ax=axs[0] # first polar cap SAT
+            if 'ND' in seas:
+                annlab='a. Nov-Dec Polar SAT changes'
+            else:
+                annlab='a. Polar SAT changes'
+            annloc=(0.02,0.94)
             sfnc.plot_uncertainty_cascade(dblob,fdict,coords,sims,pparams,
-                                          info=infodict,seas=seas,xlab=xlab,
-                                          color=col,effdof=effdof,printtofile=printtofile)
+                                          info=infodict,seas=seas,ax=ax,xlab=xlab,annlab=annlab,annloc=annloc,
+                                          color=col,effdof=effdof)
+            fs=9
+            ax.annotate('Ensemble mean',xy=(1.9,2.93),xycoords='data',fontsize=fs)
+            ax.annotate('120-yr means', xy=(1.9,1.93),xycoords='data',fontsize=fs)
+            ax.annotate('60-yr means', xy=(1.9,0.93),xycoords='data',fontsize=fs)
+            ax.annotate('Individual SIC forcings',xy=(1.31,6.25),xycoords='data',fontsize=fs)
+            ax.annotate('Average SIC forcing',xy=(1.31,3.25),xycoords='data',fontsize=fs)
+
+            if 'ND' in seas:
+                annlab='b. Nov-Dec Eurasian SAT changes'
+            else:
+                annlab='b. Eurasian SAT changes'
+            annloc=(0.02,0.94)
+
+            ax=axs[1] # second eurasian SAT
+            sfnc.plot_uncertainty_cascade(dblob2,fdict,coords,sims,pparams,
+                                          info=infodict,seas=seas,ax=ax,xlab=xlab,annlab=annlab,annloc=annloc,
+                                          color=col,effdof=effdof)
+            if printtofile:
+                if effdof:
+                    fig.savefig(field + '_' + region + '_' + seas[0] + '_unccascade3_effdofobs.pdf')
+                else:
+                    fig.savefig(field + '_polcap60eurasia_' + seas[0] + '_unccascade6ann.pdf')
+
 
     else:
 
