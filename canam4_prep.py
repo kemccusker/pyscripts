@@ -36,8 +36,8 @@ level=50000 # for threed
 addcont=True # overlay map with contours
 sigoff=True # if True, don't add significance
 effdof=False # use effective deg of freedom or no.
-#field2='gz'
-field2='pmsl'
+field2='gz'
+#field2='pmsl'
 level2=50000
 
 # seasonalmap, seasonalvert, plotzonmean, plotseacyc, pattcorrwithtime, plotregmean,calcregmeanwithtime, calcregunccascade,timetosig, timetosigsuper
@@ -166,7 +166,7 @@ if simsforpaper: # best for maps only
 elif simsforpaperwace:
     
     print '@@@ simsforpaperwace is WACE paper -- ND cold and warm extremes, R1, R5 only'
-    savestr = '_forpapwace'; sims = ('R1','R5'); seasons=('ND',); figtrans=False # 95% stat sig
+    savestr = '_forpapwace'; sims = ('R1','R5'); seasons=('ND',); figtrans=True # 95% stat sig
     #print '@@@ simsforpaper is WACE B paper right now -- ND cold and warm extremes, E4, E1 only'
     #savestr = '_forpapwaceb'; sims = ('E4','E1'); seasons=('ND',); figtrans=False # 90% stat sig
     
@@ -712,25 +712,40 @@ if plottype in ('seasonalmap','seasonalvert'):
 
     if simsforpaperwace:
         # here I will adjust the figure for the WACE paper
-        thefig.set_size_inches((10,5))
+        if figtrans:
+            thefig.set_size_inches((5,8))
+            thefig.subplots_adjust(hspace=.02,wspace=.02)
+        else:
+            thefig.set_size_inches((10,5))
         theaxs = thefig.get_axes()
         ax1=theaxs[0]
         ax1.set_title('a. Significant cooling case')
         ax1.set_ylabel('Latitude',fontsize=12)
-        ax1.set_xlabel('Longitude',fontsize=12)
+        if not figtrans:
+            ax1.set_xlabel('Longitude',fontsize=12)
 
         ax2=theaxs[1]
         ax2.set_title('b. Significant warming case')
         ax2.set_xlabel('Longitude',fontsize=12)
+        if figtrans:
+            ax2.set_ylabel('Latitude',fontsize=12)
+        else:
+            ax2.set_ylabel('',fontsize=12)
 
-        axcb=theaxs[2]
-        axcb.set_position([.91,.25, .02,.5])
+        if not figtrans: # one row
+            axcb=theaxs[2] # colorbar
+            axcb.set_position([.91,.25, .02,.5])
+        else: # one col
+            axcb=theaxs[2] # colorbar
+            axcb.set_position([.15,0.07, 0.75, .02])
+            axcb.set_xticks(np.arange(-1,1.2,0.2))
+            axcb.set_xticklabels(('-1.0','','','','','0','','','','','1.0'))
 
         thefig.suptitle('')
         if field2=='pmsl':
-            thefig.savefig('wacefigure3_slpcont.pdf')
+            thefig.savefig('wacefigure3_slpcont_trans.pdf')
         else:
-            thefig.savefig('wacefigure3.pdf')
+            thefig.savefig('wacefigure3_trans.pdf')
         
         
     
