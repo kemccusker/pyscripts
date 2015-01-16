@@ -177,14 +177,14 @@ def calc_plot_seasonal_maps(fielddict,coords,sims,pparams,vert=False,loctimesel=
                 if len(sims)==1:
                     ax=ax6[colidx]
                 elif len(seasons)==1:
-                    ax=ax6[rowidx]
+                    ax=ax6[colidx]
                 else:
                     ax=ax6[colidx][rowidx]
             else:
                 if len(sims)==1:
                     ax=ax6[rowidx]
                 elif len(seasons)==1:
-                    ax=ax6[colidx]
+                    ax=ax6[rowidx]
                 else:
                     ax = ax6[rowidx][colidx]
             ncparams={'timesel':timesel, 'seas': sea}
@@ -1927,14 +1927,14 @@ def plot_seasonal_maps(dblob,fielddict,coords,sims,pparams,plottype='diff',vert=
                 if len(sims)==1:
                     ax=ax6[colidx]
                 elif len(seasons)==1:
-                    ax=ax6[rowidx]
+                    ax=ax6[colidx]
                 else:
                     ax=ax6[colidx][rowidx]
             else:
                 if len(sims)==1:
                     ax=ax6[rowidx]
                 elif len(seasons)==1:
-                    ax=ax6[colidx]
+                    ax=ax6[rowidx]
                 else:
                     ax = ax6[rowidx][colidx] # swapped row and col index positions in subplot
 
