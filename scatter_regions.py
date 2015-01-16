@@ -12,7 +12,7 @@ import cccmaplots as cplt
 import cccmacmaps as ccm
 import pandas as pd
 
-printtofile=True
+printtofile=False
 plt.close('all')
 
 conv1=1; conv2=1
@@ -21,8 +21,8 @@ plotscatter=True
 
 #field1='st'; ncfield1='ST'
 #field1='sia'; ncfield1='SICN'
-field1='gz50000'; ncfield1='PHI'; conv1=1/con.get_g()
-#field1='pmsl'; ncfield1='PMSL'
+#field1='gz50000'; ncfield1='PHI'; conv1=1/con.get_g()
+field1='pmsl'; ncfield1='PMSL'
 region1='bksmori' #'bksmori' #'polcap65'
 sea1='ND' #'DJF'
 
@@ -334,14 +334,14 @@ if plotscatter:
     suby=sub.ix[1,:]
     mm, bb, rval, pval, std_err = sp.stats.linregress(subx,suby)
 
-    
+    #sube = df.loc[0,['E1','E2','E3','E4','E5']]
     firebrick=ccm.get_linecolor('firebrick')
 
     fig,ax = plt.subplots(1)
     fig.set_size_inches(6,5)
     rr = plt.scatter(df.filter(regex='R').values[0],df.filter(regex='R').values[1],
                      color='0.3',marker='o',s=8**2,alpha=0.7)
-    ee = plt.scatter(df.filter(regex='E').values[0],df.filter(regex='E').values[1],
+    ee = plt.scatter(df.loc[region1,['E1','E2','E3','E4','E5']],df.loc[region2,['E1','E2','E3','E4','E5']],
                      color=firebrick,marker='o',s=8**2,alpha=0.7)
     #plt.scatter(df['HAD'].values[0],df['HAD'].values[1],color=cd['HAD'],marker='s',s=8**2)
     #plt.scatter(df['NSIDC'].values[0],df['NSIDC'].values[1],color=cd['NSIDC'],marker='s',s=8**2)
@@ -383,7 +383,6 @@ if plotscatter:
     if printtofile:
         fig.savefig('scatterregress_' + field1 + region1 + str(sea1) + '_v_' +
                     field2 + region2 + str(sea2) + 'wacepap.pdf')
-
 
 
 
