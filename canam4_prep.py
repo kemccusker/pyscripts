@@ -33,7 +33,7 @@ field = 'st'
 smclim=True
 level=50000 # for threed
 
-addcont=True # overlay map with contours
+addcont=False # overlay map with contours
 sigoff=True # if True, don't add significance
 effdof=False # use effective deg of freedom or no.
 field2='gz'
@@ -41,7 +41,7 @@ field2='gz'
 level2=50000
 
 # seasonalmap, seasonalvert, plotzonmean, plotseacyc, pattcorrwithtime, plotregmean,calcregmeanwithtime, calcregunccascade,timetosig, timetosigsuper
-plottype='seasonalmap' 
+plottype='calcregunccascade' 
 projtype='eastere' # 'nh','sh','sq','eastere','nastere'
 
 # None, nh, polcap60, polcap65, polcap70, eurasia, eurasiamori, eurasiasth,eurasiathin,eurasiathinw,eurasiathine,ntham, nthatl, bks, bksmori, soo
@@ -71,7 +71,7 @@ allens=False # this is ONLY the ensemble means, plus superensemble
 sensruns=False # sensruns only: addr4ct=1,addsens=1. others=0 no meanBC, r mean, or obs
 ivar=False # this will show ENS (TOT) and ENSE (ANTH) and their difference = internal var
 simsforpaper=False # ANT, TOT, HAD, NSIDC only. best for maps and zonal mean figs (not line plots)
-simsforpaperwace=True
+simsforpaperwace=False
 antcat=False # this is the concatenation of ens members within each ensemble (really only useful for ANT)
 bothcat=False # can do concatenation of both ensembles if want to. These are useful for timetosig
 onlyens=False # just do ensemble means ANT and TOT
@@ -80,7 +80,7 @@ addobs=False # add mean of kemhad* & kemnsidc* runs to line plots, seasonal maps
 addr4ct=False # add kem1pert2r4ct (constant thickness version of ens4)
 addsens=False # add sensitivity runs (kem1pert1b, kem1pert3)
 addrcp=False # add kem1rcp85a simulation (and others if we do more)
-addcanens=False # add "initial condition" ensemble of kemctl1/kem1pert2
+addcanens=True # add "initial condition" ensemble of kemctl1/kem1pert2
 addsuper=False # add superensemble mean
 
 
@@ -828,7 +828,7 @@ if plottype=='calcregmeanwithtime' or plottype=='calcregunccascade':
                               loctimesel=timesel,info=infodict,calctype='regmeanwithtime',
                               effdof=effdof)
 
-    infodict['region'] = 'eurasia'
+    infodict['region'] = 'eurasiathin'
     dblob2 = sfnc.calc_seasons(fdict,coords,sims,seas=seasons,
                                loctimesel=timesel,info=infodict,calctype='regmeanwithtime',
                                effdof=effdof)
@@ -892,10 +892,11 @@ if plottype=='calcregmeanwithtime' or plottype=='calcregunccascade':
                                           info=infodict,seas=seas,ax=ax,xlab=xlab,annlab=annlab,annloc=annloc,
                                           color=col,effdof=effdof)
             if printtofile:
+                rg2 = infodict['region']
                 if effdof:
                     fig.savefig(field + '_' + region + '_' + seas[0] + '_unccascade3_effdofobs.pdf')
                 else:
-                    fig.savefig(field + '_polcap60eurasia_' + seas[0] + '_unccascade6ann.pdf')
+                    fig.savefig(field + '_polcap60' + rg2 + '_' + seas[0] + '_unccascade6ann.pdf')
 
 
     else:

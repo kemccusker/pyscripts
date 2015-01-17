@@ -12,7 +12,7 @@ import cccmaplots as cplt
 import cccmacmaps as ccm
 import pandas as pd
 
-printtofile=False
+printtofile=True
 plt.close('all')
 
 conv1=1; conv2=1
@@ -21,8 +21,8 @@ plotscatter=True
 
 #field1='st'; ncfield1='ST'
 #field1='sia'; ncfield1='SICN'
-#field1='gz50000'; ncfield1='PHI'; conv1=1/con.get_g()
-field1='pmsl'; ncfield1='PMSL'
+field1='gz50000'; ncfield1='PHI'; conv1=1/con.get_g()
+#field1='pmsl'; ncfield1='PMSL'
 region1='bksmori' #'bksmori' #'polcap65'
 sea1='ND' #'DJF'
 
@@ -141,22 +141,22 @@ for sim in sims:
     # calculate confidence interval
     # double-check the scale setting
     ciregdt[sim] = sp.stats.t.interval(1-siglevel,len(fldpreg)-1,loc=np.mean(fldpreg,axis=0)-np.mean(fldcreg,axis=0),
-                             scale=np.std(fldpreg,axis=0)/np.sqrt(len(fldpreg)))
+                             scale=np.std(fldpreg-fldcreg,axis=0)/np.sqrt(len(fldpreg)))
     ciregdt2[sim] = sp.stats.t.interval(1-siglevel,len(fldpreg2)-1,loc=np.mean(fldpreg2,axis=0)-np.mean(fldcreg2,axis=0),
-                             scale=np.std(fldpreg2,axis=0)/np.sqrt(len(fldpreg2)))
+                             scale=np.std(fldpreg2-fldcreg2,axis=0)/np.sqrt(len(fldpreg2)))
 
 
 # @@@ add confidence int for allant and alltot (means have to concat control and pert separately as well)
 # calculate confidence interval
 # double-check the scale setting
 ciregalltotr1 = sp.stats.t.interval(1-siglevel,len(alltotpr1)-1,loc=np.mean(alltotpr1,axis=0)-np.mean(alltotcr1,axis=0),
-                         scale=np.std(alltotpr1,axis=0)/np.sqrt(len(alltotpr1)))
+                         scale=np.std(alltotpr1-alltotcr1,axis=0)/np.sqrt(len(alltotpr1)))
 ciregalltotr2 = sp.stats.t.interval(1-siglevel,len(alltotpr2)-1,loc=np.mean(alltotpr2,axis=0)-np.mean(alltotcr2,axis=0),
-                         scale=np.std(alltotpr2,axis=0)/np.sqrt(len(alltotpr2)))
+                         scale=np.std(alltotpr2-alltotcr2,axis=0)/np.sqrt(len(alltotpr2)))
 ciregallantr1 = sp.stats.t.interval(1-siglevel,len(allantpr1)-1,loc=np.mean(allantpr1,axis=0)-np.mean(allantcr1,axis=0),
-                         scale=np.std(allantpr1,axis=0)/np.sqrt(len(allantpr1)))
+                         scale=np.std(allantpr1-allantcr1,axis=0)/np.sqrt(len(allantpr1)))
 ciregallantr2 = sp.stats.t.interval(1-siglevel,len(allantpr2)-1,loc=np.mean(allantpr2,axis=0)-np.mean(allantcr2,axis=0),
-                         scale=np.std(allantpr2,axis=0)/np.sqrt(len(allantpr2)))
+                         scale=np.std(allantpr2-allantcr2,axis=0)/np.sqrt(len(allantpr2)))
 
 
 if plotscatter:
@@ -337,6 +337,7 @@ if plotscatter:
     #sube = df.loc[0,['E1','E2','E3','E4','E5']]
     firebrick=ccm.get_linecolor('firebrick')
 
+    printtofile=True
     fig,ax = plt.subplots(1)
     fig.set_size_inches(6,5)
     rr = plt.scatter(df.filter(regex='R').values[0],df.filter(regex='R').values[1],
@@ -358,7 +359,7 @@ if plotscatter:
     plt.legend((rr,ee),('Individual SIC forcings','Average SIC forcing'),
                loc='best',fancybox=True,framealpha=0.5)#,frameon=False)
 
-    if sea1 == 'ND' and sea2=='ND' and region1=='bksmori' and region2=='eurasia':
+    if sea1 == 'ND' and sea2=='ND' and region1=='bksmori' and region2 in ('eurasia','eurasiathin','eurasiamori'):
         # PAPER FIG!
         xlab = '$\Delta$ Nov-Dec Barents-Kara Seas'
         if field1=='pmsl':
@@ -366,10 +367,11 @@ if plotscatter:
         else:
             xlab = xlab + ' Z500 (m)'
 
-        ylab = '$\Delta$ Nov-Dec Eurasian SAT ($^\circ$C)'        
+        ylab = '$\Delta$ Nov-Dec Eurasian SAT ($^\circ$C)'
+        
     else:
-        xlab = str(sealab1) + ' ' + field1 + ' ' + region1
-        ylab = str(sealab2) + ' ' + field2 + ' ' + region2
+        xlab = str(sea1) + ' ' + field1 + ' ' + region1
+        ylab = str(sea2) + ' ' + field2 + ' ' + region2
         
     plt.xlabel(xlab)
     plt.ylabel(ylab)
@@ -384,7 +386,7 @@ if plotscatter:
         fig.savefig('scatterregress_' + field1 + region1 + str(sea1) + '_v_' +
                     field2 + region2 + str(sea2) + 'wacepap.pdf')
 
-
+    #printtofile=False
 
     # #######################################
 

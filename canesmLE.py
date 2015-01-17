@@ -173,7 +173,7 @@ mh = cplt.kemmap(trndmean*nt,lat,lon,cmin=cmin,cmax=cmax,title='LE mean trend ' 
 # Use files that already have SIE or SIA calculated ======= 1/6/2015
 # ==================== plot NH sea ice area ======================== 
 field='sianh'; comp='OImon'; 
-season='ND'
+season='SO'
 # if season is set to just September (9), I get an error:
 # ValueError: Big-endian buffer not supported on little-endian compiler
 #   I suspect that the hadisst file is the opposite endian to what my python install is on:
@@ -187,7 +187,7 @@ import cccmacmaps as ccm
 
 subyrs=np.arange(1979,1990)
 subyrs2=np.arange(2002,2013)
-
+printtofile=True
 # ======= CANESM LE (TOT) ===
 superii=0
 allflddt={}
@@ -506,7 +506,10 @@ ax.set_xlabel('$\Delta$ Sea Ice Area (millions of km$^2$)')
 xt=ax.get_xticks()
 ax.set_xticklabels(xt/np.float(1e12))
 ax.grid('off')
-ax.set_title('Arctic sea-ice area change (Nov-Dec)')
+if season == 'ND':
+    ax.set_title('Arctic sea-ice area change (Nov-Dec)')
+else:
+    ax.set_title('Arctic sea-ice area change (' + season + ')')
 if printtofile:
     fig.savefig(field + 'diff_PDFHIST_CanESMLE_TOTNAT_' + str(season) + '_paper2d.pdf')
 
