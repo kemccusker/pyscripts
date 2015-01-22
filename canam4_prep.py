@@ -27,10 +27,10 @@ plt.ion()
        # coords = {'lat': con.get_t63lat(), 'lon': con.get_t63lon()}
 
 
-printtofile=True
+printtofile=False
 
-field = 'st'
-smclim=True
+field = 'net'
+smclim=False
 level=50000 # for threed
 
 addcont=False # overlay map with contours
@@ -41,12 +41,12 @@ field2='gz'
 level2=50000
 
 # seasonalmap, seasonalvert, plotzonmean, plotseacyc, pattcorrwithtime, plotregmean,calcregmeanwithtime, calcregunccascade,timetosig, timetosigsuper
-plottype='calcregunccascade' 
+plottype='plotregmean' 
 projtype='eastere' # 'nh','sh','sq','eastere','nastere'
 
 # None, nh, polcap60, polcap65, polcap70, eurasia, eurasiamori, eurasiasth,eurasiathin,eurasiathinw,eurasiathine,ntham, nthatl, bks, bksmori, soo
 region='polcap60' #'eurasia' #'eurasiamori'
-screen=True
+screen=True # just for seasonalvert
 seacyclatlim=60
 withlat=False
 pattcorryr=False # need anymore?
@@ -76,7 +76,7 @@ antcat=False # this is the concatenation of ens members within each ensemble (re
 bothcat=False # can do concatenation of both ensembles if want to. These are useful for timetosig
 onlyens=False # just do ensemble means ANT and TOT
 
-addobs=False # add mean of kemhad* & kemnsidc* runs to line plots, seasonal maps. 
+addobs=True # add mean of kemhad* & kemnsidc* runs to line plots, seasonal maps. 
 addr4ct=False # add kem1pert2r4ct (constant thickness version of ens4)
 addsens=False # add sensitivity runs (kem1pert1b, kem1pert3)
 addrcp=False # add kem1rcp85a simulation (and others if we do more)

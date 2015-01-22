@@ -19,13 +19,17 @@ conv1=1; conv2=1
 
 plotscatter=True
 
+# field1 is x
 #field1='st'; ncfield1='ST'
 #field1='sia'; ncfield1='SICN'
 field1='gz50000'; ncfield1='PHI'; conv1=1/con.get_g()
 #field1='pmsl'; ncfield1='PMSL'
+# field1='net'; # @@ implement fluxes! should make files instead of doing calc in python
+
 region1='bksmori' #'bksmori' #'polcap65'
 sea1='ND' #'DJF'
 
+# field2 is y
 field2='st'; ncfield2='ST'
 #field2='sia'; ncfield2='SICN'
 #field2='pmsl'; ncfield2='PMSL'
@@ -83,6 +87,15 @@ for sim in sims:
         fldcreg=cutl.calc_regtotseaicearea(fldc,lat,lon,region1) # isarea=False
         fldpreg=cutl.calc_regtotseaicearea(fldp,lat,lon,region1) # isarea=False
     else:
+        # IF FLUX, MASK OUT OPEN-WATER:
+        print 'Implement masking out of open water in control for FLUXES @@@'
+        ## if isflux: #field in (fluxes,'fsg','turb','net'):
+        ##     # mask out regions that are not ice in the control (as P&M 2014 JClim)
+        ##     sicnc = cnc.getNCvar(frootc + 'sicn_' + timstr + '_ts.nc','SICN',timesel=timesel,**ncparams)
+
+        ##     fldc = ma.masked_where(sicnc<.10,fldc)
+        ##     fldp = ma.masked_where(sicnc<.10,fldp)
+            
         fldcreg=cutl.calc_regmean(fldc,lat,lon,region1)
         fldpreg=cutl.calc_regmean(fldp,lat,lon,region1)
         
