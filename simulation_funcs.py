@@ -1608,6 +1608,7 @@ def plot_regmean_byseas(datablob,fielddict,sims,pparams=None,info=None,seas=None
     fldcstddf = pd.DataFrame(datablob['ctlstd'])
     fldpstddf = pd.DataFrame(datablob['pertstd'])
     cidf = pd.DataFrame(datablob['ci'])
+    pvdf = pd.DataFrame(datablob['pval'])
 
     if len(sims)> 2:
         multby=1.1
@@ -1628,13 +1629,17 @@ def plot_regmean_byseas(datablob,fielddict,sims,pparams=None,info=None,seas=None
              
             val=flddiffdf[skey][sea]
             ci=cidf[skey][sea]
+            pv=pvdf[skey][sea]
             
             ax.plot(skeyii,val,color=colordict[skey],marker='s',markersize=8)
             ax.plot((skeyii,skeyii),ci,color=colordict[skey],linewidth=2,marker='_',markersize=6)
             axylims = ax.get_ylim()
             if axylims[0]<=0 and axylims[1]>=0:
                 ax.axhline(y=0,color='k',linewidth=.5) # @@ figure out how to make it first layer of plot...
-            print sea + ' ' + skey + ' ' + str(val)
+            if pv <= 0.05:
+                print sea + ' ' + skey + ' ANOM: ' + str(val) + ' *****PVAL: ' + str(pv)
+            else:
+                print sea + ' ' + skey + ' ANOM: ' + str(val) + ' PVAL: ' + str(pv)
             if skey in ('ENS','ENSE'):
                 print skey + 'CI: ' + str(ci)
 
