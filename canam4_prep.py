@@ -29,23 +29,23 @@ plt.ion()
 
 printtofile=False
 
-field = 'net'
+field = 'st'
 smclim=False
 level=50000 # for threed
 
 addcont=False # overlay map with contours
 sigoff=True # if True, don't add significance
-effdof=False # use effective deg of freedom or no.
+effdof=False # use effective deg of freedom or no. Set to False.
 field2='gz'
 #field2='pmsl'
 level2=50000
 
-# seasonalmap, seasonalvert, plotzonmean, plotseacyc, pattcorrwithtime, plotregmean,calcregmeanwithtime, calcregunccascade,timetosig, timetosigsuper
-plottype='plotregmean' 
+# seasonalmap, seasonalvert, plotzonmean, plotseacyc, pattcorrwithtime, plotregmean,calcregmeanwithtime, calcregunccascade,timetosig, timetosigsuper, plotscatter
+plottype='calcregmeanwithtime' 
 projtype='eastere' # 'nh','sh','sq','eastere','nastere'
 
 # None, nh, polcap60, polcap65, polcap70, eurasia, eurasiamori, eurasiasth,eurasiathin,eurasiathinw,eurasiathine,ntham, nthatl, bks, bksmori, soo
-region='polcap60' #'eurasia' #'eurasiamori'
+region='eurasia' #'eurasia' #'eurasiamori'
 screen=True # just for seasonalvert
 seacyclatlim=60
 withlat=False
@@ -71,16 +71,16 @@ allens=False # this is ONLY the ensemble means, plus superensemble
 sensruns=False # sensruns only: addr4ct=1,addsens=1. others=0 no meanBC, r mean, or obs
 ivar=False # this will show ENS (TOT) and ENSE (ANTH) and their difference = internal var
 simsforpaper=False # ANT, TOT, HAD, NSIDC only. best for maps and zonal mean figs (not line plots)
-simsforpaperwace=False
+simsforpaperwace=True
 antcat=False # this is the concatenation of ens members within each ensemble (really only useful for ANT)
 bothcat=False # can do concatenation of both ensembles if want to. These are useful for timetosig
 onlyens=False # just do ensemble means ANT and TOT
 
-addobs=True # add mean of kemhad* & kemnsidc* runs to line plots, seasonal maps. 
+addobs=False # add mean of kemhad* & kemnsidc* runs to line plots, seasonal maps. 
 addr4ct=False # add kem1pert2r4ct (constant thickness version of ens4)
 addsens=False # add sensitivity runs (kem1pert1b, kem1pert3)
 addrcp=False # add kem1rcp85a simulation (and others if we do more)
-addcanens=True # add "initial condition" ensemble of kemctl1/kem1pert2
+addcanens=False # add "initial condition" ensemble of kemctl1/kem1pert2
 addsuper=False # add superensemble mean
 
 
@@ -817,12 +817,14 @@ if plottype=='timetosig' or plottype=='timetosigsuper':
         calctype='timetosigsuper'
         pparams['cmax'] = 600
         
-    dblob = sfnc.calc_seasons(fdict,coords,sims,loctimesel=timesel,info=infodict,calctype=calctype,seas=seasons,effdof=effdof)
+    dblob = sfnc.calc_seasons(fdict,coords,sims,loctimesel=timesel,info=infodict,
+                              calctype=calctype,seas=seasons,effdof=effdof)
   
-    sfnc.plot_seasonal_maps(dblob,fdict,coords,sims,pparams,plottype='timetosig',vert=False,seas=seasons,info=infodict,printtofile=printtofile)
+    sfnc.plot_seasonal_maps(dblob,fdict,coords,sims,pparams,plottype='timetosig',
+                            vert=False,seas=seasons,info=infodict,printtofile=printtofile)
 
     
-if plottype=='calcregmeanwithtime' or plottype=='calcregunccascade':
+if plottype=='calcregmeanwithtime' or plottype=='calcregunccascade' or plottype=='calccomposites':
     
     dblob = sfnc.calc_seasons(fdict,coords,sims,seas=seasons,
                               loctimesel=timesel,info=infodict,calctype='regmeanwithtime',
@@ -898,6 +900,43 @@ if plottype=='calcregmeanwithtime' or plottype=='calcregunccascade':
                 else:
                     fig.savefig(field + '_polcap60' + rg2 + '_' + seas[0] + '_unccascade6ann.pdf')
 
+    elif plottype=='calccomposites':
+
+        print 'here calculate high and low composites using a given threshold, say 1 sigma' # @@@@
+        thresh=1 # the multiplier to sigma, ie 1sigma or 2sigma etc.
+        # first do eurasia SAT anomalies.
+        # assume I have a timeseries of anomalies, with a sigma associated with it.
+        # select all times with val < sigma and with val > sigma
+        #diffdf = pd.DataFrame(dblob['diff'])
+        #std= diffdf.std()
+        diffdt=dblob['diff']
+        
+        for sea in seasons:
+            for skey in sims:
+                diff = diffdt[skey][sea]
+                std = diff.std()
+                maxthresh = diff.mean()+thresh*std
+                minthresh = diff.mean()-thresh*std
+
+                high = ma.masked_where(diff<maxthresh,diff)
+                low = ma.masked_where(diff>minthresh,diff)
+                xx=np.arange(0,len(diff))
+                fig,axs=plt.subplots(1,2)
+                ax=axs[0] # timeseries
+                ax.plot(xx,diff,color='k')
+                ax.axhline(y=0,color='k',linewidth=.5)
+                ax.axhline(y=maxthresh,color='k',linewidth=.5,linestyle='--')
+                ax.axhline(y=minthresh,color='k',linewidth=.5,linestyle='--')
+                ax.plot(xx,high,marker='o',linestyle='none',color='r')
+                ax.plot(xx,low,marker='o',linestyle='none',color='b')
+                #plt.fill_between(xx,y1=maxthresh,y2=diff,where=diff>=maxthresh,color='r')
+                #plt.fill_between(xx,y1=minthresh,y2=diff,where=diff<=minthresh,color='b')
+                ax.set_title(field + ' ' + region + ' ' + skey + ' ' + sea)
+
+                ax=axs[1]
+                nnhi,binshi,patcheshi = ax.hist(high.compressed(),color='r',alpha=0.5,normed=True,histtype='stepfilled')
+                nnlo,binslo,patcheslo = ax.hist(low.compressed(),color='b',alpha=0.5,normed=True,histtype='stepfilled')
+                nntot,binstot,patchestot = ax.hist(diff,color='0.5',alpha=0.5,normed=True,histtype='stepfilled')
 
     else:
 
@@ -922,6 +961,20 @@ if plottype=='calcregmeanwithtime' or plottype=='calcregunccascade':
         if printtofile:
             fig.savefig(fdict['fieldstr']+'_ftpvals' + savestr + '_' + region + '.pdf')
 
+if plottype=='plotscatter':
+
+    print 'Implement plotscatter! @@@'
+    ## # get datablobs of two fields
+    ## dblob = sfnc.calc_seasons(fdict,coords,sims,seas=seasons,
+    ##                           loctimesel=timesel,info=infodict,calctype='regmeanwithtime',
+    ##                           effdof=effdof)
+
+    ## infodict['region'] = region2    
+    ## dblob2 = sfnc.calc_seasons(fdict,coords,sims,seas=seasons,
+    ##                            loctimesel=timesel,info=infodict,calctype='regmeanwithtime',
+    ##                            effdof=effdof)
+
+    ## sfnc.plot_scatter_regions()
         
 if testhadisst:
     print '@@testhadisst not implemented'
