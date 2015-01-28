@@ -4,6 +4,9 @@
       variables, two regions, two seasons. There are figures of just the simulation mean
       values with confidence intervals, and figures with all regional averages
       in time with regression lines. 10/10/2014
+
+      1/26/15: try to make into a function that uses datablobs.
+      
 """
 
 import cccmautils as cutl
@@ -11,8 +14,9 @@ import constants as con
 import cccmaplots as cplt
 import cccmacmaps as ccm
 import pandas as pd
+import numpy.ma as ma
 
-printtofile=True
+printtofile=False
 plt.close('all')
 
 conv1=1; conv2=1
@@ -21,13 +25,13 @@ plotscatter=True
 
 # field1 is x
 #field1='st'; ncfield1='ST'
-#field1='sia'; ncfield1='SICN'
-field1='gz50000'; ncfield1='PHI'; conv1=1/con.get_g()
+field1='sia'; ncfield1='SICN'
+#field1='gz50000'; ncfield1='PHI'; conv1=1/con.get_g()
 #field1='pmsl'; ncfield1='PMSL'
-# field1='net'; # @@ implement fluxes! should make files instead of doing calc in python
+#field1='turb'; 
 
-region1='bksmori' #'bksmori' #'polcap65'
-sea1='ND' #'DJF'
+region1='polcap60' #'polcap65'
+sea1='SO' #'DJF'
 
 # field2 is y
 field2='st'; ncfield2='ST'
@@ -35,7 +39,7 @@ field2='st'; ncfield2='ST'
 #field2='pmsl'; ncfield2='PMSL'
 #field2='gz50000'; ncfield2='PHI'; conv2=1/con.get_g()
 region2= 'eurasia' #'eurasiamori'
-sea2='ND' #'DJF'
+sea2='SO' #'DJF'
 
 sims = ('E1','E2','E3','E4','E5','R1','R2','R3','R4','R5','HAD','NSIDC','ENS','ENSE')
 TOT = ('R1','R2','R3','R4','R5')
@@ -74,10 +78,32 @@ tallii=0 # index to keep track of time in accumulated TOT ensemble
 aallii=0 # index to keep track of time in accumulated ANT ensemble
 for sim in sims:
 
-    fnamec,fnamep=con.build_filepathpair(sim,field1)
+    
 
-    fldc=cnc.getNCvar(fnamec,ncfield1,timesel=timesel,seas=sea1)*conv1
-    fldp=cnc.getNCvar(fnamep,ncfield1,timesel=timesel,seas=sea1)*conv1
+    if field1 in ('turb','net'):
+        
+        fielda='hfl'; fieldb='hfs'
+        fnamec,fnamepa=con.build_filepathpair(sim,fielda)
+        fnamecb,fnamepb=con.build_filepathpair(sim,fieldb)
+        fldc = cnc.getNCvar(fnamec,fielda.upper(),timesel=timesel,seas=sea1) +\
+               cnc.getNCvar(fnamecb,fieldb.upper(),timesel=timesel,seas=sea1)
+        fldp = cnc.getNCvar(fnamepa,fielda.upper(),timesel=timesel,seas=sea1) +\
+               cnc.getNCvar(fnamepb,fieldb.upper(),timesel=timesel,seas=sea1)
+
+        if field1=='net':
+            fieldb='flg'
+            conv=-1
+            fnamecb,fnamepb=con.build_filepathpair(sim,fieldb)
+
+            fldc = fldc + cnc.getNCvar(fnamecb,fieldb.upper(),
+                                       timesel=timesel,seas=sea1)*conv
+            fldp = fldp + cnc.getNCvar(fnamepb,fieldb.upper(),
+                                       timesel=timesel,seas=sea1)*conv
+            conv=1
+    else:
+        fnamec,fnamep=con.build_filepathpair(sim,field1)
+        fldc=cnc.getNCvar(fnamec,ncfield1,timesel=timesel,seas=sea1)*conv1
+        fldp=cnc.getNCvar(fnamep,ncfield1,timesel=timesel,seas=sea1)*conv1
 
 
     lat=cnc.getNCvar(fnamec,'lat')
@@ -88,13 +114,15 @@ for sim in sims:
         fldpreg=cutl.calc_regtotseaicearea(fldp,lat,lon,region1) # isarea=False
     else:
         # IF FLUX, MASK OUT OPEN-WATER:
-        print 'Implement masking out of open water in control for FLUXES @@@'
-        ## if isflux: #field in (fluxes,'fsg','turb','net'):
-        ##     # mask out regions that are not ice in the control (as P&M 2014 JClim)
-        ##     sicnc = cnc.getNCvar(frootc + 'sicn_' + timstr + '_ts.nc','SICN',timesel=timesel,**ncparams)
+        #print 'Implement masking out of open water in control for FLUXES @@@'
+        if field1 in ('hfl','hfs','flg','fsg','turb','net'):
+            print 'field1, ' + field1 + ' is a flux. Mask out non-ice in control' # @@
+            # mask out regions that are not ice in the control (as P&M 2014 JClim)
+            sicfname,junk=con.build_filepathpair(sim,'sicn')
+            sicnc = cnc.getNCvar(sicfname,'SICN',timesel=timesel,seas=sea1)
 
-        ##     fldc = ma.masked_where(sicnc<.10,fldc)
-        ##     fldp = ma.masked_where(sicnc<.10,fldp)
+            fldc = ma.masked_where(sicnc<.10,fldc) 
+            fldp = ma.masked_where(sicnc<.10,fldp)
             
         fldcreg=cutl.calc_regmean(fldc,lat,lon,region1)
         fldpreg=cutl.calc_regmean(fldp,lat,lon,region1)
@@ -105,13 +133,37 @@ for sim in sims:
     else:
         flddregtsdt[sim] = fldpreg-np.mean(fldcreg,axis=0)
 
-    if field2 != field1:
-        fnamec,fnamep=con.build_filepathpair(sim,field2)
-        fldc2=cnc.getNCvar(fnamec,ncfield2,timesel=timesel,seas=sea2)*conv2
-        fldp2=cnc.getNCvar(fnamep,ncfield2,timesel=timesel,seas=sea2)*conv2
-    elif sea2 != sea1:
-        fldc2=cnc.getNCvar(fnamec,ncfield2,timesel=timesel,seas=sea2)*conv2
-        fldp2=cnc.getNCvar(fnamep,ncfield2,timesel=timesel,seas=sea2)*conv2
+    if (field2 != field1) or (sea2 != sea1):
+        print field2 + ' != ' + field1 + ' or ' + str(sea2) + ' != ' + str(sea1)
+        
+        if field2 in ('turb','net'):
+
+            fielda='hfl'; fieldb='hfs'
+            fnamec,fnamepa=con.build_filepathpair(sim,fielda)
+            fnamecb,fnamepb=con.build_filepathpair(sim,fieldb)
+            fldc2 = cnc.getNCvar(fnamec,fielda.upper(),timesel=timesel,seas=sea2) +\
+                   cnc.getNCvar(fnamecb,fieldb.upper(),timesel=timesel,seas=sea2)
+            fldp2 = cnc.getNCvar(fnamepa,fielda.upper(),timesel=timesel,seas=sea2) +\
+                   cnc.getNCvar(fnamepb,fieldb.upper(),timesel=timesel,seas=sea2)
+
+            if field2=='net':
+                fieldb='flg'
+                conv=-1
+                fnamecb,fnamepb=con.build_filepathpair(sim,fieldb)
+
+                fldc2 = fldc2 + cnc.getNCvar(fnamecb,fieldb.upper(),
+                                           timesel=timesel,seas=sea2)*conv
+                fldp2 = fldp2 + cnc.getNCvar(fnamepb,fieldb.upper(),
+                                           timesel=timesel,seas=sea2)*conv
+                conv=1
+        else:
+            fnamec,fnamep=con.build_filepathpair(sim,field2)
+            fldc2=cnc.getNCvar(fnamec,ncfield2,timesel=timesel,seas=sea2)*conv2
+            fldp2=cnc.getNCvar(fnamep,ncfield2,timesel=timesel,seas=sea2)*conv2
+            
+    ## elif sea2 != sea1:
+    ##     fldc2=cnc.getNCvar(fnamec,ncfield2,timesel=timesel,seas=sea2)*conv2
+    ##     fldp2=cnc.getNCvar(fnamep,ncfield2,timesel=timesel,seas=sea2)*conv2
     else:
         fldc2=fldc
         fldp2=fldp
@@ -120,6 +172,15 @@ for sim in sims:
         fldcreg2=cutl.calc_regtotseaicearea(fldc,lat,lon,region2) # isarea=False
         fldpreg2=cutl.calc_regtotseaicearea(fldp,lat,lon,region2) # isarea=False
     else:
+        if field2 in ('hfl','hfs','flg','fsg','turb','net'):
+            # mask out regions that are not ice in the control (as P&M 2014 JClim)
+            print 'field2, ' + field2 + ' is a flux. Mask out non-ice in control' # @@
+            sicfname,junk=con.build_filepathpair(sim,'sicn')
+            sicnc2 = cnc.getNCvar(sicfname,'SICN',timesel=timesel,seas=sea2)
+
+            fldc2 = ma.masked_where(sicnc2<.10,fldc2)
+            fldp2 = ma.masked_where(sicnc2<.10,fldp2)
+            
         fldcreg2=cutl.calc_regmean(fldc2,lat,lon,region2)
         fldpreg2=cutl.calc_regmean(fldp2,lat,lon,region2)
         
@@ -342,6 +403,8 @@ if plotscatter:
     
     # this will work:
     allens=['R1','R2','R3','R4','R5','E1','E2','E3','E4','E5'] # has to be an array!
+    rens=['R1','R2','R3','R4','R5']
+    eens=['E1','E2','E3','E4','E5'] 
     sub = df.loc[:,allens]
     subx=sub.ix[0,:]
     suby=sub.ix[1,:]
@@ -350,12 +413,12 @@ if plotscatter:
     #sube = df.loc[0,['E1','E2','E3','E4','E5']]
     firebrick=ccm.get_linecolor('firebrick')
 
-    printtofile=True
+    printtofile=False
     fig,ax = plt.subplots(1)
     fig.set_size_inches(6,5)
     rr = plt.scatter(df.filter(regex='R').values[0],df.filter(regex='R').values[1],
                      color='0.3',marker='o',s=8**2,alpha=0.7)
-    ee = plt.scatter(df.loc[region1,['E1','E2','E3','E4','E5']],df.loc[region2,['E1','E2','E3','E4','E5']],
+    ee = plt.scatter(sub.ix[0,5:],sub.ix[1,5:],
                      color=firebrick,marker='o',s=8**2,alpha=0.7)
     #plt.scatter(df['HAD'].values[0],df['HAD'].values[1],color=cd['HAD'],marker='s',s=8**2)
     #plt.scatter(df['NSIDC'].values[0],df['NSIDC'].values[1],color=cd['NSIDC'],marker='s',s=8**2)
@@ -367,7 +430,7 @@ if plotscatter:
     onex=np.linspace(axxlims[0],axxlims[1])
     plt.plot(onex,mm*onex + bb, color='0.5',linewidth=1)#,linestyle='--')
     rsq = rval**2
-    print 'PAPER --- mean sims regr info: RVAL: ' + str(rval) + ', PVAL: ' + str(pval) + ', R2: ' + str(rsq)
+    print 'PAPER --- mean sims regr info: SLOPE: ' + str(mm) + ', RVAL: ' + str(rval) + ', PVAL: ' + str(pval) + ', R2: ' + str(rsq)
     
     plt.legend((rr,ee),('Individual SIC forcings','Average SIC forcing'),
                loc='best',fancybox=True,framealpha=0.5)#,frameon=False)
@@ -523,7 +586,7 @@ if plotscatter:
         ax.plot(onex,mm*onex + bb, color=cd[sim],linewidth=2)#,linestyle='--')
         #rr = np.corrcoef(dfts[sim].values[0],dfts[sim].values[1] )[0,1]
         rsq = rval**2
-        print 'TOT: R: ' + str(rval) + ', R squared: ' + str(rsq)
+        print 'TOT: R: ' + str(rval) + ', R squared: ' + str(rsq) + ', SLOPE: ' + str(mm) + ', PVAL: ' + str(pval)
         ## val = '$%.2f$'%(rsq)
         ## ax.annotate('$R^2$= ' + val, xy=(axxlims[0]+.1*axxlims[1], axylims[1]-.2*axylims[1]),
         ##             xycoords='data') # upper left?
@@ -534,7 +597,7 @@ if plotscatter:
         ax.plot(onex,mm*onex + bb, color=cd[sim],linewidth=2)#,linestyle='--')
         #rr = np.corrcoef(dfts[sim].values[0],dfts[sim].values[1] )[0,1]
         rsq = rval**2
-        print 'ANT: R: ' + str(rval) + ', R squared: ' + str(rsq)
+        print 'ANT: R: ' + str(rval) + ', R squared: ' + str(rsq) + ', SLOPE: ' + str(mm) + ', PVAL: ' + str(pval)
 
     ax.set_xlabel(str(sea1) + ' ' + field1 + ' ' + region1)
     ax.set_ylabel(str(sea2) + ' ' + field2 + ' ' + region2)
@@ -728,7 +791,7 @@ def plot_anttotsbplt_histpdf(antdata,totdata,printtofile=False,label=''):
         fig.savefig('histpdf_' + label + '_ANTTOTsbplt.pdf')
 
 
-printtofile=False
+printtofile=True
 plot_anttotanom_histpdf(allantr2,alltotr2,
                         label=(field2 + region2 + '_' + str(sea2)),printtofile=printtofile)
 cutl.calc_pvals(allantr2,alltotr2)
