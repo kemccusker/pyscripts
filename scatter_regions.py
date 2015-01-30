@@ -25,21 +25,21 @@ plotscatter=True
 
 # field1 is x
 #field1='st'; ncfield1='ST'
-field1='sia'; ncfield1='SICN'
+#field1='sia'; ncfield1='SICN'
 #field1='gz50000'; ncfield1='PHI'; conv1=1/con.get_g()
 #field1='pmsl'; ncfield1='PMSL'
-#field1='turb'; 
+field1='net'; 
 
 region1='polcap60' #'polcap65'
-sea1='SO' #'DJF'
+sea1='ND' #'DJF'
 
 # field2 is y
 field2='st'; ncfield2='ST'
 #field2='sia'; ncfield2='SICN'
 #field2='pmsl'; ncfield2='PMSL'
 #field2='gz50000'; ncfield2='PHI'; conv2=1/con.get_g()
-region2= 'eurasia' #'eurasiamori'
-sea2='SO' #'DJF'
+region2= 'polcap60' #'eurasiamori'
+sea2='ND' #'DJF'
 
 sims = ('E1','E2','E3','E4','E5','R1','R2','R3','R4','R5','HAD','NSIDC','ENS','ENSE')
 TOT = ('R1','R2','R3','R4','R5')

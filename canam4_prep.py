@@ -27,21 +27,21 @@ plt.ion()
        # coords = {'lat': con.get_t63lat(), 'lon': con.get_t63lon()}
 
 
-printtofile=False
+printtofile=True
 
 field = 'st'
-smclim=False
+smclim=True
 level=50000 # for threed
 
-addcont=False # overlay map with contours
+addcont=True # overlay map with contours
 sigoff=True # if True, don't add significance
 effdof=False # use effective deg of freedom or no. Set to False.
-field2='gz'
-#field2='pmsl'
+#field2='gz'
+field2='pmsl'
 level2=50000
 
 # seasonalmap, seasonalvert, plotzonmean, plotseacyc, pattcorrwithtime, plotregmean,calcregmeanwithtime, calcregunccascade,timetosig, timetosigsuper, plotscatter
-plottype='calcregmeanwithtime' 
+plottype='seasonalmap' 
 projtype='eastere' # 'nh','sh','sq','eastere','nastere'
 
 # None, nh, polcap60, polcap65, polcap70, eurasia, eurasiamori, eurasiasth,eurasiathin,eurasiathinw,eurasiathine,ntham, nthatl, bks, bksmori, soo
@@ -165,8 +165,11 @@ if simsforpaper: # best for maps only
     
 elif simsforpaperwace:
     
-    print '@@@ simsforpaperwace is WACE paper -- ND cold and warm extremes, R1, R5 only'
-    savestr = '_forpapwace'; sims = ('R1','R5'); seasons=('ND',); figtrans=True # 95% stat sig
+    #print '@@@ simsforpaperwace is WACE paper -- ND cold and warm extremes, R1, R5 only'
+    #savestr = '_forpapwace'; sims = ('R1','R5'); seasons=('ND',); figtrans=True # 95% stat sig
+    print '@@@ simsforpaperwace is WACE paper -- ND ENSEMBLE MEANS ONLY'
+    savestr = '_forpapwace_ensmean'; sims = ('ENS','ENSE'); seasons=('ND',); figtrans=True # 95% stat sig
+    
     #print '@@@ simsforpaper is WACE B paper right now -- ND cold and warm extremes, E4, E1 only'
     #savestr = '_forpapwaceb'; sims = ('E4','E1'); seasons=('ND',); figtrans=False # 90% stat sig
     
@@ -694,7 +697,7 @@ if plottype in ('seasonalmap','seasonalvert'):
     print sims
     print pparams
 
-    
+    pparams2['cmin']=-.6; pparams2['cmax']=.6 #@@@
         
     # this one does data processing and plotting together
     # some stuff in the function need to be removed or set differently.@@
@@ -719,13 +722,13 @@ if plottype in ('seasonalmap','seasonalvert'):
             thefig.set_size_inches((10,5))
         theaxs = thefig.get_axes()
         ax1=theaxs[0]
-        ax1.set_title('a. Significant cooling case')
+        ax1.set_title('a. Individual SIC forcings')#Significant cooling case')
         ax1.set_ylabel('Latitude',fontsize=12)
         if not figtrans:
             ax1.set_xlabel('Longitude',fontsize=12)
 
         ax2=theaxs[1]
-        ax2.set_title('b. Significant warming case')
+        ax2.set_title('b. Average SIC forcing') #Significant warming case')
         ax2.set_xlabel('Longitude',fontsize=12)
         if figtrans:
             ax2.set_ylabel('Latitude',fontsize=12)
