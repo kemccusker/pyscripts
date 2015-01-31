@@ -29,20 +29,20 @@ plt.ion()
 
 printtofile=True
 
-field = 'st'
+field = 'pmsl'
 smclim=True
 level=50000 # for threed
 
-addcont=True # overlay map with contours
-sigoff=True # if True, don't add significance
+addcont=False # overlay map with contours
+sigoff=False # if True, don't add significance
 effdof=False # use effective deg of freedom or no. Set to False.
-#field2='gz'
-field2='pmsl'
+field2='gz'
+#field2='pmsl'
 level2=50000
 
 # seasonalmap, seasonalvert, plotzonmean, plotseacyc, pattcorrwithtime, plotregmean,calcregmeanwithtime, calcregunccascade,timetosig, timetosigsuper, plotscatter
 plottype='seasonalmap' 
-projtype='eastere' # 'nh','sh','sq','eastere','nastere'
+projtype='eastere' #'eastere' # 'nh','sh','sq','eastere','nastere'
 
 # None, nh, polcap60, polcap65, polcap70, eurasia, eurasiamori, eurasiasth,eurasiathin,eurasiathinw,eurasiathine,ntham, nthatl, bks, bksmori, soo
 region='eurasia' #'eurasia' #'eurasiamori'
@@ -697,7 +697,7 @@ if plottype in ('seasonalmap','seasonalvert'):
     print sims
     print pparams
 
-    pparams2['cmin']=-.6; pparams2['cmax']=.6 #@@@
+    #pparams2['cmin']=-.6; pparams2['cmax']=.6 #@@@
         
     # this one does data processing and plotting together
     # some stuff in the function need to be removed or set differently.@@
@@ -716,24 +716,38 @@ if plottype in ('seasonalmap','seasonalvert'):
     if simsforpaperwace:
         # here I will adjust the figure for the WACE paper
         if figtrans:
-            thefig.set_size_inches((5,8))
-            thefig.subplots_adjust(hspace=.02,wspace=.02)
+            if projtype=='eastere':
+                thefig.set_size_inches((5,8))
+                thefig.subplots_adjust(hspace=.02,wspace=.02)
+            else:
+                thefig.set_size_inches((4,10))
+            
         else:
             thefig.set_size_inches((10,5))
         theaxs = thefig.get_axes()
         ax1=theaxs[0]
-        ax1.set_title('a. Individual SIC forcings')#Significant cooling case')
-        ax1.set_ylabel('Latitude',fontsize=12)
-        if not figtrans:
-            ax1.set_xlabel('Longitude',fontsize=12)
+        if 'ENS' in sims: # assume it is just the two ensemble means
+            prstr='ANTTOT'
+            ax1.set_title('a. Individual SIC forcings')
+            ax1.set_ylabel('')
+        else: # else assume it's the cooling and warming cases for paper
+            prstr=''
+            ax1.set_title('a. Significant cooling case')
+            ax1.set_ylabel('Latitude',fontsize=12)
+            if not figtrans:
+                ax1.set_xlabel('Longitude',fontsize=12)
 
         ax2=theaxs[1]
-        ax2.set_title('b. Average SIC forcing') #Significant warming case')
-        ax2.set_xlabel('Longitude',fontsize=12)
-        if figtrans:
-            ax2.set_ylabel('Latitude',fontsize=12)
-        else:
-            ax2.set_ylabel('',fontsize=12)
+        if 'ENS' in sims:  # assume it is just the two ensemble means
+            ax2.set_title('b. Average SIC forcing')
+            ax2.set_ylabel('')
+        else:  # else assume it's the cooling and warming cases for paper
+            ax2.set_title('b. Significant warming case')
+            ax2.set_xlabel('Longitude',fontsize=12)
+            if figtrans:
+                ax2.set_ylabel('Latitude',fontsize=12)
+            else:
+                ax2.set_ylabel('',fontsize=12)
 
         if not figtrans: # one row
             axcb=theaxs[2] # colorbar
@@ -741,14 +755,15 @@ if plottype in ('seasonalmap','seasonalvert'):
         else: # one col
             axcb=theaxs[2] # colorbar
             axcb.set_position([.15,0.07, 0.75, .02])
-            axcb.set_xticks(np.arange(-1,1.2,0.2))
-            axcb.set_xticklabels(('-1.0','','','','','0','','','','','1.0'))
+            if 'ENS' not in sims:
+                axcb.set_xticks(np.arange(-1,1.2,0.2))
+                axcb.set_xticklabels(('-1.0','','','','','0','','','','','1.0'))
 
         thefig.suptitle('')
-        if field2=='pmsl':
-            thefig.savefig('wacefigure3_slpcont_trans.pdf')
+        if addcont:
+            thefig.savefig('wacefigure3_' + field + '_' + field2 + 'cont_trans_' + prstr + '.pdf')
         else:
-            thefig.savefig('wacefigure3_trans.pdf')
+            thefig.savefig('wacefigure3_' + field + '_trans_' + prstr + '.pdf')
         
         
     
