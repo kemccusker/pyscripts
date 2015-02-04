@@ -6,7 +6,7 @@
 """
 import numpy as np # for array handling
 import scipy as sp # scientific python
-from netCDF4 import Dataset
+from netCDF4 import Dataset, num2date
 import cccmautils as cutl
 import cdo as cdo #; cdo = cdo.Cdo()
 import os
@@ -19,7 +19,43 @@ def openNC(filename):
     return ncfile
 
 
-def getNCvar(filename,field,timesel=None,levsel=None,monsel=None,seas=None,calc=None,remlon=1,sqz=True):
+def get_NCtimeunits(filename,field='time'):
+
+    ncfile = openNC(filename)
+    time_nc=ncfile.variables[field]
+
+    return time_nc.units
+
+def get_NCtimecal(filename,field='time'):
+
+    ncfile = openNC(filename)
+    time_nc=ncfile.variables[field]
+
+    return time_nc.calendar
+
+def NCtime2date(thetimes,timeunit,timecal):
+
+    thedates = num2date(thetimes,timeunit,timecal)
+
+    # @@@ need to convert each of these to np.datetime64 if want to convert to pandas DatetimeIndex
+    
+    return thedates
+
+def get_NCdates(filename,field='time',timesel=None):
+    """ will get the field ('time' is default) and convert to datetimes
+
+    """
+
+    thetimes = getNCvar(filename,field=field,timesel=timesel)
+    theunit = get_NCtimeunits(filename,field=field)
+    thecal = get_NCtimecal(filename,field=field)
+
+    thedates = NCtime2date(thetimes,theunit,thecal)
+
+    return thedates
+
+
+def getNCvar(filename,field,timesel=None,levsel=None,monsel=None,seas=None,calc=None,remlon=1,sqz=True,att=False):
     """ gets a variable from netcdf file.
         Time is assumed to be the 1st dimension, Lon is assumed to be the last.
         If any calculations are requested to be performed on the data, the user
@@ -38,6 +74,7 @@ def getNCvar(filename,field,timesel=None,levsel=None,monsel=None,seas=None,calc=
         sqz:  squeeze the data if 'getting all data'. Default True.
                    Trying to avoid situation where need singular dims and squeeze them out
                    (e.g. MOC variable in CCSM4)
+        att: if True, include the full netcdf variable (including attributes). Most useful for time.
         
         returns fld
         """
