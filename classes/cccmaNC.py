@@ -11,6 +11,9 @@ import cccmautils as cutl
 import cdo as cdo #; cdo = cdo.Cdo()
 import os
 import platform as platform
+import datetime as datetime
+import matplotlib.dates as dates
+
 
 
 def openNC(filename):
@@ -108,7 +111,7 @@ def getNCvar(filename,field,timesel=None,levsel=None,monsel=None,seas=None,calc=
                 if 'timsel/' not in filename:
                     print 'On mac, use files in timsel/ subdirectory! @@ NEEDS TESTING'
 
-            fld = getNCvar_old(filename,field,seas=seas,monsel=monsel,level=level,calc=calc,sqz=sqz) # doesn't work with all arguments yet @@
+            fld = getNCvar_old(filename,field,seas=seas,monsel=monsel,level=level,calc=calc,sqz=sqz,timesel=timesel) # doesn't work with all arguments yet @@
 
         
         return fld
@@ -308,7 +311,7 @@ def getNCvar(filename,field,timesel=None,levsel=None,monsel=None,seas=None,calc=
 
 
 
-def getNCvar_old(filename,field,timechunk=None,monsel=None,level=None,seas=None,calc=None,remlon=1,sqz=True):
+def getNCvar_old(filename,field,timechunk=None,monsel=None,level=None,seas=None,calc=None,remlon=1,sqz=True,timesel=None):
     """ gets a variable from netcdf file.
         Time is assumed to be the 1st dimension, Lon is assumed to be the last.
         If any calculations are requested to be performed on the data, the user
@@ -318,6 +321,7 @@ def getNCvar_old(filename,field,timechunk=None,monsel=None,level=None,seas=None,
         filename: full path to file
         field: NC variable to read in
         timechunk: tuple of start,stop
+        timesel: same format as CDO. will be parsed into startyear, startmon, startday and endyr,enmon,enday
         monsel: index of month to choose (1=all Jans, 2=all Febs, etc. really meant for CDO bindings)
         level: index of plev to select
         seas: seasonally (annually) average {ANN|DJF|JJA|NDJ|MAM|SON}
@@ -334,9 +338,10 @@ def getNCvar_old(filename,field,timechunk=None,monsel=None,level=None,seas=None,
     
     ncfile = openNC(filename)
     ndims = len(ncfile.dimensions)
+    #print 'getNCvar_old()'
     
     #### READ VARIABLE FROM NC FILE ########
-    if timechunk == None:
+    if (timechunk == None) and (timesel == None):
         if level != None:
             fld = ncfile.variables[field][:,level,...]
         else:
@@ -346,7 +351,86 @@ def getNCvar_old(filename,field,timechunk=None,monsel=None,level=None,seas=None,
         if sqz:
             fld=fld.squeeze() # remove spurious dimensions of 1
     else:
-        if len(timechunk)==1: # start time until end
+        if timesel == None:
+            print 'timesel is None' # @@@
+        else:
+            #print 'timesel ' + timesel
+
+            # parse timesel:
+            # year-month-day
+            (timselst,timselen)=timesel.split(',')       
+            (styear,stmon,stday) = timselst.split('-')
+            (enyear,enmon,enday) = timselen.split('-')
+
+            # ############################
+            # from Joe's util.py (originally Phil Austin cookbook)
+            #
+            # first convert to netcdftime datetime objects
+            #
+            time_nc=ncfile.variables['time']
+            the_times=time_nc[...]
+
+            #try:
+
+            the_dates=num2date(the_times,time_nc.units,time_nc.calendar)
+            #
+            # netCDF4 bug(?) means that netcdftime objects can't be compared/sorted
+            # so convert to python datetime objects
+            #
+
+            py_dates=[datetime.date(*item.timetuple()[:3]) for item in the_dates] # This only deals in Year/Month/Day.
+            py_dates=np.array(py_dates)
+
+            # Convert start and stop dates to python datetimes
+            # Presently assume monthly data!
+            date1 = datetime.date( int(styear), int(stmon), 1 ) #Starts Jan 1
+            date2 = datetime.date( int(enyear), int(enmon), 31 )  #Ends Dec 31  
+
+            #
+            # 
+            if styear is None:
+                start_index=0
+            else:
+                start_index=find_index(py_dates,date1)[0]
+
+            if enyear is not None:
+                stop_index=find_index(py_dates,date2)[0]
+                if stop_index == 0:
+                    # The stop index is 0 since you asked for a date beyond that in the 
+                    # file. So print a warning and set it to the last date in the file
+                    print 'You are asking for a date beyond that in the file.'
+                    print 'I will take the last time index in the file and move on.'
+                    stop_index = len(the_times)
+
+            else:
+                stop_index=None
+
+            time_slice=slice(start_index,stop_index+1) # b/c it's monthly data, want inclusize last month@@
+            the_times=py_dates[time_slice] # may not need this...@@
+            #print 'the_times: ' + str(the_times) # @@@@@@@@@@@@@
+            #  @@@@ end testing new time functionality
+
+        
+# ############################
+        #if (timesel!= None):# and (len(timechunk)==1): # start time until end
+
+#            firsttime = ncfile.variables['time'][timechunk[0],...] #@@@
+#            firstdate = datetime.date(1850, 1, 1) + datetime.timedelta(int(firsttime))
+#            print firsttime # @@@
+#            print firstdate # @@@
+
+#            if level != None:
+#                fld = ncfile.variables[field][time_slice,level,...]
+#            else:
+#                fld = ncfile.variables[field][time_slice,...]
+#        else:
+        if level != None:
+            fld = ncfile.variables[field][time_slice,level,...]
+        else:
+            fld = ncfile.variables[field][time_slice,...]
+
+        """ old functionality...@@
+        if (timechunk!= None) and (len(timechunk)==1): # start time until end
             print timechunk # @@
             firsttime = ncfile.variables['time'][timechunk[0],...] #@@@
             firstdate = datetime.date(1850, 1, 1) + datetime.timedelta(int(firsttime))
@@ -362,7 +446,7 @@ def getNCvar_old(filename,field,timechunk=None,monsel=None,level=None,seas=None,
                 fld = ncfile.variables[field][timechunk[0]:timechunk[1],level,...]
             else:
                 fld = ncfile.variables[field][timechunk[0]:timechunk[1],...]
-
+        """
         # @@@shit, caused problems with MOC.
         if sqz:
             fld=fld.squeeze() # remove spurious dimensions of 1
@@ -442,6 +526,44 @@ def getNCvar_old(filename,field,timechunk=None,monsel=None,level=None,seas=None,
         
     return fld
 
+
+def find_index(vec_vals,target):
+    """
+    from Joe util.py, originally Phil Austin
+    added 2/4/2015
+
+    returns the first index of vec_vals that contains the value
+    closest to target.
+
+    Parameters
+    ----------
+
+    vec_vals: list or 1-d array
+    target:   list 1-d array or scalar
+
+
+    Returns
+    -------
+
+    list of len(target) containing the index idx such that
+    vec_vals[idx] is closest to each item in target
+
+    Example
+    -------
+
+    >>> lons=[110,115,120,125,130,135,140]
+    >>> find_index(lons,[115.4,134.9])
+    [1, 5]
+
+    """
+    target=np.atleast_1d(target)  #turn scalar into iterable, no-op if already array
+    vec_vals=np.array(vec_vals)  #turn list into ndarray or no-op if already array
+    index_list=[]
+    for item in target:
+        first_index=np.argmin(np.abs(vec_vals - item))
+        index_list.append(first_index)
+    
+    return index_list 
 
 if __name__ != '__main__':
  
