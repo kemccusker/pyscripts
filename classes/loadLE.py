@@ -1,20 +1,29 @@
 import cccmautils as cutl
 import pandas as pd
 import cccmaNC as cnc
+import constants as con
+import numpy as np
 
-basepath='/ra40/data/kem/CanSISE/CanESM2/LE/'
+con=reload(con)
+
+bp=con.get_LEbasepath()
+
+basepath=bp['basepath']
 ensnum=10
 
 #  Make this a class! CanESM2LE
 
-def load_LEdata(fielddict, ens,seas=None, timesel=None,infodict=None,ftype='fullts',calctype=None, calcdict=None):
+def load_LEdata(fielddict, ens, seas=None, timesel=None,infodict=None,ftype='fullts',calctype=None, calcdict=None, rettype='dict'):
     """ def loadLEdata(fielddict, seas=('DJF','MAM','JJA','SON'), timesel=None, infodict=None, calctype=None, calcdict=None)
 
             ftype: type of filename to build. Right now just 'fullts' for full timeseries
               or '1950-2020_climo'
             seas has to be a tuple
+            rettype: 'dict' or 'ndarray' as return type. 
+                      default is dict of DataFrames (to make a Panel). 
+                      else, 'ndarray' is a 4D array
 
-            returns a dict of DataFrames (to make a Panel)
+            returns an object of type rettype
     """
 
     field = fielddict['field']
@@ -22,28 +31,65 @@ def load_LEdata(fielddict, ens,seas=None, timesel=None,infodict=None,ftype='full
     comp = fielddict['comp']
 
     flist = build_filenames(fielddict, ens,ftype=ftype)
-    flddt = {}
 
     fname1 = flist[0]
     timedim = cnc.getNCvar(fname1,'time',timesel=timesel)
-    print timedim
+    #print timedim
+
+    if rettype=='dict':
+        fldret={}
+    elif rettype=='ndarray':
+        tmp = cnc.getNCvar(fname1,ncfield,timesel=timesel)
+
+        if len(tmp.shape)>3:
+            print '4D variable not supported! @@@@'
+            return -1
+        elif len(tmp.shape)==3:
+            # first dim is time, reshape the 2nd two into one spatial dim
+            n0=tmp.shape[0]
+            n1=tmp.shape[1]
+            n2=tmp.shape[2]
+            initshape=(len(flist), n0, n1*n2) # 3D, ens x time x space
+            rshape=initshape[1:] # what to reshape individual data to
+        elif len(tmp.shape)==2:
+            initshape=list(tmp.shape)
+            initshape.insert(0,len(flist))
+            initshape=tuple(initshape) # 3D, ens x time x space
+            rshape=None
+        elif len(tmp.shape)==1:
+            initshape = (len(flist),tmp.shape[0])
+            rshape=None
+
+        fldret = np.zeros(initshape)
+        print fldret.shape # @@@
+    else:
+        print 'return type not supported!! @@@'
+        return -1
 
     numens = len(flist)
     #fldall = np.zeros(numens)
     #dlist=[]
     
-    for fname in flist:
+    for eii,fname in enumerate(flist):
         
         if seas==None:
             # don't average, return all months
             fld = cnc.getNCvar(fname,ncfield,timesel=timesel)
-            n0,n1,n2=fld.shape
+            
             
             # do calcs:
             if calctype!=None:
                 print 'calcs not implemented yet!! @@@'
 
-            fldseas=fld.reshape((n0,n1*n2))
+            if rettype=='ndarray':
+                fldseas=fld.reshape(rshape)
+            else:
+                if len(fld.shape)!=3:
+                    print 'load LE will with rettype dict will break if dim of var is not 3 @@@'
+                    return -1
+
+                n0,n1,n2=fld.shape
+                fldseas=fld.reshape((n0,n1*n2)) # flattening
             
         else:
             fldseas={}
@@ -56,11 +102,15 @@ def load_LEdata(fielddict, ens,seas=None, timesel=None,infodict=None,ftype='full
                 
                 fldseas[sea]=fld
             
-        flddt[fname]= pd.DataFrame(fldseas,index=timedim)
+        if rettype=='dict':
+            fldret[fname]= pd.DataFrame(fldseas,index=timedim)
+        elif rettype=='ndarray':
+            fldret[eii,...] = fldseas
+
         #dlist.append(fldseas)
 
         
-    return flddt # dict of dataframes
+    return fldret
 
 
 def build_filenames(fielddict, ens, ftype='fullts'):
