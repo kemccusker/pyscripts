@@ -50,6 +50,22 @@ def get_basepath():
 
     return bp
 
+def get_LEbasepath(model='CanESM2'):
+
+    bp={}
+    
+    plat = platform.system()   
+    if plat == 'Darwin':  # means I'm on my mac
+        bp['basepath'] = '/Volumes/MyPassport2TB/DATA/CanSISE/' + model + '/LE/'
+        bp['subdir'] = ''
+
+    else:  # on linux workstation in Vic
+        bp['basepath'] = '/ra40/data/kem/CanSISE/' + model + '/LE/'
+        bp['subdir'] = ''
+
+    return bp
+
+
 def get_BCbasepath():
     """ get_basepath():
            returns path to data, depending on what machine we're running on
