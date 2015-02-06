@@ -8,7 +8,12 @@ import loadLE as le
 
 le=reload(le)
 
-fdict = {'field': 'uaZM', 'ncfield': 'ua', 'comp': 'Amon'}
+field='taZM'; ncfield='ta'; cmin=-2; cmax=2; cminz=-0.5; cmaxz=0.5
+#field='uaZM'; ncfield='ua'; cmin=-2; cmax=2; cminz=-0.5; cmaxz=0.5
+
+printtofile=True
+
+fdict = {'field': field, 'ncfield': ncfield, 'comp': 'Amon'}
 
 # Agung: Feb. 1963
 # Chichon: Apr 1982
@@ -35,7 +40,7 @@ timselpinatubo = '1991-01-01,1993-12-31'; pistidx=6
 
 # Need to remove each run's annual cycle
 natclimo = le.load_LEdata(fdict,'historicalNat',ftype='1950-2020_climo',rettype='ndarray')
-histclimo = le.load_LEdata(fdict,'historical',ftype='1950-2020_climo',rettype='ndarray')
+#histclimo = le.load_LEdata(fdict,'historical',ftype='1950-2020_climo',rettype='ndarray')
 
 agungdat=le.load_LEdata(fdict,'historicalNat',timesel=timselagung, rettype='ndarray')
 chichondat=le.load_LEdata(fdict,'historicalNat',timesel=timselchichon, rettype='ndarray')
@@ -138,9 +143,8 @@ pcomp = pcomptime[pislice,...].mean(axis=0)
 
 # #######plotting #####################
 
-field=fdict['field']
 levlim=10
-cmin=-2; cmax=2
+
 
 fig,axs=plt.subplots(1,3)
 fig.set_size_inches(13,6)
@@ -168,11 +172,10 @@ if printtofile:
 
 
 # zoom in
-cmin=-0.5; cmax=0.5
 
 fig,ax=plt.subplots(1,1)
 #fig.set_size_inches(12,6)
-cplt.vert_plot((acomp+ccomp+pcomp)/3.,lev,lat,axis=ax,cmin=cmin,cmax=cmax,
+cplt.vert_plot((acomp+ccomp+pcomp)/3.,lev,lat,axis=ax,cmin=cminz,cmax=cmaxz,
                title='volc composite',levlim=100,addcontlines=True)
 ax.set_xlim(-30,30)
 if printtofile:
