@@ -2177,45 +2177,45 @@ def plot_uncertainty_cascade(dblob,fielddict,coords,sims,pparams,info=None,seas=
         print 'lev2: ' + str(lev2) + ', lev3: ' + str(lev3)
         cplt.plot_onecascade(lev2,lev3,y2,y3,ax=ax,color=col,pvalst=lev2pv,pvalsb=lev3pv)
 
-        ## if ensname=='histBC':
-        ##     # add obs runs to levels 2 and 3
-        ##     had=dblob['diff']['HAD'][seas[0]]
-        ##     hadpv=dblob['pval']['HAD'][seas[0]]
-        ##     nsidc=dblob['diff']['NSIDC'][seas[0]]
-        ##     nsidcpv=dblob['pval']['NSIDC'][seas[0]]
+        if ensname=='histBC':
+            # add obs runs to levels 2 and 3
+            ## had=dblob['diff']['HAD'][seas[0]]
+            ## hadpv=dblob['pval']['HAD'][seas[0]]
+            nsidc=dblob['diff']['NSIDC'][seas[0]]
+            nsidcpv=dblob['pval']['NSIDC'][seas[0]]
 
-        ##     lev2 = (had.mean(),)
-        ##     lev2pv = (hadpv,)
+            ## lev2 = (had.mean(),)
+            ## lev2pv = (hadpv,)
 
-        ##     lenh=len(had)
-        ##     hhalf1 = had[:lenh/2.]
-        ##     hhalf2 = had[lenh/2.:]
+            ## lenh=len(had)
+            ## hhalf1 = had[:lenh/2.]
+            ## hhalf2 = had[lenh/2.:]
 
-        ##     lenn=len(nsidc)
-        ##     nhalf1 = nsidc[:lenn/2.]
-        ##     nhalf2 = nsidc[lenn/2.:]
-        ##     lev3=((hhalf1.mean(),hhalf2.mean()), )
+            lenn=len(nsidc)
+            nhalf1 = nsidc[:lenn/2.]
+            nhalf2 = nsidc[lenn/2.:]
+            lev3=((nhalf1.mean(),nhalf2.mean()), )
 
-        ##     # calc significance on the halves
-        ##     hadc = dblob['ctl']['HAD'][seas[0]]
-        ##     hadp = dblob['pert']['HAD'][seas[0]]
-        ##     (a,hpv1,b,c) = cutl.calc_pvals(hadp[:lenh/2.],hadc[:lenh/2.],effdof=effdof)
-        ##     (a,hpv2,b,c) = cutl.calc_pvals(hadp[lenh/2.:],hadc[lenh/2.:],effdof=effdof)
+            # calc significance on the halves
+            ## hadc = dblob['ctl']['HAD'][seas[0]]
+            ## hadp = dblob['pert']['HAD'][seas[0]]
+            ## (a,hpv1,b,c) = cutl.calc_pvals(hadp[:lenh/2.],hadc[:lenh/2.],effdof=effdof)
+            ## (a,hpv2,b,c) = cutl.calc_pvals(hadp[lenh/2.:],hadc[lenh/2.:],effdof=effdof)
 
-        ##     nsidcc = dblob['ctl']['NSIDC'][seas[0]]
-        ##     nsidcp = dblob['pert']['NSIDC'][seas[0]]
-        ##     (a,npv1,b,c) = cutl.calc_pvals(nsidcp[:lenh/2.],nsidcc[:lenh/2.],effdof=effdof)
-        ##     (a,npv2,b,c) = cutl.calc_pvals(nsidcp[lenh/2.:],nsidcc[lenh/2.:],effdof=effdof)
-        ##     lev3pv = ((hpv1,hpv2),)
+            nsidcc = dblob['ctl']['NSIDC'][seas[0]]
+            nsidcp = dblob['pert']['NSIDC'][seas[0]]
+            (a,npv1,b,c) = cutl.calc_pvals(nsidcp[:lenn/2.],nsidcc[:lenn/2.],effdof=effdof)
+            (a,npv2,b,c) = cutl.calc_pvals(nsidcp[lenn/2.:],nsidcc[lenn/2.:],effdof=effdof)
+            lev3pv = ((npv1,npv2),)
             
-        ##     cplt.plot_onecascade(lev2,lev3,y2,y3,ax=ax,color='b',pvalst=lev2pv,pvalsb=lev3pv)
+            cplt.plot_onecascade(lev2,lev3,y2,y3,ax=ax,color='b',pvalst=lev2pv,pvalsb=lev3pv)
 
-        ##     lev2 = (nsidc.mean(),)
-        ##     lev2pv = (nsidcpv,)
-        ##     lev3 = ( (nhalf1.mean(),nhalf2.mean()), )
-        ##     lev3pv = ((npv1,npv2), )
+            lev2 = (nsidc.mean(),)
+            lev2pv = (nsidcpv,)
+            lev3 = ( (nhalf1.mean(),nhalf2.mean()), )
+            lev3pv = ((npv1,npv2), )
             
-        ##     cplt.plot_onecascade(lev2,lev3,y2,y3,ax=ax,color='g',pvalst=lev2pv,pvalsb=lev3pv)
+            cplt.plot_onecascade(lev2,lev3,y2,y3,ax=ax,color='g',pvalst=lev2pv,pvalsb=lev3pv)
 
 
         starty=starty-3
