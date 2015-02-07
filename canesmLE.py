@@ -173,7 +173,7 @@ mh = cplt.kemmap(trndmean*nt,lat,lon,cmin=cmin,cmax=cmax,title='LE mean trend ' 
 # Use files that already have SIE or SIA calculated ======= 1/6/2015
 # ==================== plot NH sea ice area ======================== 
 field='sianh'; comp='OImon'; 
-season='SO'
+season='ND'
 # if season is set to just September (9), I get an error:
 # ValueError: Big-endian buffer not supported on little-endian compiler
 #   I suspect that the hadisst file is the opposite endian to what my python install is on:
@@ -413,6 +413,7 @@ import matplotlib.lines as mlines
 #http://matplotlib.org/users/legend_guide.html#proxy-legend-handles
 
 # # # PAPER ############
+printtofile=True
 ms = 7 # markersize
 deffs='none' # default fillstyle
 mew=1.5
@@ -470,18 +471,21 @@ nn=mlines.Line2D([],[],color='g',linestyle='none',marker='o',mec='g',mew=mew,mar
 ax.plot(plotx,ploty,marker='o',color='g',mec='g',fillstyle=fs,mew=mew,markersize=ms)
 #nn = ax.axvline(x=diffnsidc,ymin=.97,ymax=1,color='g',linewidth=3)
 
-plotx=diffhad
-idx=cutl.find_nearest(axx,plotx)
-ploty=apdf_fitted[idx]
-if hadpv<siglevel: #significant, fill the marker
-    fs='full'
-else:
-    fs=deffs # defaultfs
-hh=mlines.Line2D([],[],color='b',linestyle='none',marker='o',mec='b',mew=mew,markersize=ms,fillstyle=fs)
-ax.plot(plotx,ploty,marker='o',color='b',mec='b',fillstyle=fs,mew=mew,markersize=ms)
-#hh = ax.axvline(x=diffhad,ymin=.97,ymax=1,color='b',linewidth=3)
+## do not plot hadisst anymore
+## plotx=diffhad
+## idx=cutl.find_nearest(axx,plotx)
+## ploty=apdf_fitted[idx]
+## if hadpv<siglevel: #significant, fill the marker
+##     fs='full'
+## else:
+##     fs=deffs # defaultfs
+## hh=mlines.Line2D([],[],color='b',linestyle='none',marker='o',mec='b',mew=mew,markersize=ms,fillstyle=fs)
+## ax.plot(plotx,ploty,marker='o',color='b',mec='b',fillstyle=fs,mew=mew,markersize=ms)
+## #hh = ax.axvline(x=diffhad,ymin=.97,ymax=1,color='b',linewidth=3)
 
-ax.legend((nn,hh,tot,nat),('NSIDC','HadISST','Historical','HistoricalNat'),loc='upper left',frameon=False)
+## ax.legend((nn,hh,tot,nat),('NSIDC','HadISST','Historical','HistoricalNat'),loc='upper left',frameon=False)
+ax.legend((nn,tot,nat),('NSIDC','Historical','HistoricalNat'),loc='upper left',frameon=False)
+
 ## ax.annotate('NSIDC',xy=(diffnsidc-(diffnsidc*.05),axylims[1]-(axylims[1]*.07)),xycoords='data')#,rotation=45)
 
 ## tlaby = 0.94
@@ -511,11 +515,13 @@ if season == 'ND':
 else:
     ax.set_title('Arctic sea-ice area change (' + season + ')')
 if printtofile:
-    fig.savefig(field + 'diff_PDFHIST_CanESMLE_TOTNAT_' + str(season) + '_paper2d.pdf')
+    fig.savefig(field + 'diff_PDFHIST_CanESMLE_TOTNAT_' + str(season) + '_paper2e.pdf')
+    ax.set_rasterized(True)
+    fig.savefig(field + 'diff_PDFHIST_CanESMLE_TOTNAT_' + str(season) + '_paper2e.eps')
 
 
 
-#printtofile=True
+printtofile=False
 fig,ax=plt.subplots(1,1)
 plt.title(field + ' anom ' + str(season))
 tot=ax.plot(axx,apdf_fitted,color=ccm.get_linecolor('firebrick'),linewidth=2)

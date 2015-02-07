@@ -29,7 +29,7 @@ plt.ion()
 
 printtofile=True
 
-field = 'pmsl'
+field = 'st'
 smclim=True
 level=50000 # for threed
 
@@ -41,11 +41,11 @@ field2='gz'
 level2=50000
 
 # seasonalmap, seasonalvert, plotzonmean, plotseacyc, pattcorrwithtime, plotregmean,calcregmeanwithtime, calcregunccascade,timetosig, timetosigsuper, plotscatter
-plottype='seasonalmap' 
+plottype='calcregunccascade' 
 projtype='eastere' #'eastere' # 'nh','sh','sq','eastere','nastere'
 
 # None, nh, polcap60, polcap65, polcap70, eurasia, eurasiamori, eurasiasth,eurasiathin,eurasiathinw,eurasiathine,ntham, nthatl, bks, bksmori, soo
-region='eurasia' #'eurasia' #'eurasiamori'
+region='polcap60' #'eurasia' #'eurasiamori'
 screen=True # just for seasonalvert
 seacyclatlim=60
 withlat=False
@@ -71,16 +71,16 @@ allens=False # this is ONLY the ensemble means, plus superensemble
 sensruns=False # sensruns only: addr4ct=1,addsens=1. others=0 no meanBC, r mean, or obs
 ivar=False # this will show ENS (TOT) and ENSE (ANTH) and their difference = internal var
 simsforpaper=False # ANT, TOT, HAD, NSIDC only. best for maps and zonal mean figs (not line plots)
-simsforpaperwace=True
+simsforpaperwace=False # Just R1,R5 (warm/cold Eurasia) or whatever it's set to below.
 antcat=False # this is the concatenation of ens members within each ensemble (really only useful for ANT)
 bothcat=False # can do concatenation of both ensembles if want to. These are useful for timetosig
 onlyens=False # just do ensemble means ANT and TOT
 
-addobs=False # add mean of kemhad* & kemnsidc* runs to line plots, seasonal maps. 
+addobs=True # add mean of kemhad* & kemnsidc* runs to line plots, seasonal maps. 
 addr4ct=False # add kem1pert2r4ct (constant thickness version of ens4)
 addsens=False # add sensitivity runs (kem1pert1b, kem1pert3)
 addrcp=False # add kem1rcp85a simulation (and others if we do more)
-addcanens=False # add "initial condition" ensemble of kemctl1/kem1pert2
+addcanens=True # add "initial condition" ensemble of kemctl1/kem1pert2
 addsuper=False # add superensemble mean
 
 
@@ -165,10 +165,10 @@ if simsforpaper: # best for maps only
     
 elif simsforpaperwace:
     
-    #print '@@@ simsforpaperwace is WACE paper -- ND cold and warm extremes, R1, R5 only'
-    #savestr = '_forpapwace'; sims = ('R1','R5'); seasons=('ND',); figtrans=True # 95% stat sig
-    print '@@@ simsforpaperwace is WACE paper -- ND ENSEMBLE MEANS ONLY'
-    savestr = '_forpapwace_ensmean'; sims = ('ENS','ENSE'); seasons=('ND',); figtrans=True # 95% stat sig
+    print '@@@ simsforpaperwace is WACE paper -- ND cold and warm extremes, R1, R5 only'
+    savestr = '_forpapwace'; sims = ('R1','R5'); seasons=('ND',); figtrans=True # 95% stat sig
+    #print '@@@ simsforpaperwace is WACE paper -- ND ENSEMBLE MEANS ONLY'
+    #savestr = '_forpapwace_ensmean'; sims = ('ENS','ENSE'); seasons=('ND',); figtrans=True # 95% stat sig
     
     #print '@@@ simsforpaper is WACE B paper right now -- ND cold and warm extremes, E4, E1 only'
     #savestr = '_forpapwaceb'; sims = ('E4','E1'); seasons=('ND',); figtrans=False # 90% stat sig
@@ -762,8 +762,10 @@ if plottype in ('seasonalmap','seasonalvert'):
         thefig.suptitle('')
         if addcont:
             thefig.savefig('wacefigure3_' + field + '_' + field2 + 'cont_trans_' + prstr + '.pdf')
+            thefig.savefig('wacefigure3_' + field + '_' + field2 + 'cont_trans_' + prstr + '.eps')
         else:
             thefig.savefig('wacefigure3_' + field + '_trans_' + prstr + '.pdf')
+            thefig.savefig('wacefigure3_' + field + '_trans_' + prstr + '.eps')
         
         
     
@@ -848,7 +850,7 @@ if plottype=='calcregmeanwithtime' or plottype=='calcregunccascade' or plottype=
                               loctimesel=timesel,info=infodict,calctype='regmeanwithtime',
                               effdof=effdof)
 
-    infodict['region'] = 'eurasiathin'
+    infodict['region'] = 'eurasia'
     dblob2 = sfnc.calc_seasons(fdict,coords,sims,seas=seasons,
                                loctimesel=timesel,info=infodict,calctype='regmeanwithtime',
                                effdof=effdof)
@@ -916,7 +918,8 @@ if plottype=='calcregmeanwithtime' or plottype=='calcregunccascade' or plottype=
                 if effdof:
                     fig.savefig(field + '_' + region + '_' + seas[0] + '_unccascade3_effdofobs.pdf')
                 else:
-                    fig.savefig(field + '_polcap60' + rg2 + '_' + seas[0] + '_unccascade6ann.pdf')
+                    fig.savefig(field + '_polcap60' + rg2 + '_' + seas[0] + '_unccascade7ann.pdf')
+                    fig.savefig(field + '_polcap60' + rg2 + '_' + seas[0] + '_unccascade7ann.eps')
 
     elif plottype=='calccomposites':
 

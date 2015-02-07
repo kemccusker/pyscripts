@@ -26,11 +26,11 @@ plotscatter=True
 # field1 is x
 #field1='st'; ncfield1='ST'
 #field1='sia'; ncfield1='SICN'
-#field1='gz50000'; ncfield1='PHI'; conv1=1/con.get_g()
+field1='gz50000'; ncfield1='PHI'; conv1=1/con.get_g()
 #field1='pmsl'; ncfield1='PMSL'
-field1='net'; 
+#field1='net'; 
 
-region1='polcap60' #'polcap65'
+region1='bksmori' #'polcap65'
 sea1='ND' #'DJF'
 
 # field2 is y
@@ -38,7 +38,7 @@ field2='st'; ncfield2='ST'
 #field2='sia'; ncfield2='SICN'
 #field2='pmsl'; ncfield2='PMSL'
 #field2='gz50000'; ncfield2='PHI'; conv2=1/con.get_g()
-region2= 'polcap60' #'eurasiamori'
+region2= 'eurasia'
 sea2='ND' #'DJF'
 
 sims = ('E1','E2','E3','E4','E5','R1','R2','R3','R4','R5','HAD','NSIDC','ENS','ENSE')
@@ -413,7 +413,7 @@ if plotscatter:
     #sube = df.loc[0,['E1','E2','E3','E4','E5']]
     firebrick=ccm.get_linecolor('firebrick')
 
-    printtofile=False
+    printtofile=True
     fig,ax = plt.subplots(1)
     fig.set_size_inches(6,5)
     rr = plt.scatter(df.filter(regex='R').values[0],df.filter(regex='R').values[1],
@@ -461,8 +461,10 @@ if plotscatter:
     if printtofile:
         fig.savefig('scatterregress_' + field1 + region1 + str(sea1) + '_v_' +
                     field2 + region2 + str(sea2) + 'wacepap.pdf')
+        fig.savefig('scatterregress_' + field1 + region1 + str(sea1) + '_v_' +
+                    field2 + region2 + str(sea2) + 'wacepap.eps')
 
-    #printtofile=False
+    printtofile=False
 
     # #######################################
 
