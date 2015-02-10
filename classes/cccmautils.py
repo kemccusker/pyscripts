@@ -400,6 +400,8 @@ def calc_cellareas(lat,lon, repeat=None):
         lat_bounds = np.array([(lat[1:] + lat[0:-1])/2.])
         
 #    lat_bounds = np.array([(lat[1:nlat] + lat[0:(nlat-1)]) / 2])
+    print lat_bounds
+
     lat_bounds = np.insert(lat_bounds,0,-90)
     lat_bounds = np.append(lat_bounds,90)
 
