@@ -34,9 +34,13 @@ def get_NCtimecal(filename,field='time'):
     ncfile = openNC(filename)
     time_nc=ncfile.variables[field]
 
-    return time_nc.calendar
+    if 'calendar' not in time_nc.ncattrs():
+        print 'NO CALENDAR in time variable @@@. Default to 365_day'
+        return '365_day'
+    else:
+        return time_nc.calendar
 
-def NCtime2date(thetimes,timeunit,timecal):
+def NCtime2date(thetimes,timeunit,timecal='365_day'):
 
     thedates = num2date(thetimes,timeunit,timecal)
 
