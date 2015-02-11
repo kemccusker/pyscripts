@@ -400,12 +400,13 @@ def calc_cellareas(lat,lon, repeat=None):
         lat_bounds = np.array([(lat[1:] + lat[0:-1])/2.])
         
 #    lat_bounds = np.array([(lat[1:nlat] + lat[0:(nlat-1)]) / 2])
-    print lat_bounds
+    #print lat_bounds # @@
 
     lat_bounds = np.insert(lat_bounds,0,-90)
     lat_bounds = np.append(lat_bounds,90)
 
     del_phi = np.sin(lat_bounds[1:]*deg2rad) - np.sin(lat_bounds[0:-1]*deg2rad)
+    #print del_phi # @@
     
     # convert latcircle radians to latcircle areas and
     # divide by number of longitudes to get area of each cell
