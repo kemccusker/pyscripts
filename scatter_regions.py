@@ -31,7 +31,7 @@ field1='gz50000'; ncfield1='PHI'; conv1=1/con.get_g()
 #field1='net'; 
 
 region1='bksmori' #'polcap65'
-sea1='ND' #'DJF'
+sea1='DJF' #'ND' #'DJF'
 
 # field2 is y
 field2='st'; ncfield2='ST'
@@ -39,7 +39,7 @@ field2='st'; ncfield2='ST'
 #field2='pmsl'; ncfield2='PMSL'
 #field2='gz50000'; ncfield2='PHI'; conv2=1/con.get_g()
 region2= 'eurasia'
-sea2='ND' #'DJF'
+sea2='DJF' #'ND' #'DJF'
 
 sims = ('E1','E2','E3','E4','E5','R1','R2','R3','R4','R5','HAD','NSIDC','ENS','ENSE')
 TOT = ('R1','R2','R3','R4','R5')
@@ -435,15 +435,20 @@ if plotscatter:
     plt.legend((rr,ee),('Individual SIC forcings','Average SIC forcing'),
                loc='best',fancybox=True,framealpha=0.5)#,frameon=False)
 
-    if sea1 == 'ND' and sea2=='ND' and region1=='bksmori' and region2 in ('eurasia','eurasiathin','eurasiamori'):
+    if sea1 in ('ND','DJF') and sea2 in ('ND','DJF') and region1=='bksmori' and region2 in ('eurasia','eurasiathin','eurasiamori'):
         # PAPER FIG!
-        xlab = '$\Delta$ Nov-Dec Barents-Kara Seas'
+        if sea1 == sea2 == 'DJF':
+            monlab = 'Dec-Jan-Feb'
+        else:
+            monlab = 'Nov-Dec'
+
+        xlab = '$\Delta$ ' + monlab + ' Barents-Kara Seas'
         if field1=='pmsl':
             xlab = xlab + ' SLP (hPa)'
         else:
             xlab = xlab + ' Z500 (m)'
 
-        ylab = '$\Delta$ Nov-Dec Eurasian SAT ($^\circ$C)'
+        ylab = '$\Delta$ ' + monlab + ' Eurasian SAT ($^\circ$C)'
         
     else:
         xlab = str(sea1) + ' ' + field1 + ' ' + region1
