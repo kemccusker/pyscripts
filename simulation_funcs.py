@@ -2061,7 +2061,7 @@ def plot_seasonal_maps(dblob,fielddict,coords,sims,pparams,plottype='diff',vert=
 
 
 def plot_uncertainty_cascade(dblob,fielddict,coords,sims,pparams,info=None,seas=None,ax=None,
-                             xlab=None,annlab=None,annloc=(0.1,0.95),color=None,effdof=False,printtofile=False):
+                             xlab=None,annlab=None,annloc=(0.1,0.95),color=None,effdof=False,printtofile=False,xlims=None):
     """ This function should produce a cascade whereby each row of points is connected to
         the previous (higher up on y axis) number of points by straight lines. A la Hawkins
 
@@ -2219,6 +2219,9 @@ def plot_uncertainty_cascade(dblob,fielddict,coords,sims,pparams,info=None,seas=
 
 
         starty=starty-3
+
+    if xlims!=None:
+        ax.set_xlim(xlims)
 
     ax.set_xticklabels(ax.get_xticks(), fontProperties)
     #ax.set_yticklabels(ax.get_yticks(), fontProperties)
