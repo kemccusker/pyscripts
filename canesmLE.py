@@ -21,7 +21,8 @@ field='sic'; comp='OImon'; cmin=-3e11; cmax=3e11;cmap='red2blue_w20'
 reg2=True # if sea ice, include southern hem? if other, include regional mean?
 region= 'etroppac'
 
-sea='ANN'
+sea='DJF'
+siglevel=0.1 #0.05
 timesel=None
 timesel2 = '2002-01-01,2012-12-31'
 superii=0
@@ -173,7 +174,7 @@ mh = cplt.kemmap(trndmean*nt,lat,lon,cmin=cmin,cmax=cmax,title='LE mean trend ' 
 # Use files that already have SIE or SIA calculated ======= 1/6/2015
 # ==================== plot NH sea ice area ======================== 
 field='sianh'; comp='OImon'; 
-season='ND'
+season='DJF' #'ND'
 # if season is set to just September (9), I get an error:
 # ValueError: Big-endian buffer not supported on little-endian compiler
 #   I suspect that the hadisst file is the opposite endian to what my python install is on:
@@ -228,6 +229,8 @@ subdir='HadISST/'
 hadfile=basedir + subdir + 'hadisst1.1_bc_128_64_1870_2013m03_' + field + '_1870010100-2013030100.nc'
 hadsel='1950-01-01,2012-12-31'
 hadyrs=np.arange(1950,2013)
+if sea=='DJF':
+    hadyrs=hadyrs[:-1]
 hadfld=cnc.getNCvar(hadfile,field,timesel=hadsel,seas=season)
 haddf = pd.Series(hadfld,index=hadyrs)
 pasthad = haddf.loc[subyrs]
@@ -239,6 +242,8 @@ subdir='NSIDC/'
 nsidcfile = basedir + subdir + 'nsidc_bt_128x64_1978m11_2011m12_' + field + '_1978111600-2011121612.nc'
 nsidcsel='1979-01-01,2011-12-31'
 nsidcyrs=np.arange(1979,2012)
+if sea=='DJF':
+    nsidcyrs=nsidcyrs[:-1]
 nsidcfld=cnc.getNCvar(nsidcfile,field,timesel=nsidcsel,seas=season)
 nsidcdf=pd.Series(nsidcfld,index=nsidcyrs)
 pastnsidc = nsidcdf.loc[subyrs]
@@ -253,6 +258,8 @@ ensnum=5
 basedir='/home/rkm/work/DATA/CanESM2/' + casename
 origsel='1950-01-01,2012-12-31'
 origyrs = np.arange(1950,2013)
+if sea=='DJF':
+    origyrs=origyrs[:-1]
 
 origdt={}
 for eii in np.arange(1,ensnum+1):
@@ -512,6 +519,8 @@ ax.set_xticklabels(xt/np.float(1e12))
 ax.grid('off')
 if season == 'ND':
     ax.set_title('Arctic sea-ice area change (Nov-Dec)')
+elif season == 'DJF':
+    ax.set_title('Arctic sea-ice area change (Dec-Jan-Feb)')
 else:
     ax.set_title('Arctic sea-ice area change (' + season + ')')
 if printtofile:
