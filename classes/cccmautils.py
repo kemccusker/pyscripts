@@ -190,7 +190,7 @@ def global_mean_areawgted3d(fld, lat, lon):
     cellareas = calc_cellareas(lat,lon)
 
     nt = fld.shape[0]
-    wgts = cellareas/totalarea
+    wgts = cellareas/np.float(totalarea)
     
     gm = np.zeros(nt)    
     for tidx in range(0,nt):
@@ -198,6 +198,19 @@ def global_mean_areawgted3d(fld, lat, lon):
         
     return gm
    
+def global_mean_areawgted(fld, lat, lon):
+
+    earthrad = con.get_earthrad()
+    totalarea = 4*np.pi*earthrad**2
+
+    cellareas = calc_cellareas(lat,lon)
+
+    #nt = fld.shape[0]
+    wgts = cellareas/np.float(totalarea)
+    
+    gm = ma.average(fld,weights=wgts)
+        
+    return gm
 
 def polar_mean_areawgted3d(fld,lat,lon,latlim=60,hem='nh',cellareas=None,includenan=False):
     """ Pass in cellareas if you want some of the cells masked, e.g. if masking ocean or land.
@@ -268,11 +281,11 @@ def annualize_monthlyts(input, includenan=0):
 
     #yidx=0
     counter=0
-    annts = np.zeros(diml2)
+    annts = ma.zeros(diml2)
     
     # Loop through 12-month chunks
     for yidx in range(0, nyrs):
-        annts[yidx,...] = np.average(input[counter:counter+12,...],axis=0,weights=wgts)
+        annts[yidx,...] = ma.average(input[counter:counter+12,...],axis=0,weights=wgts)
         counter = counter+12
 
     return annts
@@ -306,7 +319,7 @@ def seasonalize_monthlyts(input,season=None,includenan=0,mo=0,climo=0):
         
         if climo==1:
             subwgts = wgts[[0,1,11]]
-            seasts = np.average(input[[0,1,11],...],weights=subwgts,axis=0)
+            seasts = ma.average(input[[0,1,11],...],weights=subwgts,axis=0)
             return seasts
 
         subwgts = wgts[[0,1,11]] 
@@ -318,7 +331,7 @@ def seasonalize_monthlyts(input,season=None,includenan=0,mo=0,climo=0):
     elif season=='NDJ':
         if climo==1:
             subwgts = wgts[[0,10,11]]
-            seasts = np.average(input[[0,10,11],...],weights=subwgts,axis=0)
+            seasts = ma.average(input[[0,10,11],...],weights=subwgts,axis=0)
             return seasts
         
         subwgts = wgts[[0,10,11]]
@@ -363,12 +376,12 @@ def seasonalize_monthlyts(input,season=None,includenan=0,mo=0,climo=0):
         diml2 = nyrs,
 
 
-    seasts = np.zeros(diml2)
+    seasts = ma.zeros(diml2)
     #print subwgts.shape
     
     for yridx in range(0,nyrs):
         subsamp = range(start+yridx*12,start+yridx*12+incr)
-        seasts[yridx,...] = np.average(input[subsamp,...],weights=subwgts,axis=0)        
+        seasts[yridx,...] = ma.average(input[subsamp,...],weights=subwgts,axis=0)        
     # @@ implement includenan? If set = 1, then the mean will not ignore a NaN
     #    such that if a NaN is present, the mean is NaN
     
