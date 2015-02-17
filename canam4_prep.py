@@ -33,10 +33,11 @@ field = 'st'
 smclim=True
 level=50000 # for threed
 
-addcont=True # overlay map with contours
+addcont=False # overlay map with contours
 sigoff=True # if True, don't add significance
 effdof=False # use effective deg of freedom or no. Set to False.
-field2='gz'
+field2='sicn'
+#field2='gz'
 #field2='pmsl'
 level2=50000
 
@@ -722,6 +723,14 @@ if plottype in ('seasonalmap','seasonalvert'):
 
     if simsforpaperwace:
         # here I will adjust the figure for the WACE paper
+
+        if field2=='sicn':
+            fdict2,pparams2=ld.loadfldmeta(field2,infodict,plottype,ptparams,level=level2)
+            dblob2 = sfnc.calc_seasons(fdict2,coords,sims,seas=seasons,loctimesel=timesel,info=infodict,effdof=effdof)
+
+            # @@@@@ ADD SICN 15% (or all?) contours here (make them nice: thick and light colored over the dark red)
+
+
         if figtrans:
             if projtype in ('eastere',):
                 thefig.set_size_inches((5,8))
