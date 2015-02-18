@@ -11,14 +11,17 @@ le=reload(le)
 plt.close('all')
 
 # regular zonal mean anomaly lims, zoom lims, and climo lims
-field='taZM'; ncfield='ta'; cmin=-2; cmax=2; cminz=-0.5; cmaxz=0.5; cminc=-60+273; cmaxc=40+273
+#field='taZM'; ncfield='ta'; cmin=-2; cmax=2; cminz=-0.5; cmaxz=0.5; cminc=-60+273; cmaxc=40+273
+field='taZMpac'; ncfield='ta'; cmin=-2; cmax=2; cminz=-0.5; cmaxz=0.5; cminc=-60+273; cmaxc=40+273
 #field='uaZM'; ncfield='ua'; cmin=-2; cmax=2; cminz=-0.5; cmaxz=0.5; cminc=-40; cmaxc=40
+#field='uaZMpac'; ncfield='ua'; cmin=-2; cmax=2; cminz=-1; cmaxz=1; cminc=-40; cmaxc=40
+
 
 printtofile=True
 
 fdict = {'field': field, 'ncfield': ncfield, 'comp': 'Amon'}
 offset=5
-duration=9
+duration=3
 troplims=(-10,10)
 
 # Agung: Feb. 1963
@@ -40,7 +43,7 @@ timselpinatubo = '1990-01-01,1996-12-31'; pistidx=18; pieridx=6
 
 # Need to remove each run's annual cycle: get seasonal cycle climo
 natclimo = le.load_LEdata(fdict,'historicalNat',ftype='1950-2020_climo',rettype='ndarray')
-histclimo = le.load_LEdata(fdict,'historical',ftype='1950-2020_climo',rettype='ndarray')
+#@@@histclimo = le.load_LEdata(fdict,'historical',ftype='1950-2020_climo',rettype='ndarray')
 
 # Get months surrounding each volcano
 agungdat=le.load_LEdata(fdict,'historicalNat',timesel=timselagung, rettype='ndarray')
