@@ -60,7 +60,7 @@ def get_LEbasepath(model='CanESM2'):
         bp['subdir'] = ''
 
     else:  # on linux workstation in Vic
-        bp['basepath'] = '/ra40/data/kem/CanSISE/' + model + '/LE/'
+        bp['basepath'] = '/raid/ra40/data/kem/CanSISE/' + model + '/LE/'
         bp['subdir'] = ''
 
     return bp
