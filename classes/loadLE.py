@@ -13,7 +13,8 @@ ensnum=10
 
 #  Make this a class! CanESM2LE
 
-def load_LEdata(fielddict, ens, seas=None, timesel=None,infodict=None,ftype='fullts',calctype=None, calcdict=None, rettype='dict'):
+def load_LEdata(fielddict, ens, seas=None, timesel=None,infodict=None,ftype='fullts',
+                calctype=None, calcdict=None, rettype='dict',conv=1):
     """ def loadLEdata(fielddict, seas=('DJF','MAM','JJA','SON'), timesel=None, infodict=None, calctype=None, calcdict=None)
 
             ftype: type of filename to build. Right now just 'fullts' for full timeseries
@@ -39,7 +40,7 @@ def load_LEdata(fielddict, ens, seas=None, timesel=None,infodict=None,ftype='ful
     if rettype=='dict':
         fldret={}
     elif rettype=='ndarray':
-        tmp = cnc.getNCvar(fname1,ncfield,timesel=timesel)
+        tmp = cnc.getNCvar(fname1,ncfield,timesel=timesel)*conv
 
         if len(tmp.shape)>3:
             print '4D variable not supported! @@@@'
@@ -74,7 +75,7 @@ def load_LEdata(fielddict, ens, seas=None, timesel=None,infodict=None,ftype='ful
         
         if seas==None:
             # don't average, return all months
-            fld = cnc.getNCvar(fname,ncfield,timesel=timesel)
+            fld = cnc.getNCvar(fname,ncfield,timesel=timesel)*conv
             
             
             # do calcs:
@@ -94,7 +95,7 @@ def load_LEdata(fielddict, ens, seas=None, timesel=None,infodict=None,ftype='ful
         else:
             fldseas={}
             for sea in seas:
-                fld = cnc.getNCvar(fname,ncfield,timesel=timesel,seas=sea)
+                fld = cnc.getNCvar(fname,ncfield,timesel=timesel,seas=sea)*conv
 
                 # do calcs
                 if calctype!=None:
