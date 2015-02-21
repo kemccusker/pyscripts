@@ -3,52 +3,69 @@ import pandas as pd
 import cccmaplots as cplt
 import datetime as datetime
 from netCDF4 import num2date
-
+import sys
 import loadLE as le
 
 le=reload(le)
 
 plt.close('all')
+conv=1
+# @@@ create a gif animation: convert -delay 10 -loop 0 *.png volcevo.gif
 
 # regular zonal mean anomaly lims, zoom lims, and climo lims
+cmint=-0.5; cmaxt=0.5 # height x time plots. good for ua, ta
+
 #field='taZM'; ncfield='ta'; cmin=-2; cmax=2; cminz=-0.5; cmaxz=0.5; cminc=-60+273; cmaxc=40+273
-field='taZMpac'; ncfield='ta'; cmin=-2; cmax=2; cminz=-0.5; cmaxz=0.5; cminc=-60+273; cmaxc=40+273
+#field='taZMpac'; ncfield='ta'; cmin=-2; cmax=2; cminz=-0.5; cmaxz=0.5; cminc=-60+273; cmaxc=40+273
 #field='uaZM'; ncfield='ua'; cmin=-2; cmax=2; cminz=-0.5; cmaxz=0.5; cminc=-40; cmaxc=40
 #field='uaZMpac'; ncfield='ua'; cmin=-2; cmax=2; cminz=-1; cmaxz=1; cminc=-40; cmaxc=40
-
+field='zmpsi'; ncfield='ZMPSI'; cmin=-.05; cmax=.05; cminz=-.05; cmaxz=.05; cminc=-1; cmaxc=1; cmint=-0.1; cmaxt=0.1; conv=1e-11
 
 printtofile=True
+eps=sys.float_info.epsilon
 
 fdict = {'field': field, 'ncfield': ncfield, 'comp': 'Amon'}
 offset=5
 duration=3
 troplims=(-10,10)
 
+if field=='zmpsi':
+    divby=5.0 # to calc increments in climo contours
+elif field=='uaZM':
+    divby=10.0
+else:
+    divby=15.0
+
+levels=np.arange(cminc,cmaxc+eps,(cmaxc-cminc)/divby) # 11 for uaZM
+levelsn=np.arange(cminc,0,(0-cminc)/divby)
+levelsp=np.arange(0,cmaxc+eps,(cmaxc-0)/divby)
+levelsp=levelsp[1:] # skip 0
+
 # Agung: Feb. 1963
 # Chichon: Apr 1982
-# Pinatubo: Jul 1991
+# Pinatubo: Jun 1991
 
 # These time selections start with month of eruption
 ## timselagung ='1963-02-01,1965-12-31'
 ## timselchichon = '1982-04-01,1984-12-31'
-## timselpinatubo = '1991-07-01,1993-12-31'
+## timselpinatubo = '1991-06-01,1993-12-31'
 
 # These time selections start with beginning of year of eruption
 #  (so can easily remove seasonal cycle)
 # index into time series for eruption month, and index of eruption month (in a year)
 timselagung ='1962-01-01,1968-12-31'; agstidx=13; ageridx=1 
 timselchichon = '1981-01-01,1987-12-31'; chstidx=15; cheridx=3
-timselpinatubo = '1990-01-01,1996-12-31'; pistidx=18; pieridx=6
+timselpinatubo = '1990-01-01,1996-12-31'; pistidx=17; pieridx=5
 
 
 # Need to remove each run's annual cycle: get seasonal cycle climo
-natclimo = le.load_LEdata(fdict,'historicalNat',ftype='1950-2020_climo',rettype='ndarray')
-#@@@histclimo = le.load_LEdata(fdict,'historical',ftype='1950-2020_climo',rettype='ndarray')
+natclimo = le.load_LEdata(fdict,'historicalNat',ftype='1950-2020_climo',rettype='ndarray',conv=conv)
+#@@@histclimo = le.load_LEdata(fdict,'historical',ftype='1950-2020_climo',rettype='ndarray',conv=conv)
 
 # Get months surrounding each volcano
-agungdat=le.load_LEdata(fdict,'historicalNat',timesel=timselagung, rettype='ndarray')
-chichondat=le.load_LEdata(fdict,'historicalNat',timesel=timselchichon, rettype='ndarray')
-pinatubodat=le.load_LEdata(fdict,'historicalNat',timesel=timselpinatubo, rettype='ndarray')
+agungdat=le.load_LEdata(fdict,'historicalNat',timesel=timselagung, rettype='ndarray',conv=conv)
+chichondat=le.load_LEdata(fdict,'historicalNat',timesel=timselchichon, rettype='ndarray',conv=conv)
+pinatubodat=le.load_LEdata(fdict,'historicalNat',timesel=timselpinatubo, rettype='ndarray',conv=conv)
 
 flist=le.build_filenames(fdict,'historicalNat',ftype='fullts')
 numens=len(flist)
@@ -74,7 +91,7 @@ nyr=ntime/12.
 #   for wind only
 
 
-def volcano_avg(volcdat,remclimo, eridx, coords,offset=5, duration=9):
+def volcano_avg(volcdat,remclimo, eridx, coords,offset=offset, duration=duration):
     """ volcano_comp(volcdat,remclimo):
             For each ensemble member, remove its climo sea cycle,
             then select months to average.
@@ -172,7 +189,11 @@ def volc_regevolution(volcdat,remclimo, eridx, coords,latlims):
 
 def plot_volcevolution(compev,lev,time,cmap='blue2red_20',cmin=None,cmax=None,axis=None,
                        addcontlines=False,levlim=100,suppylab=False,suppcb=False,title=''):
-
+    """ plot_volcevolution(compev,lev,time,cmap='blue2red_20',cmin=None,cmax=None,axis=None,
+                       addcontlines=False,levlim=100,suppylab=False,suppcb=False,title=''):
+             
+            Plot time x height figure
+    """
     fld=compev
     
     #fig,ax=plt.subplots(1,1)
@@ -240,23 +261,23 @@ def plot_volcevolution(compev,lev,time,cmap='blue2red_20',cmin=None,cmax=None,ax
 acompev = volc_regevolution(agungdat,natclimo,agstidx,(nlev,nlat),troplims)
 times=np.arange(0,acompev.shape[0])
 fig,ax=plt.subplots(1,1)
-plot_volcevolution(acompev.T,lev,times,cmin=-.5,cmax=.5,levlim=10,title='Agung',axis=ax)
+plot_volcevolution(acompev.T,lev,times,cmin=cmint,cmax=cmaxt,levlim=10,title='Agung',axis=ax)
 ax.axvline(x=12,color='k',linestyle='--',linewidth=1.5)
 
 ccompev = volc_regevolution(chichondat,natclimo,chstidx,(nlev,nlat),troplims)
 fig,ax=plt.subplots(1,1)
-plot_volcevolution(ccompev.T,lev,times,cmin=-.5,cmax=.5,levlim=10,title='Chichon',axis=ax)
+plot_volcevolution(ccompev.T,lev,times,cmin=cmint,cmax=cmaxt,levlim=10,title='Chichon',axis=ax)
 ax.axvline(x=12,color='k',linestyle='--',linewidth=1.5)
 
 pcompev = volc_regevolution(pinatubodat,natclimo,pistidx,(nlev,nlat),troplims)
 fig,ax=plt.subplots(1,1)
-plot_volcevolution(pcompev.T,lev,times,cmin=-.5,cmax=.5,levlim=10,title='Pinatubo',axis=ax)
+plot_volcevolution(pcompev.T,lev,times,cmin=cmint,cmax=cmaxt,levlim=10,title='Pinatubo',axis=ax)
 ax.axvline(x=12,color='k',linestyle='--',linewidth=1.5)
 
 fig,ax=plt.subplots(1,1)
 fig.set_size_inches(12,4)
 plot_volcevolution((acompev.T+ccompev.T+pcompev.T)/3.,lev,times,
-                   cmin=-.5,cmax=.5,levlim=10,title='Composite',axis=ax)
+                   cmin=cmint,cmax=cmaxt,levlim=10,title='Composite',axis=ax)
 ax.axvline(x=12,color='k',linestyle='--',linewidth=1.5)
 if printtofile:
     fig.savefig('volc_compositeintime_latlims' + str(troplims[0]) +'-' + str(troplims[1]) + '_' + field + '_' + '.pdf')
@@ -264,7 +285,7 @@ if printtofile:
 fig,ax=plt.subplots(1,1)
 fig.set_size_inches(12,4)
 plot_volcevolution((acompev.T+ccompev.T+pcompev.T)/3.,lev,times,
-                   cmin=-.5,cmax=.5,levlim=100,title='Composite',axis=ax)
+                   cmin=cmint,cmax=cmaxt,levlim=100,title='Composite',axis=ax)
 ax.axvline(x=12,color='k',linestyle='--',linewidth=1.5)
 if printtofile:
     fig.savefig('volc_compositeintime_latlims' + str(troplims[0]) +'-' + str(troplims[1]) + '_' + field + '_' + 'zoom.pdf')
@@ -290,7 +311,6 @@ pclim = np.reshape(pclim,(nlev,nlat))
 
 # #######plotting #####################
 
-levels=np.arange(cminc,cmaxc+1,(cmaxc-cminc)/11.0) # 11 for uaZM
 
 levlim=10
 suff='off' + str(offset) + 'dur' + str(duration) + 'mo'
@@ -304,17 +324,26 @@ fig.set_size_inches(13,6)
 ax=axs[0]
 cplt.vert_plot(acomp,lev,lat,axis=ax,cmin=cmin,cmax=cmax,title='Agung (Feb 1963)',suppcb=True,
                levlim=levlim,cmap='blue2red_20')
-ax.contour(levs,lats,aclim,colors='0.6',linewidths=2,levels=levels)
+#ax.contour(levs,lats,aclim,colors='0.6',linewidths=2,levels=levels)
+ax.contour(levs,lats,aclim,colors='0.6',linewidths=1.5,levels=levelsp)
+ax.contour(levs,lats,aclim,colors='0.6',linewidths=1.5,levels=levelsn,linestyles='--')
+if field=='zmpsi':
+    ax.set_yticks([1000,800,500,300,100])
+    ax.set_yticklabels((1000,800,500,300,100))
 
 ax=axs[1]
 cplt.vert_plot(ccomp,lev,lat,axis=ax,cmin=cmin,cmax=cmax,title='Chichon (Apr 1982)',suppcb=True,
                suppylab=True,levlim=levlim,cmap='blue2red_20')
-ax.contour(levs,lats,cclim,colors='0.6',linewidths=2,levels=levels)
+#ax.contour(levs,lats,cclim,colors='0.6',linewidths=2,levels=levels)
+ax.contour(levs,lats,cclim,colors='0.6',linewidths=1.5,levels=levelsp)
+ax.contour(levs,lats,cclim,colors='0.6',linewidths=1.5,levels=levelsn,linestyles='--')
 
 ax=axs[2]
-vp = cplt.vert_plot(pcomp,lev,lat,axis=ax,cmin=cmin,cmax=cmax,title='Pinatubo (Jul 1991)',suppcb=True,
+vp = cplt.vert_plot(pcomp,lev,lat,axis=ax,cmin=cmin,cmax=cmax,title='Pinatubo (Jun 1991)',suppcb=True,
                     suppylab=True,levlim=levlim,cmap='blue2red_20')
-ax.contour(levs,lats,pclim,colors='0.6',linewidths=2,levels=levels)
+#ax.contour(levs,lats,pclim,colors='0.6',linewidths=2,levels=levels)
+ax.contour(levs,lats,pclim,colors='0.6',linewidths=1.5,levels=levelsp)
+ax.contour(levs,lats,pclim,colors='0.6',linewidths=1.5,levels=levelsn,linestyles='--')
 
 cbar_ax = fig.add_axes([.25,0.07, 0.5, .02])
 cbor='horizontal'
@@ -335,7 +364,7 @@ cplt.vert_plot(ccomp,lev,lat,axis=ax,cmin=cmin,cmax=cmax,title='Chichon (Apr 198
                suppylab=True,levlim=levlim,addcontlines=True,cmap='blue2red_w20')
 
 ax=axs[2]
-vp = cplt.vert_plot(pcomp,lev,lat,axis=ax,cmin=cmin,cmax=cmax,title='Pinatubo (Jul 1991)',suppcb=True,
+vp = cplt.vert_plot(pcomp,lev,lat,axis=ax,cmin=cmin,cmax=cmax,title='Pinatubo (Jun 1991)',suppcb=True,
                     suppylab=True,levlim=levlim,addcontlines=True,cmap='blue2red_w20')
 
 cbar_ax = fig.add_axes([.25,0.07, 0.5, .02])
@@ -350,11 +379,13 @@ if printtofile:
 fig,ax=plt.subplots(1,1)
 cplt.vert_plot((acomp+ccomp+pcomp)/3.,lev,lat,axis=ax,cmin=cmin,cmax=cmax,
                title='volc composite',levlim=levlim,cmap='blue2red_20')
-ax.contour(levs,lats,(aclim+cclim+pclim)/3.,colors='0.6',linewidths=2,levels=levels)
+#ax.contour(levs,lats,(aclim+cclim+pclim)/3.,colors='0.6',linewidths=2,levels=levels)
+ax.contour(levs,lats,(aclim+cclim+pclim)/3.,colors='0.6',linewidths=1.5,levels=levelsp)
+ax.contour(levs,lats,(aclim+cclim+pclim)/3.,colors='0.6',linewidths=1.5,levels=levelsn,linestyles='--')
 
 if printtofile:
     fig.savefig('volc_composite_' + field + '_' + suff + '_climocont.pdf')
-    
+
 #   NO CONTOURS
 fig,ax=plt.subplots(1,1)
 #fig.set_size_inches(12,6)
@@ -370,7 +401,9 @@ fig,ax=plt.subplots(1,1)
 #fig.set_size_inches(12,6)
 cplt.vert_plot((acomp+ccomp+pcomp)/3.,lev,lat,axis=ax,cmin=cminz,cmax=cmaxz,
                title='volc composite',levlim=100,cmap='blue2red_20')
-ax.contour(levs,lats,(aclim+cclim+pclim)/3.,colors='0.6',linewidths=2,levels=levels)
+#ax.contour(levs,lats,(aclim+cclim+pclim)/3.,colors='0.6',linewidths=2,levels=levels)
+ax.contour(levs,lats,(aclim+cclim+pclim)/3.,colors='0.6',linewidths=1.5,levels=levelsp)
+ax.contour(levs,lats,(aclim+cclim+pclim)/3.,colors='0.6',linewidths=1.5,levels=levelsn,linestyles='--')
 
 ax.set_xlim(-30,30)
 if printtofile:
@@ -385,6 +418,23 @@ cplt.vert_plot((acomp+ccomp+pcomp)/3.,lev,lat,axis=ax,cmin=cminz,cmax=cmaxz,
 ax.set_xlim(-30,30)
 if printtofile:
     fig.savefig('volc_composite_' + field + '_' + suff + '_zoom.pdf')
+
+
+# =================== MMC notes:
+#mmc=cnc.getNCvar(fname,'ZMPSI',seas='ANN')
+#lat=cnc.getNCvar(fname,'lat')
+#lev=cnc.getNCvar(fname,'plev')
+#lats,levs = np.meshgrid(lat,lev)
+
+#fig,ax=plt.subplots(1,1) 
+#cnt = ax.contour(lats,levs/100,mmc.mean(axis=0))
+#ax.clabel(cnt) # get values: cnt.cvalues. need to format
+#ax.invert_yaxis()
+#ax.set_yscale('log')
+
+
+
+
 
 """
 #adt=le.load_LEdata(fdict,'historicalNat',timesel=timselagung)
