@@ -17,7 +17,7 @@ def loadfldmeta(field,infodict,plottype,ptparams,level=None):
     # ptparams has specific settings for plottype
 
     print ptparams
-    
+
     smclim=ptparams['smclim']
     latlim=ptparams['latlim']
     round=ptparams['round']
