@@ -42,7 +42,7 @@ field2='sicn'
 level2=50000
 
 # seasonalmap, seasonalvert, plotzonmean, plotseacyc, pattcorrwithtime, plotregmean,calcregmeanwithtime, calcregunccascade,timetosig, timetosigsuper, plotscatter
-plottype='seasonalmap' 
+plottype='calcregunccascade' 
 projtype='eabksstere' #'eastere' # 'nh','sh','sq','eastere','nastere'
 
 # None, nh, polcap60, polcap65, polcap70, eurasia, eurasiamori, eurasiasth,eurasiathin,eurasiathinw,eurasiathine,ntham, nthatl, bks, bksmori, soo
@@ -72,22 +72,22 @@ allens=False # this is ONLY the ensemble means, plus superensemble
 sensruns=False # sensruns only: addr4ct=1,addsens=1. others=0 no meanBC, r mean, or obs
 ivar=False # this will show ENS (TOT) and ENSE (ANTH) and their difference = internal var
 simsforpaper=False # ANT, TOT, HAD, NSIDC only. best for maps and zonal mean figs (not line plots)
-simsforpaperwace=True # Just R1,R5 (warm/cold Eurasia) or whatever it's set to below.
+simsforpaperwace=False # Just R1,R5 (warm/cold Eurasia) or whatever it's set to below.
 antcat=False # this is the concatenation of ens members within each ensemble (really only useful for ANT)
 bothcat=False # can do concatenation of both ensembles if want to. These are useful for timetosig
 onlyens=False # just do ensemble means ANT and TOT
 
-addobs=False # add mean of kemhad* & kemnsidc* runs to line plots, seasonal maps. 
+addobs=True # add mean of kemhad* & kemnsidc* runs to line plots, seasonal maps. 
 addr4ct=False # add kem1pert2r4ct (constant thickness version of ens4)
 addsens=False # add sensitivity runs (kem1pert1b, kem1pert3)
 addrcp=False # add kem1rcp85a simulation (and others if we do more)
-addcanens=False # add "initial condition" ensemble of kemctl1/kem1pert2
+addcanens=True # add "initial condition" ensemble of kemctl1/kem1pert2
 addsuper=False # add superensemble mean
 
 
 # not sure these flags are in use?
 sigtype = 'cont' # significance: 'cont' or 'hatch' which is default
-siglevel= 0.05 # 0.10
+siglevel= 0.10 # 0.10, 0.05
 print 'SIGLEVEL = ' + str(siglevel) # @@@
 
 
@@ -329,7 +329,7 @@ infodict ={'cmapclimo': 'Spectral_r','leglocs': None,
            'model': model, 'sigtype': sigtype, 'sigoff': sigoff,
            'pct': pct, 'seacyclatlim': seacyclatlim, 'region': region,
            'shadeens': shadeens, 'corrlim': corrlim, 'figtrans':figtrans,
-           'type': projtype} # random other info. projtype for maps only
+           'type': projtype,'contclr': '0.3'} # random other info. projtype for maps only
 
 fdict,pparams=ld.loadfldmeta(field,infodict,plottype,ptparams,level=level)
 
@@ -366,6 +366,8 @@ if plottype in ('seasonalmap','seasonalvert'):
     if addcont:
         addflds=(fdict2,)
         addpparams=(pparams2,)
+        if simsforpaperwace and field2=='sicn':
+            infodict['contclr'] = 'g'
     else:
         addflds=None
         addpparams=None
@@ -376,13 +378,6 @@ if plottype in ('seasonalmap','seasonalvert'):
 
     if simsforpaperwace:
         # here I will adjust the figure for the WACE paper
-
-        if field2=='sicn':
-            fdict2,pparams2=ld.loadfldmeta(field2,infodict,plottype,ptparams,level=level2)
-            dblob2 = sfnc.calc_seasons(fdict2,coords,sims,seas=seasons,loctimesel=timesel,info=infodict,effdof=effdof)
-
-            # @@@@@ ADD SICN 15% (or all?) contours here (make them nice: 
-            #     thick and light colored over the dark red)
 
 
         if figtrans:
@@ -398,6 +393,21 @@ if plottype in ('seasonalmap','seasonalvert'):
             thefig.set_size_inches((10,5))
         theaxs = thefig.get_axes()
         ax1=theaxs[0]
+
+        """if field2=='sicn':
+            fdict2,pparams2=ld.loadfldmeta(field2,infodict,plottype,ptparams,level=level2)
+            dblob2 = sfnc.calc_seasons(fdict2,coords,sims,seas=seasons,loctimesel=timesel,info=infodict,effdof=effdof)
+            fldctl=dblob2['ctl'][sims[0]]['DJF']
+            fldpt=dblob2['pert'][sims[0]]['DJF']
+
+            # @@@@@ ADD SICN 15% (or all?) contours here (make them nice: 
+            #     thick and light colored over the dark red)
+            lons,lats = np.meshgrid(coords['lon'],coords['lat'])
+            #figtmp,axtmp=plt.subplots(1,1)
+            # this needs to be bm.contour() @@
+            ax1.contour(lons,lats,fldctl,colors='0.6',linewidths=1)#,levels=[0,0.15,0.15]"""
+
+
         if 'ENS' in sims: # assume it is just the two ensemble means
             prstr='ANTTOT'
             ax1.set_title('a. Individual SIC forcings')
@@ -541,7 +551,7 @@ if plottype=='calcregmeanwithtime' or plottype=='calcregunccascade' or plottype=
                               loctimesel=timesel,info=infodict,calctype='regmeanwithtime',
                               effdof=effdof)
 
-    infodict['region'] = 'eurasia'
+    infodict['region'] = 'eurasiamori'
     dblob2 = sfnc.calc_seasons(fdict,coords,sims,seas=seasons,
                                loctimesel=timesel,info=infodict,calctype='regmeanwithtime',
                                effdof=effdof)
