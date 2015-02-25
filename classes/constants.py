@@ -45,7 +45,7 @@ def get_basepath():
         bp['subdir'] = '/timsel/'
 
     else:  # on linux workstation in Vic
-        bp['basepath'] = '/home/rkm/work/DATA/'
+        bp['basepath'] = '/HOME/rkm/work/DATA/'
         bp['subdir'] = '/ts/'
 
     return bp
@@ -81,7 +81,7 @@ def get_BCbasepath():
         bp['subdir'] = '/'
 
     else:  # on linux workstation in Vic
-        bp['basepath'] = '/home/rkm/work/BCs/'
+        bp['basepath'] = '/HOME/rkm/work/BCs/'
         bp['subdir'] = '/'
 
     return bp
@@ -97,7 +97,7 @@ def get_t63landmask(repeat=None,remcyclic=False):
     plat = platform.system()
 
     if plat == "Linux":
-        basepath = '/home/rkm/work/DATA/CanAM4/constants/'
+        basepath = '/HOME/rkm/work/DATA/CanAM4/constants/'
     else:
         basepath = '/Users/kelly/CCCma/CanSISE/DATA/constants/' #@@
 
@@ -121,7 +121,7 @@ def get_t63lat():
     plat = platform.system()
 
     if plat == "Linux":
-        basepath = '/home/rkm/work/DATA/CanAM4/constants/'
+        basepath = '/HOME/rkm/work/DATA/CanAM4/constants/'
     else:
         basepath = '/Users/kelly/CCCma/CanSISE/DATA/constants/' #@@
 
@@ -134,7 +134,7 @@ def get_t63lon():
     plat = platform.system()
 
     if plat == "Linux":
-        basepath = '/home/rkm/work/DATA/CanAM4/constants/'
+        basepath = '/HOME/rkm/work/DATA/CanAM4/constants/'
     else:
         basepath = '/Users/kelly/CCCma/CanSISE/DATA/constants/' #@@
 
@@ -147,7 +147,7 @@ def get_t63lev(): # prob isn't tied to t63..
     plat = platform.system()
 
     if plat == "Linux":
-        basepath = '/home/rkm/work/DATA/CanAM4/constants/'
+        basepath = '/HOME/rkm/work/DATA/CanAM4/constants/'
     else:
         basepath = '/Users/kelly/CCCma/CanSISE/DATA/constants/'
 
