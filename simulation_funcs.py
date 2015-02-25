@@ -32,7 +32,8 @@ ccm = reload(ccm)
 cnc = reload(cnc)
 
 
-def calc_plot_seasonal_maps(fielddict,coords,sims,pparams,vert=False,loctimesel=None,info=None,printtofile=False,seas=None,addflds=None,addpparams=None):
+def calc_plot_seasonal_maps(fielddict,coords,sims,pparams,vert=False,loctimesel=None,
+                            info=None,printtofile=False,seas=None,addflds=None,addpparams=None):
     """ calc_plot_seasonal_maps(fielddict,coords,sims,pparams,vert=False,loctimesel=None,info=None,printtofile=False,seas=None, addflds=None,addpparams=None):
     
               info should be a dict of catch-all keywords/info
@@ -46,6 +47,8 @@ def calc_plot_seasonal_maps(fielddict,coords,sims,pparams,vert=False,loctimesel=
     ncfield=fielddict['ncfield']
     fieldstr=fielddict['fieldstr']
     conv=fielddict['conv']
+
+    addsie=False
 
     if addflds:
         addcont=True
@@ -101,13 +104,18 @@ def calc_plot_seasonal_maps(fielddict,coords,sims,pparams,vert=False,loctimesel=
     conts = np.arange(cmin,cmax+incr,incr)
 
     if addcont:
-        #cmapadd=addpparams[0]['cmap']
-        cminadd=addpparams[0]['cmin']; cmaxadd=addpparams[0]['cmax']
-        cmlen=float( plt.cm.get_cmap(cmap).N)
-        incradd = (cmaxadd-cminadd) / (cmlen)
-        contsadd = np.arange(cminadd,cmaxadd+incradd,incradd)
-        contsadd = contsadd[::2]
+        if fieldadd=='sie':
+            addsie=True
+            contsadd=[0.15, 0.15] # @@
+        else:
+            cminadd=addpparams[0]['cmin']; cmaxadd=addpparams[0]['cmax']
+            cmlen=float( plt.cm.get_cmap(cmap).N)
+            incradd = (cmaxadd-cminadd) / (cmlen)
+            contsadd = np.arange(cminadd,cmaxadd+incradd,incradd)
+            contsadd = contsadd[::2]
         print 'added contours: ' + str(contsadd)
+        contclradd=info['contclr'] # contour color
+        print contclradd # @@@
         
     if figtrans:
         fig6,ax6 = plt.subplots(len(sims),len(seasons)) # 1 row for e/ simulation, 1 col per season
@@ -152,9 +160,11 @@ def calc_plot_seasonal_maps(fielddict,coords,sims,pparams,vert=False,loctimesel=
         fnamec = frootc + timstr + '_ts.nc'
         fnamep = frootp + timstrp + '_ts.nc'
         if addcont:
+            if addsie:
+                fieldadd='sicn'; ncfieldadd='SICN'
             fnamecadd,fnamepadd = con.build_filepathpair(sim,fieldadd)
-            #print fnamecadd
-            #print fnamepadd
+            print fnamecadd
+            print fnamepadd
 
         # @@@ I *think* I don't need this anymore since processing the 3D files more
         # @@  although getting a nonstandard lev is not supported
@@ -226,6 +236,10 @@ def calc_plot_seasonal_maps(fielddict,coords,sims,pparams,vert=False,loctimesel=
                     plotfldadd = (fldpallseasadd[rowidx,:,:]-fldcallseasadd[rowidx,:,:]) / fldcallseasadd[rowidx,:,:] *100
                 else:
                     plotfldadd = fldpallseasadd[rowidx,:,:] - fldcallseasadd[rowidx,:,:]
+                if addsie:
+                    fieldadd='sie';
+                    plotfldadd = fldcallseasadd[rowidx,:,:]
+                    plotfldaddp = fldpallseasadd[rowidx,:,:]
                 
             tstat[rowidx,:,:],pval[rowidx,:,:] = sp.stats.ttest_ind(fldpsea,fldcsea,axis=0)
             fldcallseas[rowidx,:,:] = np.mean(fldcsea,axis=0)
@@ -272,7 +286,7 @@ def calc_plot_seasonal_maps(fielddict,coords,sims,pparams,vert=False,loctimesel=
                      cplt.addtsig(ax,pval[rowidx,...],lat,lev/100.,type=sigtype) # @@ dims?
                 if addcont:
                     lats,levs = np.meshgrid(lat,lev/100.)
-                    ax.contour(lats,levs,plotfldadd,levels=contsadd,colors='0.3',linewidths=1)
+                    ax.contour(lats,levs,plotfldadd,levels=contsadd,colors=contclradd,linewidths=1)
 
                 
                 if colidx==lastcol:
@@ -301,8 +315,15 @@ def calc_plot_seasonal_maps(fielddict,coords,sims,pparams,vert=False,loctimesel=
                     
                 if addcont:
                     lons, lats = np.meshgrid(lon,lat)
-                    bm.contour(lons,lats,plotfldadd,levels=contsadd,colors='0.3',linewidths=1,latlon=True)
-                    # @@@@ eventually add more contours?
+                    if addsie:
+                        bm.contour(lons,lats,plotfldadd,levels=contsadd,
+                                   colors=contclradd,linewidths=2,latlon=True)
+                        bm.contour(lons,lats,plotfldaddp,levels=contsadd,
+                                   colors=contclradd,linewidths=2,latlon=True,linestyles='--')
+                    else:
+                        bm.contour(lons,lats,plotfldadd,levels=contsadd,
+                                   colors=contclradd,linewidths=1,latlon=True)
+                        # @@@@ eventually add more contours?
                     
                 if colidx==0: # when col index is 0, set season
                     if figtrans: # if first row
@@ -399,7 +420,7 @@ def calc_seasons(fielddict,coords,sims,loctimesel=None,info=None,siglevel=0.05,
     else:
         seasons=seas
         
-    sia = False
+    sia = False; sie=False
 
     field=fielddict['field']
     ncfield=fielddict['ncfield']
@@ -464,6 +485,9 @@ def calc_seasons(fielddict,coords,sims,loctimesel=None,info=None,siglevel=0.05,
     if field=='sia':
         sia=True
         field = 'sicn' # while getting the data...
+    elif field=='sie':
+        sie=True
+        field = 'sicn'
         
     tstatdict = dict.fromkeys(sims,{}); pvaldict = dict.fromkeys(sims,{})
     fldcdict = dict.fromkeys(sims,{}); fldpdict = dict.fromkeys(sims,{})
@@ -563,6 +587,9 @@ def calc_seasons(fielddict,coords,sims,loctimesel=None,info=None,siglevel=0.05,
                 if sia:
                     fldc = cutl.calc_seaicearea(fldc,lat,lon)
                     fldp = cutl.calc_seaicearea(fldp,lat,lon)
+                elif sie:
+                    fldc = ma.masked_where(fldc<.15,fldc)#really just mask out <.15?
+                    fldp = ma.masked_where(fldp<.15,fldp)#really just maske out <.15
                     
 
             if isflux: #field in (fluxes,'fsg','turb','net'):
@@ -633,6 +660,9 @@ def calc_seasons(fielddict,coords,sims,loctimesel=None,info=None,siglevel=0.05,
                     fldc = cutl.calc_regtotseaicearea(fldc,lat,lon,region,isarea=True)
                     fldp = cutl.calc_regtotseaicearea(fldp,lat,lon,region,isarea=True)
                 else:
+                    if sie:
+                        print 'sie does not make sense for regmean'
+                        return -1
                     fldc = cutl.calc_regmean(fldc,lat,lon,region)#limsdict)
                     fldp = cutl.calc_regmean(fldp,lat,lon,region)#limsdict)           
                 
@@ -708,6 +738,8 @@ def calc_seasons(fielddict,coords,sims,loctimesel=None,info=None,siglevel=0.05,
         # end loop through simulations
     if sia:
         field = 'sia' # put back after getting the data. prob not important in the function context
+    elif sie:
+        field = 'sie'
 
     blob = {}
     blob['ctl'] = fldcdict
