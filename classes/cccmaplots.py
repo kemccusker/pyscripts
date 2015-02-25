@@ -50,6 +50,8 @@ kemmap(fld, lat, lon, title='', units='', cmap='blue2red_w20', type='sq', cmin='
 def kemmap(fld, lat, lon,title='',units='',cmap='blue2red_w20',type='sq',
            cmin='',cmax='',axis=None, suppcb=0,lmask=0,flipmask=0,latlim=None,drawgrid=False,
            round=True):
+    """ returns bm,pc (Basemap,Pcolor handle)
+    """
 
     if cmap =='' or cmap==None:
         cmap='blue2red_w20'
@@ -91,11 +93,17 @@ def kemmap(fld, lat, lon,title='',units='',cmap='blue2red_w20',type='sq',
     elif type == 'eabksstere': # Eurasia + Barents Kara attempt
         mapparams = dict(llcrnrlon=40.,llcrnrlat=10.,urcrnrlon=175.,urcrnrlat=60.,
                          resolution='c',projection='stere',lat_0=45.,lon_0=80.)
+    elif type == 'ealamb': # Lambert azimuthal equal-area
+        mapparams = dict(llcrnrlon=40.,llcrnrlat=10.,urcrnrlon=160.,urcrnrlat=50.,
+                         resolution='c',projection='laea',lat_0=45.,lon_0=80.)
+    elif type == 'eabkslamb': # Lambert azimuthal equal-area
+        mapparams = dict(llcrnrlon=40.,llcrnrlat=10.,urcrnrlon=175.,urcrnrlat=60.,
+                         resolution='c',projection='laea',lat_0=45.,lon_0=80.)
     elif type == 'nastere': # North America stere projection
         mapparams = dict(llcrnrlon=220.,llcrnrlat=20.,urcrnrlon=320.,urcrnrlat=50.,
                          resolution='c',projection='stere',lat_0=45.,lon_0=230.)
     else:
-        print "Incorrect map type. Choose sq,nh,sh,eastere"
+        print "Incorrect map type. Choose sq,nh,sh,nastere,eastere,eabksstere,ealamb,eabkslamb"
         return -1
         
     # default pcolormesh dictionary
@@ -113,14 +121,14 @@ def kemmap(fld, lat, lon,title='',units='',cmap='blue2red_w20',type='sq',
 
         #pcparams = dict(shading='gouraud',latlon=True,cmap=incmap,vmin=cmin,vmax=cmax)
         pcparams = dict(latlon=True,cmap=incmap,vmin=cmin,vmax=cmax)
-        if type not in ('eastere','eabksstere','nastere'):
+        if type not in ('eastere','eabksstere','nastere','ealamb','eabkslamb'):
             pcparams['levels']=conts
             pcparams['extend']='both'
 
     if axis != None: # if an axis is given, add to dict for basemap
         mapparams['ax'] = axis
     
-    if type in ('eastere','eabksstere','nastere'):
+    if type in ('eastere','eabksstere','nastere','ealamb','eabkslamb'):
         pcparams['shading']='flat' #'gouraud' # @@ gouraud pdf files fail/crash. flat and interp are same??
 
     """ m = Basemap(projection='ortho',lon_0=lon_0,lat_0=lat_0,resolution='l',\
@@ -146,13 +154,13 @@ def kemmap(fld, lat, lon,title='',units='',cmap='blue2red_w20',type='sq',
 
 #    pc = bm.pcolormesh(lons,lats,fld,**pcparams)
     if cmin=='':
-        if type in ('eastere','eabksstere','nastere'):
+        if type in ('eastere','eabksstere','nastere','ealamb','eabkslamb'):
             # for some reason these projections don't plot colors correctly so have to use pcolormesh()@@@
             pc=bm.pcolormesh(lons,lats,fld,**pcparams) 
         else:
             pc = bm.contourf(lons,lats,fld,20,**pcparams) # 20 auto levels
     else:
-        if type in ('eastere','eabksstere','nastere'):
+        if type in ('eastere','eabksstere','nastere','ealamb','eabkslamb'):
             pc=bm.pcolormesh(lons,lats,fld,**pcparams)
         else:
             pc = bm.contourf(lons,lats,fld,**pcparams)
