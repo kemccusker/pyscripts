@@ -6,7 +6,7 @@ import cccmautils as cutl
 cnc=reload(cnc)
 cutl=reload(cutl)
 
-printtofile=True
+printtofile=False
 plt.close('all')
 
 styr=1979
@@ -15,19 +15,20 @@ timesel=str(styr) + '-01-01,2014-12-31'
 region='eurasiamori'
 sicregion='bksmori'
 sea='DJF'
-filesic='/HOME/rkm/work/BCs/NSIDC/nsidc_bt_128x64_1978m11_2011m12_sicn_1978111600-2011121612.nc'
+
+#filesic='/HOME/rkm/work/BCs/NSIDC/nsidc_bt_128x64_1978m11_2011m12_sicn_1978111600-2011121612.nc'
+filesic='/Volumes/MyPassport2TB/DATA/OBSERVATIONS/nsidc_bt_128x64_1978m11_2011m12_sicn_1978111600-2011121612.nc'
 latsic=cnc.getNCvar(filesic,'lat')
 lonsic=cnc.getNCvar(filesic,'lon')
 
 
-#basepath = '/Volumes/MyPassport2TB/DATA/OBSERVATIONS/'
+basepath = '/Volumes/MyPassport2TB/DATA/OBSERVATIONS/'
 #basepath = '/raid/ra40/data/ncs/reanalyses/'
-basepath = '/HOME/rkm/work/DATA/GISS/'
+#basepath = '/HOME/rkm/work/DATA/GISS/'
 file = 'gistemp1200_ERSST.nc'
 # base is 1951-1980
 
 fname = basepath + file
-
 
 fld = cnc.getNCvar(fname,'tempanomaly',timesel=timesel)
 lat = cnc.getNCvar(fname,'lat')
@@ -35,7 +36,8 @@ lon = cnc.getNCvar(fname,'lon')
 
 dates = cnc.get_NCdates(fname)
 
-
+# ADD Simulated obs == NSIDC
+filecnsidc,filepnsidc=con.build_filepathpair('NSIDC','st')
 
 fldreg = cutl.calc_regmean(fld,lat,lon,region=region)
 fldgm = cutl.global_mean_areawgted3d(fld,lat,lon)
@@ -79,6 +81,17 @@ if printtofile: # with standard deviation lines
 
 
 # ######### Sea mean ###
+
+fldcsim = cnc.getNCvar(filecnsidc,'ST',seas=sea,timesel='002-01-01,121-12-31')
+latsim = cnc.getNCvar(filecnsidc,'lat')
+lonsim = cnc.getNCvar(filecnsidc,'lon')
+
+fldpsim = cnc.getNCvar(filepnsidc,'ST',seas=sea,timesel='002-01-01,121-12-31')
+fldregsim = cutl.calc_regmean(fldpsim-fldcsim,latsim,lonsim,region=region)
+plotregsim = fldpsim.mean(axis=0)-fldcsim.mean(axis=0)
+regsimm = fldregsim.mean()
+regsimstd=fldregsim.std()
+
 
 fld = cnc.getNCvar(fname,'tempanomaly',timesel=timesel, seas=sea)
 fldreg = cutl.calc_regmean(fld,lat,lon,region=region)
@@ -197,6 +210,8 @@ if printtofile:
 ######## EPOCH differences
 cmin=-1.8; cmax=1.8
 
+print '@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@'
+
 timesel1='1979-01-01,1989-12-31'
 timesel2='2002-01-01,2012-12-31'
 fld1 = cnc.getNCvar(fname,'tempanomaly',timesel=timesel1, seas=sea)
@@ -216,11 +231,11 @@ plotfld = fld2.mean(axis=0) - fld1.mean(axis=0)
 sic1=cnc.getNCvar(filesic,'SICN',timesel=timesel1,seas=sea)
 sic2=cnc.getNCvar(filesic,'SICN',timesel=timesel2,seas=sea)
 
-#cminsic=-.2; cmaxsic=.2
-#incr = (cmaxsic-cminsic) / (19.)
-#contssic = np.arange(cminsic,cmaxsic+incr,incr)
-#contssic = contssic[::2]
-contssic = np.arange(-.3,.21,.08) # sic contours
+cminsic=-.3; cmaxsic=.21
+incr = (cmaxsic-cminsic) / (20.)
+contssic = np.arange(cminsic,cmaxsic+incr,incr)
+contssic = contssic[::2]
+#contssic = np.arange(-.3,.21,.08) # sic contours
 
 plotsic = sic2.mean(axis=0) - sic1.mean(axis=0)
 
@@ -235,6 +250,7 @@ bm.contour(lons,lats,plotsic,levels=contssic,
 if printtofile:
     fig.savefig(field + 'anom_sicncont_' + sea + '_' + ptype + '1979-89_2002-12.pdf')
 
+
 # Do both climo SIE contours instead === this one 
 #   is no good as contours are on top of e/o in DJF
 contssic=[0.15, 0.15]
@@ -244,3 +260,23 @@ bm.contour(lons,lats,sic1.mean(axis=0),levels=contssic,
            colors='w',linewidths=2,latlon=True,linestyles='-')
 bm.contour(lons,lats,sic2.mean(axis=0),levels=contssic,
            colors='w',linewidths=2,latlon=True,linestyles='--')
+
+
+
+# ### observed temp anomaly w/ NSIDC sea ice AND simulated observed temp anomaly w/ sea ice =====
+contssic = np.arange(cminsic,cmaxsic+incr,incr)
+contssic = contssic[::2]
+
+fig,axs=plt.subplots(2,1)
+fig.set_size_inches((4,8.5))
+fig.subplots_adjust(hspace=.02,wspace=.02)
+ax=axs[0]
+bm,pc=cplt.kemmap(plotfld,lat,lon,type=ptype,axis=ax,cmin=cmin,cmax=cmax,cmap='blue2red_20')
+bm.contour(lons,lats,plotsic,levels=contssic,
+           colors='w',linewidths=2,latlon=True,linestyles='-')
+
+ax=axs[1]
+bm,pc=cplt.kemmap(plotregsim,latsim,lonsim,type=ptype,axis=ax,cmin=cmin,cmax=cmax,cmap='blue2red_20')
+bm.contour(lons,lats,plotsic,levels=contssic,
+           colors='w',linewidths=2,latlon=True,linestyles='-')
+
