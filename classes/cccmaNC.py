@@ -385,6 +385,7 @@ def getNCvar_old(filename,field,timechunk=None,monsel=None,level=None,seas=None,
             (timselst,timselen)=timesel.split(',')       
             (styear,stmon,stday) = timselst.split('-')
             (enyear,enmon,enday) = timselen.split('-')
+            #print styear + ' to ' + enyear # @@@@@@
 
             # ############################
             # from Joe's util.py (originally Phil Austin cookbook)
@@ -396,7 +397,8 @@ def getNCvar_old(filename,field,timechunk=None,monsel=None,level=None,seas=None,
 
             #try:
 
-            the_dates=num2date(the_times,time_nc.units,time_nc.calendar)
+            the_dates=num2date(the_times,time_nc.units,get_NCtimecal(filename))
+            #print the_dates # @@@@@@
             #
             # netCDF4 bug(?) means that netcdftime objects can't be compared/sorted
             # so convert to python datetime objects
@@ -409,6 +411,7 @@ def getNCvar_old(filename,field,timechunk=None,monsel=None,level=None,seas=None,
             # Presently assume monthly data!
             date1 = datetime.date( int(styear), int(stmon), 1 ) #Starts Jan 1
             date2 = datetime.date( int(enyear), int(enmon), 31 )  #Ends Dec 31  
+            #print str(date1) + ' and ' + str(date2) # @@@@@@
 
             #
             # 
@@ -536,7 +539,7 @@ def getNCvar_old(filename,field,timechunk=None,monsel=None,level=None,seas=None,
             print "Can't do seasonal average when monsel != None"
             return
         else:
-            #print 'seasonalizing'
+            #print 'seasonalizing ' + seas # @@@
             fld = cutl.seasonalize_monthlyts(fld,seas)
             #print fld.shape
 
