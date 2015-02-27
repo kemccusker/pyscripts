@@ -115,6 +115,8 @@ def calc_plot_seasonal_maps(fielddict,coords,sims,pparams,vert=False,loctimesel=
             contsadd = contsadd[::2]
         print 'added contours: ' + str(contsadd)
         contclradd=info['contclr'] # contour color
+        contthkadd=info['contthk'] # linewidths
+        contstladd=info['contstl'] # linestyles
         print contclradd # @@@
         
     if figtrans:
@@ -286,7 +288,7 @@ def calc_plot_seasonal_maps(fielddict,coords,sims,pparams,vert=False,loctimesel=
                      cplt.addtsig(ax,pval[rowidx,...],lat,lev/100.,type=sigtype) # @@ dims?
                 if addcont:
                     lats,levs = np.meshgrid(lat,lev/100.)
-                    ax.contour(lats,levs,plotfldadd,levels=contsadd,colors=contclradd,linewidths=1)
+                    ax.contour(lats,levs,plotfldadd,levels=contsadd,colors=contclradd,linewidths=contthkadd,linestyles=contstladd)
 
                 
                 if colidx==lastcol:
@@ -317,12 +319,12 @@ def calc_plot_seasonal_maps(fielddict,coords,sims,pparams,vert=False,loctimesel=
                     lons, lats = np.meshgrid(lon,lat)
                     if addsie:
                         bm.contour(lons,lats,plotfldadd,levels=contsadd,
-                                   colors=contclradd,linewidths=2,latlon=True)
+                                   colors=contclradd,linewidths=contthkadd,latlon=True)
                         bm.contour(lons,lats,plotfldaddp,levels=contsadd,
-                                   colors=contclradd,linewidths=2,latlon=True,linestyles='--')
+                                   colors=contclradd,linewidths=contthkadd,latlon=True,linestyles='--')
                     else:
                         bm.contour(lons,lats,plotfldadd,levels=contsadd,
-                                   colors=contclradd,linewidths=1,latlon=True)
+                                   colors=contclradd,linewidths=contthkadd,latlon=True,linestyles=contstladd)
                         # @@@@ eventually add more contours?
                     
                 if colidx==0: # when col index is 0, set season
