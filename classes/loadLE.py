@@ -14,7 +14,7 @@ ensnum=10
 #  Make this a class! CanESM2LE
 
 def load_LEdata(fielddict, ens, seas=None, timesel=None,infodict=None,ftype='fullts',
-                calctype=None, calcdict=None, rettype='dict',conv=1):
+                calctype=None, calcdict=None, rettype='dict',conv=1, region=None):
     """ def loadLEdata(fielddict, seas=('DJF','MAM','JJA','SON'), timesel=None, infodict=None, calctype=None, calcdict=None)
 
             ftype: type of filename to build. Right now just 'fullts' for full timeseries
@@ -23,6 +23,8 @@ def load_LEdata(fielddict, ens, seas=None, timesel=None,infodict=None,ftype='ful
             rettype: 'dict' or 'ndarray' as return type. 
                       default is dict of DataFrames (to make a Panel). 
                       else, 'ndarray' is a 4D array
+                      
+            @@ add regional avg functionality?
 
             returns an object of type rettype
     """
@@ -76,7 +78,10 @@ def load_LEdata(fielddict, ens, seas=None, timesel=None,infodict=None,ftype='ful
         if seas==None:
             # don't average, return all months
             fld = cnc.getNCvar(fname,ncfield,timesel=timesel)*conv
-            
+            #if region!=None:
+            #    lat=cnc.getNCvar(fname,'lat')
+            #    lon=cnc.getNCvar(fname,'lon')
+            #    fld = cutl.calc_regmean(fld,lat,lon,region=region)
             
             # do calcs:
             if calctype!=None:
@@ -106,6 +111,7 @@ def load_LEdata(fielddict, ens, seas=None, timesel=None,infodict=None,ftype='ful
         if rettype=='dict':
             fldret[fname]= pd.DataFrame(fldseas,index=timedim)
         elif rettype=='ndarray':
+            print 'ndarray return type with a seasonal avg does not work yet @@@@'
             fldret[eii,...] = fldseas
 
         #dlist.append(fldseas)
