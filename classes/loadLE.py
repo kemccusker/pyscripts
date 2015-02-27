@@ -33,7 +33,7 @@ def load_LEdata(fielddict, ens, seas=None, timesel=None,infodict=None,ftype='ful
     ncfield=fielddict['ncfield']
     comp = fielddict['comp']
 
-    flist = build_filenames(fielddict, ens,ftype=ftype)
+    flist = build_filenames(fielddict, ens,ftype=ftype,timesel=timesel)
 
     fname1 = flist[0]
     timedim = cnc.getNCvar(fname1,'time',timesel=timesel)
@@ -63,6 +63,7 @@ def load_LEdata(fielddict, ens, seas=None, timesel=None,infodict=None,ftype='ful
             initshape = (len(flist),tmp.shape[0])
             rshape=None
 
+        print initshape
         fldret = np.zeros(initshape)
         print fldret.shape # @@@
     else:
@@ -111,7 +112,8 @@ def load_LEdata(fielddict, ens, seas=None, timesel=None,infodict=None,ftype='ful
         if rettype=='dict':
             fldret[fname]= pd.DataFrame(fldseas,index=timedim)
         elif rettype=='ndarray':
-            print 'ndarray return type with a seasonal avg does not work yet @@@@'
+            if seas!=None:
+                print 'ndarray return type with a seasonal avg does not work yet @@@@'
             fldret[eii,...] = fldseas
 
         #dlist.append(fldseas)
@@ -120,11 +122,12 @@ def load_LEdata(fielddict, ens, seas=None, timesel=None,infodict=None,ftype='ful
     return fldret
 
 
-def build_filenames(fielddict, ens, ftype='fullts'):
+def build_filenames(fielddict, ens, ftype='fullts',timesel=None):
     """ here we know that each 'sim' has 10 sub-ensemble members
 
         ftype: type of filename to build. Right now just 'fullts' for full timeseries
-              or '1950-2020_climo'
+              or 'fullclimo' for '1950-2020_climo' or, given timesel:
+              for styr-enyr_climo
               
         returns a list of all filenames (50). @@add original 5?!
         
@@ -132,8 +135,17 @@ def build_filenames(fielddict, ens, ftype='fullts'):
 
     if ftype=='fullts':
         suff='195001-202012'
-    else:
+    elif ftype=='fullclimo':
         suff=ftype
+    else: # climo with specified years
+        if timesel==None:
+            print 'timesel cannot be None if ftype=climo'
+            return -1
+        (timselst,timselen)=timesel.split(',')       
+        (styear,stmon,stday) = timselst.split('-')
+        (enyear,enmon,enday) = timselen.split('-')
+        suff=str(styear)+ '-' + str(enyear) + '_climo'
+
         
     field=fielddict['field']
     comp=fielddict['comp']

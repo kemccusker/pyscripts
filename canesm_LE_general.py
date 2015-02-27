@@ -17,18 +17,18 @@ sea='DJF'
 
 
 field='ts'; ncfield='ts'; comp='Amon'
-
+ftype='climo' # or 'fullts'
 
 
 fdict = {'field': field, 'ncfield': ncfield, 'comp': comp}
 
-histcdat=le.load_LEdata(fdict,'historical',timesel=timesel1, rettype='ndarray',conv=conv)
+histcdat=le.load_LEdata(fdict,'historical',timesel=timesel1, rettype='ndarray',conv=conv,ftype=ftype)
 (numens,ntime,nlatlon) = histcdat.shape
-histpdat=le.load_LEdata(fdict,'historical',timesel=timesel2, rettype='ndarray',conv=conv)
+histpdat=le.load_LEdata(fdict,'historical',timesel=timesel2, rettype='ndarray',conv=conv,ftype=ftype)
 
-histnatcdat=le.load_LEdata(fdict,'historicalNat',timesel=timesel1, rettype='ndarray',conv=conv)
+histnatcdat=le.load_LEdata(fdict,'historicalNat',timesel=timesel1, rettype='ndarray',conv=conv,ftype=ftype)
 #(numens,ntime,nlatlon) = histnatcdat.shape
-histnatpdat=le.load_LEdata(fdict,'historicalNat',timesel=timesel2, rettype='ndarray',conv=conv)
+histnatpdat=le.load_LEdata(fdict,'historicalNat',timesel=timesel2, rettype='ndarray',conv=conv,ftype=ftype)
 
 
 flist=le.build_filenames(fdict,'historical',ftype='fullts')
@@ -46,7 +46,7 @@ histnatcdat = histnatcdat.reshape((numens,ntime,nlat,nlon))
 histnatpdat = histnatpdat.reshape((numens,ntime,nlat,nlon))
 
 # Now, seasonal average and regional average here
-nyr = ntime/12.-1 # @@@@@@ hack for laptop. data probably not correct @@@@
+nyr = ntime/12.-1 # @@@@@@ hack for laptop. data probably not correct @@@@ actually needed on linux too...
 
 #histcsea = np.zeros((numens,nyr,nlat,lon)
 histreg = np.zeros((numens,nyr))
