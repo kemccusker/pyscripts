@@ -1,12 +1,12 @@
 import cccmaplots as cplt
 import cccmaNC as cnc
 import cccmautils as cutl
-
+import constants as con
 
 cnc=reload(cnc)
 cutl=reload(cutl)
 
-printtofile=False
+printtofile=True
 plt.close('all')
 
 styr=1979
@@ -15,16 +15,18 @@ timesel=str(styr) + '-01-01,2014-12-31'
 region='eurasiamori'
 sicregion='bksmori'
 sea='DJF'
+field='st'
 
-#filesic='/HOME/rkm/work/BCs/NSIDC/nsidc_bt_128x64_1978m11_2011m12_sicn_1978111600-2011121612.nc'
-filesic='/Volumes/MyPassport2TB/DATA/OBSERVATIONS/nsidc_bt_128x64_1978m11_2011m12_sicn_1978111600-2011121612.nc'
+
+filesic='/HOME/rkm/work/BCs/NSIDC/nsidc_bt_128x64_1978m11_2011m12_sicn_1978111600-2011121612.nc'
+#filesic='/Volumes/MyPassport2TB/DATA/OBSERVATIONS/nsidc_bt_128x64_1978m11_2011m12_sicn_1978111600-2011121612.nc'
 latsic=cnc.getNCvar(filesic,'lat')
 lonsic=cnc.getNCvar(filesic,'lon')
 
 
-basepath = '/Volumes/MyPassport2TB/DATA/OBSERVATIONS/'
+#basepath = '/Volumes/MyPassport2TB/DATA/OBSERVATIONS/'
 #basepath = '/raid/ra40/data/ncs/reanalyses/'
-#basepath = '/HOME/rkm/work/DATA/GISS/'
+basepath = '/HOME/rkm/work/DATA/GISS/'
 file = 'gistemp1200_ERSST.nc'
 # base is 1951-1980
 
@@ -248,7 +250,7 @@ bm,pc=cplt.kemmap(plotfld,lat,lon,type=ptype,axis=ax,cmin=cmin,cmax=cmax,cmap='b
 bm.contour(lons,lats,plotsic,levels=contssic,
            colors='w',linewidths=2,latlon=True,linestyles='-')
 if printtofile:
-    fig.savefig(field + 'anom_sicncont_' + sea + '_' + ptype + '1979-89_2002-12.pdf')
+    fig.savefig(field + 'anom_sicncont_' + sea + '_' + ptype + '_giss1979-89_2002-12.pdf')
 
 
 # Do both climo SIE contours instead === this one 
@@ -279,4 +281,5 @@ ax=axs[1]
 bm,pc=cplt.kemmap(plotregsim,latsim,lonsim,type=ptype,axis=ax,cmin=cmin,cmax=cmax,cmap='blue2red_20')
 bm.contour(lons,lats,plotsic,levels=contssic,
            colors='w',linewidths=2,latlon=True,linestyles='-')
-
+if printtofile:
+    fig.savefig(field + 'anom_sicncont_' + sea + '_' + ptype + '_gissnsidcsim1979-89_2002-12.pdf')
