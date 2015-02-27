@@ -33,7 +33,7 @@ field = 'st'
 smclim=True
 level=50000 # for threed
 
-addcont=False # overlay map with contours
+addcont=True # overlay map with contours
 sigoff=True # if True, don't add significance
 effdof=False # use effective deg of freedom or no. Set to False.
 field2='sicn'
@@ -42,8 +42,8 @@ field2='sicn'
 level2=50000
 
 # seasonalmap, seasonalvert, plotzonmean, plotseacyc, pattcorrwithtime, plotregmean,calcregmeanwithtime, calcregunccascade,timetosig, timetosigsuper, plotscatter
-plottype='calcregunccascade' 
-projtype='eabksstere' #'eastere' # 'nh','sh','sq','eastere','nastere'
+plottype='seasonalmap' 
+projtype='eabkslamb' #'eastere' # 'nh','sh','sq','eastere','nastere','eabksstere','ealamb','eabkslamb'
 
 # None, nh, polcap60, polcap65, polcap70, eurasia, eurasiamori, eurasiasth,eurasiathin,eurasiathinw,eurasiathine,ntham, nthatl, bks, bksmori, soo
 region='polcap60' #'eurasia' #'eurasiamori'
@@ -72,22 +72,22 @@ allens=False # this is ONLY the ensemble means, plus superensemble
 sensruns=False # sensruns only: addr4ct=1,addsens=1. others=0 no meanBC, r mean, or obs
 ivar=False # this will show ENS (TOT) and ENSE (ANTH) and their difference = internal var
 simsforpaper=False # ANT, TOT, HAD, NSIDC only. best for maps and zonal mean figs (not line plots)
-simsforpaperwace=False # Just R1,R5 (warm/cold Eurasia) or whatever it's set to below.
+simsforpaperwace=True # Just R1,R5 (warm/cold Eurasia) or whatever it's set to below.
 antcat=False # this is the concatenation of ens members within each ensemble (really only useful for ANT)
 bothcat=False # can do concatenation of both ensembles if want to. These are useful for timetosig
 onlyens=False # just do ensemble means ANT and TOT
 
-addobs=True # add mean of kemhad* & kemnsidc* runs to line plots, seasonal maps. 
+addobs=False # add mean of kemhad* & kemnsidc* runs to line plots, seasonal maps. 
 addr4ct=False # add kem1pert2r4ct (constant thickness version of ens4)
 addsens=False # add sensitivity runs (kem1pert1b, kem1pert3)
 addrcp=False # add kem1rcp85a simulation (and others if we do more)
-addcanens=True # add "initial condition" ensemble of kemctl1/kem1pert2
+addcanens=False # add "initial condition" ensemble of kemctl1/kem1pert2
 addsuper=False # add superensemble mean
 
 
 # not sure these flags are in use?
 sigtype = 'cont' # significance: 'cont' or 'hatch' which is default
-siglevel= 0.10 # 0.10, 0.05
+siglevel= 0.05 # 0.10, 0.05
 print 'SIGLEVEL = ' + str(siglevel) # @@@
 
 
@@ -169,11 +169,11 @@ elif simsforpaperwace:
     #print '@@@ simsforpaperwace is WACE paper -- ND cold and warm extremes, R1, R5 only'
     #savestr = '_forpapwace'; sims = ('R1','R5'); seasons=('DJF',); figtrans=True # 95% stat sig
 
-    print '@@@ simsforpaperwace (version d) is WACE paper -- DJF cold and warm extremes, E4,R4 only'
-    savestr = '_forpapwaced'; sims = ('E4','R4'); seasons=('DJF',); figtrans=True 
+    #print '@@@ simsforpaperwace (version d) is WACE paper -- DJF cold and warm extremes, E4,R4 only'
+    #savestr = '_forpapwaced'; sims = ('E4','R4'); seasons=('DJF',); figtrans=True 
 
-    #print '@@@ simsforpaperwace (version c) is WACE paper -- DJF cold and cold extremes, R2, E4 only'
-    #savestr = '_forpapwacec'; sims = ('R2','E4'); seasons=('DJF',); figtrans=True 
+    print '@@@ simsforpaperwace (version c) is WACE paper -- DJF cold and cold extremes, R2, E4 only'
+    savestr = '_forpapwacec'; sims = ('R2','E4'); seasons=('DJF',); figtrans=True 
 
     #print '@@@ simsforpaperwace is WACE paper -- ND ENSEMBLE MEANS ONLY'
     #savestr = '_forpapwace_ensmean'; sims = ('ENS','ENSE'); seasons=('ND',); figtrans=True # 95% stat sig
@@ -329,7 +329,7 @@ infodict ={'cmapclimo': 'Spectral_r','leglocs': None,
            'model': model, 'sigtype': sigtype, 'sigoff': sigoff,
            'pct': pct, 'seacyclatlim': seacyclatlim, 'region': region,
            'shadeens': shadeens, 'corrlim': corrlim, 'figtrans':figtrans,
-           'type': projtype,'contclr': '0.3'} # random other info. projtype for maps only
+           'type': projtype,'contclr': '0.3', 'contthk': 1, 'contstl': None} # random other info. projtype for maps only
 
 fdict,pparams=ld.loadfldmeta(field,infodict,plottype,ptparams,level=level)
 
@@ -365,9 +365,15 @@ if plottype in ('seasonalmap','seasonalvert'):
     # marked in the function @@
     if addcont:
         addflds=(fdict2,)
-        addpparams=(pparams2,)
+        
         if simsforpaperwace and field2=='sicn':
-            infodict['contclr'] = 'g'
+            pparams2['cmin'] = -.50; pparams2['cmax'] = 0 # only plot negative contours??
+            infodict['contclr'] = 'w'
+            infodict['contthk'] = 2 # thickness of contour lines
+            infodict['contstl'] = '-' # solid linestyles
+
+        addpparams=(pparams2,)
+
     else:
         addflds=None
         addpparams=None
@@ -381,10 +387,10 @@ if plottype in ('seasonalmap','seasonalvert'):
 
 
         if figtrans:
-            if projtype in ('eastere',):
+            if projtype in ('eastere','ealamb'):
                 thefig.set_size_inches((5,8))
                 thefig.subplots_adjust(hspace=.02,wspace=.02)
-            elif projtype in ('eabksstere',):
+            elif projtype in ('eabksstere','eabkslamb'):
                 thefig.set_size_inches((4,8.5))
                 thefig.subplots_adjust(hspace=.02,wspace=.02)
             else:
@@ -420,7 +426,7 @@ if plottype in ('seasonalmap','seasonalvert'):
                 ax1.set_xlabel('Longitude',fontsize=12)
         else: # else assume it's the cooling and warming cases for paper
             prstr=''
-            ax1.set_title('a. Significant cooling case')
+            ax1.set_title('a. Cooling case')
             ax1.set_ylabel('Latitude',fontsize=12)
             if not figtrans:
                 ax1.set_xlabel('Longitude',fontsize=12)
@@ -443,7 +449,7 @@ if plottype in ('seasonalmap','seasonalvert'):
             if 'DJF' in seasons:
                 prstr='d' # version d
 
-            ax2.set_title('b. Significant warming case')
+            ax2.set_title('b. Warming case')
             ax2.set_xlabel('Longitude',fontsize=12)
             if figtrans:
                 ax2.set_ylabel('Latitude',fontsize=12)
@@ -462,11 +468,11 @@ if plottype in ('seasonalmap','seasonalvert'):
 
         thefig.suptitle('')
         if addcont:
-            thefig.savefig('wacefigure3_' + field + '_' + field2 + 'cont_trans_' + prstr + projtype + '.pdf')
-            thefig.savefig('wacefigure3_' + field + '_' + field2 + 'cont_trans_' + prstr + projtype + '.eps')
+            thefig.savefig('wacefigure4_' + field + '_' + field2 + 'cont_trans_' + prstr + projtype + '.pdf')
+            thefig.savefig('wacefigure4_' + field + '_' + field2 + 'cont_trans_' + prstr + projtype + '.eps')
         else:
-            thefig.savefig('wacefigure3_' + field + '_trans_' + prstr + projtype + '.pdf')
-            thefig.savefig('wacefigure3_' + field + '_trans_' + prstr + projtype + '.eps')
+            thefig.savefig('wacefigure4_' + field + '_trans_' + prstr + projtype + '.pdf')
+            thefig.savefig('wacefigure4_' + field + '_trans_' + prstr + projtype + '.eps')
         
         
     
