@@ -2095,7 +2095,7 @@ def plot_seasonal_maps(dblob,fielddict,coords,sims,pparams,plottype='diff',vert=
 
 
 def plot_uncertainty_cascade(dblob,fielddict,coords,sims,pparams,info=None,seas=None,ax=None,
-                             xlab=None,annlab=None,annloc=(0.1,0.95),color=None,effdof=False,printtofile=False,xlims=None):
+                             xlab=None,annlab=None,annloc=(0.1,0.95),color=None,effdof=False,printtofile=False,xlims=None,siglevel=0.05):
     """ This function should produce a cascade whereby each row of points is connected to
         the previous (higher up on y axis) number of points by straight lines. A la Hawkins
 
@@ -2178,7 +2178,7 @@ def plot_uncertainty_cascade(dblob,fielddict,coords,sims,pparams,info=None,seas=
         print 'lev2pv: ' + str(lev2pv)
         y2 = topy-1 #* np.ones(len(lev2))
 
-        cplt.plot_onecascade((lev1,),(lev2,),topy,y2,ax=ax,color=col,pvalst=(pvmdt,),pvalsb=(lev2pv,))
+        cplt.plot_onecascade((lev1,),(lev2,),topy,y2,ax=ax,color=col,pvalst=(pvmdt,),pvalsb=(lev2pv,),siglevel=siglevel)
             
 
         # ------------ 3rd level down (split timeseries, 60yrs each)
@@ -2209,7 +2209,7 @@ def plot_uncertainty_cascade(dblob,fielddict,coords,sims,pparams,info=None,seas=
         y3 = y2-1
 
         print 'lev2: ' + str(lev2) + ', lev3: ' + str(lev3)
-        cplt.plot_onecascade(lev2,lev3,y2,y3,ax=ax,color=col,pvalst=lev2pv,pvalsb=lev3pv)
+        cplt.plot_onecascade(lev2,lev3,y2,y3,ax=ax,color=col,pvalst=lev2pv,pvalsb=lev3pv,siglevel=siglevel)
 
         if ensname=='histBC':
             # add obs runs to levels 2 and 3
@@ -2242,14 +2242,14 @@ def plot_uncertainty_cascade(dblob,fielddict,coords,sims,pparams,info=None,seas=
             (a,npv2,b,c) = cutl.calc_pvals(nsidcp[lenn/2.:],nsidcc[lenn/2.:],effdof=effdof)
             lev3pv = ((npv1,npv2),)
             
-            cplt.plot_onecascade(lev2,lev3,y2,y3,ax=ax,color='b',pvalst=lev2pv,pvalsb=lev3pv)
+            cplt.plot_onecascade(lev2,lev3,y2,y3,ax=ax,color='b',pvalst=lev2pv,pvalsb=lev3pv,siglevel=siglevel)
 
             lev2 = (nsidc.mean(),)
             lev2pv = (nsidcpv,)
             lev3 = ( (nhalf1.mean(),nhalf2.mean()), )
             lev3pv = ((npv1,npv2), )
             
-            cplt.plot_onecascade(lev2,lev3,y2,y3,ax=ax,color='g',pvalst=lev2pv,pvalsb=lev3pv)
+            cplt.plot_onecascade(lev2,lev3,y2,y3,ax=ax,color='g',pvalst=lev2pv,pvalsb=lev3pv,siglevel=siglevel)
 
 
         starty=starty-3
