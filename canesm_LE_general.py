@@ -3,6 +3,8 @@
 """
 import pandas as pd
 import cccmaplots as cplt
+import cccmautils as cutl
+import cccmacmaps as ccm
 import datetime as datetime
 from netCDF4 import num2date
 import sys
@@ -16,21 +18,51 @@ region='eurasiamori'
 sea='DJF'
 
 
-field='ts'; ncfield='ts'; comp='Amon'
-ftype='climo' # or 'fullts'
+field='tas'; ncfield='tas'; comp='Amon'; region='eurasiamori'
+
+#field='sia'; ncfield='sianh'; comp='OImon'; region='nh'
+
+ftype='fullts' # 'fullclimo' or 'climo' or 'fullts'
 
 
-fdict = {'field': field, 'ncfield': ncfield, 'comp': comp}
+fdict = {'field': field+region, 'ncfield': ncfield, 'comp': comp}
 
 histcdat=le.load_LEdata(fdict,'historical',timesel=timesel1, rettype='ndarray',conv=conv,ftype=ftype)
-(numens,ntime,nlatlon) = histcdat.shape
+(numens,ntime) = histcdat.shape
 histpdat=le.load_LEdata(fdict,'historical',timesel=timesel2, rettype='ndarray',conv=conv,ftype=ftype)
+
+# Now have 11 years of monthly data. Grab DJF:
+histc = cutl.seasonalize_monthlyts(histcdat.T,season='DJF').T
+histp = cutl.seasonalize_monthlyts(histpdat.T,season='DJF').T
 
 histnatcdat=le.load_LEdata(fdict,'historicalNat',timesel=timesel1, rettype='ndarray',conv=conv,ftype=ftype)
 #(numens,ntime,nlatlon) = histnatcdat.shape
 histnatpdat=le.load_LEdata(fdict,'historicalNat',timesel=timesel2, rettype='ndarray',conv=conv,ftype=ftype)
+histnatc = cutl.seasonalize_monthlyts(histnatcdat.T,season='DJF').T
+histnatp = cutl.seasonalize_monthlyts(histnatpdat.T,season='DJF').T
+
+firebrick=ccm.get_linecolor('firebrick')
+
+plt.figure()
+plt.hist(histp.mean(axis=1)-histc.mean(axis=1),color=firebrick,alpha=0.5)
+plt.hist(histnatp.mean(axis=1)-histnatc.mean(axis=1),color='b',alpha=0.5)
+plt.title('CanESM LE: ' + sea + ' ' + '2002-02 - 1979-89')
+plt.xlabel(field + ' ' + region)
+if printtofile:
+    plt.savefig(field+'_' + region + 'historical_historicalNat_2002-12_1979-89_PDF_' + sea + '.pdf')
 
 
+
+natdf=pd.DataFrame(histnatp.mean(axis=1)-histnatc.mean(axis=1))
+histdf=pd.DataFrame(histp.mean(axis=1)-histc.mean(axis=1))
+
+fig,ax=plt.subplots(1,1)
+histdf.hist(normed=True,color='0.5',alpha=0.5)#,histtype='stepfilled')
+natdf.hist(normed=True,color=firebrick,alpha=0.5)
+
+
+
+""" Got memory errors when trying to read in everything @@
 flist=le.build_filenames(fdict,'historical',ftype='fullts')
 numens=len(flist)
 fname = flist[0]
@@ -68,4 +100,4 @@ for nii in range(0,numens):
 
 plt.figure()
 plt.hist(histreg.mean(axis=1),alpha=0.5)
-plt.hist(histnatreg.mean(axis=1),color='.5')
+plt.hist(histnatreg.mean(axis=1),color='.5')"""
