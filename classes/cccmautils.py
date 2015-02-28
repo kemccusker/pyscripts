@@ -370,7 +370,10 @@ def seasonalize_monthlyts(input,season=None,includenan=0,mo=0,climo=0):
         subwgts = np.tile(subwgts,diml)
         # put the 3rd dim (2) in first spot, 1st dim (0) in second spot, 2nd dim (1) in third spot
         # this effectively shifts the dimensions back to time,dim2,dim3
-        subwgts = np.transpose(subwgts,(2,0,1))
+        if len(dims)==2:
+            subwgts = np.transpose(subwgts,(1,0))
+        else: # assume 3 dims
+            subwgts = np.transpose(subwgts,(2,0,1))
     
     else:
         diml2 = nyrs,
