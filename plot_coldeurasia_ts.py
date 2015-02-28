@@ -15,6 +15,7 @@ timesel=str(styr) + '-01-01,2014-12-31'
 region='eurasiamori'
 sicregion='bksmori'
 sea='DJF'
+sicsea='SON'
 field='st'
 
 
@@ -114,7 +115,7 @@ ax.set_title(region + ' (' + sea + ' anom)')
 if printtofile:
     fig.savefig(field + '_' + region + '_' + sea + 'anom_' + str(styr) + '-2014_timeseries2.pdf')
 
-fldsic = cnc.getNCvar(filesic,'SICN',timesel=timesel,seas=sea)
+fldsic = cnc.getNCvar(filesic,'SICN',timesel=timesel,seas=sicsea)
 fldsicreg = cutl.calc_regtotseaicearea(fldsic,latsic,lonsic,region=sicregion)#isarea=False
 
 sicrstd=fldsicreg.std()
@@ -128,9 +129,9 @@ ax.axhline(sicrm-sicrstd,linewidth=.5,color='k')
 ax.set_xticks(np.arange(0,len(fldsicreg),5)) # ticks for each decade, in July
 #ax.minorticks_on()
 ax.set_xticklabels(np.arange(styr,2011,5))
-ax.set_title(sicregion + ' (' + sea + ' anom)')
+ax.set_title(sicregion + ' (' + sicsea + ' anom)')
 if printtofile:
-    fig.savefig( 'sicn_' + sicregion + '_' + sea + '_' + str(styr) + '-2011_timeseries2.pdf')
+    fig.savefig( 'sicn_' + sicregion + '_' + sicsea + '_' + str(styr) + '-2011_timeseries2.pdf')
 
 # ######### SAT and SIC timeseries ###
 fig,axs=plt.subplots(2,1)
@@ -152,11 +153,11 @@ ax.axhline((sicrm-sicrstd)/1e12,linewidth=.5,color='k')
 ax.set_xticks(np.arange(0,len(fldsicreg),5)) # ticks for each decade, in July
 #ax.minorticks_on()
 ax.set_xticklabels(np.arange(styr,2011,5))
-ax.set_title(sea + ' Barents-Kara SIC (e$^{12}$)')# + sicregion)
+ax.set_title(sicsea + ' Barents-Kara SIC (e$^{12}$)')# + sicregion)
 ax.set_xlabel('years')
 if printtofile:
     fig.savefig(field + '_' + region + 'anom_sicn_' + sicregion + 
-                '_' + sea + '_' + str(styr) + '-2014_2011_timeseries2.pdf')
+                '_' + sicsea + sea + '_' + str(styr) + '-2014_2011_timeseries2.pdf')
 
 
 
@@ -230,8 +231,8 @@ plotfld = fld2.mean(axis=0) - fld1.mean(axis=0)
 #file2='nsidc_bt_128x64_1978m11_2011m12_sic_2002-2011climo.nc'
 #filets='nsidc_bt_128x64_1978m11_2011m12_sicn_1978111600-2011121612.nc'
 
-sic1=cnc.getNCvar(filesic,'SICN',timesel=timesel1,seas=sea)
-sic2=cnc.getNCvar(filesic,'SICN',timesel=timesel2,seas=sea)
+sic1=cnc.getNCvar(filesic,'SICN',timesel=timesel1,seas=sicsea)
+sic2=cnc.getNCvar(filesic,'SICN',timesel=timesel2,seas=sicsea)
 
 cminsic=-.3; cmaxsic=.21
 incr = (cmaxsic-cminsic) / (20.)
@@ -250,7 +251,7 @@ bm,pc=cplt.kemmap(plotfld,lat,lon,type=ptype,axis=ax,cmin=cmin,cmax=cmax,cmap='b
 bm.contour(lons,lats,plotsic,levels=contssic,
            colors='w',linewidths=2,latlon=True,linestyles='-')
 if printtofile:
-    fig.savefig(field + 'anom_sicncont_' + sea + '_' + ptype + '_giss1979-89_2002-12.pdf')
+    fig.savefig(field + '_' + sea+ 'anom_sicncont_' + sicsea + '_' + ptype + '_giss1979-89_2002-12.pdf')
 
 
 # Do both climo SIE contours instead === this one 
@@ -282,4 +283,4 @@ bm,pc=cplt.kemmap(plotregsim,latsim,lonsim,type=ptype,axis=ax,cmin=cmin,cmax=cma
 bm.contour(lons,lats,plotsic,levels=contssic,
            colors='w',linewidths=2,latlon=True,linestyles='-')
 if printtofile:
-    fig.savefig(field + 'anom_sicncont_' + sea + '_' + ptype + '_gissnsidcsim1979-89_2002-12.pdf')
+    fig.savefig(field + '_' + sea + 'anom_sicncont_' + sicsea + '_' + ptype + '_gissnsidcsim1979-89_2002-12.pdf')
