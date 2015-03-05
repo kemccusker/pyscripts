@@ -42,11 +42,11 @@ field2='sicn'
 level2=50000
 
 # seasonalmap, seasonalvert, plotzonmean, plotseacyc, pattcorrwithtime, plotregmean,calcregmeanwithtime, calcregunccascade,timetosig, timetosigsuper, plotscatter
-plottype='calcregunccascade' 
+plottype='plotregmean' 
 projtype='eabkslamb' #'eastere' # 'nh','sh','sq','eastere','nastere','eabksstere','ealamb','eabkslamb'
 
 # None, nh, polcap60, polcap65, polcap70, eurasia, eurasiamori, eurasiasth,eurasiathin,eurasiathinw,eurasiathine,ntham, nthatl, bks, bksmori, soo
-region='polcap60' #'eurasia' #'eurasiamori'
+region='nthamsth' #'eurasia' #'eurasiamori'
 screen=True # just for seasonalvert
 seacyclatlim=60
 withlat=False
@@ -557,7 +557,8 @@ if plottype=='calcregmeanwithtime' or plottype=='calcregunccascade' or plottype=
                               loctimesel=timesel,info=infodict,calctype='regmeanwithtime',
                               effdof=effdof,siglevel=siglevel)
 
-    infodict['region'] = 'eurasiamori'
+    infodict['region'] = 'nthamsth' #'eurasiamori'
+    rg2 = infodict['region']
     dblob2 = sfnc.calc_seasons(fdict,coords,sims,seas=seasons,
                                loctimesel=timesel,info=infodict,calctype='regmeanwithtime',
                                effdof=effdof,siglevel=siglevel)
@@ -623,8 +624,11 @@ if plottype=='calcregmeanwithtime' or plottype=='calcregunccascade' or plottype=
                 ax.annotate('60-yr means', xy=(1.4,0.93),xycoords='data',fontsize=fs)
                 ax.annotate('Individual SIC forcings',xy=(0.45,6.25),xycoords='data',fontsize=fs)
                 ax.annotate('Average SIC forcing',xy=(0.45,3.25),xycoords='data',fontsize=fs)
-                
-                annlab='b. Dec-Jan-Feb Eurasian SAT changes'
+                if rg2 in ('nthamsth','ntham'):
+                    annlab = 'b. Dec-Jan-Feb N. American SAT changes'
+                    xlims=(-.6,.5)
+                else:
+                    annlab='b. Dec-Jan-Feb Eurasian SAT changes'
             else:                
                 annlab='b. Eurasian SAT changes'
             annloc=(0.02,0.94)
@@ -635,7 +639,7 @@ if plottype=='calcregmeanwithtime' or plottype=='calcregunccascade' or plottype=
                                           color=col,effdof=effdof,xlims=xlims,siglevel=siglevel)
             
             if printtofile:
-                rg2 = infodict['region']
+                
                 if effdof:
                     fig.savefig(field + '_' + region + '_' + seas[0] + '_unccascade3_effdofobs.pdf')
                 else:
