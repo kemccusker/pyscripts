@@ -10,7 +10,7 @@ plt.close('all')
 # @@ Look at Southern Ocean and Southern Jet
 
 
-basepath='/ra40/data/kem/CanSISE/CanESM2/LE/'
+basepath='/raid/ra40/data/kem/CanSISE/CanESM2/LE/'
 sims=('historical-r1','historical-r2','historical-r3','historical-r4','historical-r5')
 simsnat=('historicalNat-r1','historicalNat-r2','historicalNat-r3','historicalNat-r4','historicalNat-r5')
 ensnum=10
@@ -224,7 +224,7 @@ allnatdf=pd.DataFrame(allnatdt,index=years)
 
 
 # =============== OBS:
-basedir='/home/rkm/work/BCs/'
+basedir='/HOME/rkm/work/BCs/'
 subdir='HadISST/'
 hadfile=basedir + subdir + 'hadisst1.1_bc_128_64_1870_2013m03_' + field + '_1870010100-2013030100.nc'
 hadsel='1950-01-01,2012-12-31'
@@ -255,7 +255,7 @@ diffnsidc=presnsidc.mean(axis=0) - pastnsidc.mean(axis=0)
 # =============== original five:
 casename='historicalrcp45'
 ensnum=5
-basedir='/home/rkm/work/DATA/CanESM2/' + casename
+basedir='/HOME/rkm/work/DATA/CanESM2/' + casename
 origsel='1950-01-01,2012-12-31'
 origyrs = np.arange(1950,2013)
 if sea=='DJF':
@@ -277,7 +277,7 @@ difforig = presorig.mean(axis=0) - pastorig.mean(axis=0)
 
 # =============== original five: NAT
 casename='historicalNat'
-basedir='/home/rkm/work/DATA/CanESM2/' + casename
+basedir='/HOME/rkm/work/DATA/CanESM2/' + casename
 orignatdt={}
 for eii in np.arange(1,ensnum+1):
 
@@ -295,11 +295,13 @@ diffnatorig = presnatorig.mean(axis=0) - pastnatorig.mean(axis=0)
 
 # TIMESERIES
 firebrick=ccm.get_linecolor('firebrick')
+natcol=ccm.get_linecolor('steelblue3')
+natcolline=ccm.get_linecolor('steelblue4')
 
 fig,axs=plt.subplots(1,1)
-axs.plot(years,allnatdf,color='0.5',alpha=.5)
+axs.plot(years,allnatdf,color=natcol,alpha=.5)
 axs.plot(years,allflddf,color='r',alpha=.3)
-axs.plot(origyrs,orignatdf,color='k',linewidth=2)
+axs.plot(origyrs,orignatdf,color=natcol,linewidth=2)
 axs.plot(origyrs,origdf,color='brown',linewidth=2)
 axs.plot(hadyrs,haddf,color='b',linewidth=2)
 axs.plot(nsidcyrs,nsidcdf,color='g',linewidth=2)
@@ -318,11 +320,11 @@ alldiff =pres.mean(axis=0)- past.mean(axis=0)
 allnatdiff =presnat.mean(axis=0)- pastnat.mean(axis=0)
 
 fig,ax = plt.subplots(1,1)
-allnatdiff.hist(color='0.5',alpha=0.5)
+allnatdiff.hist(color=natcol,alpha=0.5)
 alldiff.hist(color='r',alpha=0.5)
 for eii in range(1,6):
     ax.axvline(difforig[eii],color=ccm.get_linecolor('firebrick'),linewidth=3)
-    ax.axvline(diffnatorig[eii],color='k',linewidth=3)
+    ax.axvline(diffnatorig[eii],color=natcol,linewidth=3)
 ax.axvline(diffhad,color='b',linewidth=3)
 ax.axvline(diffnsidc,color='g',linewidth=3)
 ax.set_title(field + ' anom ' + str(season))
@@ -352,18 +354,18 @@ npdf_fitted = norm.pdf(nxx,loc=nmean,scale=nsd)
 
 # normed means: integral of the histogram will sum to 1 @@@ don't think it's right
 fig,ax=plt.subplots(1,1)
-allnatdiff.hist(normed=True,color='0.5',alpha=0.5)#,histtype='stepfilled')
+allnatdiff.hist(normed=True,color=natcol,alpha=0.5)#,histtype='stepfilled')
 alldiff.hist(normed=True,color=firebrick,alpha=0.5)#,histtype='stepfilled')
 #plt.title(field + ' anom ' + str(season))
 ax.plot(axx,apdf_fitted,color=firebrick,linewidth=2)
-ax.plot(nxx,npdf_fitted,color='k',linewidth=2)
+ax.plot(nxx,npdf_fitted,color=natcol,linewidth=2)
 axylims=ax.get_ylim()
 ax.axvline(color='k',linestyle='--')
 for eii in range(1,6):
     ax.plot(difforig[eii],axylims[1],marker='|',markersize=20,color=firebrick) 
-    ax.plot(diffnatorig[eii],axylims[1],marker='|',markersize=20,color='k')
+    ax.plot(diffnatorig[eii],axylims[1],marker='|',markersize=20,color=natcol)
     ax.axvline(x=difforig[eii],ymin=.97,ymax=1,color=firebrick,linewidth=2)
-    ax.axvline(x=diffnatorig[eii],ymin=.97,ymax=1,color='k',linewidth=2)
+    ax.axvline(x=diffnatorig[eii],ymin=.97,ymax=1,color=natcol,linewidth=2)
 hh=ax.axvline(diffhad,color='b',linewidth=3)
 nn=ax.axvline(diffnsidc,color='g',linewidth=3)
 ax.legend((hh,nn),('HadISST','NSIDC'),loc='upper left')
@@ -378,11 +380,11 @@ if printtofile:
 
 
 fig,ax=plt.subplots(1,1)
-allnatdiff.hist(normed=True,color='0.5',alpha=0.5)#,histtype='stepfilled')
+allnatdiff.hist(normed=True,color=natcol,alpha=0.5)#,histtype='stepfilled')
 alldiff.hist(normed=True,color=firebrick,alpha=0.5)#,histtype='stepfilled')
 #plt.title(field + ' anom ' + str(season))
 ax.plot(axx,apdf_fitted,color=firebrick,linewidth=2)
-ax.plot(nxx,npdf_fitted,color='k',linewidth=2)
+ax.plot(nxx,npdf_fitted,color=natcol,linewidth=2)
 axylims=ax.get_ylim()
 ax.set_ylim((axylims[0],axylims[1]+(axylims[1]*.1)))
 axylims=ax.get_ylim()
@@ -391,7 +393,7 @@ for eii in range(1,6):
     #ax.plot(difforig[eii],axylims[1],marker='|',markersize=20,color=firebrick) 
     #ax.plot(diffnatorig[eii],axylims[1],marker='|',markersize=20,color='k')
     ax.axvline(x=difforig[eii],ymin=.97,ymax=1,color=firebrick,linewidth=2)
-    ax.axvline(x=diffnatorig[eii],ymin=.97,ymax=1,color='k',linewidth=2)
+    ax.axvline(x=diffnatorig[eii],ymin=.97,ymax=1,color=natcol,linewidth=2)
 hh=ax.axvline(diffhad,color='b',linewidth=3)
 nn=ax.axvline(diffnsidc,color='g',linewidth=3)
 #ax.legend((hh,nn),('HadISST','NSIDC'),loc='upper left')
@@ -426,16 +428,16 @@ deffs='none' # default fillstyle
 mew=1.5
 
 fig,ax=plt.subplots(1,1)
-allnatdiff.hist(normed=True,color='0.5',alpha=0.5)#,histtype='stepfilled')
+allnatdiff.hist(normed=True,color=natcol,alpha=0.5)#,histtype='stepfilled')
 alldiff.hist(normed=True,color=firebrick,alpha=0.5)#,histtype='stepfilled')
 # use proxy artist for histogram legend entries
 #tot = mpatches.Patch(color=firebrick,alpha=0.5)#, label='The red data')
 #nat = mpatches.Patch(color='0.5',alpha=0.5)#, label='The red data')
 tot=mlines.Line2D([],[],color=firebrick,linewidth=2)
-nat=mlines.Line2D([],[],color='k',linewidth=2)
+nat=mlines.Line2D([],[],color=natcolline,linewidth=2)
 
 ax.plot(axx,apdf_fitted,color=firebrick,linewidth=2)
-ax.plot(nxx,npdf_fitted,color='k',linewidth=2)
+ax.plot(nxx,npdf_fitted,color=natcolline,linewidth=2)
 axylims=ax.get_ylim()
 ax.set_ylim((axylims[0],axylims[1]+(axylims[1]*.1)))
 axylims=ax.get_ylim()
@@ -463,7 +465,7 @@ for eii in range(1,6):
         fs='full'
     else:
         fs=deffs # defaultfs
-    ax.plot(plotx,ploty,marker='o',color='k',mec='k',fillstyle=fs,mew=mew,markersize=ms)
+    ax.plot(plotx,ploty,marker='o',color=natcolline,mec=natcolline,fillstyle=fs,mew=mew,markersize=ms)
     #ax.axvline(x=diffnatorig[eii],ymin=.97,ymax=1,color='k',linewidth=2)
 
 #nn=ax.axvline(diffnsidc,color='g',linewidth=3)
@@ -491,7 +493,7 @@ ax.plot(plotx,ploty,marker='o',color='g',mec='g',fillstyle=fs,mew=mew,markersize
 ## #hh = ax.axvline(x=diffhad,ymin=.97,ymax=1,color='b',linewidth=3)
 
 ## ax.legend((nn,hh,tot,nat),('NSIDC','HadISST','Historical','HistoricalNat'),loc='upper left',frameon=False)
-ax.legend((nn,tot,nat),('NSIDC','Historical','HistoricalNat'),loc='upper left',frameon=False)
+ax.legend((nn,tot,nat),('NSIDC','Historical','HistoricalNat'),loc='upper right',frameon=False)
 
 ## ax.annotate('NSIDC',xy=(diffnsidc-(diffnsidc*.05),axylims[1]-(axylims[1]*.07)),xycoords='data')#,rotation=45)
 
