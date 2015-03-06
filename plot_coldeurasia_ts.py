@@ -6,7 +6,7 @@ import constants as con
 cnc=reload(cnc)
 cutl=reload(cutl)
 
-printtofile=True
+printtofile=False
 plt.close('all')
 
 styr=1979
@@ -15,9 +15,9 @@ timesel=str(styr) + '-01-01,2014-12-31'
 region='eurasiamori'
 sicregion='bksmori'
 sea='DJF'
-sicsea='SON'
+sicsea='DJF'
 field='st'
-
+units='$^\circ$ C'
 
 filesic='/HOME/rkm/work/BCs/NSIDC/nsidc_bt_128x64_1978m11_2011m12_sicn_1978111600-2011121612.nc'
 #filesic='/Volumes/MyPassport2TB/DATA/OBSERVATIONS/nsidc_bt_128x64_1978m11_2011m12_sicn_1978111600-2011121612.nc'
@@ -159,6 +159,33 @@ if printtofile:
     fig.savefig(field + '_' + region + 'anom_sicn_' + sicregion + 
                 '_' + sicsea + sea + '_' + str(styr) + '-2014_2011_timeseries2.pdf')
 
+siccol=ccm.get_linecolor('yelloworange')
+
+import matplotlib.lines as mlines
+
+sat=mlines.Line2D([],[],color='k',linewidth=2)
+sic=mlines.Line2D([],[],color=siccol,linewidth=2)
+
+# #### SAT and SIC timeseries on same fig (twinx)
+fig,axl=plt.subplots(1,1)
+fig.set_size_inches(8,3)
+satlin = axl.plot(xx,fldreg,'k',linewidth=2,label='SAT')
+axr=axl.twinx()
+siclin = axr.plot(xxs,fldsicreg/1e12,color=siccol,linewidth=2,label='SIC')
+axr.set_ylabel(r'Barents-Kara SIC (e$^{12}$)')
+axl.set_ylabel(r'$\Delta$ Eurasian SAT ($^\circ$C)')
+axl.set_xticklabels(np.arange(styr,2014,5))
+axl.set_title('Dec-Jan-Feb')
+hl,ll = axl.get_legend_handles_labels()
+hr,lr = axr.get_legend_handles_labels()
+
+axl.legend((sat,sic),('SAT','SIC'),frameon=False)
+if printtofile:
+    fig.savefig(field + '_' + region + 'anom_sicn_' + sicregion + 
+                '_' + sicsea + sea + '_' + str(styr) + '-2014_2011_timeseries_onepanel.pdf')
+
+
+
 
 
 nlat=len(lat)
@@ -211,7 +238,7 @@ if printtofile:
 
 
 ######## EPOCH differences
-cmin=-1.8; cmax=1.8
+cmin=-1; cmax=1 # -1,1 match simulated
 
 print '@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@'
 
@@ -220,7 +247,7 @@ timesel2='2002-01-01,2012-12-31'
 fld1 = cnc.getNCvar(fname,'tempanomaly',timesel=timesel1, seas=sea)
 fld2 = cnc.getNCvar(fname,'tempanomaly',timesel=timesel2, seas=sea)
 
-fldreg = cutl.calc_regmean(fld2,lat,lon,region).mean(axis=0) - \
+fldregtm = cutl.calc_regmean(fld2,lat,lon,region).mean(axis=0) - \
          cutl.calc_regmean(fld1,lat,lon,region).mean(axis=0)
 plotfld = fld2.mean(axis=0) - fld1.mean(axis=0)
 
@@ -284,3 +311,66 @@ bm.contour(lons,lats,plotsic,levels=contssic,
            colors='w',linewidths=2,latlon=True,linestyles='-')
 if printtofile:
     fig.savefig(field + '_' + sea + 'anom_sicncont_' + sicsea + '_' + ptype + '_gissnsidcsim1979-89_2002-12.pdf')
+
+
+printtofile=True
+# # this one is 1 row
+fig,axs=plt.subplots(1,2)
+fig.set_size_inches((8,4))
+fig.subplots_adjust(hspace=.02,wspace=.02)
+ax=axs[0]
+bm,pc=cplt.kemmap(plotfld,lat,lon,type=ptype,axis=ax,cmin=cmin,cmax=cmax,
+                  cmap='blue2red_20',lcol='0.3',suppcb=True)
+bm.contour(lons,lats,plotsic,levels=contssic,
+           colors='w',linewidths=2,latlon=True,linestyles='-')
+ax.set_title('a. Observed SAT change')
+
+ax=axs[1]
+bm,pc=cplt.kemmap(plotregsim,latsim,lonsim,type=ptype,axis=ax,cmin=cmin,cmax=cmax,
+                  cmap='blue2red_20',lcol='0.3',suppcb=True)
+bm.contour(lons,lats,plotsic,levels=contssic,
+           colors='w',linewidths=2,latlon=True,linestyles='-')
+ax.set_title('b. Simulated SAT change')
+cbar_ax = fig.add_axes([.25,0.07, 0.5, .04])
+cbar=fig.colorbar(pc,cax=cbar_ax, orientation='horizontal',format='%.1f') 
+
+cbar_ax.tick_params(labelsize=15)
+cbar.set_ticks(np.arange(-1,1.2,0.2))
+#cbar.set_label('$\Delta$ SAT')
+cbar.ax.set_ylabel(units,rotation=0,labelpad=20)
+cbar.ax.yaxis.set_label_position('right')
+cbar_ax.set_xticklabels(('-1.0','','','','','0','','','','','1.0'))
+
+if printtofile:
+    fig.savefig(field + '_' + sea + 'anom_sicncont_' + sicsea + \
+                '_' + ptype + '_gissnsidcsim1979-89_2002-12_horiz.pdf')
+
+
+## same as above but NO SIC CONTOURS
+printtofile=True
+# # this one is 1 row
+fig,axs=plt.subplots(1,2)
+fig.set_size_inches((8,4))
+fig.subplots_adjust(hspace=.02,wspace=.02)
+ax=axs[0]
+bm,pc=cplt.kemmap(plotfld,lat,lon,type=ptype,axis=ax,cmin=cmin,cmax=cmax,
+                  cmap='blue2red_20',lcol='0.3',suppcb=True)
+ax.set_title('a. Observed SAT change')
+
+ax=axs[1]
+bm,pc=cplt.kemmap(plotregsim,latsim,lonsim,type=ptype,axis=ax,cmin=cmin,cmax=cmax,
+                  cmap='blue2red_20',lcol='0.3',suppcb=True)
+ax.set_title('b. Simulated SAT change')
+cbar_ax = fig.add_axes([.25,0.07, 0.5, .04])
+cbar=fig.colorbar(pc,cax=cbar_ax, orientation='horizontal',format='%.1f') 
+
+cbar_ax.tick_params(labelsize=15)
+cbar.set_ticks(np.arange(-1,1.2,0.2))
+#cbar.set_label('$\Delta$ SAT')
+cbar.ax.set_ylabel(units,rotation=0,labelpad=20)
+cbar.ax.yaxis.set_label_position('right')
+cbar_ax.set_xticklabels(('-1.0','','','','','0','','','','','1.0'))
+
+if printtofile:
+    fig.savefig(field + '_' + sea + 'anom_' + \
+                '_' + ptype + '_gissnsidcsim1979-89_2002-12_horiz.pdf')
