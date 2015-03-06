@@ -41,6 +41,7 @@ kemmap(fld, lat, lon, title='', units='', cmap='blue2red_w20', type='sq', cmin='
             drawgrid: if True, draw parallels and meridians
             round: default True. Used if type 'nh' or 'sh' and latlim provided
                    otherwise the zoomed in figure will be square
+            lcol: color of land contours, default 0.7 (lightish gray)
 
     Returns: basemap handle (to add to bm after function call),
              pcolormesh handle (typically to add colorbar after func call)
@@ -49,7 +50,7 @@ kemmap(fld, lat, lon, title='', units='', cmap='blue2red_w20', type='sq', cmin='
 
 def kemmap(fld, lat, lon,title='',units='',cmap='blue2red_w20',type='sq',
            cmin='',cmax='',axis=None, suppcb=0,lmask=0,flipmask=0,latlim=None,drawgrid=False,
-           round=True):
+           round=True,lcol='0.7'):
     """ returns bm,pc (Basemap,Pcolor handle)
     """
 
@@ -170,7 +171,7 @@ def kemmap(fld, lat, lon,title='',units='',cmap='blue2red_w20',type='sq',
         bm.drawmeridians(np.arange(0.,360.,30.),labels=[0,0,0,1])
 
 
-    bm.drawcoastlines(color='0.7')
+    bm.drawcoastlines(color=lcol)
     #bm.drawmapboundary(fill_color='#99ffff')
 
     if lmask==1:
