@@ -188,7 +188,10 @@ import cccmacmaps as ccm
 
 subyrs=np.arange(1979,1990)
 subyrs2=np.arange(2002,2013)
-printtofile=True
+if sea=='DJF':
+    subyrs2=np.arange(2002,2012) # because timeseries ends 2012-12
+
+printtofile=False
 # ======= CANESM LE (TOT) ===
 superii=0
 allflddt={}
@@ -450,6 +453,8 @@ for eii in range(1,6):
     plotx = difforig[eii]
     idx = cutl.find_nearest(axx,plotx)
     ploty = apdf_fitted[idx]
+    print 'Orig hist ' + str(eii) + ' PVAL: ' + str(origpv[eii-1])
+
     if origpv[eii-1]<=siglevel: #significant, fill the marker
         fs='full'
     else:
