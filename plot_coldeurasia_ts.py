@@ -443,8 +443,43 @@ cbar_ax.set_xticklabels(('-1.0','','','','','0','','','','','1.0'))
 
 if printtofile:
     fig.savefig(field + '_' + sea + 'anomSIG_sicncont_' + sicsea + \
-                '_' + ptype + '_gissnsidcsim1979-89_2002-12_horiz.pdf')
+                '_' + ptype + '_gissnsidcsim1979-89_2002-12_horiz.png')
 
+printtofile=True
+# # this one is 1 row
+fig,axs=plt.subplots(1,2)
+fig.set_size_inches((8,4))
+fig.subplots_adjust(hspace=.02,wspace=.02)
+ax=axs[0]
+bm,pc=cplt.kemmap(plotfld,lat,lon,type=ptype,axis=ax,cmin=cmin,cmax=cmax,
+                  cmap='blue2red_20',lcol='0.3',suppcb=True)
+bm.contour(lons,lats,plotsic,levels=contssic,
+           colors='w',linewidths=2,latlon=True,linestyles='-')
+cplt.addtsigm(bm,pvalmap,lat,lon,siglevel=0.1)
+
+ax.set_title('a. Observed SAT change')
+
+ax=axs[1]
+bm,pc=cplt.kemmap(plotregsim,latsim,lonsim,type=ptype,axis=ax,cmin=cmin,cmax=cmax,
+                  cmap='blue2red_20',lcol='0.3',suppcb=True)
+bm.contour(lons,lats,plotsic,levels=contssic,
+           colors='w',linewidths=2,latlon=True,linestyles='-')
+cplt.addtsigm(bm,pvalmapsim,latsim,lonsim,siglevel=0.1,)
+
+ax.set_title('b. Simulated SAT change')
+cbar_ax = fig.add_axes([.25,0.07, 0.5, .04])
+cbar=fig.colorbar(pc,cax=cbar_ax, orientation='horizontal',format='%.1f') 
+
+cbar_ax.tick_params(labelsize=15)
+cbar.set_ticks(np.arange(-1,1.2,0.2))
+#cbar.set_label('$\Delta$ SAT')
+cbar.ax.set_ylabel(units,rotation=0,labelpad=20)
+cbar.ax.yaxis.set_label_position('right')
+cbar_ax.set_xticklabels(('-1.0','','','','','0','','','','','1.0'))
+
+if printtofile:
+    fig.savefig(field + '_' + sea + 'anomSIG_sicncont_' + sicsea + \
+                '_' + ptype + '_gissnsidcsim1979-89_2002-12_horiz.pdf')
 
 ## same as above but NO SIC CONTOURS
 printtofile=False
