@@ -27,13 +27,13 @@ plt.ion()
        # coords = {'lat': con.get_t63lat(), 'lon': con.get_t63lon()}
 
 
-printtofile=True
+printtofile=False
 
 field = 'st'
 smclim=True
 level=50000 # for threed
 
-addcont=False # overlay map with contours
+addcont=True # overlay map with contours
 sigoff=True # if True, don't add significance
 effdof=False # use effective deg of freedom or no. Set to False.
 field2='sicn'
@@ -42,7 +42,7 @@ field2='sicn'
 level2=50000
 
 # seasonalmap, seasonalvert, plotzonmean, plotseacyc, pattcorrwithtime, plotregmean,calcregmeanwithtime, calcregunccascade,timetosig, timetosigsuper, plotscatter
-plottype='plotregmean' 
+plottype='seasonalmap' 
 projtype='eabkslamb' #'eastere' # 'nh','sh','sq','eastere','nastere','eabksstere','ealamb','eabkslamb'
 
 # None, nh, polcap60, polcap65, polcap70, eurasia, eurasiamori, eurasiasth,eurasiathin,eurasiathinw,eurasiathine,ntham, nthatl, bks, bksmori, soo
@@ -72,16 +72,16 @@ allens=False # this is ONLY the ensemble means, plus superensemble
 sensruns=False # sensruns only: addr4ct=1,addsens=1. others=0 no meanBC, r mean, or obs
 ivar=False # this will show ENS (TOT) and ENSE (ANTH) and their difference = internal var
 simsforpaper=False # ANT, TOT, HAD, NSIDC only. best for maps and zonal mean figs (not line plots)
-simsforpaperwace=False # Just R1,R5 (warm/cold Eurasia) or whatever it's set to below.
+simsforpaperwace=True # Just R1,R5 (warm/cold Eurasia) or whatever it's set to below.
 antcat=False # this is the concatenation of ens members within each ensemble (really only useful for ANT)
 bothcat=False # can do concatenation of both ensembles if want to. These are useful for timetosig
 onlyens=False # just do ensemble means ANT and TOT
 
-addobs=True # add mean of kemhad* & kemnsidc* runs to line plots, seasonal maps. 
+addobs=False # add mean of kemhad* & kemnsidc* runs to line plots, seasonal maps. 
 addr4ct=False # add kem1pert2r4ct (constant thickness version of ens4)
 addsens=False # add sensitivity runs (kem1pert1b, kem1pert3)
 addrcp=False # add kem1rcp85a simulation (and others if we do more)
-addcanens=True # add "initial condition" ensemble of kemctl1/kem1pert2
+addcanens=False # add "initial condition" ensemble of kemctl1/kem1pert2
 addsuper=False # add superensemble mean
 
 
@@ -169,8 +169,11 @@ elif simsforpaperwace:
     #print '@@@ simsforpaperwace is WACE paper -- ND cold and warm extremes, R1, R5 only'
     #savestr = '_forpapwace'; sims = ('R1','R5'); seasons=('DJF',); figtrans=True # 95% stat sig
 
-    print '@@@ simsforpaperwace (version d) is WACE paper -- DJF cold and warm extremes, E4,R4 only'
-    savestr = '_forpapwaced'; sims = ('E4','R4'); seasons=('DJF',); figtrans=True 
+    #print '@@@ simsforpaperwace (version d) is WACE paper -- DJF cold and warm extremes, E4,R4 only'
+    #savestr = '_forpapwaced'; sims = ('E4','R4'); seasons=('DJF',); figtrans=True 
+
+    print '@@@ simsforpaperwace (version e) is WACE paper -- DJF cold and warm extremes, E4,E1 only'
+    savestr = '_forpapwaceE'; sims = ('E4','E1'); seasons=('DJF',); figtrans=True 
 
     #print '@@@ simsforpaperwace (version c) is WACE paper -- DJF cold and cold extremes, R2, E4 only'
     #savestr = '_forpapwacec'; sims = ('R2','E4'); seasons=('DJF',); figtrans=True 
@@ -468,11 +471,11 @@ if plottype in ('seasonalmap','seasonalvert'):
 
         thefig.suptitle('')
         if addcont:
-            thefig.savefig('wacefigure4_' + field + '_' + field2 + 'cont_trans_' + prstr + projtype + '.pdf')
-            thefig.savefig('wacefigure4_' + field + '_' + field2 + 'cont_trans_' + prstr + projtype + '.eps')
+            thefig.savefig('wacefigure4'+savestr+'_' + field + '_' + field2 + 'cont_trans_' + prstr + projtype + '.pdf')
+            thefig.savefig('wacefigure4'+savestr+'_' + field + '_' + field2 + 'cont_trans_' + prstr + projtype + '.eps')
         else:
-            thefig.savefig('wacefigure4_' + field + '_trans_' + prstr + projtype + '.pdf')
-            thefig.savefig('wacefigure4_' + field + '_trans_' + prstr + projtype + '.eps')
+            thefig.savefig('wacefigure4'+savestr+'_' + field + '_trans_' + prstr + projtype + '.pdf')
+            thefig.savefig('wacefigure4'+savestr+'_' + field + '_trans_' + prstr + projtype + '.eps')
         
         
     
