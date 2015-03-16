@@ -24,15 +24,15 @@ sicsea='DJF'
 field='st'
 units='$^\circ$ C'
 
-filesic='/HOME/rkm/work/BCs/NSIDC/nsidc_bt_128x64_1978m11_2011m12_sicn_1978111600-2011121612.nc'
-#filesic='/Volumes/MyPassport2TB/DATA/OBSERVATIONS/nsidc_bt_128x64_1978m11_2011m12_sicn_1978111600-2011121612.nc'
+#filesic='/HOME/rkm/work/BCs/NSIDC/nsidc_bt_128x64_1978m11_2011m12_sicn_1978111600-2011121612.nc'
+filesic='/Volumes/MyPassport2TB/DATA/OBSERVATIONS/nsidc_bt_128x64_1978m11_2011m12_sicn_1978111600-2011121612.nc'
 latsic=cnc.getNCvar(filesic,'lat')
 lonsic=cnc.getNCvar(filesic,'lon')
 
 
-#basepath = '/Volumes/MyPassport2TB/DATA/OBSERVATIONS/'
+basepath = '/Volumes/MyPassport2TB/DATA/OBSERVATIONS/'
 #basepath = '/raid/ra40/data/ncs/reanalyses/'
-basepath = '/HOME/rkm/work/DATA/GISS/'
+#basepath = '/HOME/rkm/work/DATA/GISS/'
 file = 'gistemp1200_ERSST.nc'
 # base is 1951-1980
 
@@ -443,7 +443,7 @@ cbar_ax.set_xticklabels(('-1.0','','','','','0','','','','','1.0'))
 
 if printtofile:
     fig.savefig(field + '_' + sea + 'anomSIG_sicncont_' + sicsea + \
-                '_' + ptype + '_gissnsidcsim1979-89_2002-12_horiz.pdf')
+                '_' + ptype + '_gissnsidcsim1979-89_2002-12_horiz.png')
 
 
 ## same as above but NO SIC CONTOURS
