@@ -8,8 +8,13 @@ cnc=reload(cnc)
 cutl=reload(cutl)
 
 write_temptimeseries=False # write the temperature timeseries to netcdf
+euranom=False
+nhanom=False # if both False and temptimeseries=True, do eur - nh
+
 write_siatimeseries=False # write the sea ice area timeseries to netcdf
 write_tempmap=False
+write_simsicmap=False
+write_nsidcsicmap=False
 
 printtofile=False
 plt.close('all')
@@ -24,15 +29,15 @@ sicsea='DJF'
 field='st'
 units='$^\circ$ C'
 
-#filesic='/HOME/rkm/work/BCs/NSIDC/nsidc_bt_128x64_1978m11_2011m12_sicn_1978111600-2011121612.nc'
-filesic='/Volumes/MyPassport2TB/DATA/OBSERVATIONS/nsidc_bt_128x64_1978m11_2011m12_sicn_1978111600-2011121612.nc'
+filesic='/HOME/rkm/work/BCs/NSIDC/nsidc_bt_128x64_1978m11_2011m12_sicn_1978111600-2011121612.nc'
+#filesic='/Volumes/MyPassport2TB/DATA/OBSERVATIONS/nsidc_bt_128x64_1978m11_2011m12_sicn_1978111600-2011121612.nc'
 latsic=cnc.getNCvar(filesic,'lat')
 lonsic=cnc.getNCvar(filesic,'lon')
 
 
-basepath = '/Volumes/MyPassport2TB/DATA/OBSERVATIONS/'
+#basepath = '/Volumes/MyPassport2TB/DATA/OBSERVATIONS/'
 #basepath = '/raid/ra40/data/ncs/reanalyses/'
-#basepath = '/HOME/rkm/work/DATA/GISS/'
+basepath = '/HOME/rkm/work/DATA/GISS/'
 file = 'gistemp1200_ERSST.nc'
 # base is 1951-1980
 
@@ -50,6 +55,7 @@ filecnsidc,filepnsidc=con.build_filepathpair('NSIDC','st')
 
 fldreg = cutl.calc_regmean(fld,lat,lon,region=region)
 fldgm = cutl.global_mean_areawgted3d(fld,lat,lon)
+fldnh = cutl.calc_regmean(fld,lat,lon,region='nh')
 
 
 # ####### plotting timeseries #######
@@ -107,6 +113,7 @@ regsimstd=fldregsim.std()
 fld = cnc.getNCvar(fname,'tempanomaly',timesel=timesel, seas=sea)
 fldreg = cutl.calc_regmean(fld,lat,lon,region=region)
 gisreg=fldreg # write to file
+gisnh = cutl.calc_regmean(fld,lat,lon,region='nh') # seasonal
 
 
 xx=np.arange(0,len(fldreg))
@@ -124,6 +131,25 @@ ax.set_xticklabels(np.arange(styr,2014,5))
 ax.set_title(region + ' (' + sea + ' anom)')
 if printtofile:
     fig.savefig(field + '_' + region + '_' + sea + 'anom_' + str(styr) + '-2014_timeseries2.pdf')
+
+fig,ax = plt.subplots(1,1)
+ax.plot(xx,gisnh)
+ax.set_xticks(np.arange(0,len(gisnh),5)) # ticks for each decade, in July
+#ax.minorticks_on()
+ax.set_xticklabels(np.arange(styr,2014,5))
+ax.set_title('NH (' + sea + ' anom)')
+if printtofile:
+    fig.savefig(field + '_nh_' + sea + 'anom_' + str(styr) + '-2014_timeseries.pdf')
+
+fig,ax = plt.subplots(1,1)
+ax.plot(xx,fldreg-gisnh)
+ax.set_xticks(np.arange(0,len(gisnh),5)) # ticks for each decade, in July
+#ax.minorticks_on()
+ax.set_xticklabels(np.arange(styr,2014,5))
+ax.set_title(region + '-NH (' + sea + ' anom)')
+if printtofile:
+    fig.savefig(field + '_' + region + '-nh_' + sea + 'anom_' + str(styr) + '-2014_timeseries.pdf')
+
 
 fldsic = cnc.getNCvar(filesic,'SICN',timesel=timesel,seas=sicsea)
 fldsicreg = cutl.calc_regtotseaicearea(fldsic,latsic,lonsic,region=sicregion)#isarea=False
@@ -143,6 +169,8 @@ ax.set_xticklabels(np.arange(styr,2011,5))
 ax.set_title(sicregion + ' (' + sicsea + ' anom)')
 if printtofile:
     fig.savefig( 'sicn_' + sicregion + '_' + sicsea + '_' + str(styr) + '-2011_timeseries2.pdf')
+
+
 
 # ######### SAT and SIC timeseries ###
 fig,axs=plt.subplots(2,1)
@@ -444,7 +472,6 @@ cbar_ax.set_xticklabels(('-1.0','','','','','0','','','','','1.0'))
 if printtofile:
     fig.savefig(field + '_' + sea + 'anomSIG_sicncont_' + sicsea + \
                 '_' + ptype + '_gissnsidcsim1979-89_2002-12_horiz.png')
-#<<<<<<< HEAD
 
 
 
@@ -485,7 +512,13 @@ if write_temptimeseries:
 
     from netCDF4 import Dataset
 
-    outfile='giss_' + sea + '_' + region + '_1979-2013_timeseries.nc'
+    if euranom:
+        outfile='giss_' + sea + '_' + region + '_1979-2013_timeseries.nc'
+    elif nhanom:
+        outfile='giss_' + sea + '_nh_1979-2013_timeseries.nc'
+    else:
+        outfile='giss_' + sea + '_' + region + '-nh_1979-2013_timeseries.nc'
+
     outnc = Dataset(outfile,'w',format='NETCDF3_CLASSIC')
 
     # create the dimensions
@@ -497,11 +530,17 @@ if write_temptimeseries:
     outtimes = outnc.createVariable('time','f8',('time',)) # f8 and d are the same dtype
     #outlats = outnc.createVariable('lat','d',('lat',))
     #outlons = outnc.createVariable('lon','d',('lon',))
-    outfld = outnc.createVariable('tempanomaly','f4',('time',),fill_value=1.0e38)
+    outfld = outnc.createVariable('tempanomaly','f4',('time',),fill_value=1.0e38)       
 
     # add attributes to variables
     outfld.units = 'K'
-    outfld.long_name = 'Surface temperature anomaly from 1951-1980, regional avg: ' + region + ', seasonal avg: ' + sea
+    if euranom:
+        outfld.long_name = 'Surface temperature anomaly from 1951-1980, regional avg: ' + region + ', seasonal avg: ' + sea
+    elif nhanom:
+        outfld.long_name = 'Surface temperature anomaly from 1951-1980, regional avg: NH, seasonal avg: ' + sea
+    else: # eurasia - NH
+        outfld.long_name = 'Surface temperature anomaly regional avg: ' + region + '-NH avg, seasonal avg: ' + sea
+
     # don't add scale factor back. already taken into account
 
     outtimes.long_name = 'time'
@@ -519,16 +558,29 @@ if write_temptimeseries:
     # global attributes
     import time
 
-    outnc.title = 'original file: gistemp1200_ERSST.nc. Regional avg: ' + region + ', Seasonal avg: ' + sea
+    if euranom:
+        outnc.title = 'original file: gistemp1200_ERSST.nc. Regional avg: ' + region + ', Seasonal avg: ' + sea
+    elif nhanom:
+        outnc.title = 'original file: gistemp1200_ERSST.nc. Regional avg: NH, Seasonal avg: ' + sea
+    else:
+        outnc.title = 'original file: gistemp1200_ERSST.nc. Regional avg: ' + region + '-NH avg, Seasonal avg: ' + sea
 
     outnc.creation_date = time.ctime(time.time())
     outnc.created_by = 'Kelly E. McCusker, CCCma / U. of Victoria'
 
     # set the data to the variables: important to have [:]!
     outtimes[:] = gistime[11:-12:12] # get all ~Dec except last one
+    print 'gistime size ' + str(gistime[11:-12:12].shape)
     #outlats[:] = bclat
     #outlons[:] = bclon
-    outfld[:] = gisreg
+    if euranom:
+        outfld[:] = gisreg
+    elif nhanom:
+        outfld[:] = gisnh
+    else:
+        outfld[:] = gisreg-gisnh
+
+    print 'gisreg size ' + str(gisreg.shape)
 
     outnc.close()
 
@@ -616,4 +668,130 @@ if write_tempmap:
     outlons[:] = lon
     outfld[:] = np.expand_dims(gismap,axis=0)
     #outfld[:] = gismap
+    outnc.close()
+
+
+if write_simsicmap:
+    # mean sea ice conc BC anom
+    
+    fnamec,fnamep=con.build_filepathpair('ENSE','sicn')
+    lat=cnc.getNCvar(fnamec,'lat')
+    lon=cnc.getNCvar(fnamep,'lon')
+    ctl=cnc.getNCvar(fnamec,'SICN',seas=sea).mean(axis=0)
+    pt=cnc.getNCvar(fnamep,'SICN',seas=sea).mean(axis=0)
+    sicdiff=pt-ctl
+
+    # test
+    plt.figure()
+    cplt.kemmap(pt-ctl,lat,lon,type='nh',cmap='red2blue_w20',cmin=-.2,cmax=.2)
+
+
+    from netCDF4 import Dataset
+
+    outfile='ENSEsim_SICN_' + sea + '_2002-12_minus_1979-89_map.nc'
+    outnc = Dataset(outfile,'w',format='NETCDF3_CLASSIC')
+
+    # create the dimensions
+    outtime = outnc.createDimension('time', None)
+    outlat = outnc.createDimension('lat',len(lat))
+    outlon = outnc.createDimension('lon',len(lon))
+
+    # create variables
+    outtimes = outnc.createVariable('time','f8',('time',)) # f8 and d are the same dtype
+    outlats = outnc.createVariable('lat','d',('lat',))
+    outlons = outnc.createVariable('lon','d',('lon',))
+    outfld = outnc.createVariable('SICN','f4',('time','lat','lon',),fill_value=1.0e38)
+
+    # add attributes to variables
+    outfld.units = 'frac'
+    outfld.long_name = 'Sea ice concentration anomaly, seasonal avg: ' + sea + ', 2002-12 minus 1979-89'
+
+    outtimes.long_name = 'time'
+    outtimes.units = 'days since 1800-01-01 00:00:00'
+    outtimes.calendar = '365_day'
+
+    outlats.units = 'degrees_north'
+    outlats.long_name = 'Latitude'
+    outlats.standard_name = 'latitude'
+
+    outlons.units = 'degrees_east'
+    outlons.long_name = 'Longitude'
+    outlons.standard_name = 'longitude'
+    
+    # global attributes
+    import time
+
+    outnc.title = 'original files: kemctl1ense_sicn_001-121_ts.nc, kem1pert2ense_sicn_001-121_ts.nc. , Seasonal avg: ' + sea + ', 2002-12 minus 1979-89'
+
+    outnc.creation_date = time.ctime(time.time())
+    outnc.created_by = 'Kelly E. McCusker, CCCma / U. of Victoria'
+
+    # set the data to the variables: important to have [:]!
+    outtimes[:] = gistime[11] # one time (filler) for map
+    outlats[:] = lat
+    outlons[:] = lon
+    outfld[:] = np.expand_dims(sicdiff,axis=0)
+    outnc.close()
+
+
+if write_nsidcsicmap:
+    # mean sea ice conc BC anom
+    
+    fnamec,fnamep=con.build_filepathpair('NSIDC','sicn')
+    lat=cnc.getNCvar(fnamec,'lat')
+    lon=cnc.getNCvar(fnamep,'lon')
+    ctl=cnc.getNCvar(fnamec,'SICN',seas=sea).mean(axis=0)
+    pt=cnc.getNCvar(fnamep,'SICN',seas=sea).mean(axis=0)
+    sicdiff=pt-ctl
+
+    # test
+    plt.figure()
+    cplt.kemmap(pt-ctl,lat,lon,type='nh',cmap='red2blue_w20',cmin=-.2,cmax=.2)
+
+
+    from netCDF4 import Dataset
+
+    outfile='NSIDCsim_SICN_' + sea + '_2002-11_minus_1979-89_map.nc'
+    outnc = Dataset(outfile,'w',format='NETCDF3_CLASSIC')
+
+    # create the dimensions
+    outtime = outnc.createDimension('time', None)
+    outlat = outnc.createDimension('lat',len(lat))
+    outlon = outnc.createDimension('lon',len(lon))
+
+    # create variables
+    outtimes = outnc.createVariable('time','f8',('time',)) # f8 and d are the same dtype
+    outlats = outnc.createVariable('lat','d',('lat',))
+    outlons = outnc.createVariable('lon','d',('lon',))
+    outfld = outnc.createVariable('SICN','f4',('time','lat','lon',),fill_value=1.0e38)
+
+    # add attributes to variables
+    outfld.units = 'frac'
+    outfld.long_name = 'Sea ice concentration anomaly, seasonal avg: ' + sea + ', 2002-11 minus 1979-89'
+
+    outtimes.long_name = 'time'
+    outtimes.units = 'days since 1800-01-01 00:00:00'
+    outtimes.calendar = '365_day'
+
+    outlats.units = 'degrees_north'
+    outlats.long_name = 'Latitude'
+    outlats.standard_name = 'latitude'
+
+    outlons.units = 'degrees_east'
+    outlons.long_name = 'Longitude'
+    outlons.standard_name = 'longitude'
+    
+    # global attributes
+    import time
+
+    outnc.title = 'original files: kemnsidcctl_sicn_001-121_ts.nc, kemnsidcpert_sicn_001-121_ts.nc. , Seasonal avg: ' + sea + ', 2002-11 minus 1979-89'
+
+    outnc.creation_date = time.ctime(time.time())
+    outnc.created_by = 'Kelly E. McCusker, CCCma / U. of Victoria'
+
+    # set the data to the variables: important to have [:]!
+    outtimes[:] = gistime[11] # one time (filler) for map
+    outlats[:] = lat
+    outlons[:] = lon
+    outfld[:] = np.expand_dims(sicdiff,axis=0)
     outnc.close()
