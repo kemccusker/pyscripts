@@ -3,6 +3,7 @@ import cccmaNC as cnc
 import cccmautils as cutl
 import constants as con
 import cccmacmaps as ccm
+import platform as platform
 
 cnc=reload(cnc)
 cutl=reload(cutl)
@@ -11,7 +12,7 @@ write_temptimeseries=False # write the temperature timeseries to netcdf
 euranom=False
 nhanom=False # if both False and temptimeseries=True, do eur - nh
 
-write_siatimeseries=False # write the sea ice area timeseries to netcdf
+write_siatimeseries=True # write the sea ice area timeseries to netcdf
 write_tempmap=False
 write_simsicmap=False
 write_nsidcsicmap=False
@@ -29,19 +30,30 @@ sicsea='DJF'
 field='st'
 units='$^\circ$ C'
 
-filesic='/HOME/rkm/work/BCs/NSIDC/nsidc_bt_128x64_1978m11_2011m12_sicn_1978111600-2011121612.nc'
+plat = platform.system()   
+if plat == 'Darwin':  # means I'm on my mac
+    obasepath = '/Volumes/MyPassport2TB/DATA/OBSERVATIONS/'
+    obasepath2=obasepath
+
+else:  # on linux workstation in Vic
+    obasepath = '/HOME/rkm/work/BCs/' # obs basepath (boundary conditions)
+    obasepath2 = '/HOME/rkm/work/DATA/' # other obs, like GISS
+
+
+#td_nsidc_merged_197811_latest_128_64_sicn_1978111600-2013121612.nc
+filesic = obasepath + 'NSIDC/td_bootstrap_197811_latest_128_64_sicn_1978111600-2013121612.nc'
+#filesic='/HOME/rkm/work/BCs/NSIDC/nsidc_bt_128x64_1978m11_2011m12_sicn_1978111600-2011121612.nc'
 #filesic='/Volumes/MyPassport2TB/DATA/OBSERVATIONS/nsidc_bt_128x64_1978m11_2011m12_sicn_1978111600-2011121612.nc'
 latsic=cnc.getNCvar(filesic,'lat')
 lonsic=cnc.getNCvar(filesic,'lon')
 
 
 #basepath = '/Volumes/MyPassport2TB/DATA/OBSERVATIONS/'
-#basepath = '/raid/ra40/data/ncs/reanalyses/'
-basepath = '/HOME/rkm/work/DATA/GISS/'
-file = 'gistemp1200_ERSST.nc'
+#basepath = '/HOME/rkm/work/DATA/GISS/'
+gisfile = 'GISS/gistemp1200_ERSST.nc'
 # base is 1951-1980
 
-fname = basepath + file
+fname = obasepath2 + gisfile
 
 fld = cnc.getNCvar(fname,'tempanomaly',timesel=timesel)
 lat = cnc.getNCvar(fname,'lat')
@@ -221,7 +233,7 @@ hr,lr = axr.get_legend_handles_labels()
 axl.legend((sat,sic),('SAT','SIC'),frameon=False)
 if printtofile:
     fig.savefig(field + '_' + region + 'anom_sicn_' + sicregion + 
-                '_' + sicsea + sea + '_' + str(styr) + '-2014_2011_timeseries_onepanel.pdf')
+                '_' + sicsea + sea + '_' + str(styr) + '-2013_timeseries_onepanel.pdf')
 
 
 
@@ -587,7 +599,7 @@ if write_temptimeseries:
 if write_siatimeseries:
     from netCDF4 import Dataset
 
-    outfile='nsidcbt_' + sicsea + '_' + sicregion + '_1979-2011_timeseries.nc'
+    outfile='nsidcbt_' + sicsea + '_' + sicregion + '_1979-2013_timeseries.nc'
     outnc = Dataset(outfile,'w',format='NETCDF3_CLASSIC')
 
     # create the dimensions
@@ -608,13 +620,13 @@ if write_siatimeseries:
     # global attributes
     import time
 
-    outnc.title = 'original file: nsidc_bt_128x64_1978m11_2011m12_sicn_1978111600-2011121612.nc. Regional avg: ' + sicregion + ', Seasonal avg: ' + sicsea
-
+    #outnc.title = 'original file: nsidc_bt_128x64_1978m11_2011m12_sicn_1978111600-2011121612.nc. Regional avg: ' + sicregion + ', Seasonal avg: ' + sicsea
+    outnc.title = 'original file: td_bootstrap_197811_latest_128_64_sicn_1978111600-2013121612.nc Regional avg: ' + sicregion + ', Seasonal avg: ' + sicsea
     outnc.creation_date = time.ctime(time.time())
     outnc.created_by = 'Kelly E. McCusker, CCCma / U. of Victoria'
 
     # set the data to the variables: important to have [:]!
-    outtimes[:] = gistime[11:-36:12] # get all ~Dec except last 3 for nsidc
+    outtimes[:] = gistime[11:-12:12] # get all ~Dec except last 1 for nsidc (?)
     outfld[:] = nsidcreg
 
     outnc.close()
