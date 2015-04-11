@@ -20,6 +20,7 @@ printtofile=False
 plt.close('all')
 
 conv1=1; conv2=1
+graveraint= 9.80665 # m/s2 (different from Canadian models)
 
 plotscatter=True
 
@@ -421,7 +422,7 @@ if plotscatter:
     ee = plt.scatter(sub.ix[0,5:],sub.ix[1,5:],
                      color=firebrick,marker='o',s=8**2,alpha=0.7)
     #plt.scatter(df['HAD'].values[0],df['HAD'].values[1],color=cd['HAD'],marker='s',s=8**2)
-    #plt.scatter(df['NSIDC'].values[0],df['NSIDC'].values[1],color=cd['NSIDC'],marker='s',s=8**2)
+    ns=plt.scatter(df['NSIDC'].values[0],df['NSIDC'].values[1],color=cd['NSIDC'],marker='s',s=8**2) # @@@@ add back?
     #plt.scatter(df['ENS'].values[0],df['ENS'].values[1],color=cd['ENS'],marker='s',s=10**2)
     #plt.scatter(df['ENSE'].values[0],df['ENSE'].values[1],color=cd['ENSE'],marker='o',s=10**2)
 
@@ -432,8 +433,6 @@ if plotscatter:
     rsq = rval**2
     print 'PAPER --- mean sims regr info: SLOPE: ' + str(mm) + ', RVAL: ' + str(rval) + ', PVAL: ' + str(pval) + ', R2: ' + str(rsq)
     
-    plt.legend((rr,ee),('Individual SIC forcings','Average SIC forcing'),
-               loc='best',fancybox=True,framealpha=0.5)#,frameon=False)
 
     if sea1 in ('ND','DJF') and sea2 in ('ND','DJF') and region1=='bksmori' and region2 in ('eurasia','eurasiathin','eurasiamori'):
         # PAPER FIG!
@@ -449,11 +448,27 @@ if plotscatter:
             xlab = xlab + ' Z500 (m)'
 
         ylab = '$\Delta$ ' + monlab + ' Eurasian SAT ($^\circ$C)'
+        # ### ADD ACTUAL OBS HERE:
+        # GISS (SAT) and ERA-INT (Z500)
+        erafile = '/HOME/rkm/work/DATA/ERAINT/td_era_int_197901_201412_gp_128_64_phi500_1979011612-2014121612.nc'
+        gisfile = '/HOME/rkm/work/DATA/GISS/gistemp1200_ERSST.nc'
+        eraz500c= cnc.getNCvar(erafile,ncfield1,timesel='1979-01-01,1989-12-31',seas=sea1)/graveraint
+        eraz500p= cnc.getNCvar(erafile,ncfield1,timesel='2002-01-01,2012-12-31',seas=sea1)/graveraint
+        erareg = cutl.calc_regmean(eraz500p-eraz500c,lat,lon,region1)
+        gissatc= cnc.getNCvar(gisfile,'tempanomaly',timesel='1979-01-01,1989-12-31',seas=sea2) # @@ need to deal w/ scale factor? OH IT HAPPENS IN MY FUNCTION
+        gissatp= cnc.getNCvar(gisfile,'tempanomaly',timesel='2002-01-01,2012-12-31',seas=sea2)
+        latgis=cnc.getNCvar(gisfile,'lat')
+        longis=cnc.getNCvar(gisfile,'lon')
+        gisreg =  cutl.calc_regmean(gissatp-gissatc,latgis,longis,region2)
+
+        obs=plt.scatter(erareg.mean(),gisreg.mean(),color='blue',marker='s',s=8**2)
         
     else:
         xlab = str(sea1) + ' ' + field1 + ' ' + region1
         ylab = str(sea2) + ' ' + field2 + ' ' + region2
-        
+
+    plt.legend((rr,ee,ns,obs),('Individual SIC forcings','Average SIC forcing','NSIDC SIC forcing','Observations'),
+               loc='best',fancybox=True,framealpha=0.5)#,frameon=False)    
     plt.xlabel(xlab)
     plt.ylabel(ylab)
     axylims = ax.get_ylim()
@@ -465,9 +480,9 @@ if plotscatter:
 
     if printtofile:
         fig.savefig('scatterregress_' + field1 + region1 + str(sea1) + '_v_' +
-                    field2 + region2 + str(sea2) + 'wacepap.pdf')
+                    field2 + region2 + str(sea2) + 'wacepapobs.pdf')
         fig.savefig('scatterregress_' + field1 + region1 + str(sea1) + '_v_' +
-                    field2 + region2 + str(sea2) + 'wacepap.eps')
+                    field2 + region2 + str(sea2) + 'wacepapobs.eps')
 
     printtofile=False
 
@@ -798,7 +813,7 @@ def plot_anttotsbplt_histpdf(antdata,totdata,printtofile=False,label=''):
         fig.savefig('histpdf_' + label + '_ANTTOTsbplt.pdf')
 
 
-printtofile=True
+printtofile=False
 plot_anttotanom_histpdf(allantr2,alltotr2,
                         label=(field2 + region2 + '_' + str(sea2)),printtofile=printtofile)
 cutl.calc_pvals(allantr2,alltotr2)
