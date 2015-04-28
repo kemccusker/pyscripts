@@ -15,6 +15,7 @@ import cccmaplots as cplt
 import cccmacmaps as ccm
 import pandas as pd
 import numpy.ma as ma
+import matplotlib.font_manager as fm
 
 printtofile=False
 plt.close('all')
@@ -402,6 +403,7 @@ if plotscatter:
     #edf=df.ix[:,'E1':'E5']
     #regressdf = rdf.append(edf) # didn't append like I expected. inserted NaNs in places
     
+
     # this will work:
     allens=['R1','R2','R3','R4','R5','E1','E2','E3','E4','E5'] # has to be an array!
     rens=['R1','R2','R3','R4','R5']
@@ -422,7 +424,7 @@ if plotscatter:
     ee = plt.scatter(sub.ix[0,5:],sub.ix[1,5:],
                      color=firebrick,marker='o',s=8**2,alpha=0.7)
     #plt.scatter(df['HAD'].values[0],df['HAD'].values[1],color=cd['HAD'],marker='s',s=8**2)
-    ns=plt.scatter(df['NSIDC'].values[0],df['NSIDC'].values[1],color=cd['NSIDC'],marker='s',s=8**2) # @@@@ add back?
+    ns=plt.scatter(df['NSIDC'].values[0],df['NSIDC'].values[1],color=cd['NSIDC'],marker='o',s=8**2,alpha=0.7) # @@@@ add back?
     #plt.scatter(df['ENS'].values[0],df['ENS'].values[1],color=cd['ENS'],marker='s',s=10**2)
     #plt.scatter(df['ENSE'].values[0],df['ENSE'].values[1],color=cd['ENSE'],marker='o',s=10**2)
 
@@ -483,6 +485,75 @@ if plotscatter:
                     field2 + region2 + str(sea2) + 'wacepapobs.pdf')
         fig.savefig('scatterregress_' + field1 + region1 + str(sea1) + '_v_' +
                     field2 + region2 + str(sea2) + 'wacepapobs.eps')
+
+    # ### ADD LE DATA #####
+    printtofile=True
+    import loadLE as le
+
+    lefield1='zg50000.00'; lencfield1='zg'; comp1='Amon'; leconv1=1 #region1='bksmori'
+    lefield2='tas'; lencfield2='tas'; comp2='Amon'; #region2='eurasiamori'
+
+    ftype='fullts' # 'fullclimo' or 'climo' or 'fullts'
+    lefdict1 = {'field': lefield1+region1, 'ncfield': lencfield1, 'comp': comp1}
+    lefdict2 = {'field': lefield2+region2, 'ncfield': lencfield2, 'comp': comp2}
+
+    # historical
+    lecdat1 = le.load_LEdata(fdict1,'historical',timesel=timeselc, rettype='ndarray',conv=leconv1,ftype=ftype)
+    (numens1,ntime1) = lecdat1.shape
+    lepdat1=le.load_LEdata(fdict1,'historical',timesel=timeselp, rettype='ndarray',conv=leconv1,ftype=ftype)
+    lecsea1 = cutl.seasonalize_monthlyts(lecdat1.T,season=sea1).T
+    lepsea1 = cutl.seasonalize_monthlyts(lepdat1.T,season=sea1).T
+    lefld1=lepsea1.mean(axis=1)-lecsea1.mean(axis=1)
+
+    lecdat2 = le.load_LEdata(fdict2,'historical',timesel=timeselc, rettype='ndarray',conv=conv2,ftype=ftype)
+    (numens2,ntime2) = lecdat1.shape
+    lepdat2=le.load_LEdata(fdict2,'historical',timesel=timeselp, rettype='ndarray',conv=conv2,ftype=ftype)
+    lecsea2 = cutl.seasonalize_monthlyts(lecdat2.T,season=sea2).T
+    lepsea2 = cutl.seasonalize_monthlyts(lepdat2.T,season=sea2).T
+    lefld2=lepsea2.mean(axis=1)-lecsea2.mean(axis=1)
+
+    ledat=plt.scatter(lefld1,lefld2,color=ccm.get_linecolor('darkolivegreen3'),marker='*',s=5**2,alpha=0.5)
+    lemm, lebb, lerval, lepval, lestd_err = sp.stats.linregress(lefld1,lefld2)
+    axylims = ax.get_ylim()
+    axxlims = ax.get_xlim()
+    onex=np.linspace(axxlims[0],axxlims[1])
+    ax.plot(onex,lemm*onex + lebb, color=ccm.get_linecolor('darkolivegreen3'),linewidth=1)
+
+    # historicalNat
+    lecdat1n = le.load_LEdata(fdict1,'historicalNat',timesel=timeselc, rettype='ndarray',conv=leconv1,ftype=ftype)
+    (numens1,ntime1) = lecdat1n.shape
+    lepdat1n=le.load_LEdata(fdict1,'historicalNat',timesel=timeselp, rettype='ndarray',conv=leconv1,ftype=ftype)
+    lecsea1n = cutl.seasonalize_monthlyts(lecdat1n.T,season=sea1).T
+    lepsea1n = cutl.seasonalize_monthlyts(lepdat1n.T,season=sea1).T
+    lefld1n=lepsea1n.mean(axis=1)-lecsea1n.mean(axis=1)
+
+    lecdat2n = le.load_LEdata(fdict2,'historicalNat',timesel=timeselc, rettype='ndarray',conv=conv2,ftype=ftype)
+    (numens2,ntime2) = lecdat1n.shape
+    lepdat2n=le.load_LEdata(fdict2,'historicalNat',timesel=timeselp, rettype='ndarray',conv=conv2,ftype=ftype)
+    lecsea2n = cutl.seasonalize_monthlyts(lecdat2n.T,season=sea2).T
+    lepsea2n = cutl.seasonalize_monthlyts(lepdat2n.T,season=sea2).T
+    lefld2n=lepsea2n.mean(axis=1)-lecsea2n.mean(axis=1)
+
+    ledatn=plt.scatter(lefld1n,lefld2n,color=ccm.get_linecolor('steelblue3'),marker='*',s=5**2,alpha=0.5)
+    lemmn, lebbn, lervaln, lepvaln, lestd_errn = sp.stats.linregress(lefld1n,lefld2n)
+    axylims = ax.get_ylim()
+    axxlims = ax.get_xlim()
+    onex=np.linspace(axxlims[0],axxlims[1])
+    ax.plot(onex,lemmn*onex + lebbn, color=ccm.get_linecolor('steelblue3'),linewidth=1)
+
+    fontP = fm.FontProperties()
+    fontP.set_size('small')
+    plt.legend((rr,ee,ns,obs,ledat,ledatn),('Individual SIC forcings','Average SIC forcing',
+                                            'NSIDC SIC forcing','Observations',
+                                            'historical LE', 'historicalNat LE'),
+               loc='best',fancybox=True,framealpha=0.5,prop=fontP)#,frameon=False)    
+
+    if printtofile:
+        fig.savefig('scatterregress_' + field1 + region1 + str(sea1) + '_v_' +
+                    field2 + region2 + str(sea2) + 'wacepapobs_LE.pdf')
+        #fig.savefig('scatterregress_' + field1 + region1 + str(sea1) + '_v_' +
+        #            field2 + region2 + str(sea2) + 'wacepapobs_LE.eps')
+
 
     printtofile=False
 
