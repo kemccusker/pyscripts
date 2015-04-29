@@ -298,8 +298,10 @@ diffnatorig = presnatorig.mean(axis=0) - pastnatorig.mean(axis=0)
 
 # TIMESERIES
 firebrick=ccm.get_linecolor('firebrick')
+hcol=ccm.get_linecolor('darkolivegreen3')
+hcolline=ccm.get_linecolor('darkolivegreen3')#'darkseagreen4')
 natcol=ccm.get_linecolor('steelblue3')
-natcolline=ccm.get_linecolor('steelblue4')
+natcolline=ccm.get_linecolor('steelblue3')#4')
 
 fig,axs=plt.subplots(1,1)
 axs.plot(years,allnatdf,color=natcol,alpha=.5)
@@ -432,14 +434,14 @@ mew=1.5
 
 fig,ax=plt.subplots(1,1)
 allnatdiff.hist(normed=True,color=natcol,alpha=0.5)#,histtype='stepfilled')
-alldiff.hist(normed=True,color=firebrick,alpha=0.5)#,histtype='stepfilled')
+alldiff.hist(normed=True,color=hcol,alpha=0.5)#,histtype='stepfilled')
 # use proxy artist for histogram legend entries
 #tot = mpatches.Patch(color=firebrick,alpha=0.5)#, label='The red data')
 #nat = mpatches.Patch(color='0.5',alpha=0.5)#, label='The red data')
-tot=mlines.Line2D([],[],color=firebrick,linewidth=2)
+tot=mlines.Line2D([],[],color=hcolline,linewidth=2)
 nat=mlines.Line2D([],[],color=natcolline,linewidth=2)
 
-ax.plot(axx,apdf_fitted,color=firebrick,linewidth=2)
+ax.plot(axx,apdf_fitted,color=hcolline,linewidth=2)
 ax.plot(nxx,npdf_fitted,color=natcolline,linewidth=2)
 axylims=ax.get_ylim()
 ax.set_ylim((axylims[0],axylims[1]+(axylims[1]*.1)))
@@ -460,7 +462,7 @@ for eii in range(1,6):
     else:
         fs=deffs # defaultfs
         
-    ax.plot(plotx,ploty,marker='o',color=firebrick,mec=firebrick,fillstyle=fs,mew=mew,markersize=ms)
+    ax.plot(plotx,ploty,marker='o',color=hcolline,mec=hcolline,fillstyle=fs,mew=mew,markersize=ms)
     #ax.axvline(x=difforig[eii],ymin=.97,ymax=1,color=firebrick,linewidth=2)
 
     plotx = diffnatorig[eii]
@@ -531,9 +533,9 @@ elif season == 'DJF':
 else:
     ax.set_title('Arctic sea-ice area change (' + season + ')')
 if printtofile:
-    fig.savefig(field + 'diff_PDFHIST_CanESMLE_TOTNAT_' + str(season) + '_paper2e.pdf')
+    fig.savefig(field + 'diff_PDFHIST_CanESMLE_TOTNAT_' + str(season) + '_paper2f.pdf')
     ax.set_rasterized(True)
-    fig.savefig(field + 'diff_PDFHIST_CanESMLE_TOTNAT_' + str(season) + '_paper2e.eps')
+    fig.savefig(field + 'diff_PDFHIST_CanESMLE_TOTNAT_' + str(season) + '_paper2f.eps')
 
 
 

@@ -11,14 +11,16 @@ import sys
 import loadLE as le
 import constants as con
 
-printtofile=False
+printtofile=True
 dohist=False
 doscatter=True
 
 timeselc='1979-01-01,1989-12-31'
 timeselp='2002-01-01,2012-12-31'
 
-field1='zg50000.00'; ncfield1='zg'; comp1='Amon'; region1='bksmori'
+#field1='zg50000.00'; ncfield1='zg'; comp1='Amon'; region1='bksmori'
+field1='sia'; ncfield1='sianh'; comp1='OImon'; region1='nh'
+
 conv1= 1 
 sea1='DJF'
 
@@ -36,7 +38,7 @@ fdict2 = {'field': field2+region2, 'ncfield': ncfield2, 'comp': comp2}
 
 if doscatter:
 
-    cdat1 = le.load_LEdata(fdict1,'historical',timesel=timeselc, rettype='ndarray',conv=conv1,ftype=ftype)
+    """    cdat1 = le.load_LEdata(fdict1,'historical',timesel=timeselc, rettype='ndarray',conv=conv1,ftype=ftype)
     (numens1,ntime1) = cdat1.shape
     pdat1=le.load_LEdata(fdict1,'historical',timesel=timeselp, rettype='ndarray',conv=conv1,ftype=ftype)
     csea1 = cutl.seasonalize_monthlyts(cdat1.T,season=sea1).T
@@ -58,34 +60,100 @@ if doscatter:
     axylims = ax.get_ylim()
     axxlims = ax.get_xlim()
     onex=np.linspace(axxlims[0],axxlims[1])
-    ax.plot(onex,mm*onex + bb, color='0.5',linewidth=1)#,linestyle='--')
+    ax.plot(onex,mm*onex + bb, color='0.5',linewidth=1)#,linestyle='--') """
 
 
+    # historical
+    lecdat1 = le.load_LEdata(fdict1,'historical',timesel=timeselc, rettype='ndarray',conv=leconv1,ftype=ftype)
+    (numens1,ntime1) = lecdat1.shape
+    lepdat1=le.load_LEdata(fdict1,'historical',timesel=timeselp, rettype='ndarray',conv=leconv1,ftype=ftype)
+    lecsea1 = cutl.seasonalize_monthlyts(lecdat1.T,season=sea1).T
+    lepsea1 = cutl.seasonalize_monthlyts(lepdat1.T,season=sea1).T
+    lefld1=lepsea1.mean(axis=1)-lecsea1.mean(axis=1)
+
+    lecdat2 = le.load_LEdata(fdict2,'historical',timesel=timeselc, rettype='ndarray',conv=conv2,ftype=ftype)
+    (numens2,ntime2) = lecdat1.shape
+    lepdat2=le.load_LEdata(fdict2,'historical',timesel=timeselp, rettype='ndarray',conv=conv2,ftype=ftype)
+    lecsea2 = cutl.seasonalize_monthlyts(lecdat2.T,season=sea2).T
+    lepsea2 = cutl.seasonalize_monthlyts(lepdat2.T,season=sea2).T
+    lefld2=lepsea2.mean(axis=1)-lecsea2.mean(axis=1)
+    lemm, lebb, lerval, lepval, lestd_err = sp.stats.linregress(lefld1,lefld2)
+    
+
+    # historicalNat
+    lecdat1n = le.load_LEdata(fdict1,'historicalNat',timesel=timeselc, rettype='ndarray',conv=leconv1,ftype=ftype)
+    (numens1,ntime1) = lecdat1n.shape
+    lepdat1n=le.load_LEdata(fdict1,'historicalNat',timesel=timeselp, rettype='ndarray',conv=leconv1,ftype=ftype)
+    lecsea1n = cutl.seasonalize_monthlyts(lecdat1n.T,season=sea1).T
+    lepsea1n = cutl.seasonalize_monthlyts(lepdat1n.T,season=sea1).T
+    lefld1n=lepsea1n.mean(axis=1)-lecsea1n.mean(axis=1)
+
+    lecdat2n = le.load_LEdata(fdict2,'historicalNat',timesel=timeselc, rettype='ndarray',conv=conv2,ftype=ftype)
+    (numens2,ntime2) = lecdat1n.shape
+    lepdat2n=le.load_LEdata(fdict2,'historicalNat',timesel=timeselp, rettype='ndarray',conv=conv2,ftype=ftype)
+    lecsea2n = cutl.seasonalize_monthlyts(lecdat2n.T,season=sea2).T
+    lepsea2n = cutl.seasonalize_monthlyts(lepdat2n.T,season=sea2).T
+    lefld2n=lepsea2n.mean(axis=1)-lecsea2n.mean(axis=1)
+    lemmn, lebbn, lervaln, lepvaln, lestd_errn = sp.stats.linregress(lefld1n,lefld2n)
+
+
+    fig,ax=plt.subplots(1,1)
+    ledat=plt.scatter(lefld1,lefld2,color=ccm.get_linecolor('darkolivegreen3'),marker='*',s=5**2,alpha=0.5)
+    axylims = ax.get_ylim()
+    axxlims = ax.get_xlim()
+    onex=np.linspace(axxlims[0],axxlims[1])
+    ax.plot(onex,lemm*onex + lebb, color=ccm.get_linecolor('darkolivegreen3'),linewidth=1)
+
+    ledatn=plt.scatter(lefld1n,lefld2n,color=ccm.get_linecolor('steelblue3'),marker='*',s=5**2,alpha=0.5)
+    axylims = ax.get_ylim()
+    axxlims = ax.get_xlim()
+    onex=np.linspace(axxlims[0],axxlims[1])
+    ax.plot(onex,lemmn*onex + lebbn, color=ccm.get_linecolor('steelblue3'),linewidth=1)
+
+    fontP = fm.FontProperties()
+    fontP.set_size('small')
+    plt.legend((ledat,ledatn),('historical LE', 'historicalNat LE'),
+               loc='best',fancybox=True,framealpha=0.5,prop=fontP)#,frameon=False) 
+
+    plt.annotate('historical R= ' + '$%.2f$'%(lerval) + ', historicalNat R='+ '$%.2f$'%(lervaln),
+                xy=(axxlims[0]+.1*axxlims[1], axylims[1]-.1*axylims[1]),
+                xycoords='data')
+    plt.annotate('historical p= ' + '$%.2f$'%(lepval) + ', historicalNat p='+ '$%.2f$'%(lepvaln),
+                xy=(axxlims[0]+.1*axxlims[1], axylims[1]-.2*axylims[1]),
+                xycoords='data')
+    plt.xlabel(sea1 + ' ' + field1 + ' ' + region1)
+    plt.ylabel(sea2 + ' ' + field2 + ' ' + region2)
+
+    if printtofile:
+        plt.savefig('scatterregress_' + field1 + region1 + str(sea1) + '_v_' + 
+                    field2 + region2 + str(sea2) + '_historical_historicalNat_2002-12_1979-89_.pdf')
 
 if dohist:
-    histcdat=le.load_LEdata(fdict,'historical',timesel=timeselc, rettype='ndarray',conv=conv,ftype=ftype)
+    histcdat=le.load_LEdata(fdict2,'historical',timesel=timeselc, rettype='ndarray',conv=conv,ftype=ftype)
     (numens,ntime) = histcdat.shape
-    histpdat=le.load_LEdata(fdict,'historical',timesel=timeselp, rettype='ndarray',conv=conv,ftype=ftype)
+    histpdat=le.load_LEdata(fdict2,'historical',timesel=timeselp, rettype='ndarray',conv=conv,ftype=ftype)
 
     # Now have 11 years of monthly data. Grab DJF:
     histc = cutl.seasonalize_monthlyts(histcdat.T,season='DJF').T
     histp = cutl.seasonalize_monthlyts(histpdat.T,season='DJF').T
 
-    histnatcdat=le.load_LEdata(fdict,'historicalNat',timesel=timeselc, rettype='ndarray',conv=conv,ftype=ftype)
+    histnatcdat=le.load_LEdata(fdict2,'historicalNat',timesel=timeselc, rettype='ndarray',conv=conv,ftype=ftype)
     #(numens,ntime,nlatlon) = histnatcdat.shape
-    histnatpdat=le.load_LEdata(fdict,'historicalNat',timesel=timeselp, rettype='ndarray',conv=conv,ftype=ftype)
+    histnatpdat=le.load_LEdata(fdict2,'historicalNat',timesel=timeselp, rettype='ndarray',conv=conv,ftype=ftype)
     histnatc = cutl.seasonalize_monthlyts(histnatcdat.T,season='DJF').T
     histnatp = cutl.seasonalize_monthlyts(histnatpdat.T,season='DJF').T
 
     firebrick=ccm.get_linecolor('firebrick')
+    darkolivegreen3=ccm.get_linecolor('darkolivegreen3')
+    steelblue3=ccm.get_linecolor('steelblue3')
 
     plt.figure()
-    plt.hist(histp.mean(axis=1)-histc.mean(axis=1),color=firebrick,alpha=0.5)
-    plt.hist(histnatp.mean(axis=1)-histnatc.mean(axis=1),color='b',alpha=0.5)
+    plt.hist(histp.mean(axis=1)-histc.mean(axis=1),color=darkolivegreen3,alpha=0.5)
+    plt.hist(histnatp.mean(axis=1)-histnatc.mean(axis=1),color=steelblue3,alpha=0.5)
     plt.title('CanESM LE: ' + sea + ' ' + '2002-02 - 1979-89')
-    plt.xlabel(field + ' ' + region)
+    plt.xlabel(field2 + ' ' + region2)
     if printtofile:
-        plt.savefig(field+'_' + region + 'historical_historicalNat_2002-12_1979-89_PDF_' + sea + '.pdf')
+        plt.savefig(field2+'_' + region2 + 'historical_historicalNat_2002-12_1979-89_PDF_' + sea + '.pdf')
 
 
 
