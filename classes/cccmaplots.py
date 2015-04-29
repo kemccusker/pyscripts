@@ -148,7 +148,7 @@ def kemmap(fld, lat, lon,title='',units='',cmap='blue2red_w20',type='sq',
         if flipmask:
             lsmask=np.flipud(lsmask)
             
-        fld = ma.masked_where(lsmask!=0,fld) # 0 is ocean
+        #@@@fld = ma.masked_where(lsmask!=0,fld) # 0 is ocean
         
     lons, lats = np.meshgrid(lon,lat)
         
@@ -175,8 +175,9 @@ def kemmap(fld, lat, lon,title='',units='',cmap='blue2red_w20',type='sq',
     #bm.drawmapboundary(fill_color='#99ffff')
 
     if lmask==1:
-        bm.drawmapboundary(fill_color='0.7')
+        #@@@bm.drawmapboundary(fill_color='0.7')
         bm.drawcoastlines(color='.3')
+        bm.fillcontinents(color='0.7')
 
     # I think drawlsmask puts the mask on the bottom
     #bm.drawlsmask(land_color='0.7',lsmask=con.get_t63landmask(),ax=axis)
