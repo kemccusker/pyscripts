@@ -27,23 +27,23 @@ plt.ion()
        # coords = {'lat': con.get_t63lat(), 'lon': con.get_t63lon()}
 
 
-printtofile=False
+printtofile=True
 
-field = 'st'
+field = 'sicn'
 smclim=True
 level=50000 # for threed
 
-addcont=True # overlay map with contours
+addcont=False # overlay map with contours
 sigoff=True # if True, don't add significance
 effdof=False # use effective deg of freedom or no. Set to False.
-field2='sicn'
-#field2='gz'
+#field2='sicn'
+field2='gz'
 #field2='pmsl'
 level2=50000
 
 # seasonalmap, seasonalvert, plotzonmean, plotseacyc, pattcorrwithtime, plotregmean,calcregmeanwithtime, calcregunccascade,timetosig, timetosigsuper, plotscatter
 plottype='seasonalmap' 
-projtype='eabkslamb' #'eastere' # 'nh','sh','sq','eastere','nastere','eabksstere','ealamb','eabkslamb'
+projtype='nh' #'eastere' # 'nh','sh','sq','eastere','nastere','eabksstere','ealamb','eabkslamb'
 
 # None, nh, polcap60, polcap65, polcap70, eurasia, eurasiamori, eurasiasth,eurasiathin,eurasiathinw,eurasiathine,ntham, nthatl, bks, bksmori, soo
 region='nthamsth' #'eurasia' #'eurasiamori'
@@ -172,8 +172,8 @@ elif simsforpaperwace:
     #print '@@@ simsforpaperwace (version d) is WACE paper -- DJF cold and warm extremes, E4,R4 only'
     #savestr = '_forpapwaced'; sims = ('E4','R4'); seasons=('DJF',); figtrans=True 
 
-    print '@@@ simsforpaperwace (version e) is WACE paper -- DJF cold and warm extremes, E4,E1 only'
-    savestr = '_forpapwaceE'; sims = ('E4','E1'); seasons=('DJF',); figtrans=True 
+    #print '@@@ simsforpaperwace (version e) is WACE paper -- DJF cold and warm extremes, E4,E1 only'
+    #savestr = '_forpapwaceE'; sims = ('E4','E1'); seasons=('DJF',); #figtrans=True 
 
     #print '@@@ simsforpaperwace (version c) is WACE paper -- DJF cold and cold extremes, R2, E4 only'
     #savestr = '_forpapwacec'; sims = ('R2','E4'); seasons=('DJF',); figtrans=True 
@@ -183,6 +183,10 @@ elif simsforpaperwace:
     
     #print '@@@ simsforpaper is WACE B paper right now -- ND cold and warm extremes, E4, E1 only'
     #savestr = '_forpapwaceb'; sims = ('E4','E1'); seasons=('ND',); figtrans=False # 90% stat sig
+
+    print '@@@ simsforpaperwace (version F) is WACE paper -- DJF sicn for NSIDC and ANT'
+    savestr = '_forpapwaceF'; sims = ('NSIDC','ENSE'); seasons=('DJF',); #figtrans=True 
+
     
 elif sensruns: # add sensitivity runs. with Shaded ENS. don't plot meanBC, mean of ens
     sims = sims[0:5] + ('R4ct','CANnosst','CANnothk') # @@ change to E1nosst, etc?
@@ -427,9 +431,16 @@ if plottype in ('seasonalmap','seasonalvert'):
             ax1.set_ylabel('Latitude',fontsize=12)
             if not figtrans:
                 ax1.set_xlabel('Longitude',fontsize=12)
+        elif (field=='sicn') and ('NSIDC' in sims):
+            prstr=''
+            ax1.set_title('a. NSIDC SIC forcing')
+            ax1.set_ylabel('',fontsize=12)
+            if not figtrans:
+                ax1.set_xlabel('',fontsize=12)
         else: # else assume it's the cooling and warming cases for paper
             prstr=''
-            ax1.set_title('a. Cooling case')
+            #ax1.set_title('a. Cooling case')
+            ax1.set_title('c. Cooling case')
             ax1.set_ylabel('Latitude',fontsize=12)
             if not figtrans:
                 ax1.set_xlabel('Longitude',fontsize=12)
@@ -448,11 +459,19 @@ if plottype in ('seasonalmap','seasonalvert'):
             else:
                 ax2.set_ylabel('',fontsize=12)
 
+        elif (field=='sicn') and ('NSIDC' in sims):
+            ax2.set_title('b. Average SIC forcing')
+            ax2.set_xlabel('',fontsize=12)
+            if figtrans:
+                ax2.set_ylabel('',fontsize=12)
+            else:
+                ax2.set_ylabel('',fontsize=12)
         else:  # else assume it's the cooling and warming cases for paper
             if 'DJF' in seasons:
                 prstr='d' # version d
 
-            ax2.set_title('b. Warming case')
+            #ax2.set_title('b. Warming case')
+            ax2.set_title('d. Warming case')
             ax2.set_xlabel('Longitude',fontsize=12)
             if figtrans:
                 ax2.set_ylabel('Latitude',fontsize=12)
@@ -470,12 +489,17 @@ if plottype in ('seasonalmap','seasonalvert'):
                 axcb.set_xticklabels(('-1.0','','','','','0','','','','','1.0'))
 
         thefig.suptitle('')
-        if addcont:
-            thefig.savefig('wacefigure4'+savestr+'_' + field + '_' + field2 + 'cont_trans_' + prstr + projtype + '.pdf')
-            thefig.savefig('wacefigure4'+savestr+'_' + field + '_' + field2 + 'cont_trans_' + prstr + projtype + '.eps')
+        if figtrans:
+            trans='trans_'
         else:
-            thefig.savefig('wacefigure4'+savestr+'_' + field + '_trans_' + prstr + projtype + '.pdf')
-            thefig.savefig('wacefigure4'+savestr+'_' + field + '_trans_' + prstr + projtype + '.eps')
+            trans=''
+
+        if addcont:
+            thefig.savefig('wacefigure4'+savestr+'_' + field + '_' + field2 + 'cont_' + trans + prstr + projtype + '.pdf')
+            thefig.savefig('wacefigure4'+savestr+'_' + field + '_' + field2 + 'cont_' + trans + prstr + projtype + '.eps')
+        else:
+            thefig.savefig('wacefigure4'+savestr+'_' + field + '_' + trans + prstr + projtype + '.pdf')
+            thefig.savefig('wacefigure4'+savestr+'_' + field + '_' + trans + prstr + projtype + '.eps')
         
         
     
