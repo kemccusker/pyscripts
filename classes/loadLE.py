@@ -36,6 +36,7 @@ def load_LEdata(fielddict, ens, seas=None, timesel=None,infodict=None,ftype='ful
     flist = build_filenames(fielddict, ens,ftype=ftype,timesel=timesel)
 
     fname1 = flist[0]
+    print ' @@ fname1 ' + fname1
     timedim = cnc.getNCvar(fname1,'time',timesel=timesel)
     #print timedim
 
