@@ -130,12 +130,21 @@ def calc_plot_seasonal_maps(fielddict,coords,sims,pparams,vert=False,loctimesel=
             fig6.subplots_adjust(hspace=.03,wspace=.03)
         else:
             fig6.subplots_adjust(hspace=.02,wspace=.02)
+        print '@@@@@@@@@ ax6.shape ' + str(ax6.shape)
+        print seasons
+        print sims
+        print '@@@@@@@@@'
     else:
         fig6,ax6 = plt.subplots(len(seasons),len(sims)) # 1 col for e/ simulation, 1 row per season
         fig6.set_size_inches(12,8)
         #lastcol=len(sims)-1
         #lastrow=len(seasons)-1
         fig6.subplots_adjust(hspace=.15,wspace=.05)
+        print '@@@@@@@@@ ax6.shape ' + str(ax6.shape)
+        print seasons
+        print sims
+        print '@@@@@@@@@'
+
     lastcol=len(sims)-1
     lastrow=len(seasons)-1
     
@@ -196,7 +205,9 @@ def calc_plot_seasonal_maps(fielddict,coords,sims,pparams,vert=False,loctimesel=
                 if len(sims)==1:
                     ax=ax6[rowidx]
                 elif len(seasons)==1:
-                    ax=ax6[rowidx]
+                    #ax=ax6[rowidx] # @@should this be colidx?? YES. prob means above is broken too....
+                    ax=ax6[colidx]
+                    print 'rowidx ' + str(rowidx) + ', colidx ' + str(colidx) + ' ax6.shape ' + str(ax6.shape) # @@@@@
                 else:
                     ax = ax6[rowidx][colidx]
             ncparams={'timesel':timesel, 'seas': sea}
