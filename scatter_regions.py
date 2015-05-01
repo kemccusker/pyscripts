@@ -24,6 +24,7 @@ conv1=1; conv2=1
 graveraint= 9.80665 # m/s2 (different from Canadian models)
 
 plotscatter=True
+addobs=False
 
 # field1 is x
 #field1='st'; ncfield1='ST'
@@ -395,6 +396,9 @@ if plotscatter:
 
     # ################# PAPER ###############
     
+    fontP = fm.FontProperties()
+    fontP.set_size('small')
+
     # SCATTER PLOT OF SIM MEANS
     # prepare data for regression line
     #mm, bb, rval, pval, std_err = sp.stats.linregress(dfts[sim].values[0],dfts[sim].values[1])
@@ -424,7 +428,8 @@ if plotscatter:
     ee = plt.scatter(sub.ix[0,5:],sub.ix[1,5:],
                      color=firebrick,marker='o',s=8**2,alpha=0.7)
     #plt.scatter(df['HAD'].values[0],df['HAD'].values[1],color=cd['HAD'],marker='s',s=8**2)
-    ns=plt.scatter(df['NSIDC'].values[0],df['NSIDC'].values[1],color=cd['NSIDC'],marker='o',s=8**2,alpha=0.7) # @@@@ add back?
+    #ns=plt.scatter(df['NSIDC'].values[0],df['NSIDC'].values[1],color=cd['NSIDC'],marker='o',s=8**2,alpha=0.7) # @@@@ add back?
+    ns=plt.scatter(df['NSIDC'].values[0],df['NSIDC'].values[1],color='green',marker='o',s=8**2,alpha=0.7)
     #plt.scatter(df['ENS'].values[0],df['ENS'].values[1],color=cd['ENS'],marker='s',s=10**2)
     #plt.scatter(df['ENSE'].values[0],df['ENSE'].values[1],color=cd['ENSE'],marker='o',s=10**2)
 
@@ -450,6 +455,7 @@ if plotscatter:
             xlab = xlab + ' Z500 (m)'
 
         ylab = '$\Delta$ ' + monlab + ' Eurasian SAT ($^\circ$C)'
+        
         # ### ADD ACTUAL OBS HERE:
         # GISS (SAT) and ERA-INT (Z500)
         erafile = '/HOME/rkm/work/DATA/ERAINT/td_era_int_197901_201412_gp_128_64_phi500_1979011612-2014121612.nc'
@@ -463,14 +469,23 @@ if plotscatter:
         longis=cnc.getNCvar(gisfile,'lon')
         gisreg =  cutl.calc_regmean(gissatp-gissatc,latgis,longis,region2)
 
-        obs=plt.scatter(erareg.mean(),gisreg.mean(),color='blue',marker='s',s=8**2)
+        if addobs:
+            obs=plt.scatter(erareg.mean(),gisreg.mean(),color='blue',marker='s',s=8**2)
         
     else:
         xlab = str(sea1) + ' ' + field1 + ' ' + region1
         ylab = str(sea2) + ' ' + field2 + ' ' + region2
 
-    plt.legend((rr,ee,ns,obs),('Individual SIC forcings','Average SIC forcing','NSIDC SIC forcing','Observations'),
-               loc='best',fancybox=True,framealpha=0.5)#,frameon=False)    
+    if addobs:
+        probs='obs' # print obs string
+        plt.legend((rr,ee,ns,obs),('Individual SIC forcings',
+                                   'Average SIC forcing','NSIDC SIC forcing','Observations'),
+                   loc='best',fancybox=True,framealpha=0.5,prop=fontP)#,frameon=False)  
+    else:
+        probs=''
+        plt.legend((rr,ee,ns),('Individual SIC forcings',
+                                   'Average SIC forcing','NSIDC SIC forcing'),
+                   loc='best',fancybox=True,framealpha=0.5,prop=fontP)#,frameon=False) 
     plt.xlabel(xlab)
     plt.ylabel(ylab)
     axylims = ax.get_ylim()
@@ -482,16 +497,22 @@ if plotscatter:
 
     if printtofile:
         fig.savefig('scatterregress_' + field1 + region1 + str(sea1) + '_v_' +
-                    field2 + region2 + str(sea2) + 'wacepapobs.pdf')
+                    field2 + region2 + str(sea2) + 'wacepap' + probs + '.pdf')
         fig.savefig('scatterregress_' + field1 + region1 + str(sea1) + '_v_' +
-                    field2 + region2 + str(sea2) + 'wacepapobs.eps')
+                    field2 + region2 + str(sea2) + 'wacepap' + probs + '.eps')
 
     # ### ADD LE DATA #####
     printtofile=True
     import loadLE as le
 
+    timeselc='1979-01-01,1989-12-31'
+    timeselp='2002-01-01,2012-12-31'
+
     lefield1='zg50000.00'; lencfield1='zg'; comp1='Amon'; leconv1=1 #region1='bksmori'
     lefield2='tas'; lencfield2='tas'; comp2='Amon'; #region2='eurasiamori'
+    fdict1 = {'field': lefield1+region1, 'ncfield': lencfield1, 'comp': comp1}
+    fdict2 = {'field': lefield2+region2, 'ncfield': lencfield2, 'comp': comp2}
+
 
     ftype='fullts' # 'fullclimo' or 'climo' or 'fullts'
     lefdict1 = {'field': lefield1+region1, 'ncfield': lencfield1, 'comp': comp1}
@@ -511,6 +532,8 @@ if plotscatter:
     lecsea2 = cutl.seasonalize_monthlyts(lecdat2.T,season=sea2).T
     lepsea2 = cutl.seasonalize_monthlyts(lepdat2.T,season=sea2).T
     lefld2=lepsea2.mean(axis=1)-lecsea2.mean(axis=1)
+
+    obs=plt.scatter(erareg.mean(),gisreg.mean(),color='blue',marker='s',s=8**2)
 
     ledat=plt.scatter(lefld1,lefld2,color=ccm.get_linecolor('darkolivegreen3'),marker='*',s=5**2,alpha=0.5)
     lemm, lebb, lerval, lepval, lestd_err = sp.stats.linregress(lefld1,lefld2)
@@ -541,8 +564,6 @@ if plotscatter:
     onex=np.linspace(axxlims[0],axxlims[1])
     ax.plot(onex,lemmn*onex + lebbn, color=ccm.get_linecolor('steelblue3'),linewidth=1)
 
-    fontP = fm.FontProperties()
-    fontP.set_size('small')
     plt.legend((rr,ee,ns,obs,ledat,ledatn),('Individual SIC forcings','Average SIC forcing',
                                             'NSIDC SIC forcing','Observations',
                                             'historical LE', 'historicalNat LE'),
@@ -553,6 +574,118 @@ if plotscatter:
                     field2 + region2 + str(sea2) + 'wacepapobs_LE.pdf')
         #fig.savefig('scatterregress_' + field1 + region1 + str(sea1) + '_v_' +
         #            field2 + region2 + str(sea2) + 'wacepapobs_LE.eps')
+
+
+    # ##### JUST SIMS ONE COLOR #########
+    fig,ax = plt.subplots(1)
+    fig.set_size_inches(6,5)
+    rr = plt.scatter(df.filter(regex='R').values[0],df.filter(regex='R').values[1],
+                     color='0.3',marker='o',s=8**2,alpha=0.7)
+    ee = plt.scatter(sub.ix[0,5:],sub.ix[1,5:],
+                     color='0.3',marker='o',s=8**2,alpha=0.7)
+    #plt.scatter(df['HAD'].values[0],df['HAD'].values[1],color=cd['HAD'],marker='s',s=8**2)
+    #ns=plt.scatter(df['NSIDC'].values[0],df['NSIDC'].values[1],color=cd['NSIDC'],marker='o',s=8**2,alpha=0.7) # @@@@ add back?
+    ns=plt.scatter(df['NSIDC'].values[0],df['NSIDC'].values[1],color='green',marker='o',s=8**2,alpha=0.7)
+    #plt.scatter(df['ENS'].values[0],df['ENS'].values[1],color=cd['ENS'],marker='s',s=10**2)
+    #plt.scatter(df['ENSE'].values[0],df['ENSE'].values[1],color=cd['ENSE'],marker='o',s=10**2)
+
+    axylims = ax.get_ylim()
+    axxlims = ax.get_xlim()
+    onex=np.linspace(axxlims[0],axxlims[1])
+    plt.plot(onex,mm*onex + bb, color='0.5',linewidth=1)#,linestyle='--')
+    if addobs:
+        obs=plt.scatter(erareg.mean(),gisreg.mean(),color='blue',marker='s',s=8**2)
+
+    if addobs:
+        probs='obs' # print obs string
+        plt.legend((ee,ns,obs),('Modelled SIC forcings',
+                                'NSIDC SIC forcing','Observations'),
+                   loc='best',fancybox=True,framealpha=0.5,prop=fontP)#,frameon=False)  
+    else:
+        probs=''
+        plt.legend((ee,ns),('Modelled SIC forcings','NSIDC SIC forcing'),
+                   loc='best',fancybox=True,framealpha=0.5,prop=fontP)#,frameon=False) 
+    plt.xlabel(xlab)
+    plt.ylabel(ylab)
+    axylims = ax.get_ylim()
+    if axylims[0]<=0 and axylims[1]>=0:
+        ax.axhline(y=0,color='k',linewidth=.5,linestyle='--')
+    axxlims = ax.get_xlim()
+    if axxlims[0]<=0 and axxlims[1]>=0:
+        ax.axvline(x=0,color='k',linewidth=.5,linestyle='--')
+
+    if printtofile:
+        fig.savefig('scatterregress_' + field1 + region1 + str(sea1) + '_v_' +
+                    field2 + region2 + str(sea2) + 'wacepap' + probs + '_onecol.pdf')
+        fig.savefig('scatterregress_' + field1 + region1 + str(sea1) + '_v_' +
+                    field2 + region2 + str(sea2) + 'wacepap' + probs + '_onecol.eps')
+
+
+    # ### JUST LE DATA #####
+    fig,ax = plt.subplots(1)
+    fig.set_size_inches(6,5)
+
+    obs=ax.scatter(erareg.mean(),gisreg.mean(),color='blue',marker='s',s=8**2)
+
+    ledat=ax.scatter(lefld1,lefld2,color=ccm.get_linecolor('darkolivegreen3'),marker='*',s=5**2,alpha=0.5)
+    lemm, lebb, lerval, lepval, lestd_err = sp.stats.linregress(lefld1,lefld2)
+    axylims = ax.get_ylim()
+    axxlims = ax.get_xlim()
+    onex=np.linspace(axxlims[0],axxlims[1])
+    ax.plot(onex,lemm*onex + lebb, color=ccm.get_linecolor('darkolivegreen3'),linewidth=1)
+
+    ledatn=ax.scatter(lefld1n,lefld2n,color=ccm.get_linecolor('steelblue3'),marker='*',s=5**2,alpha=0.5)
+    lemmn, lebbn, lervaln, lepvaln, lestd_errn = sp.stats.linregress(lefld1n,lefld2n)
+    axylims = ax.get_ylim()
+    axxlims = ax.get_xlim()
+    onex=np.linspace(axxlims[0],axxlims[1])
+    ax.plot(onex,lemmn*onex + lebbn, color=ccm.get_linecolor('steelblue3'),linewidth=1)
+
+    plt.legend((obs,ledat,ledatn),('Observations',
+                                   'historical LE', 'historicalNat LE'),
+               loc='best',fancybox=True,framealpha=0.5,prop=fontP)#,frameon=False)    
+
+    plt.xlabel(xlab)
+    plt.ylabel(ylab)
+    axylims = ax.get_ylim()
+    if axylims[0]<=0 and axylims[1]>=0:
+        ax.axhline(y=0,color='k',linewidth=.5,linestyle='--')
+    axxlims = ax.get_xlim()
+    if axxlims[0]<=0 and axxlims[1]>=0:
+        ax.axvline(x=0,color='k',linewidth=.5,linestyle='--')
+
+    if printtofile:
+        fig.savefig('scatterregress_' + field1 + region1 + str(sea1) + '_v_' +
+                    field2 + region2 + str(sea2) + '_obs_LE.pdf')
+
+    # ### JUST LE HISTORICAL DATA #####
+    fig,ax = plt.subplots(1)
+    fig.set_size_inches(6,5)
+
+    obs=plt.scatter(erareg.mean(),gisreg.mean(),color='blue',marker='s',s=8**2)
+
+    ledat=plt.scatter(lefld1,lefld2,color=ccm.get_linecolor('darkolivegreen3'),marker='*',s=5**2,alpha=0.5)
+    lemm, lebb, lerval, lepval, lestd_err = sp.stats.linregress(lefld1,lefld2)
+    axylims = ax.get_ylim()
+    axxlims = ax.get_xlim()
+    onex=np.linspace(axxlims[0],axxlims[1])
+    ax.plot(onex,lemm*onex + lebb, color=ccm.get_linecolor('darkolivegreen3'),linewidth=1)
+
+    plt.legend((obs,ledat),('Observations','historical LE'),
+               loc='best',fancybox=True,framealpha=0.5,prop=fontP)#,frameon=False)    
+
+    plt.xlabel(xlab)
+    plt.ylabel(ylab)
+    axylims = ax.get_ylim()
+    if axylims[0]<=0 and axylims[1]>=0:
+        ax.axhline(y=0,color='k',linewidth=.5,linestyle='--')
+    axxlims = ax.get_xlim()
+    if axxlims[0]<=0 and axxlims[1]>=0:
+        ax.axvline(x=0,color='k',linewidth=.5,linestyle='--')
+
+    if printtofile:
+        fig.savefig('scatterregress_' + field1 + region1 + str(sea1) + '_v_' +
+                    field2 + region2 + str(sea2) + '_obs_historicalLE.pdf')
 
 
     printtofile=False

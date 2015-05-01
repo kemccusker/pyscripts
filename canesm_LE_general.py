@@ -1,5 +1,8 @@
 """ canesm_LE_general.py
 
+    This script basically reads in files that are already processed
+    into area-averages and such.
+
 """
 import pandas as pd
 import cccmaplots as cplt
@@ -11,24 +14,32 @@ import sys
 import loadLE as le
 import constants as con
 
+# exception handling works below. add to other clauses @@
+
 printtofile=True
 dohist=False
 doscatter=True
+addobs=False # to scatter plot
+
+performop1 = True
+op1='div'; region1op='gm' # polar amp: gt60n / gm
+performop2 = False
+op2='sub'; region2op='nh'
 
 timeselc='1979-01-01,1989-12-31'
 timeselp='2002-01-01,2012-12-31'
 
 #field1='zg50000.00'; ncfield1='zg'; comp1='Amon'; region1='bksmori'
-field1='sia'; ncfield1='sianh'; comp1='OImon'; region1='nh'
-
-conv1= 1 
+#field1='sia'; ncfield1='sianh'; comp1='OImon'; region1='nh'
+field1='tas'; ncfield1='tas'; comp1='Amon'; region1='gt60n'
+leconv1= 1 
 sea1='DJF'
 
 field2='tas'; ncfield2='tas'; comp2='Amon'; region2='eurasiamori'
-conv2=1
+leconv2=1
 sea2='DJF'
 
-#field='sia'; ncfield='sianh'; comp='OImon'; region='nh'
+
 
 ftype='fullts' # 'fullclimo' or 'climo' or 'fullts'
 
@@ -38,65 +49,121 @@ fdict2 = {'field': field2+region2, 'ncfield': ncfield2, 'comp': comp2}
 
 if doscatter:
 
-    """    cdat1 = le.load_LEdata(fdict1,'historical',timesel=timeselc, rettype='ndarray',conv=conv1,ftype=ftype)
-    (numens1,ntime1) = cdat1.shape
-    pdat1=le.load_LEdata(fdict1,'historical',timesel=timeselp, rettype='ndarray',conv=conv1,ftype=ftype)
-    csea1 = cutl.seasonalize_monthlyts(cdat1.T,season=sea1).T
-    psea1 = cutl.seasonalize_monthlyts(pdat1.T,season=sea1).T
-    fld1=psea1.mean(axis=1)-csea1.mean(axis=1)
-
-    cdat2 = le.load_LEdata(fdict2,'historical',timesel=timeselc, rettype='ndarray',conv=conv2,ftype=ftype)
-    (numens2,ntime2) = cdat1.shape
-    pdat2=le.load_LEdata(fdict2,'historical',timesel=timeselp, rettype='ndarray',conv=conv2,ftype=ftype)
-    csea2 = cutl.seasonalize_monthlyts(cdat2.T,season=sea2).T
-    psea2 = cutl.seasonalize_monthlyts(pdat2.T,season=sea2).T
-    fld2=psea2.mean(axis=1)-csea2.mean(axis=1)
-
-
-    mm, bb, rval, pval, std_err = sp.stats.linregress(fld1,fld2)
-
-    fig,ax=plt.subplots(1,1)
-    ax.scatter(fld1,fld2)
-    axylims = ax.get_ylim()
-    axxlims = ax.get_xlim()
-    onex=np.linspace(axxlims[0],axxlims[1])
-    ax.plot(onex,mm*onex + bb, color='0.5',linewidth=1)#,linestyle='--') """
-
-
     # historical
-    lecdat1 = le.load_LEdata(fdict1,'historical',timesel=timeselc, rettype='ndarray',conv=leconv1,ftype=ftype)
+    casename='historical'
+    lecdat1 = le.load_LEdata(fdict1,casename,timesel=timeselc, rettype='ndarray',conv=leconv1,ftype=ftype)
     (numens1,ntime1) = lecdat1.shape
-    lepdat1=le.load_LEdata(fdict1,'historical',timesel=timeselp, rettype='ndarray',conv=leconv1,ftype=ftype)
+    lepdat1=le.load_LEdata(fdict1,casename,timesel=timeselp, rettype='ndarray',conv=leconv1,ftype=ftype)
     lecsea1 = cutl.seasonalize_monthlyts(lecdat1.T,season=sea1).T
     lepsea1 = cutl.seasonalize_monthlyts(lepdat1.T,season=sea1).T
-    lefld1=lepsea1.mean(axis=1)-lecsea1.mean(axis=1)
+    lesea1 = lepsea1 - lecsea1
+    
+    if performop1:
+        try:
+            fdict1op = {'field': field1+region1op, 'ncfield': ncfield1, 'comp': comp1}
+            # should rename these variables to be 'op' so it's more general
+            subc1 = le.load_LEdata(fdict1op,casename,timesel=timeselc, rettype='ndarray',conv=leconv1,ftype=ftype)
+            subp1 = le.load_LEdata(fdict1op,casename,timesel=timeselp, rettype='ndarray',conv=leconv1,ftype=ftype)
+            sub1 = cutl.seasonalize_monthlyts(subp1.T,season=sea1).T - cutl.seasonalize_monthlyts(subc1.T,season=sea1).T
 
-    lecdat2 = le.load_LEdata(fdict2,'historical',timesel=timeselc, rettype='ndarray',conv=conv2,ftype=ftype)
+            if op1=='sub': # subtract
+                lefld1 = lesea1.mean(axis=1) - sub1.mean(axis=1)
+            elif op1=='div': # divide
+                lefld1 = lesea1.mean(axis=1) / sub1.mean(axis=1)
+            else:
+                print 'operation not supported!'
+                raise Exception
+        except:
+            raise
+
+    else:
+        lefld1=lepsea1.mean(axis=1)-lecsea1.mean(axis=1)
+
+    lecdat2 = le.load_LEdata(fdict2,casename,timesel=timeselc, rettype='ndarray',conv=conv2,ftype=ftype)
     (numens2,ntime2) = lecdat1.shape
-    lepdat2=le.load_LEdata(fdict2,'historical',timesel=timeselp, rettype='ndarray',conv=conv2,ftype=ftype)
+    lepdat2=le.load_LEdata(fdict2,casename,timesel=timeselp, rettype='ndarray',conv=conv2,ftype=ftype)
     lecsea2 = cutl.seasonalize_monthlyts(lecdat2.T,season=sea2).T
     lepsea2 = cutl.seasonalize_monthlyts(lepdat2.T,season=sea2).T
-    lefld2=lepsea2.mean(axis=1)-lecsea2.mean(axis=1)
+    lesea2 = lepsea2 - lecsea2
+    if performop2:
+        if op2=='sub': # subtract
+            fdict2sub = {'field': field2+region2op, 'ncfield': ncfield2, 'comp': comp2}
+            subc2 = le.load_LEdata(fdict2sub,casename,timesel=timeselc, rettype='ndarray',conv=leconv2,ftype=ftype)
+            subp2 = le.load_LEdata(fdict2sub,casename,timesel=timeselp, rettype='ndarray',conv=leconv2,ftype=ftype)
+            sub2 = cutl.seasonalize_monthlyts(subp2.T,season=sea2).T - cutl.seasonalize_monthlyts(subc2.T,season=sea2).T
+            lefld2 = lesea2.mean(axis=1) - sub2.mean(axis=1)
+    else:
+        lefld2=lepsea2.mean(axis=1)-lecsea2.mean(axis=1)
+
     lemm, lebb, lerval, lepval, lestd_err = sp.stats.linregress(lefld1,lefld2)
     
 
     # historicalNat
-    lecdat1n = le.load_LEdata(fdict1,'historicalNat',timesel=timeselc, rettype='ndarray',conv=leconv1,ftype=ftype)
+    casename2='historicalNat'
+    lecdat1n = le.load_LEdata(fdict1,casename2,timesel=timeselc, rettype='ndarray',conv=leconv1,ftype=ftype)
     (numens1,ntime1) = lecdat1n.shape
-    lepdat1n=le.load_LEdata(fdict1,'historicalNat',timesel=timeselp, rettype='ndarray',conv=leconv1,ftype=ftype)
+    lepdat1n=le.load_LEdata(fdict1,casename2,timesel=timeselp, rettype='ndarray',conv=leconv1,ftype=ftype)
     lecsea1n = cutl.seasonalize_monthlyts(lecdat1n.T,season=sea1).T
     lepsea1n = cutl.seasonalize_monthlyts(lepdat1n.T,season=sea1).T
-    lefld1n=lepsea1n.mean(axis=1)-lecsea1n.mean(axis=1)
+    lesea1n = lepsea1n - lecsea1n
+    if performop1:
+        fdict1op = {'field': field1+region1op, 'ncfield': ncfield1, 'comp': comp1}
+        subc1n = le.load_LEdata(fdict1op,casename2,timesel=timeselc, rettype='ndarray',conv=leconv1,ftype=ftype)
+        subp1n = le.load_LEdata(fdict1op,casename2,timesel=timeselp, rettype='ndarray',conv=leconv1,ftype=ftype)
+        sub1n = cutl.seasonalize_monthlyts(subp1n.T,season=sea1).T - cutl.seasonalize_monthlyts(subc1n.T,season=sea1).T
 
-    lecdat2n = le.load_LEdata(fdict2,'historicalNat',timesel=timeselc, rettype='ndarray',conv=conv2,ftype=ftype)
+        if op1=='sub': # subtract
+            lefld1n = lesea1n.mean(axis=1) - sub1n.mean(axis=1)
+        elif op1=='div': # divide
+            lefld1n = lesea1n.mean(axis=1) / sub1n.mean(axis=1)
+    else:
+        lefld1n=lepsea1n.mean(axis=1)-lecsea1n.mean(axis=1)
+
+    lecdat2n = le.load_LEdata(fdict2,casename2,timesel=timeselc, rettype='ndarray',conv=conv2,ftype=ftype)
     (numens2,ntime2) = lecdat1n.shape
-    lepdat2n=le.load_LEdata(fdict2,'historicalNat',timesel=timeselp, rettype='ndarray',conv=conv2,ftype=ftype)
+    lepdat2n=le.load_LEdata(fdict2,casename2,timesel=timeselp, rettype='ndarray',conv=conv2,ftype=ftype)
     lecsea2n = cutl.seasonalize_monthlyts(lecdat2n.T,season=sea2).T
     lepsea2n = cutl.seasonalize_monthlyts(lepdat2n.T,season=sea2).T
-    lefld2n=lepsea2n.mean(axis=1)-lecsea2n.mean(axis=1)
+    lesea2n = lepsea2n - lecsea2n
+    if performop2:
+        if op2=='sub': # subtract
+            fdict2sub = {'field': field2+region2op, 'ncfield': ncfield2, 'comp': comp2}
+            subc2n = le.load_LEdata(fdict2sub,casename2,timesel=timeselc, rettype='ndarray',conv=leconv2,ftype=ftype)
+            subp2n = le.load_LEdata(fdict2sub,casename2,timesel=timeselp, rettype='ndarray',conv=leconv2,ftype=ftype)
+            sub2n = cutl.seasonalize_monthlyts(subp2n.T,season=sea2).T - cutl.seasonalize_monthlyts(subc2n.T,season=sea2).T
+            lefld2n = lesea2n.mean(axis=1) - sub2n.mean(axis=1)
+    else:
+        lefld2n=lepsea2n.mean(axis=1)-lecsea2n.mean(axis=1)
+
     lemmn, lebbn, lervaln, lepvaln, lestd_errn = sp.stats.linregress(lefld1n,lefld2n)
 
+    if addobs: # DATA MUST EXIST:hard coded for TAS and Z500 @@
+        graveraint= 9.80665 # m/s2 (different from Canadian models)
 
+        if field1 == 'zg50000.00' and field2 == 'tas':
+            # GISS (SAT) and ERA-INT (Z500)
+            erafile = '/HOME/rkm/work/DATA/ERAINT/td_era_int_197901_201412_gp_128_64_phi500_1979011612-2014121612.nc'
+            gisfile = '/HOME/rkm/work/DATA/GISS/gistemp1200_ERSST.nc'
+            eraz500c= cnc.getNCvar(erafile,'PHI',timesel=timeselc,seas=sea1)/graveraint
+            eraz500p= cnc.getNCvar(erafile,'PHI',timesel=timeselp,seas=sea1)/graveraint
+            latera=cnc.getNCvar(erafile,'lat')
+            lonera=cnc.getNCvar(erafile,'lon')
+            erareg = cutl.calc_regmean(eraz500p-eraz500c,latera,lonera,region1)
+            
+            latgis=cnc.getNCvar(gisfile,'lat')
+            longis=cnc.getNCvar(gisfile,'lon')
+            if sea1==sea2=='DJF' and performop2==True and op2=='sub' and region2=='eurasiamori' and region2op=='nh':
+                gisfile='/HOME/rkm/work/DATA/GISS/giss_DJF_eurasiamori-nh_1979-2013_timeseries.nc'
+                gissatc= cnc.getNCvar(gisfile,'tempanomaly',timesel=timeselc) 
+                gissatp= cnc.getNCvar(gisfile,'tempanomaly',timesel=timeselp)
+                gisreg=gissatp.mean()-gissatc.mean()
+            else:
+                gissatc= cnc.getNCvar(gisfile,'tempanomaly',timesel=timeselc,seas=sea2) 
+                gissatp= cnc.getNCvar(gisfile,'tempanomaly',timesel=timeselp,seas=sea2)
+                gisreg =  cutl.calc_regmean(gissatp-gissatc,latgis,longis,region2)
+
+            
+            
     fig,ax=plt.subplots(1,1)
     ledat=plt.scatter(lefld1,lefld2,color=ccm.get_linecolor('darkolivegreen3'),marker='*',s=5**2,alpha=0.5)
     axylims = ax.get_ylim()
@@ -110,23 +177,45 @@ if doscatter:
     onex=np.linspace(axxlims[0],axxlims[1])
     ax.plot(onex,lemmn*onex + lebbn, color=ccm.get_linecolor('steelblue3'),linewidth=1)
 
+    obstr=''
+    leghnds=(ledat,ledatn)
+    legstrs=(casename + ' LE', casename2 + ' LE')
+    if addobs:
+        obs=plt.scatter(erareg.mean(),gisreg.mean(),color='blue',marker='s',s=8**2)
+        leghnds=leghnds + (obs,)
+        legstrs=legstrs + ('Observations',)
+        obstr='obs'
+
     fontP = fm.FontProperties()
     fontP.set_size('small')
-    plt.legend((ledat,ledatn),('historical LE', 'historicalNat LE'),
+    plt.legend(leghnds,legstrs,
                loc='best',fancybox=True,framealpha=0.5,prop=fontP)#,frameon=False) 
 
-    plt.annotate('historical R= ' + '$%.2f$'%(lerval) + ', historicalNat R='+ '$%.2f$'%(lervaln),
-                xy=(axxlims[0]+.1*axxlims[1], axylims[1]-.1*axylims[1]),
+    plt.annotate(casename + ' R= ' + '$%.2f$'%(lerval) + ', ' + casename2 + ' R='+ '$%.2f$'%(lervaln),
+                xy=(axxlims[0]+.05*axxlims[1], axylims[1]-.1*axylims[1]),
                 xycoords='data')
-    plt.annotate('historical p= ' + '$%.2f$'%(lepval) + ', historicalNat p='+ '$%.2f$'%(lepvaln),
-                xy=(axxlims[0]+.1*axxlims[1], axylims[1]-.2*axylims[1]),
+    plt.annotate(casename + ' p= ' + '$%.2f$'%(lepval) + ', ' + casename2 + ' p='+ '$%.2f$'%(lepvaln),
+                xy=(axxlims[0]+.05*axxlims[1], axylims[1]-.2*axylims[1]),
                 xycoords='data')
-    plt.xlabel(sea1 + ' ' + field1 + ' ' + region1)
-    plt.ylabel(sea2 + ' ' + field2 + ' ' + region2)
+    opstr1 = opstr2 = ''
+    if performop1:
+        opstr1= op1 + '_' + region1op
+    plt.xlabel(sea1 + ' ' + field1 + ' ' + region1 + ' ' + opstr1)
+    if performop2:
+        opstr2= op2 + '_' + region2op
+    plt.ylabel(sea2 + ' ' + field2 + ' ' + region2 + ' ' + opstr2)
+
+    axylims = ax.get_ylim()
+    if axylims[0]<=0 and axylims[1]>=0:
+        ax.axhline(y=0,color='k',linewidth=.5,linestyle='--')
+    axxlims = ax.get_xlim()
+    if axxlims[0]<=0 and axxlims[1]>=0:
+        ax.axvline(x=0,color='k',linewidth=.5,linestyle='--')
 
     if printtofile:
-        plt.savefig('scatterregress_' + field1 + region1 + str(sea1) + '_v_' + 
-                    field2 + region2 + str(sea2) + '_historical_historicalNat_2002-12_1979-89_.pdf')
+        plt.savefig('scatterregress_' + field1 + region1 + opstr1 + str(sea1) + '_v_' + 
+                    field2 + region2 +opstr2 + str(sea2) + '_' + casename + '_' + 
+                    casename2 + '_2002-12_1979-89' + obstr + '.pdf')
 
 if dohist:
     histcdat=le.load_LEdata(fdict2,'historical',timesel=timeselc, rettype='ndarray',conv=conv,ftype=ftype)
