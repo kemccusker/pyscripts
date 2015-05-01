@@ -9,6 +9,7 @@ plt.close('all')
 
 # @@ Look at Southern Ocean and Southern Jet
 
+natorig=False # do not include markers for original nat runs
 
 basepath='/raid/ra40/data/kem/CanSISE/CanESM2/LE/'
 sims=('historical-r1','historical-r2','historical-r3','historical-r4','historical-r5')
@@ -472,8 +473,13 @@ for eii in range(1,6):
         fs='full'
     else:
         fs=deffs # defaultfs
-    ax.plot(plotx,ploty,marker='o',color=natcolline,mec=natcolline,fillstyle=fs,mew=mew,markersize=ms)
-    #ax.axvline(x=diffnatorig[eii],ymin=.97,ymax=1,color='k',linewidth=2)
+    if natorig:
+        natstr=''
+        ax.plot(plotx,ploty,marker='o',color=natcolline,mec=natcolline,fillstyle=fs,mew=mew,markersize=ms)
+    else:
+        natstr='nonatorig'
+
+    #ax.axvline(x=diffnatorig[eii],ymin=.97,ymax=1,color='k',lineawidth=2)
 
 #nn=ax.axvline(diffnsidc,color='g',linewidth=3)
 plotx=diffnsidc
@@ -533,9 +539,9 @@ elif season == 'DJF':
 else:
     ax.set_title('Arctic sea-ice area change (' + season + ')')
 if printtofile:
-    fig.savefig(field + 'diff_PDFHIST_CanESMLE_TOTNAT_' + str(season) + '_paper2f.pdf')
+    fig.savefig(field + 'diff_PDFHIST_CanESMLE_TOTNAT_' + str(season) + '_paper2f' + natstr + '.pdf')
     ax.set_rasterized(True)
-    fig.savefig(field + 'diff_PDFHIST_CanESMLE_TOTNAT_' + str(season) + '_paper2f.eps')
+    fig.savefig(field + 'diff_PDFHIST_CanESMLE_TOTNAT_' + str(season) + '_paper2f' + natstr + '.eps')
 
 
 
