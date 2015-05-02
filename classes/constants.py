@@ -676,6 +676,7 @@ def get_regiondict():
     regdict['polcap70'] = {'latlims': [70,89], 'lonlims': [0,359]}
     regdict['polcap65'] = {'latlims': [65,89], 'lonlims': [0,359]}
     regdict['polcap60'] = {'latlims': [60,89], 'lonlims': [0,359]}
+    regdict['gt60n'] = {'latlims': [60,89], 'lonlims': [0,359]} # greater than 60N (poleward)
     regdict['eurasia'] = {'latlims': [35,60], 'lonlims': [40,120]}
     regdict['eurasiamori'] = {'latlims': [40,60], 'lonlims': [60,120]} # Mori et al NatGeo 2014
     regdict['eurasiathin'] = {'latlims': [35,55], 'lonlims': [40,120]}
@@ -693,6 +694,8 @@ def get_regiondict():
     regdict['bksmori'] = {'latlims': [65,85], 'lonlims': [30,90]} # Barents-Kara Seas 65N-85N,30E-90E
     regdict['soo'] = {'latlims': [46,61], 'lonlims': [136,158]} # Sea of Okhotsk 46N-61N,136E-158E
     regdict['etroppac'] = {'latlims': [-15, 15], 'lonlims': [180,280]} # eastern trop pacific 15S-15N, 180W-80W
+    regdict['trop'] = {'latlims': [-30, 30], 'lonlims': [0,360]} # wide tropics
+    regdict['deeptrop'] = {'latlims': [-10, 10], 'lonlims': [0,360]} # deep tropics
 
     regdict['pig'] = {'latlims':[0,384], 'lonlims': [230,280]} # CCSM4 OCEAN!!! @@@ untested 10/6/2014
     
