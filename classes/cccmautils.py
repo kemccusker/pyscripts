@@ -622,26 +622,32 @@ def calc_regmean(fld,lat,lon,region,limsdict=None):
                  Returns: Regional mean (or series of regional means with length ndim1)
     """
 
-    
-    fldm,regmask = mask_region(fld,lat,lon,region,limsdict)
-
-    # calculate area-weights
-    areas = calc_cellareas(lat,lon)
-    if regmask.ndim>2:
-        areasm = ma.masked_where(np.squeeze(regmask[0,...]),areas)
+    if region=='gm':
+        print 'Global average!'
+        if fld.ndim>2: # @@ hack. just make global mean func better
+            fldreg = global_mean_areawgted3d(fld,lat,lon)
+        else:
+            fldreg = global_mean_areawgted(fld,lat,lon)
     else:
-        areasm = ma.masked_where(regmask,areas)
-    weightsm = areasm / np.sum(np.sum(areasm,axis=1),axis=0) # weights masked
+        fldm,regmask = mask_region(fld,lat,lon,region,limsdict)
 
-    if fld.ndim>2:
-        ndim1 = fld.shape[0]
-        weightsmt = np.tile(weightsm,(ndim1,1,1)) # weights masked tiled
-    else:
-        weightsmt = weightsm
+        # calculate area-weights
+        areas = calc_cellareas(lat,lon)
+        if regmask.ndim>2:
+            areasm = ma.masked_where(np.squeeze(regmask[0,...]),areas)
+        else:
+            areasm = ma.masked_where(regmask,areas)
+        weightsm = areasm / np.sum(np.sum(areasm,axis=1),axis=0) # weights masked
 
-    tmp = ma.masked_where(regmask,fldm)
-    tmpreg = np.sum(np.sum(tmp*weightsmt,axis=2),axis=1)
-    fldreg = tmpreg # should be ndim1 of regional mean (or just one regional mean)
+        if fld.ndim>2:
+            ndim1 = fld.shape[0]
+            weightsmt = np.tile(weightsm,(ndim1,1,1)) # weights masked tiled
+        else:
+            weightsmt = weightsm
+
+        tmp = ma.masked_where(regmask,fldm)
+        tmpreg = np.sum(np.sum(tmp*weightsmt,axis=2),axis=1)
+        fldreg = tmpreg # should be ndim1 of regional mean (or just one regional mean)
 
     return fldreg
 
