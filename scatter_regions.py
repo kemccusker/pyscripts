@@ -17,14 +17,14 @@ import pandas as pd
 import numpy.ma as ma
 import matplotlib.font_manager as fm
 
-printtofile=False
+printtofile=True
 plt.close('all')
 
 conv1=1; conv2=1
 graveraint= 9.80665 # m/s2 (different from Canadian models)
 
 plotscatter=True
-addobs=False
+addobs=True
 
 # field1 is x
 #field1='st'; ncfield1='ST'
@@ -34,7 +34,7 @@ field1='gz50000'; ncfield1='PHI'; conv1=1/con.get_g()
 #field1='net'; 
 
 region1='bksmori' #'polcap65'
-sea1='DJF' #'ND' #'DJF'
+sea1='SON' #'ND' #'DJF'
 
 # field2 is y
 field2='st'; ncfield2='ST'
@@ -59,24 +59,29 @@ ciregdt2 = {}
 ntime=120
 # if one of the scatter vars is winter, need to remove a year from the other one
 #  if it's not winter too
-if sea1 in ('DJF','NDJ') or sea2 in ('DJF','NDJ'):
+if (sea1 in ('DJF','NDJ') and sea2 not in ('DJF','NDJ')) or (sea2 in ('DJF','NDJ') and sea1 not in ('DJF','NDJ')):
     ntime=ntime-1
     
 nsim=len(TOT)
-timesel='0002-01-01,0121-12-31'
-alltotcr1=np.zeros(ntime*nsim)
-alltotcr2=np.zeros(ntime*nsim)
-alltotpr1=np.zeros(ntime*nsim)
-alltotpr2=np.zeros(ntime*nsim)
-alltotr1=np.zeros(ntime*nsim)
-alltotr2=np.zeros(ntime*nsim)
+#if sea2 in ('DJF','NDJ') and sea1 not in ('DJF','NDJ'): # have to shorten other timeseries
+#    inittime=ntime*nsim-1
+#else:
+inittime=ntime*nsim
 
-allantcr1=np.zeros(ntime*nsim)
-allantcr2=np.zeros(ntime*nsim)
-allantpr1=np.zeros(ntime*nsim)
-allantpr2=np.zeros(ntime*nsim)
-allantr1=np.zeros(ntime*nsim)
-allantr2=np.zeros(ntime*nsim)
+timesel='0002-01-01,0121-12-31'
+alltotcr1=np.zeros(inittime)
+alltotcr2=np.zeros(inittime)
+alltotpr1=np.zeros(inittime)
+alltotpr2=np.zeros(inittime)
+alltotr1=np.zeros(inittime)
+alltotr2=np.zeros(inittime)
+
+allantcr1=np.zeros(inittime)
+allantcr2=np.zeros(inittime)
+allantpr1=np.zeros(inittime)
+allantpr2=np.zeros(inittime)
+allantr1=np.zeros(inittime)
+allantr2=np.zeros(inittime)
 tallii=0 # index to keep track of time in accumulated TOT ensemble
 aallii=0 # index to keep track of time in accumulated ANT ensemble
 for sim in sims:
@@ -188,18 +193,18 @@ for sim in sims:
         fldpreg2=cutl.calc_regmean(fldp2,lat,lon,region2)
         
     flddregdt2[sim] = np.mean(fldpreg2-fldcreg2,axis=0)
-    if sea2 in ('DJF','NDJ') and sea1 not in ('DJF','NDJ'): # have to shorten other timeseries
-        flddregtsdt2[sim] = fldpreg2[:-1,...]-np.mean(fldcreg2[:-1,...],axis=0)
-    else:
-        flddregtsdt2[sim] = fldpreg2-np.mean(fldcreg2,axis=0) # anomaly timeseries from ctl mean
+#    if sea2 in ('DJF','NDJ') and sea1 not in ('DJF','NDJ'): # have to shorten other timeseries
+#        flddregtsdt2[sim] = fldpreg2[:-1,...]-np.mean(fldcreg2[:-1,...],axis=0)
+#    else:
+    flddregtsdt2[sim] = fldpreg2-np.mean(fldcreg2,axis=0) # anomaly timeseries from ctl mean
 
     # @@@ there are files with concated ensembles now: e.g. sim name kemctl1enscat, diffname ENSCAT
     if sim in TOT:
         #print 'concat tot ens members'
-        alltotcr1[tallii:tallii+ntime] = fldcreg # control reg1
-        alltotcr2[tallii:tallii+ntime] = fldcreg2 # control reg2
-        alltotpr1[tallii:tallii+ntime] = fldpreg # pert reg1
-        alltotpr2[tallii:tallii+ntime] = fldpreg2 # pert reg2
+        alltotcr1[tallii:tallii+ntime] = fldcreg[:ntime] # control reg1
+        alltotcr2[tallii:tallii+ntime] = fldcreg2[:ntime] # control reg2
+        alltotpr1[tallii:tallii+ntime] = fldpreg[:ntime] # pert reg1
+        alltotpr2[tallii:tallii+ntime] = fldpreg2[:ntime] # pert reg2
         alltotr1[tallii:tallii+ntime] = flddregtsdt[sim] # diff reg1
         alltotr2[tallii:tallii+ntime] = flddregtsdt2[sim] # diff reg2
         tallii+=ntime
@@ -207,10 +212,10 @@ for sim in sims:
         #totser2.append(pd.Series(flddregtsdt2))
     elif sim in ANT:
         #print 'concat ant ens members'
-        allantcr1[aallii:aallii+ntime] = fldcreg
-        allantcr2[aallii:aallii+ntime] = fldcreg2
-        allantpr1[aallii:aallii+ntime] = fldpreg
-        allantpr2[aallii:aallii+ntime] = fldpreg2
+        allantcr1[aallii:aallii+ntime] = fldcreg[:ntime] # to deal w/ SON vs DJF for example
+        allantcr2[aallii:aallii+ntime] = fldcreg2[:ntime]
+        allantpr1[aallii:aallii+ntime] = fldpreg[:ntime]
+        allantpr2[aallii:aallii+ntime] = fldpreg2[:ntime]
         allantr1[aallii:aallii+ntime] = flddregtsdt[sim]
         allantr2[aallii:aallii+ntime] = flddregtsdt2[sim]
         aallii+=ntime
