@@ -93,7 +93,7 @@ def load_LEdata(fielddict, ens, seas=None, timesel=None,infodict=None,ftype='ful
                 fldseas=fld.reshape(rshape)
             else:
                 if len(fld.shape)!=3:
-                    print 'load LE will with rettype dict will break if dim of var is not 3 @@@'
+                    print 'load LE with rettype dict will break if dim of var is not 3 @@@'
                     return -1
 
                 n0,n1,n2=fld.shape
