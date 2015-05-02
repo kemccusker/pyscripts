@@ -19,9 +19,11 @@ import constants as con
 printtofile=True
 dohist=False
 doscatter=True
-addobs=False # to scatter plot
+addobs=True # to scatter plot
+addnat=False
+addsims=False # add the idealized simulations. only good for DJF polar amp vs eurasia SAT
 
-performop1 = True
+performop1 = False
 op1='div'; region1op='gm' # polar amp: gt60n / gm
 performop2 = False
 op2='sub'; region2op='nh'
@@ -29,11 +31,11 @@ op2='sub'; region2op='nh'
 timeselc='1979-01-01,1989-12-31'
 timeselp='2002-01-01,2012-12-31'
 
-#field1='zg50000.00'; ncfield1='zg'; comp1='Amon'; region1='bksmori'
+field1='zg50000.00'; ncfield1='zg'; comp1='Amon'; region1='bksmori'
 #field1='sia'; ncfield1='sianh'; comp1='OImon'; region1='nh'
-field1='tas'; ncfield1='tas'; comp1='Amon'; region1='gt60n'
+#field1='tas'; ncfield1='tas'; comp1='Amon'; region1='gt60n'
 leconv1= 1 
-sea1='DJF'
+sea1='SON'
 
 field2='tas'; ncfield2='tas'; comp2='Amon'; region2='eurasiamori'
 leconv2=1
@@ -140,29 +142,47 @@ if doscatter:
     if addobs: # DATA MUST EXIST:hard coded for TAS and Z500 @@
         graveraint= 9.80665 # m/s2 (different from Canadian models)
 
-        if field1 == 'zg50000.00' and field2 == 'tas':
-            # GISS (SAT) and ERA-INT (Z500)
+        if field1 == 'zg50000.00':
             erafile = '/HOME/rkm/work/DATA/ERAINT/td_era_int_197901_201412_gp_128_64_phi500_1979011612-2014121612.nc'
-            gisfile = '/HOME/rkm/work/DATA/GISS/gistemp1200_ERSST.nc'
             eraz500c= cnc.getNCvar(erafile,'PHI',timesel=timeselc,seas=sea1)/graveraint
             eraz500p= cnc.getNCvar(erafile,'PHI',timesel=timeselp,seas=sea1)/graveraint
             latera=cnc.getNCvar(erafile,'lat')
             lonera=cnc.getNCvar(erafile,'lon')
-            erareg = cutl.calc_regmean(eraz500p-eraz500c,latera,lonera,region1)
-            
+            obsreg1 = cutl.calc_regmean(eraz500p-eraz500c,latera,lonera,region1)
+            obsreg1=obsreg1.mean()
+        elif field1 == 'tas':
+            gisfile = '/HOME/rkm/work/DATA/GISS/gistemp1200_ERSST.nc'
             latgis=cnc.getNCvar(gisfile,'lat')
             longis=cnc.getNCvar(gisfile,'lon')
+            gissatc= cnc.getNCvar(gisfile,'tempanomaly',timesel=timeselc,seas=sea2) 
+            gissatp= cnc.getNCvar(gisfile,'tempanomaly',timesel=timeselp,seas=sea2)
+            obsreg1 =  cutl.calc_regmean(gissatp-gissatc,latgis,longis,region1)
+            if performop1:
+                opfld1 = cutl.calc_regmean(gissatp-gissatc,latgis,longis,region1op)
+
+                if op1=='sub': # subtract
+                    obsreg1 = obsreg1.mean() - opfld1.mean()
+                elif op1=='div': # divide
+                    obsreg1 = obsreg1.mean() / opfld1.mean()
+            else:
+                obsreg1=obsreg1.mean()
+
+        if field2 == 'tas':
+            gisfile = '/HOME/rkm/work/DATA/GISS/gistemp1200_ERSST.nc'
+            latgis=cnc.getNCvar(gisfile,'lat')
+            longis=cnc.getNCvar(gisfile,'lon')
+            gissatc= cnc.getNCvar(gisfile,'tempanomaly',timesel=timeselc,seas=sea2) 
+            gissatp= cnc.getNCvar(gisfile,'tempanomaly',timesel=timeselp,seas=sea2)
+            
             if sea1==sea2=='DJF' and performop2==True and op2=='sub' and region2=='eurasiamori' and region2op=='nh':
+                # a file already exists for this
                 gisfile='/HOME/rkm/work/DATA/GISS/giss_DJF_eurasiamori-nh_1979-2013_timeseries.nc'
                 gissatc= cnc.getNCvar(gisfile,'tempanomaly',timesel=timeselc) 
                 gissatp= cnc.getNCvar(gisfile,'tempanomaly',timesel=timeselp)
-                gisreg=gissatp.mean()-gissatc.mean()
+                obsreg2=gissatp.mean()-gissatc.mean()
             else:
-                gissatc= cnc.getNCvar(gisfile,'tempanomaly',timesel=timeselc,seas=sea2) 
-                gissatp= cnc.getNCvar(gisfile,'tempanomaly',timesel=timeselp,seas=sea2)
-                gisreg =  cutl.calc_regmean(gissatp-gissatc,latgis,longis,region2)
-
-            
+                obsreg2 =  cutl.calc_regmean(gissatp-gissatc,latgis,longis,region2)
+                obsreg2=obsreg2.mean()
             
     fig,ax=plt.subplots(1,1)
     ledat=plt.scatter(lefld1,lefld2,color=ccm.get_linecolor('darkolivegreen3'),marker='*',s=5**2,alpha=0.5)
@@ -171,32 +191,69 @@ if doscatter:
     onex=np.linspace(axxlims[0],axxlims[1])
     ax.plot(onex,lemm*onex + lebb, color=ccm.get_linecolor('darkolivegreen3'),linewidth=1)
 
-    ledatn=plt.scatter(lefld1n,lefld2n,color=ccm.get_linecolor('steelblue3'),marker='*',s=5**2,alpha=0.5)
-    axylims = ax.get_ylim()
-    axxlims = ax.get_xlim()
-    onex=np.linspace(axxlims[0],axxlims[1])
-    ax.plot(onex,lemmn*onex + lebbn, color=ccm.get_linecolor('steelblue3'),linewidth=1)
-
     obstr=''
-    leghnds=(ledat,ledatn)
-    legstrs=(casename + ' LE', casename2 + ' LE')
+    leghnds=(ledat,)
+    legstrs=(casename + ' LE',)
+
+    if addnat:
+        ledatn=plt.scatter(lefld1n,lefld2n,color=ccm.get_linecolor('steelblue3'),marker='*',s=5**2,alpha=0.5)
+        axylims = ax.get_ylim()
+        axxlims = ax.get_xlim()
+        onex=np.linspace(axxlims[0],axxlims[1])
+        ax.plot(onex,lemmn*onex + lebbn, color=ccm.get_linecolor('steelblue3'),linewidth=1)
+        leghnds=leghnds + (ledatn,)
+        legstrs=legstrs + (casename2 + ' LE',)
     if addobs:
-        obs=plt.scatter(erareg.mean(),gisreg.mean(),color='blue',marker='s',s=8**2)
+        obs=plt.scatter(obsreg1,obsreg2,color='blue',marker='s',s=8**2)
         leghnds=leghnds + (obs,)
         legstrs=legstrs + ('Observations',)
         obstr='obs'
+
+    if addsims and sea1==sea2=='DJF' and performop1==True and op1=='div' and region1=='gt60n' and region1op=='gm':
+        # calculated using, for example:
+        # lmd.loaddata(('st',),('E1','E2','E3','E4','E5','R1','R2','R3','R4','R5'),
+        #              timefreq='DJF',meantype='time',region='eurasiamori')
+        # polaramp is gt60n / gm
+
+        # these are DJF values for E1-5 and R1-5
+        simpolamp = [[  9.98685376],
+                     [ 11.2359957 ],
+                     [ 13.62247628],
+                     [ 12.03047158],
+                     [ 12.47854705],
+                     [ 10.8695116 ],
+                     [ 13.04175298],
+                     [ 10.06997661],
+                     [ 10.7259977 ],
+                     [ 10.69236807]]
+        simeur = [[ 0.27966023],
+                  [-0.03198602],
+                  [ 0.12460408],
+                  [-0.24664229],
+                  [-0.03082406],
+                  [ 0.12214981],
+                  [-0.10484801],
+                  [-0.00995005],
+                  [ 0.35847141],
+                  [ 0.27739474]]
+        sims = ax.scatter(simpolamp,simeur,color='0.3',marker='o',s=6**2,alpha=0.7)
+        leghnds=leghnds + (sims,)
+        legstrs=legstrs + ('Modelled SIC forcing',)
+        obstr=obstr+'sims'
 
     fontP = fm.FontProperties()
     fontP.set_size('small')
     plt.legend(leghnds,legstrs,
                loc='best',fancybox=True,framealpha=0.5,prop=fontP)#,frameon=False) 
 
-    plt.annotate(casename + ' R= ' + '$%.2f$'%(lerval) + ', ' + casename2 + ' R='+ '$%.2f$'%(lervaln),
+    plt.annotate(casename + ' R= ' + '$%.2f$'%(lerval) + ', p='+ '$%.2f$'%(lepval),
                 xy=(axxlims[0]+.05*axxlims[1], axylims[1]-.1*axylims[1]),
                 xycoords='data')
-    plt.annotate(casename + ' p= ' + '$%.2f$'%(lepval) + ', ' + casename2 + ' p='+ '$%.2f$'%(lepvaln),
-                xy=(axxlims[0]+.05*axxlims[1], axylims[1]-.2*axylims[1]),
-                xycoords='data')
+    if addnat:
+        plt.annotate(casename2 + ' R= ' + '$%.2f$'%(lervaln) + ', p='+ '$%.2f$'%(lepvaln),
+                    xy=(axxlims[0]+.05*axxlims[1], axylims[1]-.2*axylims[1]),
+                    xycoords='data')
+
     opstr1 = opstr2 = ''
     if performop1:
         opstr1= op1 + '_' + region1op
@@ -213,9 +270,14 @@ if doscatter:
         ax.axvline(x=0,color='k',linewidth=.5,linestyle='--')
 
     if printtofile:
-        plt.savefig('scatterregress_' + field1 + region1 + opstr1 + str(sea1) + '_v_' + 
-                    field2 + region2 +opstr2 + str(sea2) + '_' + casename + '_' + 
-                    casename2 + '_2002-12_1979-89' + obstr + '.pdf')
+        if addnat:
+            plt.savefig('scatterregress_' + field1 + region1 + opstr1 + str(sea1) + '_v_' + 
+                        field2 + region2 +opstr2 + str(sea2) + '_' + casename + '_' + 
+                        casename2 + '_2002-12_1979-89' + obstr + '.pdf')
+        else:
+            plt.savefig('scatterregress_' + field1 + region1 + opstr1 + str(sea1) + '_v_' + 
+                        field2 + region2 +opstr2 + str(sea2) + '_' + casename + 
+                        '_2002-12_1979-89' + obstr + '.pdf')
 
 if dohist:
     histcdat=le.load_LEdata(fdict2,'historical',timesel=timeselc, rettype='ndarray',conv=conv,ftype=ftype)
