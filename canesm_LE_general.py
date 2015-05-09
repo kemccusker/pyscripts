@@ -13,34 +13,54 @@ from netCDF4 import num2date
 import sys
 import loadLE as le
 import constants as con
+import matplotlib.font_manager as fm
+import loadmodeldata as lmd
 
 # exception handling works below. add to other clauses @@
 
 printtofile=True
 dohist=False
 doscatter=True
-addobs=True # to scatter plot
-addnat=False
-addsims=False # add the idealized simulations. only good for DJF polar amp vs eurasia SAT
+addobs=False # to scatter plot
+addnat=True
+addsims=True # add the idealized simulations. only good for DJF polar amp vs eurasia SAT
 
 performop1 = False
-op1='div'; region1op='gm' # polar amp: gt60n / gm
-performop2 = False
+#op1='div'; region1op='gm' # polar amp: gt60n / gm
+op1='sub'; region1op='deeptrop' # pole-eq temp gradient: gt60n - deeptrop (or trop)
+performop2 = True
 op2='sub'; region2op='nh'
 
 timeselc='1979-01-01,1989-12-31'
 timeselp='2002-01-01,2012-12-31'
 
-field1='zg50000.00'; ncfield1='zg'; comp1='Amon'; region1='bksmori'
+#field1='zg50000.00'; ncfield1='zg'; comp1='Amon'; region1='bksmori'
 #field1='sia'; ncfield1='sianh'; comp1='OImon'; region1='nh'
-#field1='tas'; ncfield1='tas'; comp1='Amon'; region1='gt60n'
+field1='sic'; ncfield1='sic'; comp1='OImon'; region1='bksmori' # @@ a hack. prefer SIA
+#field1='tas'; ncfield1='tas'; comp1='Amon'; region1='gt60n' #region1='bksmori'
 leconv1= 1 
-sea1='SON'
+sea1='DJF'
 
 field2='tas'; ncfield2='tas'; comp2='Amon'; region2='eurasiamori'
+#field2='zg50000.00'; ncfield2='zg'; comp2='Amon'; region2='bksmori'
 leconv2=1
 sea2='DJF'
 
+xlab=ylab=None
+#xlab = '$\Delta$ DJF Barents-Kara Seas Z500 (m)'
+#ylab = '$\Delta$ DJF SAT(Eurasia) - SAT(NH) ($^\circ$C)'
+#ylab = '$\Delta$ DJF Eurasian SAT ($^\circ$C)'
+
+simconv1=simconv2=1
+if field1=='tas': simfield1='st'; simncfield1='ST'
+elif field1=='zg50000.00': simfield1='gz50000'; simncfield1='PHI'; simconv1=1/con.get_g()
+elif field1=='sia': simfield1='sicn'; simncfield1='SICN'; print '@@ danger, sia actually sicn average'
+else: print 'cannot addsims for ' + field1; addsims=False
+
+if field2=='tas': simfield2='st'; simncfield2='ST'
+elif field2=='zg50000.00': simfield2='gz50000'; simncfield2='PHI'; simconv2=1/con.get_g()
+elif field2=='sia': simfield2='sicn'; simncfield2='SICN'; print '@@ danger, sia actually sicn average'
+else: print 'cannot addsims for ' + field2; addsims=False
 
 
 ftype='fullts' # 'fullclimo' or 'climo' or 'fullts'
@@ -81,9 +101,9 @@ if doscatter:
     else:
         lefld1=lepsea1.mean(axis=1)-lecsea1.mean(axis=1)
 
-    lecdat2 = le.load_LEdata(fdict2,casename,timesel=timeselc, rettype='ndarray',conv=conv2,ftype=ftype)
+    lecdat2 = le.load_LEdata(fdict2,casename,timesel=timeselc, rettype='ndarray',conv=leconv2,ftype=ftype)
     (numens2,ntime2) = lecdat1.shape
-    lepdat2=le.load_LEdata(fdict2,casename,timesel=timeselp, rettype='ndarray',conv=conv2,ftype=ftype)
+    lepdat2=le.load_LEdata(fdict2,casename,timesel=timeselp, rettype='ndarray',conv=leconv2,ftype=ftype)
     lecsea2 = cutl.seasonalize_monthlyts(lecdat2.T,season=sea2).T
     lepsea2 = cutl.seasonalize_monthlyts(lepdat2.T,season=sea2).T
     lesea2 = lepsea2 - lecsea2
@@ -98,7 +118,6 @@ if doscatter:
         lefld2=lepsea2.mean(axis=1)-lecsea2.mean(axis=1)
 
     lemm, lebb, lerval, lepval, lestd_err = sp.stats.linregress(lefld1,lefld2)
-    
 
     # historicalNat
     casename2='historicalNat'
@@ -121,9 +140,9 @@ if doscatter:
     else:
         lefld1n=lepsea1n.mean(axis=1)-lecsea1n.mean(axis=1)
 
-    lecdat2n = le.load_LEdata(fdict2,casename2,timesel=timeselc, rettype='ndarray',conv=conv2,ftype=ftype)
+    lecdat2n = le.load_LEdata(fdict2,casename2,timesel=timeselc, rettype='ndarray',conv=leconv2,ftype=ftype)
     (numens2,ntime2) = lecdat1n.shape
-    lepdat2n=le.load_LEdata(fdict2,casename2,timesel=timeselp, rettype='ndarray',conv=conv2,ftype=ftype)
+    lepdat2n=le.load_LEdata(fdict2,casename2,timesel=timeselp, rettype='ndarray',conv=leconv2,ftype=ftype)
     lecsea2n = cutl.seasonalize_monthlyts(lecdat2n.T,season=sea2).T
     lepsea2n = cutl.seasonalize_monthlyts(lepdat2n.T,season=sea2).T
     lesea2n = lepsea2n - lecsea2n
@@ -138,6 +157,7 @@ if doscatter:
         lefld2n=lepsea2n.mean(axis=1)-lecsea2n.mean(axis=1)
 
     lemmn, lebbn, lervaln, lepvaln, lestd_errn = sp.stats.linregress(lefld1n,lefld2n)
+   
 
     if addobs: # DATA MUST EXIST:hard coded for TAS and Z500 @@
         graveraint= 9.80665 # m/s2 (different from Canadian models)
@@ -166,6 +186,8 @@ if doscatter:
                     obsreg1 = obsreg1.mean() / opfld1.mean()
             else:
                 obsreg1=obsreg1.mean()
+        else:
+            print 'this field not supported with addobs @@: ' + field1; addobs=False
 
         if field2 == 'tas':
             gisfile = '/HOME/rkm/work/DATA/GISS/gistemp1200_ERSST.nc'
@@ -183,6 +205,8 @@ if doscatter:
             else:
                 obsreg2 =  cutl.calc_regmean(gissatp-gissatc,latgis,longis,region2)
                 obsreg2=obsreg2.mean()
+        else:
+            print 'this field not supported with addobs @@: ' + field2; addobs=False
             
     fig,ax=plt.subplots(1,1)
     ledat=plt.scatter(lefld1,lefld2,color=ccm.get_linecolor('darkolivegreen3'),marker='*',s=5**2,alpha=0.5)
@@ -190,11 +214,13 @@ if doscatter:
     axxlims = ax.get_xlim()
     onex=np.linspace(axxlims[0],axxlims[1])
     ax.plot(onex,lemm*onex + lebb, color=ccm.get_linecolor('darkolivegreen3'),linewidth=1)
+    
 
     obstr=''
     leghnds=(ledat,)
     legstrs=(casename + ' LE',)
 
+    print '-------- LE slope, rval, pval: ' + str(lemm),str(lerval),str(lepval)
     if addnat:
         ledatn=plt.scatter(lefld1n,lefld2n,color=ccm.get_linecolor('steelblue3'),marker='*',s=5**2,alpha=0.5)
         axylims = ax.get_ylim()
@@ -203,13 +229,14 @@ if doscatter:
         ax.plot(onex,lemmn*onex + lebbn, color=ccm.get_linecolor('steelblue3'),linewidth=1)
         leghnds=leghnds + (ledatn,)
         legstrs=legstrs + (casename2 + ' LE',)
+        print '-------- LENat slope, rval, pval: ' + str(lemmn),str(lervaln),str(lepvaln)
     if addobs:
         obs=plt.scatter(obsreg1,obsreg2,color='blue',marker='s',s=8**2)
         leghnds=leghnds + (obs,)
         legstrs=legstrs + ('Observations',)
         obstr='obs'
 
-    if addsims and sea1==sea2=='DJF' and performop1==True and op1=='div' and region1=='gt60n' and region1op=='gm':
+    """if addsims and sea1==sea2=='DJF' and performop1==True and op1=='div' and region1=='gt60n' and region1op=='gm':
         # calculated using, for example:
         # lmd.loaddata(('st',),('E1','E2','E3','E4','E5','R1','R2','R3','R4','R5'),
         #              timefreq='DJF',meantype='time',region='eurasiamori')
@@ -236,8 +263,45 @@ if doscatter:
                   [-0.00995005],
                   [ 0.35847141],
                   [ 0.27739474]]
-        sims = ax.scatter(simpolamp,simeur,color='0.3',marker='o',s=6**2,alpha=0.7)
-        leghnds=leghnds + (sims,)
+        simsh = ax.scatter(simpolamp,simeur,color='0.3',marker='o',s=6**2,alpha=0.7)
+        leghnds=leghnds + (simsh,)
+        legstrs=legstrs + ('Modelled SIC forcing',)
+        obstr=obstr+'sims'"""
+    if addsims:
+        sims=('E1','E2','E3','E4','E5','R1','R2','R3','R4','R5')
+        flddf1 = pd.DataFrame(lmd.loaddata((simfield1,),sims,ncfields=(simncfield1,), timefreq=sea1, 
+                                           meantype='time',region=region1))*simconv1
+
+        if performop1:
+            flddf1op = pd.DataFrame(lmd.loaddata((simfield1,),sims,ncfields=(simncfield1,), timefreq=sea1, 
+                                                 meantype='time',region=region1op))*simconv1
+
+            if op1=='sub': # subtract
+                flddf1 = flddf1 - flddf1op
+            elif op1=='div': # divide
+                flddf1 = flddf1 / flddf1op
+
+        flddf2 = pd.DataFrame(lmd.loaddata((simfield2,),sims,ncfields=(simncfield2,), timefreq=sea2, 
+                                           meantype='time',region=region2))*simconv2
+
+        if performop2:
+            flddf2op = pd.DataFrame(lmd.loaddata((simfield2,),sims,ncfields=(simncfield2,), timefreq=sea2, 
+                                                 meantype='time',region=region2op))*simconv2
+
+            if op2=='sub': # subtract
+                flddf2 = flddf2 - flddf2op
+            elif op2=='div': # divide
+                flddf2 = flddf2 / flddf2op
+
+        simmm, simbb, simrval, simpval, simstd_err = sp.stats.linregress(np.squeeze(flddf1.values),np.squeeze(flddf2.values))
+        print '-------- SIMS slope, rval, pval: ' + str(simmm),str(simrval),str(simpval)
+
+        simsh = ax.scatter(flddf1,flddf2,color='0.3',marker='o',s=6**2,alpha=0.7)
+        #axylims = ax.get_ylim()
+        #axxlims = ax.get_xlim()
+        onex=np.linspace(axxlims[0],axxlims[1])
+        ax.plot(onex,simmm*onex + simbb, color='0.3',linewidth=1)
+        leghnds=leghnds + (simsh,)
         legstrs=legstrs + ('Modelled SIC forcing',)
         obstr=obstr+'sims'
 
@@ -257,10 +321,17 @@ if doscatter:
     opstr1 = opstr2 = ''
     if performop1:
         opstr1= op1 + '_' + region1op
-    plt.xlabel(sea1 + ' ' + field1 + ' ' + region1 + ' ' + opstr1)
+    if xlab==None:
+        plt.xlabel(sea1 + ' ' + field1 + ' ' + region1 + ' ' + opstr1)
+    else:
+        plt.xlabel(xlab)
     if performop2:
         opstr2= op2 + '_' + region2op
-    plt.ylabel(sea2 + ' ' + field2 + ' ' + region2 + ' ' + opstr2)
+
+    if ylab==None:
+        plt.ylabel(sea2 + ' ' + field2 + ' ' + region2 + ' ' + opstr2)
+    else:
+        plt.ylabel(ylab)
 
     axylims = ax.get_ylim()
     if axylims[0]<=0 and axylims[1]>=0:
