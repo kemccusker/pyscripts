@@ -50,13 +50,14 @@ def loadseasdata(fields,simulations,model='CanAM4',levsel=None,meantype=None):
     return loaddata(fields,simulations,model,timefreq='seasonal',levsel=levsel,meantype=meantype)
 
 
-def loaddata(fields, simulations, model='CanAM4',timeper='001-121',timefreq=None, 
+def loaddata(fields, simulations, ncfields=None,model='CanAM4',timeper='001-121',timefreq=None, 
              levsel=None,meantype=None,filetype='diff',region=None):
-    """ loaddata(fields, simulations,model='CanAM4',timeper='001-121',timefreq=None, 
+    """ loaddata(fields, simulations,ncfields=None,model='CanAM4',timeper='001-121',timefreq=None, 
                  levsel=None, meantype=None,filetype='diff',region=None)
     
             fields: tuple of field names
             simulations: tuple of simulation names (diff names='E1'...'ENS','NSIDC' etc)
+            ncfields: tuple of ncfield names (var name in file itself). Default to upper case of field
             model: for now only 'CanAM4' is implemented
             timeper: time period of the data (used for filename). default '001-121'
             timefreq: time frequency TO RETURN. default all data
@@ -102,18 +103,27 @@ def loaddata(fields, simulations, model='CanAM4',timeper='001-121',timefreq=None
         # choose an individual month
         tf=timefreq
         monbool=True
-    elif timefreq in ('climo','ANN','DJF','JJA','NDJ','MAM','SON'):
+    elif timefreq in ('climo','ANN','DJF','JJA','NDJ','MAM','SON','ND','JF','SO'):
         tf=timefreq
         seabool=True
 
     print tf # @@
-    
-    datadict = dict.fromkeys(fields,{})
-    for field in fields:
 
-        print field # @@
+    # @@@@@ add handling of sia!
+
+
+    datadict = dict.fromkeys(fields,{})
+    for fii,field in enumerate(fields):
+
+        if ncfields==None:
+            ncfield=field.upper()
+        else:
+            ncfield=ncfields[fii]
+
+        print field,ncfield #@@
+
         # assume simulations entered are of the form: E1, R3, ENSE etc. Then
-        # filetype input arg tells which simulation to get (or both) @@@@ NOT DONE.
+        # filetype input arg tells which simulation to get (or both) 
         simdict = dict.fromkeys(simulations,{})
 
         for sim in simulations:
@@ -143,12 +153,12 @@ def loaddata(fields, simulations, model='CanAM4',timeper='001-121',timefreq=None
                 ncparams['calc'] = 'zm'
 
             if filetype=='diff':
-                fld = cnc.getNCvar(fnamep,field.upper(),timesel=timesel,**ncparams) -\
-                      cnc.getNCvar(fnamec,field.upper(),timesel=timesel,**ncparams)
+                fld = cnc.getNCvar(fnamep,ncfield,timesel=timesel,**ncparams) -\
+                      cnc.getNCvar(fnamec,ncfield,timesel=timesel,**ncparams)
             elif filetype=='ctl':
-                fld = cnc.getNCvar(fnamec,field.upper(),timesel=timesel,**ncparams)
+                fld = cnc.getNCvar(fnamec,ncfield,timesel=timesel,**ncparams)
             elif filetype=='pert':
-                fld = cnc.getNCvar(fnamep,field.upper(),timesel=timesel,**ncparams)
+                fld = cnc.getNCvar(fnamep,ncfield,timesel=timesel,**ncparams)
             else:
                 print "filetype not supported! ['diff'|'ctl'|'pert']"
                 return -1
