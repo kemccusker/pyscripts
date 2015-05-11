@@ -214,7 +214,7 @@ def addtsigm(basem, pvals, lat, lon, siglevel=0.05,color='k',type='hatch'):
     lons, lats = np.meshgrid(lon,lat)
 
     if type == 'hatch':
-        basem.contourf(lons,lats,plotfld,levels=[1,2],colors='none',hatches='.',latlon=True)
+        basem.contourf(lons,lats,plotfld,levels=[1,2],colors='none',latlon=True,hatches='o')#hatches='.')
     else:
         basem.contour(lons,lats,plotfld,[0, 1.5],colors=color,linewidths=2,latlon=True)
 
@@ -240,7 +240,7 @@ def addtsig(ploth, pvals, dim1, dim2, siglevel=0.05,color='k',type='hatch',cmap=
 
 
     if type == 'hatch':
-        pc = ploth.contourf(dim1s,dim2s,plotfld,levels=[1,2],colors='none',hatches='.')
+        pc = ploth.contourf(dim1s,dim2s,plotfld,levels=[1,2],colors='none',hatches='o')#'.')
         # ploth.contourf(dim1s,dim2s,plotfld,levels=[1,2],colors='none',hatches='.')
     elif type == 'color':
         pc = ploth.pcolormesh(dim1s,dim2s,plotfld,\
@@ -254,13 +254,16 @@ def addtsig(ploth, pvals, dim1, dim2, siglevel=0.05,color='k',type='hatch',cmap=
 
 def vert_plot(fld, lev, lat, title='',units='',cmap='blue2red_w20',cmin='',cmax='', type=None,
               axis=None, suppcb=False, latlim=None, levlim=None,addcontlines=False,screen=False,
-              suppylab=False,suppxlab=False):
+              suppylab=False,suppxlab=False,hPa=False):
     """ screen=False: this flag tells whether the plot should be after Screen et al. 2013, ClimDyn
                           1000-300hPa, 20-90N. Ignores latlim/levlim
         suppylab=False: suppress the y labels
     """
 
-    lats,levs = np.meshgrid(lat,lev/100.)
+    if hPa:
+        lats,levs = np.meshgrid(lat,lev) # do not divide by 100, already in hPa
+    else:
+        lats,levs = np.meshgrid(lat,lev/100.)
 
     if cmap =='' or cmap==None:
         cmap='blue2red_w20'
@@ -504,7 +507,8 @@ def plotvert_allseas(fld, lev, lat,title='',units='',cmap='blue2red_w20',type=No
         
         ax.set_title(seasons[midx])
         if pvals != None:
-            addtsig(cf,pvals,lat,lon,type=sigtype)
+            #addtsig(cf,pvals,lat,lon,type=sigtype) # @@@ untested? no lat... 5/10/15
+            addtsig(cf,pvals,lat,lev,type=sigtype) 
 
         midx = midx+1
 
