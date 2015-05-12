@@ -172,10 +172,14 @@ mh = cplt.kemmap(trndmean*nt,lat,lon,cmin=cmin,cmax=cmax,title='LE mean trend ' 
 # @@ now combine with cmip5 ensemble, and CESM if possible..
     
 
+# ==================================================================
+#    This is the part of the file that I actually care about...for paper..
 # Use files that already have SIE or SIA calculated ======= 1/6/2015
 # ==================== plot NH sea ice area ======================== 
 field='sianh'; comp='OImon'; 
 season='DJF' #'ND'
+dopct=True # make the calculation into a percent change
+
 # if season is set to just September (9), I get an error:
 # ValueError: Big-endian buffer not supported on little-endian compiler
 #   I suspect that the hadisst file is the opposite endian to what my python install is on:
@@ -240,7 +244,10 @@ haddf = pd.Series(hadfld,index=hadyrs)
 pasthad = haddf.loc[subyrs]
 preshad = haddf.loc[subyrs2]
 (hadtstat,hadpv) = cutl.ttest_ind(preshad,pasthad)
-diffhad=preshad.mean(axis=0) - pasthad.mean(axis=0)
+if dopct:
+    diffhad= (preshad.mean(axis=0) - pasthad.mean(axis=0)) / pasthad.mean(axis=0) *100
+else:
+    diffhad=preshad.mean(axis=0) - pasthad.mean(axis=0)
 
 subdir='NSIDC/'
 nsidcfile = basedir + subdir + 'nsidc_bt_128x64_1978m11_2011m12_' + field + '_1978111600-2011121612.nc'
@@ -253,7 +260,10 @@ nsidcdf=pd.Series(nsidcfld,index=nsidcyrs)
 pastnsidc = nsidcdf.loc[subyrs]
 presnsidc = nsidcdf.loc[subyrs2[:-1]]
 (nsidctstat,nsidcpv) = cutl.ttest_ind(presnsidc,pastnsidc)
-diffnsidc=presnsidc.mean(axis=0) - pastnsidc.mean(axis=0)
+if dopct:
+    diffnsidc=(presnsidc.mean(axis=0) - pastnsidc.mean(axis=0)) / pastnsidc.mean(axis=0) *100
+else:
+    diffnsidc=presnsidc.mean(axis=0) - pastnsidc.mean(axis=0)
 
 
 # =============== original five:
@@ -277,7 +287,10 @@ origdf=pd.DataFrame(origdt,index=origyrs)
 pastorig = origdf.loc[subyrs]
 presorig = origdf.loc[subyrs2]
 (origtstat,origpv) = cutl.ttest_ind(presorig,pastorig,axis=0)
-difforig = presorig.mean(axis=0) - pastorig.mean(axis=0)
+if dopct:
+    difforig = (presorig.mean(axis=0) - pastorig.mean(axis=0)) / pastorig.mean(axis=0) *100
+else:
+    difforig = presorig.mean(axis=0) - pastorig.mean(axis=0)
 
 # =============== original five: NAT
 casename='historicalNat'
@@ -294,7 +307,10 @@ orignatdf=pd.DataFrame(orignatdt,index=origyrs)
 pastnatorig = orignatdf.loc[subyrs]
 presnatorig = orignatdf.loc[subyrs2]
 (natorigtstat,natorigpv) = cutl.ttest_ind(presnatorig,pastnatorig,axis=0)
-diffnatorig = presnatorig.mean(axis=0) - pastnatorig.mean(axis=0)
+if dopct:
+    diffnatorig = (presnatorig.mean(axis=0) - pastnatorig.mean(axis=0)) / pastnatorig.mean(axis=0)*100
+else:
+    diffnatorig = presnatorig.mean(axis=0) - pastnatorig.mean(axis=0)
 
 
 # TIMESERIES
@@ -322,8 +338,14 @@ pres=allflddf.loc[subyrs2]
 pastnat=allnatdf.loc[subyrs]
 presnat=allnatdf.loc[subyrs2]
 
-alldiff =pres.mean(axis=0)- past.mean(axis=0)
-allnatdiff =presnat.mean(axis=0)- pastnat.mean(axis=0)
+if dopct:
+    alldiff = (pres.mean(axis=0)- past.mean(axis=0)) / past.mean(axis=0)*100
+    allnatdiff = (presnat.mean(axis=0)- pastnat.mean(axis=0)) / pastnat.mean(axis=0)*100
+    pct='pct'
+else:
+    alldiff =pres.mean(axis=0)- past.mean(axis=0)
+    allnatdiff =presnat.mean(axis=0)- pastnat.mean(axis=0)
+    pct=''
 
 fig,ax = plt.subplots(1,1)
 allnatdiff.hist(color=natcol,alpha=0.5)
@@ -376,13 +398,19 @@ hh=ax.axvline(diffhad,color='b',linewidth=3)
 nn=ax.axvline(diffnsidc,color='g',linewidth=3)
 ax.legend((hh,nn),('HadISST','NSIDC'),loc='upper left')
 ax.set_ylabel('Density')
-ax.set_xlabel('$\Delta$ Sea Ice Area (m$^2$)')
-ax.set_xlabel('$\Delta$ Sea Ice Area (millions of km$^2$)')
-xt=ax.get_xticks()
-ax.set_xticklabels(xt/np.float(1e12))
+#ax.set_xlabel('$\Delta$ Sea Ice Area (m$^2$)')
+if dopct:
+    ax.set_xlabel('$\Delta$ Sea Ice Area (%)')
+    #xt=ax.get_xticks()
+    #ax.set_xticklabels(xt/np.float(1e12))
+else:
+    ax.set_xlabel('$\Delta$ Sea Ice Area (millions of km$^2$)')
+    xt=ax.get_xticks()
+    ax.set_xticklabels(xt/np.float(1e12))
+
 ax.grid('off')
 if printtofile:
-    fig.savefig(field + 'diff_PDFHIST_CanESMLE_TOTNAT_' + str(season) + '.pdf')
+    fig.savefig(field + 'diff' + pct + '_PDFHIST_CanESMLE_TOTNAT_' + str(season) + '.pdf')
 
 
 fig,ax=plt.subplots(1,1)
@@ -415,13 +443,18 @@ ax.annotate('Sea Ice Gain', xy=(1,1.02), xytext=(.74,1.02),xycoords='axes fracti
             arrowprops=dict(facecolor='k', edgecolor='None',shrink=0.05),verticalalignment='center')
 
 ax.set_ylabel('Density')
-ax.set_xlabel('$\Delta$ Sea Ice Area (m$^2$)')
-ax.set_xlabel('$\Delta$ Sea Ice Area (millions of km$^2$)')
-xt=ax.get_xticks()
-ax.set_xticklabels(xt/np.float(1e12))
+if dopct:
+    ax.set_xlabel('$\Delta$ Sea Ice Area (%)')
+    #xt=ax.get_xticks()
+    #ax.set_xticklabels(xt/np.float(1e12))
+else:
+    ax.set_xlabel('$\Delta$ Sea Ice Area (m$^2$)')
+    ax.set_xlabel('$\Delta$ Sea Ice Area (millions of km$^2$)')
+    xt=ax.get_xticks()
+    ax.set_xticklabels(xt/np.float(1e12))
 ax.grid('off')
 if printtofile:
-    fig.savefig(field + 'diff_PDFHIST_CanESMLE_TOTNAT_' + str(season) + '_annotate.pdf')
+    fig.savefig(field + 'diff' + pct + '_PDFHIST_CanESMLE_TOTNAT_' + str(season) + '_annotate.pdf')
 
 import matplotlib.patches as mpatches
 import matplotlib.lines as mlines
@@ -528,9 +561,14 @@ ax.legend((nn,tot,nat),('NSIDC','Historical','HistoricalNat'),loc='upper right',
 
 ax.set_ylabel('Density')
 ax.set_yticklabels('')
-ax.set_xlabel('$\Delta$ Sea Ice Area (millions of km$^2$)')
-xt=ax.get_xticks()
-ax.set_xticklabels(xt/np.float(1e12))
+if dopct:
+    ax.set_xlabel('$\Delta$ Sea Ice Area (%)')
+    #xt=ax.get_xticks()
+    #ax.set_xticklabels(xt/np.float(1e12))
+else:
+    ax.set_xlabel('$\Delta$ Sea Ice Area (millions of km$^2$)')
+    xt=ax.get_xticks()
+    ax.set_xticklabels(xt/np.float(1e12))
 ax.grid('off')
 if season == 'ND':
     ax.set_title('Arctic sea-ice area change (Nov-Dec)')
@@ -539,9 +577,9 @@ elif season == 'DJF':
 else:
     ax.set_title('Arctic sea-ice area change (' + season + ')')
 if printtofile:
-    fig.savefig(field + 'diff_PDFHIST_CanESMLE_TOTNAT_' + str(season) + '_paper2f' + natstr + '.pdf')
+    fig.savefig(field + 'diff' + pct + '_PDFHIST_CanESMLE_TOTNAT_' + str(season) + '_paper2f' + natstr + '.pdf')
     ax.set_rasterized(True)
-    fig.savefig(field + 'diff_PDFHIST_CanESMLE_TOTNAT_' + str(season) + '_paper2f' + natstr + '.eps')
+    fig.savefig(field + 'diff'+ pct + '_PDFHIST_CanESMLE_TOTNAT_' + str(season) + '_paper2f' + natstr + '.eps')
 
 
 
@@ -564,4 +602,4 @@ ax.set_ylabel('frequency')
 #ax.legend((tot,nat,hh,nn),('TOT LE','NAT LE','HadISST','NSIDC'))
 ax.legend((hh,nn),('HadISST','NSIDC'))
 if printtofile:
-    fig.savefig(field + 'diff_PDF_CanESMLE_TOTNAT_' + str(season) + '.pdf')
+    fig.savefig(field + 'diff'+ pct + '_PDF_CanESMLE_TOTNAT_' + str(season) + '.pdf')
