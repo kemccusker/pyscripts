@@ -123,7 +123,7 @@ def load_LEdata(fielddict, ens, seas=None, timesel=None,infodict=None,ftype='ful
     return fldret
 
 
-def build_filenames(fielddict, ens, ftype='fullts',timesel=None):
+def build_filenames(fielddict, ens, ftype='fullts',timesel=None,verb=True):
     """ here we know that each 'sim' has 10 sub-ensemble members
 
         ftype: type of filename to build. Right now just 'fullts' for full timeseries
@@ -159,12 +159,21 @@ def build_filenames(fielddict, ens, ftype='fullts',timesel=None):
 
             fname=basepath + sim + '/' + field + '/' + field + '_' + comp + '_CanESM2_' +\
                sim + '_r' + str(eii) + 'i1p1_' + suff + '.nc'
-            print fname
+            if verb:
+                print fname
             flist.append(fname)
 
     return flist
         
+def get_lat():
     
+    fnames=build_filenames({'field':'tas','comp':'Amon'},'historical',verb=False)
+    return cnc.getNCvar(fnames[0],'lat')
+
+def get_lon():
+    
+    fnames=build_filenames({'field':'tas','comp':'Amon'},'historical',verb=False)
+    return cnc.getNCvar(fnames[0],'lon')
 
 
 def get_sims(ens):
@@ -176,5 +185,6 @@ def get_sims(ens):
     else:
         print 'ens not defined!! @@' # should throw an exception
         return -1
+
 
     
