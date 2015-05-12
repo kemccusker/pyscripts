@@ -204,6 +204,10 @@ def addtsigm(basem, pvals, lat, lon, siglevel=0.05,color='k',type='hatch'):
     If type is anything other than 'hatch', it will be a contour
     """
     
+    if np.mod(lon.shape,2) == 0:
+        # add cyclic lon
+        pvals,lon = mpltk.basemap.addcyclic(pvals,lon)
+
     # Make pval field binary
     plotfld = copy.copy(pvals) # shallow copy
     #plotfld=ma.masked_where(pvals,plotfld) # @@ didn't work...
