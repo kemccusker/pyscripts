@@ -18,9 +18,10 @@ import loadmodeldata as lmd
 
 # exception handling works below. add to other clauses @@
 
-printtofile=True
+printtofile=False
 dohist=False
-doscatter=True
+doregress=True
+doscatter=False
 addobs=False # to scatter plot
 addnat=True
 addsims=True # add the idealized simulations. only good for DJF polar amp vs eurasia SAT
@@ -351,19 +352,22 @@ if doscatter:
                         '_2002-12_1979-89' + obstr + '.pdf')
 
 if dohist:
+    conv=leconv1 # just assume we are doing variable 1
+    sea=sea1
+
     histcdat=le.load_LEdata(fdict2,'historical',timesel=timeselc, rettype='ndarray',conv=conv,ftype=ftype)
     (numens,ntime) = histcdat.shape
     histpdat=le.load_LEdata(fdict2,'historical',timesel=timeselp, rettype='ndarray',conv=conv,ftype=ftype)
 
     # Now have 11 years of monthly data. Grab DJF:
-    histc = cutl.seasonalize_monthlyts(histcdat.T,season='DJF').T
-    histp = cutl.seasonalize_monthlyts(histpdat.T,season='DJF').T
+    histc = cutl.seasonalize_monthlyts(histcdat.T,season=sea1).T
+    histp = cutl.seasonalize_monthlyts(histpdat.T,season=sea1).T
 
     histnatcdat=le.load_LEdata(fdict2,'historicalNat',timesel=timeselc, rettype='ndarray',conv=conv,ftype=ftype)
     #(numens,ntime,nlatlon) = histnatcdat.shape
     histnatpdat=le.load_LEdata(fdict2,'historicalNat',timesel=timeselp, rettype='ndarray',conv=conv,ftype=ftype)
-    histnatc = cutl.seasonalize_monthlyts(histnatcdat.T,season='DJF').T
-    histnatp = cutl.seasonalize_monthlyts(histnatpdat.T,season='DJF').T
+    histnatc = cutl.seasonalize_monthlyts(histnatcdat.T,season=sea1).T
+    histnatp = cutl.seasonalize_monthlyts(histnatpdat.T,season=sea1).T
 
     firebrick=ccm.get_linecolor('firebrick')
     darkolivegreen3=ccm.get_linecolor('darkolivegreen3')
@@ -386,44 +390,126 @@ if dohist:
     histdf.hist(normed=True,color='0.5',alpha=0.5)#,histtype='stepfilled')
     natdf.hist(normed=True,color=firebrick,alpha=0.5)
 
+if doregress:
+
+    seasp=sea1 # season of spatial field
+    sear=sea2 # season of regional avgs
+
+    # what are the units of these regressions? @@
+    cmin=-3; cmax=3
+    cmin2=-16; cmax2=16
+
+    # spatial field
+    leconvsp=1
+    fieldsp='zg50000.00'; ncfieldsp='zg'; compsp='Amon'; #regionsp='bksmori'
+
+    # regional avg field 1
+    leconvr=1
+    fieldr='sic'; ncfieldr='sic'; compr='OImon'; regionr='bksmori'
+
+    # regional avg field 2
+    leconvr2=1
+    fieldr2='tas'; ncfieldr2='tas'; compr2='Amon'; regionr2='eurasiamori'
+
+    fdictsp = {'field': fieldsp, 'ncfield': ncfieldsp, 'comp': compsp}
+    fdictr = {'field': fieldr+regionr, 'ncfield': ncfieldr, 'comp': compr}
+    fdictr2 = {'field': fieldr2+regionr2, 'ncfield': ncfieldr2, 'comp': compr2}
+
+    #Got memory errors when trying to read in everything @@
+    # so only do one LE
+    casename = 'historical'
+
+    lat=le.get_lat()
+    lon=le.get_lon()
+    nlat=len(lat); nlon=len(lon)
+
+    # LOAD SPATIAL DATA
+    lecdatsp = le.load_LEdata(fdictsp,casename,timesel=timeselc, rettype='ndarray',conv=leconvsp,ftype=ftype)
+    (numensp,ntimesp,nspacesp) = lecdatsp.shape
+    lepdatsp=le.load_LEdata(fdictsp,casename,timesel=timeselp, rettype='ndarray',conv=leconvsp,ftype=ftype)
+    # time needs to be first dimension
+    lecdatsp = np.transpose(lecdatsp,(1,0,2))
+    lepdatsp = np.transpose(lepdatsp,(1,0,2))
+    lecseasp = cutl.seasonalize_monthlyts(lecdatsp,season=seasp).mean(axis=0) # average the 11 seasonal avgs 
+    lepseasp = cutl.seasonalize_monthlyts(lepdatsp,season=seasp).mean(axis=0) # average the 11 seasonal avgs 
+    leseasp = lepseasp - lecseasp # numens x space.flat
+    
+    # LOAD 1D DATA
+    lecdatr = le.load_LEdata(fdictr,casename,timesel=timeselc, rettype='ndarray',conv=leconvr,ftype=ftype)
+    (numenr,ntimer) = lecdatr.shape
+    lepdatr=le.load_LEdata(fdictr,casename,timesel=timeselp, rettype='ndarray',conv=leconvr,ftype=ftype)
+    lecsear = cutl.seasonalize_monthlyts(lecdatr.T,season=sear).mean(axis=0)
+    lepsear = cutl.seasonalize_monthlyts(lepdatr.T,season=sear).mean(axis=0)
+    lesear = lepsear - lecsear # numens
+
+    #mm, bb, rval, pval, std_err = sp.stats.linregress(lesear,leseasp) # errors. why? @@
+    slope,intercept = np.polyfit(lesear,leseasp,1)
+    bkszg=slope.reshape((nlat,nlon))
+
+    # LOAD 1D DATA (2)
+    lecdatr2 = le.load_LEdata(fdictr2,casename,timesel=timeselc, rettype='ndarray',conv=leconvr2,ftype=ftype)
+    (numenr2,ntimer2) = lecdatr2.shape
+    lepdatr2=le.load_LEdata(fdictr2,casename,timesel=timeselp, rettype='ndarray',conv=leconvr2,ftype=ftype)
+    lecsear2 = cutl.seasonalize_monthlyts(lecdatr2.T,season=sear).mean(axis=0)
+    lepsear2 = cutl.seasonalize_monthlyts(lepdatr2.T,season=sear).mean(axis=0)
+    lesear2 = lepsear2 - lecsear2 # numens
+
+    #mm, bb, rval, pval, std_err = sp.stats.linregress(lesear,leseasp) # errors. why? @@
+    slope,intercept = np.polyfit(lesear2,leseasp,1)
+    eurzg=slope.reshape((nlat,nlon))
 
 
-""" Got memory errors when trying to read in everything @@
-flist=le.build_filenames(fdict,'historical',ftype='fullts')
-numens=len(flist)
-fname = flist[0]
-lat=cnc.getNCvar(fname,'lat')
-nlat=len(lat)
-lon=cnc.getNCvar(fname,'lon')
-nlon=len(lon)
 
-histcdat = histcdat.reshape((numens,ntime,nlat,nlon))
-histpdat = histpdat.reshape((numens,ntime,nlat,nlon))
 
-histnatcdat = histnatcdat.reshape((numens,ntime,nlat,nlon))
-histnatpdat = histnatpdat.reshape((numens,ntime,nlat,nlon))
+    fig,axs=plt.subplots(1,2)
+    fig.set_size_inches(10,5)
+    ax=axs[0]
+    cplt.kemmap(bkszg,lat,lon,type='nh',cmin=cmin,cmax=cmax,axis=ax,
+                title=sear + ' ' +fieldr+regionr + ' regressed onto ' + seasp + ' ' + fieldsp)
 
-# Now, seasonal average and regional average here
-nyr = ntime/12.-1 # @@@@@@ hack for laptop. data probably not correct @@@@ actually needed on linux too...
+    ax=axs[1] 
+    cplt.kemmap(eurzg,lat,lon,type='nh',axis=ax, cmin=cmin2,cmax=cmax2,
+                title=sear + ' ' +fieldr2+regionr2 + ' regressed onto ' + seasp + ' ' + fieldsp)
 
-#histcsea = np.zeros((numens,nyr,nlat,lon)
-histreg = np.zeros((numens,nyr))
-histnatreg = np.zeros((numens,nyr))
+    if printtofile:
+        fig.savefig(fieldr +regionr + '_' + fieldr2 + regionr2 + sear + '_regresson_' + fieldsp + seasp + '.pdf') 
 
-for nii in range(0,numens):
 
-    histcsea = cutl.seasonalize_monthlyts(histcdat[nii,...],season=sea)
-    histpsea = cutl.seasonalize_monthlyts(histpdat[nii,...],season=sea)
-    ctl = cutl.calc_regmean(histcsea,lat,lon,region=region)
-    pert = cutl.calc_regmean(histpsea,lat,lon,region=region)
-    histreg[nii,...] = pert - ctl
+    """flist=le.build_filenames(fdict,casename,ftype='fullts')
+    numens=len(flist)
+    fname = flist[0]
+    lat=cnc.getNCvar(fname,'lat')
+    nlat=len(lat)
+    lon=cnc.getNCvar(fname,'lon')
+    nlon=len(lon)
 
-    histnatcsea = cutl.seasonalize_monthlyts(histnatcdat[nii,...],season=sea)
-    histnatpsea = cutl.seasonalize_monthlyts(histnatpdat[nii,...],season=sea)
-    ctlnat = cutl.calc_regmean(histnatcsea,lat,lon,region=region)
-    pertnat = cutl.calc_regmean(histnatpsea,lat,lon,region=region)
-    histnatreg[nii,...] = pertnat - ctlnat
+    histcdat = histcdat.reshape((numens,ntime,nlat,nlon))
+    histpdat = histpdat.reshape((numens,ntime,nlat,nlon))
 
-plt.figure()
-plt.hist(histreg.mean(axis=1),alpha=0.5)
-plt.hist(histnatreg.mean(axis=1),color='.5')"""
+    #histnatcdat = histnatcdat.reshape((numens,ntime,nlat,nlon))
+    #histnatpdat = histnatpdat.reshape((numens,ntime,nlat,nlon))
+
+    # Now, seasonal average and regional average here
+    nyr = ntime/12.-1 # @@@@@@ hack for laptop. data probably not correct @@@@ actually needed on linux too...
+
+    #histcsea = np.zeros((numens,nyr,nlat,lon)
+    histreg = np.zeros((numens,nyr))
+    #histnatreg = np.zeros((numens,nyr))
+
+    for nii in range(0,numens):
+
+        histcsea = cutl.seasonalize_monthlyts(histcdat[nii,...],season=sea)
+        histpsea = cutl.seasonalize_monthlyts(histpdat[nii,...],season=sea)
+        ctl = cutl.calc_regmean(histcsea,lat,lon,region=region)
+        pert = cutl.calc_regmean(histpsea,lat,lon,region=region)
+        histreg[nii,...] = pert - ctl
+
+        #histnatcsea = cutl.seasonalize_monthlyts(histnatcdat[nii,...],season=sea)
+        #histnatpsea = cutl.seasonalize_monthlyts(histnatpdat[nii,...],season=sea)
+        #ctlnat = cutl.calc_regmean(histnatcsea,lat,lon,region=region)
+        #pertnat = cutl.calc_regmean(histnatpsea,lat,lon,region=region)
+        #histnatreg[nii,...] = pertnat - ctlnat
+
+    plt.figure()
+    plt.hist(histreg.mean(axis=1),alpha=0.5)
+    #plt.hist(histnatreg.mean(axis=1),color='.5')"""
