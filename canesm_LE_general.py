@@ -18,7 +18,7 @@ import loadmodeldata as lmd
 
 # exception handling works below. add to other clauses @@
 
-printtofile=False
+printtofile=True
 dohist=False
 doregress=True
 doscatter=False
@@ -391,32 +391,54 @@ if dohist:
     natdf.hist(normed=True,color=firebrick,alpha=0.5)
 
 if doregress:
+    donorm=True
 
     seasp=sea1 # season of spatial field
     sear=sea2 # season of regional avgs
 
-    # what are the units of these regressions? @@
-    cmin=-3; cmax=3
-    cmin2=-16; cmax2=16
 
     # spatial field
     leconvsp=1
-    fieldsp='zg50000.00'; ncfieldsp='zg'; compsp='Amon'; #regionsp='bksmori'
+    fieldsp='zg50000.00'; ncfieldsp='zg'; compsp='Amon'; 
+    #fieldsp='tas'; ncfieldsp='tas'; compsp='Amon'; 
 
     # regional avg field 1
-    leconvr=1
+    leconvr=-1 # this way, sea ice loss is linked with positive changes elsewhere
     fieldr='sic'; ncfieldr='sic'; compr='OImon'; regionr='bksmori'
 
     # regional avg field 2
     leconvr2=1
-    fieldr2='tas'; ncfieldr2='tas'; compr2='Amon'; regionr2='eurasiamori'
+    fieldr2='tas'; ncfieldr2='tas'; compr2='Amon'; regionr2='eurasiamori'; leconvr2=-1 # so cooling=high heights
+    #fieldr2='zg50000.00'; ncfieldr2='zg'; compr2='Amon'; regionr2='bksmori'
+    
+
+    # what are the units of these regressions? @@
+    if fieldsp=='zg50000.00':
+        # these are probably : m/% and m/C
+        # try normalizing the 1D field by its sigma so that plots will be m/SD
+        cmin=-3; cmax=3 # I think m/%
+        cmin2=-16; cmax2=16 # m/C
+        normstr=''
+        if donorm:
+            cmin=-10; cmax=10
+            cmin2=-10; cmax2=10
+            normstr='norm'
+    elif fieldsp=='tas':
+        # these are probably : C/% and C/m
+        # try normalizing the 1D field by its sigma so that plots will be C/SD
+        cmin=-.5; cmax=.5 # I think C/%
+        cmin2=-.1; cmax2=.1 # C/m
+        normstr=''
+        if donorm:
+            cmin=-.7; cmax=.7
+            cmin2=-.7; cmax2=.7
+            normstr='norm'
+
 
     fdictsp = {'field': fieldsp, 'ncfield': ncfieldsp, 'comp': compsp}
     fdictr = {'field': fieldr+regionr, 'ncfield': ncfieldr, 'comp': compr}
     fdictr2 = {'field': fieldr2+regionr2, 'ncfield': ncfieldr2, 'comp': compr2}
 
-    #Got memory errors when trying to read in everything @@
-    # so only do one LE
     casename = 'historical'
 
     lat=le.get_lat()
@@ -441,6 +463,8 @@ if doregress:
     lecsear = cutl.seasonalize_monthlyts(lecdatr.T,season=sear).mean(axis=0)
     lepsear = cutl.seasonalize_monthlyts(lepdatr.T,season=sear).mean(axis=0)
     lesear = lepsear - lecsear # numens
+    if donorm:
+        lesear=lesear / lesear.std()
 
     #mm, bb, rval, pval, std_err = sp.stats.linregress(lesear,leseasp) # errors. why? @@
     slope,intercept = np.polyfit(lesear,leseasp,1)
@@ -453,6 +477,8 @@ if doregress:
     lecsear2 = cutl.seasonalize_monthlyts(lecdatr2.T,season=sear).mean(axis=0)
     lepsear2 = cutl.seasonalize_monthlyts(lepdatr2.T,season=sear).mean(axis=0)
     lesear2 = lepsear2 - lecsear2 # numens
+    if donorm:
+        lesear2=lesear2 / lesear2.std()
 
     #mm, bb, rval, pval, std_err = sp.stats.linregress(lesear,leseasp) # errors. why? @@
     slope,intercept = np.polyfit(lesear2,leseasp,1)
@@ -463,19 +489,22 @@ if doregress:
 
     fig,axs=plt.subplots(1,2)
     fig.set_size_inches(10,5)
-    ax=axs[0]
-    cplt.kemmap(bkszg,lat,lon,type='nh',cmin=cmin,cmax=cmax,axis=ax,
+    ax=axs[0]#
+    cplt.kemmap(bkszg,lat,lon,type='nh',axis=ax,cmin=cmin,cmax=cmax,
                 title=sear + ' ' +fieldr+regionr + ' regressed onto ' + seasp + ' ' + fieldsp)
 
-    ax=axs[1] 
+    ax=axs[1] #
     cplt.kemmap(eurzg,lat,lon,type='nh',axis=ax, cmin=cmin2,cmax=cmax2,
                 title=sear + ' ' +fieldr2+regionr2 + ' regressed onto ' + seasp + ' ' + fieldsp)
 
     if printtofile:
-        fig.savefig(fieldr +regionr + '_' + fieldr2 + regionr2 + sear + '_regresson_' + fieldsp + seasp + '.pdf') 
+        fig.savefig(fieldr +regionr + '_' + fieldr2 + regionr2 + sear \
+                    + '_regresson_' + fieldsp + seasp + normstr + '.pdf') 
 
 
-    """flist=le.build_filenames(fdict,casename,ftype='fullts')
+    """    #Got memory errors when trying to read in everything @@
+           #But one LE works
+    flist=le.build_filenames(fdict,casename,ftype='fullts')
     numens=len(flist)
     fname = flist[0]
     lat=cnc.getNCvar(fname,'lat')
