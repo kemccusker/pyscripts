@@ -3,12 +3,13 @@
 
 import cccmautils as cutl
 import numpy.ma as ma
+import cccmacmaps as ccm
 
 plt.close('all')
 
-printtofile=True
-atmos=False
-ocean=True
+printtofile=False
+atmos=True
+ocean=False
 
 basepath2 = '/Users/kelly/School/DATA/'
 basepath = '/Volumes/MyPassport2TB/DATA/ccsm4/'
@@ -217,10 +218,10 @@ if atmos:
 
     var='TAUX' # wind stress
 
-    fnamec =  basepath + casenamec + '/atm_proc/' + var + '/' + var + '.' + casenamec + '.cam2.h0.' + timeperc + '_timeseries.nc'
-    fnamep =  basepath + casenamep + '/atm_proc/' + var + '/' + var + '.' + casenamep + '.cam2.h0.' + timeperp + '_timeseries.nc'
-    fnamep2 =  basepath + casenamep2 + '/atm_proc/' + var + '/' + var + '.' + casenamep2 + '.cam2.h0.' + timeperp + '_timeseries.nc'
-    fnamep3 =  basepath + casenamep3 + '/atm_proc/' + var + '/' + var + '.' + casenamep3 + '.cam2.h0.' + timeperp + '_timeseries.nc'
+    fnamec =  basepath + casenamec + '/atm_proc/2D/' + var + '.' + casenamec + '.cam2.h0.' + timeperc + '_timeseries.nc'
+    fnamep =  basepath + casenamep + '/atm_proc/2D/' + var + '.' + casenamep + '.cam2.h0.' + timeperp + '_timeseries.nc'
+    fnamep2 =  basepath + casenamep2 + '/atm_proc/2D/' + var + '.' + casenamep2 + '.cam2.h0.' + timeperp + '_timeseries.nc'
+    fnamep3 =  basepath + casenamep3 + '/atm_proc/2D/' + var + '.' + casenamep3 + '.cam2.h0.' + timeperp + '_timeseries.nc'
 
 
     # Now plot zonal mean wind and wind stress curl
@@ -236,45 +237,67 @@ if atmos:
     # field = 'wscurl'
     # @@ need to get landfrac
 
-    fname = basepath + 'wscurl.b40.20th.track1.1deg.006.cam2.1970-1999.nc'
+    fname = basepath + 'wscurl.b40.20th.track1.1deg.006.cam2.1970-1999.ANN.nc'
 
     fldc = np.squeeze(cnc.getNCvar(fname,'wscurl'))*-1 
     lat = cnc.getNCvar(fname,'lat')
     lon = cnc.getNCvar(fname,'lon')
     print fldc.shape
 
-    # wind stress files
+    (nt,nlt,nln)=fldc.shape
+    ofract=np.tile(ofrac,(nt,1,1))
+    fldcwt = fldc*ofract
+    fldcwtzm = np.mean(fldcwt,axis=2)
+
+
+    #--- wind stress files
     fnamews = basepath + '../b40.20th.track1.1deg.006_ANN_climo.nc' # 1970-1999
-    wsfldc = np.squeeze(cnc.getNCvar(fnamews,'TAUX'))*-1 # (also mult by -1 ?) Yes, atmos field
+    wsfldc = np.squeeze(cnc.getNCvar(fnamec,'TAUX'))*-1 # (also mult by -1 ?) Yes, atmos field
+
+    # tile ofroac with time
+    (nt,nlt,nln)=wsfldc.shape
+    ofract=np.tile(ofrac,(nt,1,1))
+    wsfldcwt = wsfldc*ofract
+    wsfldcwtzm = np.mean(wsfldcwt,axis=2)
 
     fnames = {'Sulf': fnamep, # 2045-2054
               'GHGrem': fnamep2, # 2045-2054
               'RCP8.5': fnamep3} # 2045-2054
 
     # wind stress curl files
-    wscfnames = {'Sulf': basepath + 'wscurl.geo2035ensavg.cam2.2045-2054.nc',
-              'GHGrem': basepath + 'wscurl.rcp8_5GHGrem1850.cam2.2045-2054.nc',
-              'RCP8.5': basepath + 'wscurl.b40.rcp8_5.1deg.006.cam2.2045-2054.nc' }
+    wscfnames = {'Sulf': basepath + 'wscurl.geo2035ensavg.cam2.2045-2054.ANN.nc',
+              'GHGrem': basepath + 'wscurl.rcp8_5GHGrem1850.cam2.2045-2054.ANN.nc',
+              'RCP8.5': basepath + 'wscurl.b40.rcp8_5.1deg.006.cam2.2045-2054.ANN.nc' }
 
 
     coldt = {'RCP8.5': ccm.get_linecolor('firebrick1'),
              'Sulf': ccm.get_linecolor('mediumblue'),
              'GHGrem': ccm.get_linecolor('darkolivegreen3') }
 
-
-    # @@@@@@@@@ ended here. Need to add compute significance and add to figs.
-
     fig,axs = plt.subplots(1,2,sharex=True)
     fig.set_size_inches(14,3.2) # match zonal mean ocean TEMP
     ax=axs[0] # wind stress
     for fname in ('RCP8.5','Sulf','GHGrem'):
-        fld = np.squeeze(cnc.getNCvar(fnames[fname],'TAUX'))*-1 
-        fldd = fld-wsfldc
-        flddwt = fldd*ofrac
-        flddwtzm = np.mean(flddwt,axis=1)
+        fld = np.squeeze(cnc.getNCvar(fnames[fname],'TAUX'))*-1         
 
-        ax.plot(lat,flddwtzm,color=coldt[fname],linewidth=3)
+        #fldd = fld.mean(axis=0)-wsfldc.mean(axis=0)
+        #flddwt = fldd*ofrac
+        #flddwtzm = np.mean(flddwt,axis=1)
+        
+        # do stats now (Nothing is sig!)
+        (nt,nlt,nln)=fld.shape
+        ofract=np.tile(ofrac,(nt,1,1))
+        fldwt = fld*ofract
+        fldwtzm = np.mean(fldwt,axis=2)
 
+        tstat,pvalsws = cutl.ttest_ind(fldwtzm,wsfldcwtzm)
+        plotfld=fldwtzm.mean(axis=0)-wsfldcwtzm.mean(axis=0)
+
+        ax.plot(lat,plotfld,color=coldt[fname],linewidth=3)
+        plotfldm = ma.masked_where(plotfld,pvalsws<=siglev)
+        ax.plot(lat,plotfldm, color=coldt[fname],linewidth=5,alpha=0.5)
+
+    print '@@@ fix legend...'
     ax.set_xlim(-75,-40)
     ax.axhline(y=0,color='k')
     ax.set_xticks(np.arange(-75,-35,5))
@@ -287,13 +310,29 @@ if atmos:
     ax.legend(('RCP8.5','Sulf','GHGrem'),loc='upper right',fancybox=True,framealpha=0.5,fontsize=15)
 
     ax=axs[1] # wind stress curl
+    savedt={}
     for fname in ('RCP8.5','Sulf','GHGrem'):
         fld = np.squeeze(cnc.getNCvar(wscfnames[fname],'wscurl'))*-1 
-        fldd = fld-fldc
-        flddwt = fldd*ofrac
-        flddwtzm = np.mean(flddwt,axis=1)
+        #fldd = fld-fldc
+        #flddwt = fldd*ofrac
+        #flddwtzm = np.mean(flddwt,axis=1)
 
-        ax.plot(lat,flddwtzm,color=coldt[fname],linewidth=3)
+        print '@@ RCP85 data is wrong -- much too large, pattern seems shifted...'
+
+        # do stats now (Nothing is sig!)
+        (nt,nlt,nln)=fld.shape
+        ofract=np.tile(ofrac,(nt,1,1))
+        fldwt = fld*ofract
+        fldwtzm = np.mean(fldwt,axis=2)
+
+        tstat,pvalswsc = cutl.ttest_ind(fldwtzm,fldcwtzm)
+        plotfldwsc=fldwtzm.mean(axis=0)-fldcwtzm.mean(axis=0)
+
+        savedt[fname] = plotfldwsc # @@@
+
+        ax.plot(lat,plotfldwsc,color=coldt[fname],linewidth=3)
+        plotfldwscm = ma.masked_where(plotfldwsc,pvalswsc<=siglev)
+        #ax.plot(lat,plotfldwscm, color=coldt[fname],linewidth=5,alpha=0.5)
 
     ax.set_xlim(-75,-40)
     ax.axhline(y=0,color='k')
