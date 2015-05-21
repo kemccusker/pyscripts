@@ -17,14 +17,15 @@ import pandas as pd
 import numpy.ma as ma
 import matplotlib.font_manager as fm
 
-printtofile=True
+printtofile=False
 plt.close('all')
 
 conv1=1; conv2=1
-graveraint= 9.80665 # m/s2 (different from Canadian models)
+graveraint= 9.80665 # m/s2 (ERA-Int, different from Canadian models)
 
 plotscatter=True
 addobs=True
+addle=False
 
 # field1 is x
 #field1='st'; ncfield1='ST'
@@ -34,14 +35,14 @@ field1='gz50000'; ncfield1='PHI'; conv1=1/con.get_g()
 #field1='net'; 
 
 region1='bksmori' #'polcap65'
-sea1='SON' #'ND' #'DJF'
+sea1='DJF' #'ND' #'DJF'
 
 # field2 is y
 field2='st'; ncfield2='ST'
 #field2='sia'; ncfield2='SICN'
 #field2='pmsl'; ncfield2='PMSL'
 #field2='gz50000'; ncfield2='PHI'; conv2=1/con.get_g()
-region2= 'eurasiamori'
+region2= 'eurasiathine' #'eurasiamori'
 sea2='DJF' #'ND' #'DJF'
 
 sims = ('E1','E2','E3','E4','E5','R1','R2','R3','R4','R5','HAD','NSIDC','ENS','ENSE')
@@ -59,8 +60,10 @@ ciregdt2 = {}
 ntime=120
 # if one of the scatter vars is winter, need to remove a year from the other one
 #  if it's not winter too
-if (sea1 in ('DJF','NDJ') and sea2 not in ('DJF','NDJ')) or (sea2 in ('DJF','NDJ') and sea1 not in ('DJF','NDJ')):
+if (sea1 in ('DJF','NDJ')) or (sea2 in ('DJF','NDJ')):
     ntime=ntime-1
+#if (sea1 in ('DJF','NDJ') and sea2 not in ('DJF','NDJ')) or (sea2 in ('DJF','NDJ') and sea1 not in ('DJF','NDJ')):
+#    ntime=ntime-1
     
 nsim=len(TOT)
 #if sea2 in ('DJF','NDJ') and sea1 not in ('DJF','NDJ'): # have to shorten other timeseries
@@ -425,7 +428,7 @@ if plotscatter:
     #sube = df.loc[0,['E1','E2','E3','E4','E5']]
     firebrick=ccm.get_linecolor('firebrick')
 
-    printtofile=True
+    printtofile=False
     fig,ax = plt.subplots(1)
     fig.set_size_inches(6,5)
     rr = plt.scatter(df.filter(regex='R').values[0],df.filter(regex='R').values[1],
@@ -446,7 +449,7 @@ if plotscatter:
     print 'PAPER --- mean sims regr info: SLOPE: ' + str(mm) + ', RVAL: ' + str(rval) + ', PVAL: ' + str(pval) + ', R2: ' + str(rsq)
     
 
-    if sea1 in ('ND','DJF') and sea2 in ('ND','DJF') and region1=='bksmori' and region2 in ('eurasia','eurasiathin','eurasiamori'):
+    if sea1 in ('ND','DJF') and sea2 in ('ND','DJF') and region1=='bksmori' and region2 in ('eurasia','eurasiathin','eurasiamori') and field1=='gz50000' and field2=='st':
         # PAPER FIG!
         if sea1 == sea2 == 'DJF':
             monlab = 'Dec-Jan-Feb'
@@ -478,6 +481,8 @@ if plotscatter:
             obs=plt.scatter(erareg.mean(),gisreg.mean(),color='blue',marker='s',s=8**2)
         
     else:
+        addobs=False
+        print 'Cannot add obs for this field combo' #@@
         xlab = str(sea1) + ' ' + field1 + ' ' + region1
         ylab = str(sea2) + ' ' + field2 + ' ' + region2
 
@@ -507,78 +512,79 @@ if plotscatter:
                     field2 + region2 + str(sea2) + 'wacepap' + probs + '.eps')
 
     # ### ADD LE DATA #####
-    printtofile=True
-    import loadLE as le
+    if addle:
+        printtofile=True
+        import loadLE as le
 
-    timeselc='1979-01-01,1989-12-31'
-    timeselp='2002-01-01,2012-12-31'
+        timeselc='1979-01-01,1989-12-31'
+        timeselp='2002-01-01,2012-12-31'
 
-    lefield1='zg50000.00'; lencfield1='zg'; comp1='Amon'; leconv1=1 #region1='bksmori'
-    lefield2='tas'; lencfield2='tas'; comp2='Amon'; #region2='eurasiamori'
-    fdict1 = {'field': lefield1+region1, 'ncfield': lencfield1, 'comp': comp1}
-    fdict2 = {'field': lefield2+region2, 'ncfield': lencfield2, 'comp': comp2}
+        lefield1='zg50000.00'; lencfield1='zg'; comp1='Amon'; leconv1=1 #region1='bksmori'
+        lefield2='tas'; lencfield2='tas'; comp2='Amon'; #region2='eurasiamori'
+        fdict1 = {'field': lefield1+region1, 'ncfield': lencfield1, 'comp': comp1}
+        fdict2 = {'field': lefield2+region2, 'ncfield': lencfield2, 'comp': comp2}
 
 
-    ftype='fullts' # 'fullclimo' or 'climo' or 'fullts'
-    lefdict1 = {'field': lefield1+region1, 'ncfield': lencfield1, 'comp': comp1}
-    lefdict2 = {'field': lefield2+region2, 'ncfield': lencfield2, 'comp': comp2}
+        ftype='fullts' # 'fullclimo' or 'climo' or 'fullts'
+        lefdict1 = {'field': lefield1+region1, 'ncfield': lencfield1, 'comp': comp1}
+        lefdict2 = {'field': lefield2+region2, 'ncfield': lencfield2, 'comp': comp2}
 
-    # historical
-    lecdat1 = le.load_LEdata(fdict1,'historical',timesel=timeselc, rettype='ndarray',conv=leconv1,ftype=ftype)
-    (numens1,ntime1) = lecdat1.shape
-    lepdat1=le.load_LEdata(fdict1,'historical',timesel=timeselp, rettype='ndarray',conv=leconv1,ftype=ftype)
-    lecsea1 = cutl.seasonalize_monthlyts(lecdat1.T,season=sea1).T
-    lepsea1 = cutl.seasonalize_monthlyts(lepdat1.T,season=sea1).T
-    lefld1=lepsea1.mean(axis=1)-lecsea1.mean(axis=1)
+        # historical
+        lecdat1 = le.load_LEdata(fdict1,'historical',timesel=timeselc, rettype='ndarray',conv=leconv1,ftype=ftype)
+        (numens1,ntime1) = lecdat1.shape
+        lepdat1=le.load_LEdata(fdict1,'historical',timesel=timeselp, rettype='ndarray',conv=leconv1,ftype=ftype)
+        lecsea1 = cutl.seasonalize_monthlyts(lecdat1.T,season=sea1).T
+        lepsea1 = cutl.seasonalize_monthlyts(lepdat1.T,season=sea1).T
+        lefld1=lepsea1.mean(axis=1)-lecsea1.mean(axis=1)
 
-    lecdat2 = le.load_LEdata(fdict2,'historical',timesel=timeselc, rettype='ndarray',conv=conv2,ftype=ftype)
-    (numens2,ntime2) = lecdat1.shape
-    lepdat2=le.load_LEdata(fdict2,'historical',timesel=timeselp, rettype='ndarray',conv=conv2,ftype=ftype)
-    lecsea2 = cutl.seasonalize_monthlyts(lecdat2.T,season=sea2).T
-    lepsea2 = cutl.seasonalize_monthlyts(lepdat2.T,season=sea2).T
-    lefld2=lepsea2.mean(axis=1)-lecsea2.mean(axis=1)
+        lecdat2 = le.load_LEdata(fdict2,'historical',timesel=timeselc, rettype='ndarray',conv=conv2,ftype=ftype)
+        (numens2,ntime2) = lecdat1.shape
+        lepdat2=le.load_LEdata(fdict2,'historical',timesel=timeselp, rettype='ndarray',conv=conv2,ftype=ftype)
+        lecsea2 = cutl.seasonalize_monthlyts(lecdat2.T,season=sea2).T
+        lepsea2 = cutl.seasonalize_monthlyts(lepdat2.T,season=sea2).T
+        lefld2=lepsea2.mean(axis=1)-lecsea2.mean(axis=1)
 
-    obs=plt.scatter(erareg.mean(),gisreg.mean(),color='blue',marker='s',s=8**2)
+        obs=plt.scatter(erareg.mean(),gisreg.mean(),color='blue',marker='s',s=8**2)
 
-    ledat=plt.scatter(lefld1,lefld2,color=ccm.get_linecolor('darkolivegreen3'),marker='*',s=5**2,alpha=0.5)
-    lemm, lebb, lerval, lepval, lestd_err = sp.stats.linregress(lefld1,lefld2)
-    axylims = ax.get_ylim()
-    axxlims = ax.get_xlim()
-    onex=np.linspace(axxlims[0],axxlims[1])
-    ax.plot(onex,lemm*onex + lebb, color=ccm.get_linecolor('darkolivegreen3'),linewidth=1)
+        ledat=plt.scatter(lefld1,lefld2,color=ccm.get_linecolor('darkolivegreen3'),marker='*',s=5**2,alpha=0.5)
+        lemm, lebb, lerval, lepval, lestd_err = sp.stats.linregress(lefld1,lefld2)
+        axylims = ax.get_ylim()
+        axxlims = ax.get_xlim()
+        onex=np.linspace(axxlims[0],axxlims[1])
+        ax.plot(onex,lemm*onex + lebb, color=ccm.get_linecolor('darkolivegreen3'),linewidth=1)
 
-    # historicalNat
-    lecdat1n = le.load_LEdata(fdict1,'historicalNat',timesel=timeselc, rettype='ndarray',conv=leconv1,ftype=ftype)
-    (numens1,ntime1) = lecdat1n.shape
-    lepdat1n=le.load_LEdata(fdict1,'historicalNat',timesel=timeselp, rettype='ndarray',conv=leconv1,ftype=ftype)
-    lecsea1n = cutl.seasonalize_monthlyts(lecdat1n.T,season=sea1).T
-    lepsea1n = cutl.seasonalize_monthlyts(lepdat1n.T,season=sea1).T
-    lefld1n=lepsea1n.mean(axis=1)-lecsea1n.mean(axis=1)
+        # historicalNat
+        lecdat1n = le.load_LEdata(fdict1,'historicalNat',timesel=timeselc, rettype='ndarray',conv=leconv1,ftype=ftype)
+        (numens1,ntime1) = lecdat1n.shape
+        lepdat1n=le.load_LEdata(fdict1,'historicalNat',timesel=timeselp, rettype='ndarray',conv=leconv1,ftype=ftype)
+        lecsea1n = cutl.seasonalize_monthlyts(lecdat1n.T,season=sea1).T
+        lepsea1n = cutl.seasonalize_monthlyts(lepdat1n.T,season=sea1).T
+        lefld1n=lepsea1n.mean(axis=1)-lecsea1n.mean(axis=1)
 
-    lecdat2n = le.load_LEdata(fdict2,'historicalNat',timesel=timeselc, rettype='ndarray',conv=conv2,ftype=ftype)
-    (numens2,ntime2) = lecdat1n.shape
-    lepdat2n=le.load_LEdata(fdict2,'historicalNat',timesel=timeselp, rettype='ndarray',conv=conv2,ftype=ftype)
-    lecsea2n = cutl.seasonalize_monthlyts(lecdat2n.T,season=sea2).T
-    lepsea2n = cutl.seasonalize_monthlyts(lepdat2n.T,season=sea2).T
-    lefld2n=lepsea2n.mean(axis=1)-lecsea2n.mean(axis=1)
+        lecdat2n = le.load_LEdata(fdict2,'historicalNat',timesel=timeselc, rettype='ndarray',conv=conv2,ftype=ftype)
+        (numens2,ntime2) = lecdat1n.shape
+        lepdat2n=le.load_LEdata(fdict2,'historicalNat',timesel=timeselp, rettype='ndarray',conv=conv2,ftype=ftype)
+        lecsea2n = cutl.seasonalize_monthlyts(lecdat2n.T,season=sea2).T
+        lepsea2n = cutl.seasonalize_monthlyts(lepdat2n.T,season=sea2).T
+        lefld2n=lepsea2n.mean(axis=1)-lecsea2n.mean(axis=1)
 
-    ledatn=plt.scatter(lefld1n,lefld2n,color=ccm.get_linecolor('steelblue3'),marker='*',s=5**2,alpha=0.5)
-    lemmn, lebbn, lervaln, lepvaln, lestd_errn = sp.stats.linregress(lefld1n,lefld2n)
-    axylims = ax.get_ylim()
-    axxlims = ax.get_xlim()
-    onex=np.linspace(axxlims[0],axxlims[1])
-    ax.plot(onex,lemmn*onex + lebbn, color=ccm.get_linecolor('steelblue3'),linewidth=1)
+        ledatn=plt.scatter(lefld1n,lefld2n,color=ccm.get_linecolor('steelblue3'),marker='*',s=5**2,alpha=0.5)
+        lemmn, lebbn, lervaln, lepvaln, lestd_errn = sp.stats.linregress(lefld1n,lefld2n)
+        axylims = ax.get_ylim()
+        axxlims = ax.get_xlim()
+        onex=np.linspace(axxlims[0],axxlims[1])
+        ax.plot(onex,lemmn*onex + lebbn, color=ccm.get_linecolor('steelblue3'),linewidth=1)
 
-    plt.legend((rr,ee,ns,obs,ledat,ledatn),('Individual SIC forcings','Average SIC forcing',
-                                            'NSIDC SIC forcing','Observations',
-                                            'historical LE', 'historicalNat LE'),
-               loc='best',fancybox=True,framealpha=0.5,prop=fontP)#,frameon=False)    
+        plt.legend((rr,ee,ns,obs,ledat,ledatn),('Individual SIC forcings','Average SIC forcing',
+                                                'NSIDC SIC forcing','Observations',
+                                                'historical LE', 'historicalNat LE'),
+                   loc='best',fancybox=True,framealpha=0.5,prop=fontP)#,frameon=False)    
 
-    if printtofile:
-        fig.savefig('scatterregress_' + field1 + region1 + str(sea1) + '_v_' +
-                    field2 + region2 + str(sea2) + 'wacepapobs_LE.pdf')
-        #fig.savefig('scatterregress_' + field1 + region1 + str(sea1) + '_v_' +
-        #            field2 + region2 + str(sea2) + 'wacepapobs_LE.eps')
+        if printtofile:
+            fig.savefig('scatterregress_' + field1 + region1 + str(sea1) + '_v_' +
+                        field2 + region2 + str(sea2) + 'wacepapobs_LE.pdf')
+            #fig.savefig('scatterregress_' + field1 + region1 + str(sea1) + '_v_' +
+            #            field2 + region2 + str(sea2) + 'wacepapobs_LE.eps')
 
 
     # ##### JUST SIMS ONE COLOR #########
@@ -625,72 +631,72 @@ if plotscatter:
         fig.savefig('scatterregress_' + field1 + region1 + str(sea1) + '_v_' +
                     field2 + region2 + str(sea2) + 'wacepap' + probs + '_onecol.eps')
 
+    if addle:
+        # ### JUST LE DATA #####
+        fig,ax = plt.subplots(1)
+        fig.set_size_inches(6,5)
 
-    # ### JUST LE DATA #####
-    fig,ax = plt.subplots(1)
-    fig.set_size_inches(6,5)
+        obs=ax.scatter(erareg.mean(),gisreg.mean(),color='blue',marker='s',s=8**2)
 
-    obs=ax.scatter(erareg.mean(),gisreg.mean(),color='blue',marker='s',s=8**2)
+        ledat=ax.scatter(lefld1,lefld2,color=ccm.get_linecolor('darkolivegreen3'),marker='*',s=5**2,alpha=0.5)
+        lemm, lebb, lerval, lepval, lestd_err = sp.stats.linregress(lefld1,lefld2)
+        axylims = ax.get_ylim()
+        axxlims = ax.get_xlim()
+        onex=np.linspace(axxlims[0],axxlims[1])
+        ax.plot(onex,lemm*onex + lebb, color=ccm.get_linecolor('darkolivegreen3'),linewidth=1)
 
-    ledat=ax.scatter(lefld1,lefld2,color=ccm.get_linecolor('darkolivegreen3'),marker='*',s=5**2,alpha=0.5)
-    lemm, lebb, lerval, lepval, lestd_err = sp.stats.linregress(lefld1,lefld2)
-    axylims = ax.get_ylim()
-    axxlims = ax.get_xlim()
-    onex=np.linspace(axxlims[0],axxlims[1])
-    ax.plot(onex,lemm*onex + lebb, color=ccm.get_linecolor('darkolivegreen3'),linewidth=1)
+        ledatn=ax.scatter(lefld1n,lefld2n,color=ccm.get_linecolor('steelblue3'),marker='*',s=5**2,alpha=0.5)
+        lemmn, lebbn, lervaln, lepvaln, lestd_errn = sp.stats.linregress(lefld1n,lefld2n)
+        axylims = ax.get_ylim()
+        axxlims = ax.get_xlim()
+        onex=np.linspace(axxlims[0],axxlims[1])
+        ax.plot(onex,lemmn*onex + lebbn, color=ccm.get_linecolor('steelblue3'),linewidth=1)
 
-    ledatn=ax.scatter(lefld1n,lefld2n,color=ccm.get_linecolor('steelblue3'),marker='*',s=5**2,alpha=0.5)
-    lemmn, lebbn, lervaln, lepvaln, lestd_errn = sp.stats.linregress(lefld1n,lefld2n)
-    axylims = ax.get_ylim()
-    axxlims = ax.get_xlim()
-    onex=np.linspace(axxlims[0],axxlims[1])
-    ax.plot(onex,lemmn*onex + lebbn, color=ccm.get_linecolor('steelblue3'),linewidth=1)
+        plt.legend((obs,ledat,ledatn),('Observations',
+                                       'historical LE', 'historicalNat LE'),
+                   loc='best',fancybox=True,framealpha=0.5,prop=fontP)#,frameon=False)    
 
-    plt.legend((obs,ledat,ledatn),('Observations',
-                                   'historical LE', 'historicalNat LE'),
-               loc='best',fancybox=True,framealpha=0.5,prop=fontP)#,frameon=False)    
+        plt.xlabel(xlab)
+        plt.ylabel(ylab)
+        axylims = ax.get_ylim()
+        if axylims[0]<=0 and axylims[1]>=0:
+            ax.axhline(y=0,color='k',linewidth=.5,linestyle='--')
+        axxlims = ax.get_xlim()
+        if axxlims[0]<=0 and axxlims[1]>=0:
+            ax.axvline(x=0,color='k',linewidth=.5,linestyle='--')
 
-    plt.xlabel(xlab)
-    plt.ylabel(ylab)
-    axylims = ax.get_ylim()
-    if axylims[0]<=0 and axylims[1]>=0:
-        ax.axhline(y=0,color='k',linewidth=.5,linestyle='--')
-    axxlims = ax.get_xlim()
-    if axxlims[0]<=0 and axxlims[1]>=0:
-        ax.axvline(x=0,color='k',linewidth=.5,linestyle='--')
+        if printtofile:
+            fig.savefig('scatterregress_' + field1 + region1 + str(sea1) + '_v_' +
+                        field2 + region2 + str(sea2) + '_obs_LE.pdf')
 
-    if printtofile:
-        fig.savefig('scatterregress_' + field1 + region1 + str(sea1) + '_v_' +
-                    field2 + region2 + str(sea2) + '_obs_LE.pdf')
+        # ### JUST LE HISTORICAL DATA #####
+        fig,ax = plt.subplots(1)
+        fig.set_size_inches(6,5)
 
-    # ### JUST LE HISTORICAL DATA #####
-    fig,ax = plt.subplots(1)
-    fig.set_size_inches(6,5)
+        obs=plt.scatter(erareg.mean(),gisreg.mean(),color='blue',marker='s',s=8**2)
 
-    obs=plt.scatter(erareg.mean(),gisreg.mean(),color='blue',marker='s',s=8**2)
+        ledat=plt.scatter(lefld1,lefld2,color=ccm.get_linecolor('darkolivegreen3'),marker='*',s=5**2,alpha=0.5)
+        lemm, lebb, lerval, lepval, lestd_err = sp.stats.linregress(lefld1,lefld2)
+        axylims = ax.get_ylim()
+        axxlims = ax.get_xlim()
+        onex=np.linspace(axxlims[0],axxlims[1])
+        ax.plot(onex,lemm*onex + lebb, color=ccm.get_linecolor('darkolivegreen3'),linewidth=1)
 
-    ledat=plt.scatter(lefld1,lefld2,color=ccm.get_linecolor('darkolivegreen3'),marker='*',s=5**2,alpha=0.5)
-    lemm, lebb, lerval, lepval, lestd_err = sp.stats.linregress(lefld1,lefld2)
-    axylims = ax.get_ylim()
-    axxlims = ax.get_xlim()
-    onex=np.linspace(axxlims[0],axxlims[1])
-    ax.plot(onex,lemm*onex + lebb, color=ccm.get_linecolor('darkolivegreen3'),linewidth=1)
+        plt.legend((obs,ledat),('Observations','historical LE'),
+                   loc='best',fancybox=True,framealpha=0.5,prop=fontP)#,frameon=False)    
 
-    plt.legend((obs,ledat),('Observations','historical LE'),
-               loc='best',fancybox=True,framealpha=0.5,prop=fontP)#,frameon=False)    
+        plt.xlabel(xlab)
+        plt.ylabel(ylab)
+        axylims = ax.get_ylim()
+        if axylims[0]<=0 and axylims[1]>=0:
+            ax.axhline(y=0,color='k',linewidth=.5,linestyle='--')
+        axxlims = ax.get_xlim()
+        if axxlims[0]<=0 and axxlims[1]>=0:
+            ax.axvline(x=0,color='k',linewidth=.5,linestyle='--')
 
-    plt.xlabel(xlab)
-    plt.ylabel(ylab)
-    axylims = ax.get_ylim()
-    if axylims[0]<=0 and axylims[1]>=0:
-        ax.axhline(y=0,color='k',linewidth=.5,linestyle='--')
-    axxlims = ax.get_xlim()
-    if axxlims[0]<=0 and axxlims[1]>=0:
-        ax.axvline(x=0,color='k',linewidth=.5,linestyle='--')
-
-    if printtofile:
-        fig.savefig('scatterregress_' + field1 + region1 + str(sea1) + '_v_' +
-                    field2 + region2 + str(sea2) + '_obs_historicalLE.pdf')
+        if printtofile:
+            fig.savefig('scatterregress_' + field1 + region1 + str(sea1) + '_v_' +
+                        field2 + region2 + str(sea2) + '_obs_historicalLE.pdf')
 
 
     printtofile=False
@@ -1035,6 +1041,14 @@ cutl.calc_pvals(allantr1,alltotr1)
 
 plot_anttotsbplt_histpdf((allantcr2,allantpr2),(alltotcr2,alltotpr2),
                          label=(field2 + region2 + '_' + str(sea2)),printtofile=printtofile)
+print 'ANT: ' + field2, region2
+cutl.calc_pvals(allantpr2,allantcr2)
+print 'TOT: ' + field2, region2
+cutl.calc_pvals(alltotpr2,alltotcr2)
+
 plot_anttotsbplt_histpdf((allantcr1,allantpr1),(alltotcr1,alltotpr1),
                          label=(field1 + region1 + '_' + str(sea1)),printtofile=printtofile)
-
+print 'ANT: ' + field1, region1
+cutl.calc_pvals(allantpr1,allantcr1)
+print 'TOT: ' + field1, region1
+cutl.calc_pvals(alltotpr1,alltotcr1)

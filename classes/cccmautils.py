@@ -843,7 +843,7 @@ def calc_pvals(pert,ctl,axis=0,center='mean',verb=True,effdof=False,siglevel=0.0
         print '    TSTAT: ' + str(tstat) + ' PVAL: ' + str(tpval)
         if tpval<=siglevel:
             print '  **The ensemble means are significantly different (' + str(1-siglevel) + ')'
-        print '    CTL std: ' + str(ctl.std()) + ', PERT std: ' + str(pert.std())
+        print '    DIFF: ' + str(pert.std()-ctl.std()) + ', CTL std: ' + str(ctl.std()) + ', PERT std: ' + str(pert.std())
         print '    LSTAT: ' + str(lstat) + ' PVAL: ' + str(lpval)
         if lpval<=siglevel:
             print '  **The ensemble variances are significantly different (' + str(1-siglevel) + ')'

@@ -29,7 +29,7 @@ plt.ion()
 
 printtofile=True
 
-field = 'sicn'
+field = 'st'
 smclim=True
 level=50000 # for threed
 
@@ -42,11 +42,11 @@ field2='gz'
 level2=50000
 
 # seasonalmap, seasonalvert, plotzonmean, plotseacyc, pattcorrwithtime, plotregmean,calcregmeanwithtime, calcregunccascade,timetosig, timetosigsuper, plotscatter
-plottype='seasonalmap' 
+plottype='calcregunccascade' 
 projtype='nh' #'eastere' # 'nh','sh','sq','eastere','nastere','eabksstere','ealamb','eabkslamb'
 
 # None, nh, polcap60, polcap65, polcap70, eurasia, eurasiamori, eurasiasth,eurasiathin,eurasiathinw,eurasiathine,ntham, nthatl, bks, bksmori, soo
-region='nthamsth' #'eurasia' #'eurasiamori'
+region='polcap60' #'eurasia' #'eurasiamori'
 screen=True # just for seasonalvert
 seacyclatlim=60
 withlat=False
@@ -72,16 +72,16 @@ allens=False # this is ONLY the ensemble means, plus superensemble
 sensruns=False # sensruns only: addr4ct=1,addsens=1. others=0 no meanBC, r mean, or obs
 ivar=False # this will show ENS (TOT) and ENSE (ANTH) and their difference = internal var
 simsforpaper=False # ANT, TOT, HAD, NSIDC only. best for maps and zonal mean figs (not line plots)
-simsforpaperwace=True # Just R1,R5 (warm/cold Eurasia) or whatever it's set to below.
+simsforpaperwace=False # Just R1,R5 (warm/cold Eurasia) or whatever it's set to below.
 antcat=False # this is the concatenation of ens members within each ensemble (really only useful for ANT)
 bothcat=False # can do concatenation of both ensembles if want to. These are useful for timetosig
 onlyens=False # just do ensemble means ANT and TOT
 
-addobs=False # add mean of kemhad* & kemnsidc* runs to line plots, seasonal maps. 
+addobs=True # add mean of kemhad* & kemnsidc* runs to line plots, seasonal maps. 
 addr4ct=False # add kem1pert2r4ct (constant thickness version of ens4)
 addsens=False # add sensitivity runs (kem1pert1b, kem1pert3)
 addrcp=False # add kem1rcp85a simulation (and others if we do more)
-addcanens=False # add "initial condition" ensemble of kemctl1/kem1pert2
+addcanens=True # add "initial condition" ensemble of kemctl1/kem1pert2
 addsuper=False # add superensemble mean
 
 
@@ -584,7 +584,7 @@ if plottype=='calcregmeanwithtime' or plottype=='calcregunccascade' or plottype=
                               loctimesel=timesel,info=infodict,calctype='regmeanwithtime',
                               effdof=effdof,siglevel=siglevel)
 
-    infodict['region'] = 'nthamsth' #'eurasiamori'
+    infodict['region'] = 'eurasiathine' #'eurasiamori'
     rg2 = infodict['region']
     dblob2 = sfnc.calc_seasons(fdict,coords,sims,seas=seasons,
                                loctimesel=timesel,info=infodict,calctype='regmeanwithtime',
