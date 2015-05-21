@@ -42,7 +42,7 @@ field2='st'; ncfield2='ST'
 #field2='sia'; ncfield2='SICN'
 #field2='pmsl'; ncfield2='PMSL'
 #field2='gz50000'; ncfield2='PHI'; conv2=1/con.get_g()
-region2= 'eurasiamori' #'eurasiamori'
+region2= 'eurasiathine' #'eurasiamori'
 sea2='DJF' #'ND' #'DJF'
 
 sims = ('E1','E2','E3','E4','E5','R1','R2','R3','R4','R5','HAD','NSIDC','ENS','ENSE')
