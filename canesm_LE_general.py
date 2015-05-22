@@ -392,15 +392,21 @@ if dohist:
 
 if doregress:
     donorm=True
+    addfld=True # add contours of second field
 
     seasp=sea1 # season of spatial field
     sear=sea2 # season of regional avgs
 
 
-    # spatial field
+    # spatial field1 in color
     leconvsp=1
-    fieldsp='zg50000.00'; ncfieldsp='zg'; compsp='Amon'; 
-    #fieldsp='tas'; ncfieldsp='tas'; compsp='Amon'; 
+    #fieldsp='zg50000.00'; ncfieldsp='zg'; compsp='Amon'; 
+    fieldsp='tas'; ncfieldsp='tas'; compsp='Amon'; 
+
+    # spatial field2 in contours
+    leconvsp2=1
+    fieldsp2='zg50000.00'; ncfieldsp2='zg'; compsp2='Amon'
+    cminsp2=-10; cmaxsp2=10
 
     # regional avg field 1
     leconvr=-1 # this way, sea ice loss is linked with positive changes elsewhere
@@ -436,6 +442,7 @@ if doregress:
 
 
     fdictsp = {'field': fieldsp, 'ncfield': ncfieldsp, 'comp': compsp}
+    fdictsp2 = {'field': fieldsp2, 'ncfield': ncfieldsp2, 'comp': compsp2}
     fdictr = {'field': fieldr+regionr, 'ncfield': ncfieldr, 'comp': compr}
     fdictr2 = {'field': fieldr2+regionr2, 'ncfield': ncfieldr2, 'comp': compr2}
 
@@ -445,7 +452,7 @@ if doregress:
     lon=le.get_lon()
     nlat=len(lat); nlon=len(lon)
 
-    # LOAD SPATIAL DATA
+    # LOAD SPATIAL DATA (contours)
     lecdatsp = le.load_LEdata(fdictsp,casename,timesel=timeselc, rettype='ndarray',conv=leconvsp,ftype=ftype)
     (numensp,ntimesp,nspacesp) = lecdatsp.shape
     lepdatsp=le.load_LEdata(fdictsp,casename,timesel=timeselp, rettype='ndarray',conv=leconvsp,ftype=ftype)
@@ -455,6 +462,19 @@ if doregress:
     lecseasp = cutl.seasonalize_monthlyts(lecdatsp,season=seasp).mean(axis=0) # average the 11 seasonal avgs 
     lepseasp = cutl.seasonalize_monthlyts(lepdatsp,season=seasp).mean(axis=0) # average the 11 seasonal avgs 
     leseasp = lepseasp - lecseasp # numens x space.flat
+
+    # LOAD SPATIAL DATA 2 (colors)
+    lecdatsp2 = le.load_LEdata(fdictsp2,casename,timesel=timeselc, rettype='ndarray',conv=leconvsp2,ftype=ftype)
+    (numensp,ntimesp,nspacesp) = lecdatsp2.shape
+    lepdatsp2=le.load_LEdata(fdictsp2,casename,timesel=timeselp, rettype='ndarray',conv=leconvsp2,ftype=ftype)
+    # time needs to be first dimension
+    lecdatsp2 = np.transpose(lecdatsp2,(1,0,2))
+    lepdatsp2 = np.transpose(lepdatsp2,(1,0,2))
+    lecseasp2 = cutl.seasonalize_monthlyts(lecdatsp2,season=seasp).mean(axis=0) # average the 11 seasonal avgs 
+    lepseasp2 = cutl.seasonalize_monthlyts(lepdatsp2,season=seasp).mean(axis=0) # average the 11 seasonal avgs 
+    leseasp2 = lepseasp2 - lecseasp2 # numens x space.flat
+
+
     
     # LOAD 1D DATA
     lecdatr = le.load_LEdata(fdictr,casename,timesel=timeselc, rettype='ndarray',conv=leconvr,ftype=ftype)
@@ -468,7 +488,9 @@ if doregress:
 
     #mm, bb, rval, pval, std_err = sp.stats.linregress(lesear,leseasp) # errors. why? @@
     slope,intercept = np.polyfit(lesear,leseasp,1)
-    bkszg=slope.reshape((nlat,nlon))
+    bkssat=slope.reshape((nlat,nlon)) # SAT regress on SIC
+    slope,intercept = np.polyfit(lesear,leseasp2,1)
+    bkszg=slope.reshape((nlat,nlon)) # Z500 regress on SIC
 
     # LOAD 1D DATA (2)
     lecdatr2 = le.load_LEdata(fdictr2,casename,timesel=timeselc, rettype='ndarray',conv=leconvr2,ftype=ftype)
@@ -491,16 +513,32 @@ if doregress:
     fig.set_size_inches(10,5)
     ax=axs[0]#
     cplt.kemmap(bkszg,lat,lon,type='nh',axis=ax,cmin=cmin,cmax=cmax,
-                title=sear + ' ' +fieldr+regionr + ' regressed onto ' + seasp + ' ' + fieldsp)
+                title=seasp + ' ' + fieldsp + ' regressed onto ' + sear + ' ' +fieldr+regionr )
 
     ax=axs[1] #
     cplt.kemmap(eurzg,lat,lon,type='nh',axis=ax, cmin=cmin2,cmax=cmax2,
-                title=sear + ' ' +fieldr2+regionr2 + ' regressed onto ' + seasp + ' ' + fieldsp)
+                title=+ seasp + ' ' + fieldsp + ' regressed onto ' + sear + ' ' +fieldr2+regionr2)
 
     if printtofile:
-        fig.savefig(fieldr +regionr + '_' + fieldr2 + regionr2 + sear \
-                    + '_regresson_' + fieldsp + seasp + normstr + '.pdf') 
+        fig.savefig(fieldr +regionr + '_' + fieldsp + seasp + \
+                    + '_regresson_' + fieldr2 + regionr2 + sear + normstr + '.pdf') 
 
+    # @@ create a figure with regression contours on top of other regression:
+    #   e.g. z500 regressed onto BKS SIC contours on SAT regressed onto BKS SIC map
+
+    # NEEDS TESTING @@@
+    lons, lats = np.meshgrid(lon,lat)
+    cmlen=20.
+    incr = (cmaxsp2-cminsp2) / (cmlen)
+    conts = np.arange(cminsp2,cmaxsp2+incr,incr)
+
+
+    fig,ax=plt.subplots(1,1)
+    fig.set_size_inches(5,5)
+    cplt.kemmap(bkssat,lat,lon,type='nh',axis=ax,cmin=cmin,cmax=cmax,
+                title=seasp + ' regressions onto ' + sear + ' ' + field+regionr)
+    bm.contour(lons,lats,bkszg,levels=conts,
+               colors='k',linewidths=2,latlon=True)
 
     """    #Got memory errors when trying to read in everything @@
            #But one LE works
