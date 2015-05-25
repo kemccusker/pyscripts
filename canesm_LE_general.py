@@ -18,18 +18,20 @@ import loadmodeldata as lmd
 
 # exception handling works below. add to other clauses @@
 
-printtofile=True
+printtofile=False
 dohist=False
 doregress=True
 doscatter=False
-addobs=False # to scatter plot
-addnat=True
+addobs=True # to scatter plot
+addnat=False
 addsims=True # add the idealized simulations. only good for DJF polar amp vs eurasia SAT
+
+local=True
 
 performop1 = False
 #op1='div'; region1op='gm' # polar amp: gt60n / gm
 op1='sub'; region1op='deeptrop' # pole-eq temp gradient: gt60n - deeptrop (or trop)
-performop2 = True
+performop2 = False
 op2='sub'; region2op='nh'
 
 timeselc='1979-01-01,1989-12-31'
@@ -74,9 +76,9 @@ if doscatter:
 
     # historical
     casename='historical'
-    lecdat1 = le.load_LEdata(fdict1,casename,timesel=timeselc, rettype='ndarray',conv=leconv1,ftype=ftype)
+    lecdat1 = le.load_LEdata(fdict1,casename,timesel=timeselc, rettype='ndarray',conv=leconv1,ftype=ftype,local=local)
     (numens1,ntime1) = lecdat1.shape
-    lepdat1=le.load_LEdata(fdict1,casename,timesel=timeselp, rettype='ndarray',conv=leconv1,ftype=ftype)
+    lepdat1=le.load_LEdata(fdict1,casename,timesel=timeselp, rettype='ndarray',conv=leconv1,ftype=ftype,local=local)
     lecsea1 = cutl.seasonalize_monthlyts(lecdat1.T,season=sea1).T
     lepsea1 = cutl.seasonalize_monthlyts(lepdat1.T,season=sea1).T
     lesea1 = lepsea1 - lecsea1
@@ -85,8 +87,8 @@ if doscatter:
         try:
             fdict1op = {'field': field1+region1op, 'ncfield': ncfield1, 'comp': comp1}
             # should rename these variables to be 'op' so it's more general
-            subc1 = le.load_LEdata(fdict1op,casename,timesel=timeselc, rettype='ndarray',conv=leconv1,ftype=ftype)
-            subp1 = le.load_LEdata(fdict1op,casename,timesel=timeselp, rettype='ndarray',conv=leconv1,ftype=ftype)
+            subc1 = le.load_LEdata(fdict1op,casename,timesel=timeselc, rettype='ndarray',conv=leconv1,ftype=ftype,local=local)
+            subp1 = le.load_LEdata(fdict1op,casename,timesel=timeselp, rettype='ndarray',conv=leconv1,ftype=ftype,local=local)
             sub1 = cutl.seasonalize_monthlyts(subp1.T,season=sea1).T - cutl.seasonalize_monthlyts(subc1.T,season=sea1).T
 
             if op1=='sub': # subtract
@@ -102,17 +104,17 @@ if doscatter:
     else:
         lefld1=lepsea1.mean(axis=1)-lecsea1.mean(axis=1)
 
-    lecdat2 = le.load_LEdata(fdict2,casename,timesel=timeselc, rettype='ndarray',conv=leconv2,ftype=ftype)
+    lecdat2 = le.load_LEdata(fdict2,casename,timesel=timeselc, rettype='ndarray',conv=leconv2,ftype=ftype,local=local)
     (numens2,ntime2) = lecdat1.shape
-    lepdat2=le.load_LEdata(fdict2,casename,timesel=timeselp, rettype='ndarray',conv=leconv2,ftype=ftype)
+    lepdat2=le.load_LEdata(fdict2,casename,timesel=timeselp, rettype='ndarray',conv=leconv2,ftype=ftype,local=local)
     lecsea2 = cutl.seasonalize_monthlyts(lecdat2.T,season=sea2).T
     lepsea2 = cutl.seasonalize_monthlyts(lepdat2.T,season=sea2).T
     lesea2 = lepsea2 - lecsea2
     if performop2:
         if op2=='sub': # subtract
             fdict2sub = {'field': field2+region2op, 'ncfield': ncfield2, 'comp': comp2}
-            subc2 = le.load_LEdata(fdict2sub,casename,timesel=timeselc, rettype='ndarray',conv=leconv2,ftype=ftype)
-            subp2 = le.load_LEdata(fdict2sub,casename,timesel=timeselp, rettype='ndarray',conv=leconv2,ftype=ftype)
+            subc2 = le.load_LEdata(fdict2sub,casename,timesel=timeselc, rettype='ndarray',conv=leconv2,ftype=ftype,local=local)
+            subp2 = le.load_LEdata(fdict2sub,casename,timesel=timeselp, rettype='ndarray',conv=leconv2,ftype=ftype,local=local)
             sub2 = cutl.seasonalize_monthlyts(subp2.T,season=sea2).T - cutl.seasonalize_monthlyts(subc2.T,season=sea2).T
             lefld2 = lesea2.mean(axis=1) - sub2.mean(axis=1)
     else:
@@ -122,16 +124,16 @@ if doscatter:
 
     # historicalNat
     casename2='historicalNat'
-    lecdat1n = le.load_LEdata(fdict1,casename2,timesel=timeselc, rettype='ndarray',conv=leconv1,ftype=ftype)
+    lecdat1n = le.load_LEdata(fdict1,casename2,timesel=timeselc, rettype='ndarray',conv=leconv1,ftype=ftype,local=local)
     (numens1,ntime1) = lecdat1n.shape
-    lepdat1n=le.load_LEdata(fdict1,casename2,timesel=timeselp, rettype='ndarray',conv=leconv1,ftype=ftype)
+    lepdat1n=le.load_LEdata(fdict1,casename2,timesel=timeselp, rettype='ndarray',conv=leconv1,ftype=ftype,local=local)
     lecsea1n = cutl.seasonalize_monthlyts(lecdat1n.T,season=sea1).T
     lepsea1n = cutl.seasonalize_monthlyts(lepdat1n.T,season=sea1).T
     lesea1n = lepsea1n - lecsea1n
     if performop1:
         fdict1op = {'field': field1+region1op, 'ncfield': ncfield1, 'comp': comp1}
-        subc1n = le.load_LEdata(fdict1op,casename2,timesel=timeselc, rettype='ndarray',conv=leconv1,ftype=ftype)
-        subp1n = le.load_LEdata(fdict1op,casename2,timesel=timeselp, rettype='ndarray',conv=leconv1,ftype=ftype)
+        subc1n = le.load_LEdata(fdict1op,casename2,timesel=timeselc, rettype='ndarray',conv=leconv1,ftype=ftype,local=local)
+        subp1n = le.load_LEdata(fdict1op,casename2,timesel=timeselp, rettype='ndarray',conv=leconv1,ftype=ftype,local=local)
         sub1n = cutl.seasonalize_monthlyts(subp1n.T,season=sea1).T - cutl.seasonalize_monthlyts(subc1n.T,season=sea1).T
 
         if op1=='sub': # subtract
@@ -141,17 +143,17 @@ if doscatter:
     else:
         lefld1n=lepsea1n.mean(axis=1)-lecsea1n.mean(axis=1)
 
-    lecdat2n = le.load_LEdata(fdict2,casename2,timesel=timeselc, rettype='ndarray',conv=leconv2,ftype=ftype)
+    lecdat2n = le.load_LEdata(fdict2,casename2,timesel=timeselc, rettype='ndarray',conv=leconv2,ftype=ftype,local=local)
     (numens2,ntime2) = lecdat1n.shape
-    lepdat2n=le.load_LEdata(fdict2,casename2,timesel=timeselp, rettype='ndarray',conv=leconv2,ftype=ftype)
+    lepdat2n=le.load_LEdata(fdict2,casename2,timesel=timeselp, rettype='ndarray',conv=leconv2,ftype=ftype,local=local)
     lecsea2n = cutl.seasonalize_monthlyts(lecdat2n.T,season=sea2).T
     lepsea2n = cutl.seasonalize_monthlyts(lepdat2n.T,season=sea2).T
     lesea2n = lepsea2n - lecsea2n
     if performop2:
         if op2=='sub': # subtract
             fdict2sub = {'field': field2+region2op, 'ncfield': ncfield2, 'comp': comp2}
-            subc2n = le.load_LEdata(fdict2sub,casename2,timesel=timeselc, rettype='ndarray',conv=leconv2,ftype=ftype)
-            subp2n = le.load_LEdata(fdict2sub,casename2,timesel=timeselp, rettype='ndarray',conv=leconv2,ftype=ftype)
+            subc2n = le.load_LEdata(fdict2sub,casename2,timesel=timeselc, rettype='ndarray',conv=leconv2,ftype=ftype,local=local)
+            subp2n = le.load_LEdata(fdict2sub,casename2,timesel=timeselp, rettype='ndarray',conv=leconv2,ftype=ftype,local=local)
             sub2n = cutl.seasonalize_monthlyts(subp2n.T,season=sea2).T - cutl.seasonalize_monthlyts(subc2n.T,season=sea2).T
             lefld2n = lesea2n.mean(axis=1) - sub2n.mean(axis=1)
     else:
@@ -175,8 +177,8 @@ if doscatter:
             gisfile = '/HOME/rkm/work/DATA/GISS/gistemp1200_ERSST.nc'
             latgis=cnc.getNCvar(gisfile,'lat')
             longis=cnc.getNCvar(gisfile,'lon')
-            gissatc= cnc.getNCvar(gisfile,'tempanomaly',timesel=timeselc,seas=sea2) 
-            gissatp= cnc.getNCvar(gisfile,'tempanomaly',timesel=timeselp,seas=sea2)
+            gissatc= cnc.getNCvar(gisfile,'tempanomaly',timesel=timeselc,seas=sea1) 
+            gissatp= cnc.getNCvar(gisfile,'tempanomaly',timesel=timeselp,seas=sea1)
             obsreg1 =  cutl.calc_regmean(gissatp-gissatc,latgis,longis,region1)
             if performop1:
                 opfld1 = cutl.calc_regmean(gissatp-gissatc,latgis,longis,region1op)
@@ -185,6 +187,17 @@ if doscatter:
                     obsreg1 = obsreg1.mean() - opfld1.mean()
                 elif op1=='div': # divide
                     obsreg1 = obsreg1.mean() / opfld1.mean()
+            else:
+                obsreg1=obsreg1.mean()
+        elif field1 == 'sic':
+            nsidcfile = '/HOME/rkm/work/BCs/NSIDC/td_bootstrap_197811_latest_128_64_sicn_1978111600-2013121612.nc'
+            latns = cnc.getNCvar(nsidcfile,'lat')
+            lonns = cnc.getNCvar(nsidcfile,'lon')
+            nssicc= cnc.getNCvar(nsidcfile,'SICN',timesel=timeselc,seas=sea1)*100
+            nssicp= cnc.getNCvar(nsidcfile,'SICN',timesel=timeselp,seas=sea1)*100
+            obsreg1 =  cutl.calc_regmean(nssicp-nssicc,latns,lonns,region1)
+            if performop1:
+                print '@@ no performop1 for field1=sic in addobs'
             else:
                 obsreg1=obsreg1.mean()
         else:
@@ -355,17 +368,17 @@ if dohist:
     conv=leconv1 # just assume we are doing variable 1
     sea=sea1
 
-    histcdat=le.load_LEdata(fdict2,'historical',timesel=timeselc, rettype='ndarray',conv=conv,ftype=ftype)
+    histcdat=le.load_LEdata(fdict2,'historical',timesel=timeselc, rettype='ndarray',conv=conv,ftype=ftype,local=local)
     (numens,ntime) = histcdat.shape
-    histpdat=le.load_LEdata(fdict2,'historical',timesel=timeselp, rettype='ndarray',conv=conv,ftype=ftype)
+    histpdat=le.load_LEdata(fdict2,'historical',timesel=timeselp, rettype='ndarray',conv=conv,ftype=ftype,local=local)
 
     # Now have 11 years of monthly data. Grab DJF:
     histc = cutl.seasonalize_monthlyts(histcdat.T,season=sea1).T
     histp = cutl.seasonalize_monthlyts(histpdat.T,season=sea1).T
 
-    histnatcdat=le.load_LEdata(fdict2,'historicalNat',timesel=timeselc, rettype='ndarray',conv=conv,ftype=ftype)
+    histnatcdat=le.load_LEdata(fdict2,'historicalNat',timesel=timeselc, rettype='ndarray',conv=conv,ftype=ftype,local=local)
     #(numens,ntime,nlatlon) = histnatcdat.shape
-    histnatpdat=le.load_LEdata(fdict2,'historicalNat',timesel=timeselp, rettype='ndarray',conv=conv,ftype=ftype)
+    histnatpdat=le.load_LEdata(fdict2,'historicalNat',timesel=timeselp, rettype='ndarray',conv=conv,ftype=ftype,local=local)
     histnatc = cutl.seasonalize_monthlyts(histnatcdat.T,season=sea1).T
     histnatp = cutl.seasonalize_monthlyts(histnatpdat.T,season=sea1).T
 
@@ -410,12 +423,13 @@ if doregress:
 
     # regional avg field 1
     leconvr=-1 # this way, sea ice loss is linked with positive changes elsewhere
-    fieldr='sic'; ncfieldr='sic'; compr='OImon'; regionr='bksmori'
+    #fieldr='sic'; ncfieldr='sic'; compr='OImon'; regionr='bksmori'
+    fieldr='tas'; ncfieldr='tas'; compr='Amon'; regionr='eurasiamori'; leconvr=-1 # not sure want opp?
 
     # regional avg field 2
     leconvr2=1
-    fieldr2='tas'; ncfieldr2='tas'; compr2='Amon'; regionr2='eurasiamori'; leconvr2=-1 # so cooling=high heights
-    #fieldr2='zg50000.00'; ncfieldr2='zg'; compr2='Amon'; regionr2='bksmori'
+    #fieldr2='tas'; ncfieldr2='tas'; compr2='Amon'; regionr2='eurasiamori'; leconvr2=-1 # so cooling=high heights
+    fieldr2='zg50000.00'; ncfieldr2='zg'; compr2='Amon'; regionr2='bksmori'
     
 
     # what are the units of these regressions? @@
@@ -448,14 +462,14 @@ if doregress:
 
     casename = 'historical'
 
-    lat=le.get_lat()
-    lon=le.get_lon()
+    lat=le.get_lat(local=local)
+    lon=le.get_lon(local=local)
     nlat=len(lat); nlon=len(lon)
 
     # LOAD SPATIAL DATA (contours)
-    lecdatsp = le.load_LEdata(fdictsp,casename,timesel=timeselc, rettype='ndarray',conv=leconvsp,ftype=ftype)
+    lecdatsp = le.load_LEdata(fdictsp,casename,timesel=timeselc, rettype='ndarray',conv=leconvsp,ftype=ftype,local=local)
     (numensp,ntimesp,nspacesp) = lecdatsp.shape
-    lepdatsp=le.load_LEdata(fdictsp,casename,timesel=timeselp, rettype='ndarray',conv=leconvsp,ftype=ftype)
+    lepdatsp=le.load_LEdata(fdictsp,casename,timesel=timeselp, rettype='ndarray',conv=leconvsp,ftype=ftype,local=local)
     # time needs to be first dimension
     lecdatsp = np.transpose(lecdatsp,(1,0,2))
     lepdatsp = np.transpose(lepdatsp,(1,0,2))
@@ -464,9 +478,9 @@ if doregress:
     leseasp = lepseasp - lecseasp # numens x space.flat
 
     # LOAD SPATIAL DATA 2 (colors)
-    lecdatsp2 = le.load_LEdata(fdictsp2,casename,timesel=timeselc, rettype='ndarray',conv=leconvsp2,ftype=ftype)
+    lecdatsp2 = le.load_LEdata(fdictsp2,casename,timesel=timeselc, rettype='ndarray',conv=leconvsp2,ftype=ftype,local=local)
     (numensp,ntimesp,nspacesp) = lecdatsp2.shape
-    lepdatsp2=le.load_LEdata(fdictsp2,casename,timesel=timeselp, rettype='ndarray',conv=leconvsp2,ftype=ftype)
+    lepdatsp2=le.load_LEdata(fdictsp2,casename,timesel=timeselp, rettype='ndarray',conv=leconvsp2,ftype=ftype,local=local)
     # time needs to be first dimension
     lecdatsp2 = np.transpose(lecdatsp2,(1,0,2))
     lepdatsp2 = np.transpose(lepdatsp2,(1,0,2))
@@ -477,9 +491,9 @@ if doregress:
 
     
     # LOAD 1D DATA
-    lecdatr = le.load_LEdata(fdictr,casename,timesel=timeselc, rettype='ndarray',conv=leconvr,ftype=ftype)
+    lecdatr = le.load_LEdata(fdictr,casename,timesel=timeselc, rettype='ndarray',conv=leconvr,ftype=ftype,local=local)
     (numenr,ntimer) = lecdatr.shape
-    lepdatr=le.load_LEdata(fdictr,casename,timesel=timeselp, rettype='ndarray',conv=leconvr,ftype=ftype)
+    lepdatr=le.load_LEdata(fdictr,casename,timesel=timeselp, rettype='ndarray',conv=leconvr,ftype=ftype,local=local)
     lecsear = cutl.seasonalize_monthlyts(lecdatr.T,season=sear).mean(axis=0)
     lepsear = cutl.seasonalize_monthlyts(lepdatr.T,season=sear).mean(axis=0)
     lesear = lepsear - lecsear # numens
@@ -493,9 +507,9 @@ if doregress:
     bkszg=slope.reshape((nlat,nlon)) # Z500 regress on SIC
 
     # LOAD 1D DATA (2)
-    lecdatr2 = le.load_LEdata(fdictr2,casename,timesel=timeselc, rettype='ndarray',conv=leconvr2,ftype=ftype)
+    lecdatr2 = le.load_LEdata(fdictr2,casename,timesel=timeselc, rettype='ndarray',conv=leconvr2,ftype=ftype,local=local)
     (numenr2,ntimer2) = lecdatr2.shape
-    lepdatr2=le.load_LEdata(fdictr2,casename,timesel=timeselp, rettype='ndarray',conv=leconvr2,ftype=ftype)
+    lepdatr2=le.load_LEdata(fdictr2,casename,timesel=timeselp, rettype='ndarray',conv=leconvr2,ftype=ftype,local=local)
     lecsear2 = cutl.seasonalize_monthlyts(lecdatr2.T,season=sear).mean(axis=0)
     lepsear2 = cutl.seasonalize_monthlyts(lepdatr2.T,season=sear).mean(axis=0)
     lesear2 = lepsear2 - lecsear2 # numens
@@ -517,7 +531,7 @@ if doregress:
 
     ax=axs[1] #
     cplt.kemmap(eurzg,lat,lon,type='nh',axis=ax, cmin=cmin2,cmax=cmax2,
-                title=+ seasp + ' ' + fieldsp + ' regressed onto ' + sear + ' ' +fieldr2+regionr2)
+                title= seasp + ' ' + fieldsp + ' regressed onto ' + sear + ' ' +fieldr2+regionr2)
 
     if printtofile:
         fig.savefig(fieldr +regionr + '_' + fieldsp + seasp + \
@@ -526,19 +540,39 @@ if doregress:
     # @@ create a figure with regression contours on top of other regression:
     #   e.g. z500 regressed onto BKS SIC contours on SAT regressed onto BKS SIC map
 
-    # NEEDS TESTING @@@
+    printtofile=True
     lons, lats = np.meshgrid(lon,lat)
-    cmlen=20.
+    cmlen=15.
     incr = (cmaxsp2-cminsp2) / (cmlen)
     conts = np.arange(cminsp2,cmaxsp2+incr,incr)
 
 
     fig,ax=plt.subplots(1,1)
     fig.set_size_inches(5,5)
-    cplt.kemmap(bkssat,lat,lon,type='nh',axis=ax,cmin=cmin,cmax=cmax,
-                title=seasp + ' regressions onto ' + sear + ' ' + field+regionr)
+    bm,pc=cplt.kemmap(bkssat,lat,lon,type='nh',axis=ax,cmin=cmin,cmax=cmax,
+                title=seasp + ' regressions onto ' + sear + ' ' + fieldr+regionr)
     bm.contour(lons,lats,bkszg,levels=conts,
-               colors='k',linewidths=2,latlon=True)
+               colors='k',linewidths=1,latlon=True)
+    if printtofile:
+        fig.savefig(fieldsp + seasp + '_' + fieldsp2 + seasp \
+                    + '_regresson_' + fieldr + regionr + sear + normstr + '.pdf') 
+
+
+    tmp=np.zeros(bkssat.shape)
+    fig,ax=plt.subplots(1,1)
+    fig.set_size_inches(5,5)
+    bm,pc=cplt.kemmap(tmp,lat,lon,type='nh',axis=ax,cmin=cmin,cmax=cmax,
+                      title=seasp + ' regressions onto ' + sear + ' ' + fieldr+regionr,suppcb=True)
+    
+    bm.contour(lons,lats,bkszg,levels=conts,
+               colors='k',linewidths=1,latlon=True)
+    if printtofile:
+        fig.savefig(fieldsp2 + seasp \
+                    + '_regresson_' + fieldr + regionr + sear + normstr + '.pdf') 
+
+
+
+
 
     """    #Got memory errors when trying to read in everything @@
            #But one LE works
