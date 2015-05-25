@@ -14,7 +14,7 @@ ensnum=10
 #  Make this a class! CanESM2LE
 
 def load_LEdata(fielddict, ens, seas=None, timesel=None,infodict=None,ftype='fullts',
-                calctype=None, calcdict=None, rettype='dict',conv=1, region=None):
+                calctype=None, calcdict=None, rettype='dict',conv=1, region=None,local=False):
     """ def loadLEdata(fielddict, seas=('DJF','MAM','JJA','SON'), timesel=None, infodict=None, calctype=None, calcdict=None)
 
             ftype: type of filename to build. Right now just 'fullts' for full timeseries
@@ -23,6 +23,7 @@ def load_LEdata(fielddict, ens, seas=None, timesel=None,infodict=None,ftype='ful
             rettype: 'dict' or 'ndarray' as return type. 
                       default is dict of DataFrames (to make a Panel). 
                       else, 'ndarray' is a 4D array
+            local: is data in ~/work/DATA (local=True) or /raid/ra40
                       
             @@ add regional avg functionality?
 
@@ -33,7 +34,7 @@ def load_LEdata(fielddict, ens, seas=None, timesel=None,infodict=None,ftype='ful
     ncfield=fielddict['ncfield']
     comp = fielddict['comp']
 
-    flist = build_filenames(fielddict, ens,ftype=ftype,timesel=timesel)
+    flist = build_filenames(fielddict, ens,ftype=ftype,timesel=timesel,local=local)
 
     fname1 = flist[0]
     print ' @@ fname1 ' + fname1
@@ -123,12 +124,13 @@ def load_LEdata(fielddict, ens, seas=None, timesel=None,infodict=None,ftype='ful
     return fldret
 
 
-def build_filenames(fielddict, ens, ftype='fullts',timesel=None,verb=True):
+def build_filenames(fielddict, ens, ftype='fullts',timesel=None,verb=True,local=False):
     """ here we know that each 'sim' has 10 sub-ensemble members
 
         ftype: type of filename to build. Right now just 'fullts' for full timeseries
               or 'fullclimo' for '1950-2020_climo' or, given timesel:
-              for styr-enyr_climo
+              for styr-enyr_climo.
+        local: is the data on /raid/ra40 or ~/work/DATA (local=True)
               
         returns a list of all filenames (50). @@add original 5?!
         
@@ -147,6 +149,8 @@ def build_filenames(fielddict, ens, ftype='fullts',timesel=None,verb=True):
         (enyear,enmon,enday) = timselen.split('-')
         suff=str(styear)+ '-' + str(enyear) + '_climo'
 
+    if local:
+        basepath = '/HOME/rkm/work/DATA/CanESM2/LE/'
         
     field=fielddict['field']
     comp=fielddict['comp']
@@ -165,14 +169,14 @@ def build_filenames(fielddict, ens, ftype='fullts',timesel=None,verb=True):
 
     return flist
         
-def get_lat():
+def get_lat(local=False):
     
-    fnames=build_filenames({'field':'tas','comp':'Amon'},'historical',verb=False)
+    fnames=build_filenames({'field':'tas','comp':'Amon'},'historical',verb=False,local=local)
     return cnc.getNCvar(fnames[0],'lat')
 
-def get_lon():
+def get_lon(local=False):
     
-    fnames=build_filenames({'field':'tas','comp':'Amon'},'historical',verb=False)
+    fnames=build_filenames({'field':'tas','comp':'Amon'},'historical',verb=False,local=local)
     return cnc.getNCvar(fnames[0],'lon')
 
 
