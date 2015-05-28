@@ -2034,7 +2034,7 @@ if pig:
 
     # meridional average WBAR*dTPRIME with depth: vertical heat transport
     #  @@@@ change to ma.average
-    totwbarreg = ma.average(totwbarreg[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgts)
+    totwbarreg = ma.average(totwbarreg[:,np.logical_asnd(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgts)
     totwbar2reg = ma.average(totwbar2reg[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgts)
     totwbarwvreg = ma.average(totwbarwvreg[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgts)
     totwbarwv2reg = ma.average(totwbarwv2reg[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgts)

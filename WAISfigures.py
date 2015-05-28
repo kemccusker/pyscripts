@@ -8,10 +8,11 @@ import cccmacmaps as ccm
 plt.close('all')
 
 printtofile=False
+
 atmos=False
-atmosts=True
+atmosts=False
 ocean=False
-oceanwvel=False
+oceanwvel=True
 oceants=False
 
 basepath2 = '/Users/kelly/School/DATA/'
@@ -323,7 +324,7 @@ if atmos:
              'Sulf': ccm.get_linecolor('mediumblue'),
              'GHGrem': ccm.get_linecolor('darkolivegreen3') }
 
-    printtofile=True
+    printtofile=False
 
     fig,axs = plt.subplots(1,2,sharex=True)
     fig.set_size_inches(14,3.2) # match zonal mean ocean TEMP
@@ -564,9 +565,162 @@ def ocnzonalmean_ccsm4(fld,tarea,kmt):
     return fld
 
 
-#@@def ocnregmean_ccsm4(fld,tarea,kmt):
+def ocnregmean_ccsm4(fld,rmask,tarea,kmt):
+    """ calculates regional ZONAL mean, weighted
+
+    """
+
+    print 'ocnregmean_ccsm4(): fld.shape ' + str(fld.shape)
+
+    ndims=fld.ndim
+    if ndims==4:
+        (nt,nlev,nlat,nlon) = fld.shape
+        fld = np.transpose(fld,(1,0,2,3)) # put lev first
+
+        # tile the mask
+        rmask = np.tile(rmask,(nlev,nt,1,1))
+        # tile area with depth
+        tareat = np.tile(tarea,(nlev,nt,1,1))
+        kmtt = np.tile(kmt,(nt,1,1))
+    elif ndims==3:
+        (nlev,nlat,nlon) = fld.shape
+        # tile the mask
+        rmask = np.tile(rmask,(nlev,1,1))
+        # tile area with depth
+        tareat = np.tile(tarea,(nlev,1,1))
+        kmtt=kmt
+    else:
+        print 'ndims < 3 or > 4 does not make sense @@@@'
+        return -1
+
+   
+    print rmask.shape # @@
 
 
+    fldreg = ma.masked_where(rmask,fld)
+    tareatreg = ma.masked_where(rmask,tareat)
+
+    # now also mask out cells below ocean floor:
+    for lii in np.arange(0,nlev):
+        # mask out levels below sea floor
+        fldreg[lii,...] = ma.masked_where(kmtt <= lii,fldreg[lii,...]) 
+
+    tareatreg = ma.masked_where(fldreg.mask,tareat)
+
+
+    regzonalarea= ma.sum(tareatreg,axis=ndims-1) # sum over last dimension (lon)
+
+    if ndims==4:
+        tiledims=(tareatreg.shape[ndims-1],1,1,1)
+        trans=(1,2,3,0)
+    else:
+        tiledims=(tareatreg.shape[ndims-1],1,1)
+        trans=(1,2,0)
+
+    regzonalareat=np.tile(regzonalarea,tiledims) # tile total area over lon dim to make weights
+    regzonalareat=np.transpose(regzonalareat,trans)
+    regzonalwgts= tareatreg/regzonalareat
+    regzonalwgts=ma.masked_where(tareatreg.mask,regzonalwgts) # remember have to use fld.mask !
+
+    fldreg = np.squeeze(ma.average(fldreg,axis=ndims-1,weights=regzonalwgts)) # really just a zonal mean. level dim first.
+
+    # now put time back in first dim if necessary:
+    if ndims==4:
+        fldreg=np.transpose(fldreg,(1,0,2))
+
+    return fldreg # regional zonal mean
+
+def calcheattrans_ccsm4(wprime,tbar,zt,rmask,tarea,kmt,rhocp):
+    """ returns dT bar and heat trans:
+                 return dtbarreg,transreg 
+    """
+    wprimereg = ocnregmean_ccsm4(wprime,rmask,tarea,kmt) # dims should be lev x lat, or time x lev x lat
+    tbarreg =  ocnregmean_ccsm4(tbar,rmask,tarea,kmt) # I think tbar should not have a time dim ever. climatological.
+
+    ndims=wprimereg.ndim
+    if ndims==3:
+        (nt,nlev,nlat) = wprimereg.shape
+        wprimereg = np.transpose(wprimereg,(1,0,2)) # put lev first
+        initdims=(nlev-1,nt,nlat)
+
+    elif ndims==2:
+        (nlev,nlat) = wprimereg.shape
+        initdims=(nlev-1,nlat)
+    else:
+        print 'calcheatrans_ccsm4(): ndims < 2 or > 3 does not make sense @@@@'
+        return -1
+
+
+
+    # ----- Calculate heat trans now -----
+    dtbarreg = ma.diff(tbarreg,axis=0) # diff over lev dimension
+    dzt = np.diff(zt/100.) # thickness of each layer
+
+    print 'wprimereg.shape: ' + str(wprimereg.shape)
+    print 'len(dzt): ' + str(len(dzt))
+
+    
+    transreg = ma.zeros(initdims)
+
+    print 'shapes ' + str(wprimereg[0,...].shape) +  str(dtbarreg[0,...].shape)
+
+    # calc heat transport (heating rate) for each level
+    for lii,dz in enumerate(dzt):
+        #print 'ind: ' + str(lii) + ', dz: ' + str(dz)
+
+        #  W prime * (dTbar / dz)
+        transreg[lii,...] = wprimereg[lii,...]*(dtbarreg[lii,...]/dz) * rhocp * dzt[lii] # @@@ will this work? convert to W/m2
+
+    # @@@@ next, average the given region (PIG)
+
+     # now put time back in first dim if necessary:
+    if ndims==3:
+        transreg=np.transpose(transreg,(1,0,2))
+        
+
+    return dtbarreg,transreg 
+
+def ocnmeridavgwithdepth_ccsm4(fld,tlat,tarea,Nlim=-65,Slim=-74):
+    """ the default Nlim and Slim are good for the PIG region 
+    """
+
+    # ---------- average the PIG region with depth ------
+
+    ndims = fld.ndim
+    if ndims==3:
+        # expecting a zonal mean already
+        nt=fld.shape[0]
+        fld = np.transpose(fld,(1,0,2))
+        tiledims = (fld.shape[0],nt,1)
+    else:
+        tiledims = (fld.shape[0],1)
+
+    nlev = fld.shape[0]
+
+    onelat = tlat[:,1] # note this is actually one lon. values from -79 to +72
+
+    tareay = tarea[:,0] # because we are dealing w/ SH only, doesn't matter what lon we choose
+    # now tile tareay for each depth (and time if appropriate)
+    tareayt = np.tile(tareay,tiledims) 
+    # create weights:
+    totareay = ma.sum(tareayt[...,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=ndims-1) # sum meridionally
+    if ndims==3:
+        totareayt = np.tile(totareay,(len(tareayt[0,np.logical_and(onelat<= Nlim,onelat>Slim)]),1,1))
+        totareayt = np.transpose(totareayt,(1,2,0))
+    else:
+        totareayt = np.tile(totareay,(len(tareayt[0,np.logical_and(onelat<= Nlim,onelat>Slim)]),1))
+        totareayt = np.transpose(totareayt,(1,0))
+    wgts = tareayt[...,np.logical_and(onelat<= Nlim,onelat>Slim)] / totareayt
+
+    print 'ocnmeridavg: wgts.shape ' + str(wgts.shape) + ' tareayt.shape ' + str(tareayt.shape)
+
+    # meridional average with depth
+    fldavg = ma.average(fld[...,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgts)
+
+    if ndims==3:
+        fldavg = np.transpose(fldavg) # should come out time x depth
+
+    return fldavg
 
 if ocean:
 
@@ -610,9 +764,9 @@ if ocean:
     tlatc=cnc.getNCvar(filenameclim,'TLAT')
     tlonc=cnc.getNCvar(filenameclim,'TLONG')
 
-    zt = cnc.getNCvar(filenamec, 'z_t')
-    tlat = cnc.getNCvar(filenamec,'TLAT') # these are the shape of the var
-    tlon = cnc.getNCvar(filenamec,'TLONG') 
+    zt = cnc.getNCvar(filenameclim, 'z_t')
+    tlat = cnc.getNCvar(filenameclim,'TLAT') # these are the shape of the var
+    tlon = cnc.getNCvar(filenameclim,'TLONG') 
 
     fldc = cnc.getNCvar(filenamec,var)
     fldp = cnc.getNCvar(filenamep,var)
@@ -740,6 +894,10 @@ if oceanwvel:
 
     climo=True # test with climo files first.
 
+    mediumblue = ccm.get_linecolor('mediumblue') # Sulf
+    dodgerblue = ccm.get_linecolor('dodgerblue') # GHGrem
+    darkolivegreen3 = ccm.get_linecolor('darkolivegreen3') # GHGrem
+    firebrick = ccm.get_linecolor('firebrick') # RCP8.5
 
     var='WVEL'
     varb='WISOP'
@@ -752,6 +910,11 @@ if oceanwvel:
         filenamep = filenamept = filenamepb = basepath2 + casenamep + '/' + casenamep + '.pop.ANN.' + timeperp + '.nc' 
         filenamep2 = filenamept2 = filenamepb2 = basepath2 + casenamep2 + '/' + casenamep2 + '.pop.ANN.' + timeperp + '.nc' 
         filenamep3 = filenamept3 = filenamepb3 = basepath2 + casenamep3 + '/' + casenamep3 + '.pop.ANN.' + timeperp + '.nc' 
+
+
+        filenamect = basepath + casenamec + '/ocn_proc/' + vart + '/' + vart + '.' + casenamec + '.pop.' + timeperc + '.' + reg + '.nc' #TEMP
+        filenamecw = basepath + casenamec + '/ocn_proc/' + var + '/' + var + '.' + casenamec + '.pop.' + timeperc + '.' + reg + '.nc' #WVEL
+        filenamecb = basepath + casenamec + '/ocn_proc/' + varb + '/' + varb + '.' + casenamec + '.pop.' + timeperc + '.' + reg + '.nc' #WISOP
     else:
         filenameclim = basepath2 + casenamec + '/' + casenamec + '.pop.ANN.' + timeperc + '.nc' 
 
@@ -761,9 +924,9 @@ if oceanwvel:
         filenamept2 = basepath + casenamep2 + '/ocn_proc/' + vart + '/' + vart + '.' + casenamep2  + '.pop.' + timeperp + '.' + reg + '.nc' 
 
         # WVEL
-        filenamec = basepath + casenamec + '/ocn_proc/' + var + '/' + var + '.' + casenamec + '.pop.' + timeperc + '.' + reg + '.nc' 
-        filenamep = basepath + casenamep + '/ocn_proc/' + var + '/' + var + '.' + casenamep  + '.pop.' + timeperp + '.' + reg + '.nc' 
-        filenamep2 = basepath + casenamep2 + '/ocn_proc/' + var + '/' + var + '.' + casenamep2  + '.pop.' + timeperp + '.' + reg + '.nc' 
+        filenamecw = basepath + casenamec + '/ocn_proc/' + var + '/' + var + '.' + casenamec + '.pop.' + timeperc + '.' + reg + '.nc' 
+        filenamepw = basepath + casenamep + '/ocn_proc/' + var + '/' + var + '.' + casenamep  + '.pop.' + timeperp + '.' + reg + '.nc' 
+        filenamepw2 = basepath + casenamep2 + '/ocn_proc/' + var + '/' + var + '.' + casenamep2  + '.pop.' + timeperp + '.' + reg + '.nc' 
 
         # WISOP
         filenamecb = basepath + casenamec + '/ocn_proc/' + varb + '/' + varb + '.' + casenamec + '.pop.' + timeperc + '.' + reg + '.nc' 
@@ -779,179 +942,261 @@ if oceanwvel:
     tlonc=cnc.getNCvar(filenameclim,'TLONG')
 
     # get from var file: these are in the shape of the var
-    zt = cnc.getNCvar(filenamec, 'z_t')
-    zw = cnc.getNCvar(filenamec,'z_w')
-    tlat = cnc.getNCvar(filenamec,'TLAT') 
-    tlon = cnc.getNCvar(filenamec,'TLONG') 
+    zt = cnc.getNCvar(filenameclim, 'z_t')
+    zw = cnc.getNCvar(filenameclim,'z_w')
+    tlat = cnc.getNCvar(filenameclim,'TLAT') 
+    tlon = cnc.getNCvar(filenameclim,'TLONG') 
 
-    wvelc = np.squeeze(cnc.getNCvar(filenamec,var))/100. # convert to m/s
-    wisopc = np.squeeze(cnc.getNCvar(filenamec,varb))/100.
-    tempc = np.squeeze(cnc.getNCvar(filenamec,vart))
+    rho_sw=cnc.getNCvar(filenameclim,'rho_sw')
+    cp_sw = cnc.getNCvar(filenameclim,'cp_sw')
+    rhocp = 1e-1*cp_sw*rho_sw # [J/K/m^3]
 
-    wvelp = np.squeeze(cnc.getNCvar(filenamep,var))/100.
-    wisopp = np.squeeze(cnc.getNCvar(filenamep,varb))/100.
-    tempp = np.squeeze(cnc.getNCvar(filenamep,vart))
-
-    if climo:
-        (nlev,nlat,nlon) = tempc.shape # on T grid
-        (nlevw,nlatw,nlonw) = wvelc.shape # on U grid
-    else:
-        (ntime,nlev,nlat,nlon) = tempc.shape # on T grid
-        (ntimew,nlevw,nlatw,nlonw) = wvelc.shape # on U grid
-
-    print tempc.shape # @@
+    # control climo files
+    wvelc = np.squeeze(cnc.getNCvar(filenameclim,var))/100. # convert to m/s
+    wisopc = np.squeeze(cnc.getNCvar(filenameclim,varb))/100.
+    tempc = np.squeeze(cnc.getNCvar(filenameclim,vart))
 
     # Create the mask for the region: PIG
     lonlims = [230,280]; region = 'PIG'; strlims='80W-120W'
     rmaskout = np.logical_and(tlon>lonlims[0], tlon<lonlims[1]) # region mask! this masks OUT the region itself
     rmask = np.logical_or(tlon<=lonlims[0],tlon>=lonlims[1]) # use this one for averaging. keep only the region
 
-    # tile the mask
-    rmask = np.tile(rmask,(len(zt),1,1))
-    print rmask.shape # @@
 
-    # tile area with depth
-    tareat = np.tile(tarea,(len(zt),1,1))
+    # ======= calc sigma from control for significance =====
+    wvelcts = np.squeeze(cnc.getNCvar(filenamecw,var))/100. # convert to m/s
+    wisopcts = np.squeeze(cnc.getNCvar(filenamecb,varb))/100.
+    tempcts = np.squeeze(cnc.getNCvar(filenamect,vart))
+    #   need to get coords and fix tarea/rmask for SH dimensions
+    nlatsh=wvelcts.shape[2]
+    nlonsh=wvelcts.shape[3]
+    tlatsh = np.squeeze(cnc.getNCvar(filenamecw,'TLAT'))
+    tlonsh = np.squeeze(cnc.getNCvar(filenamecw,'TLONG'))
+    rmasksh=rmask[tlat<0].reshape((nlatsh,nlonsh))
+    tareash=tarea[tlat<0].reshape((nlatsh,nlonsh))
+    kmtsh=kmt[tlat<0].reshape((nlatsh,nlonsh))
+    tempcsh = tempc[:,tlat<0].reshape((tempc.shape[0],nlatsh,nlonsh))
 
+    wvelprimects = wvelcts - wvelc[:,tlat<0].reshape((wvelc.shape[0],nlatsh,nlonsh)) # anom from itself climo
+    wisopprimects = wisopcts - wisopc[:,tlat<0].reshape((wisopc.shape[0],nlatsh,nlonsh)) # anom from itself climo
+    wtotprimects = wvelprimects + wisopprimects
 
+    dtbarreg,totwcregts = calcheattrans_ccsm4(wtotprimects,tempcsh,zt,rmasksh,tareash,kmtsh,rhocp) # time x depth x lat
 
-
-    # TAKE INTO ACCOUNT the time dimension @@@@@
-
-    # for each level, calc wprime*dTvar/dz
-    # Sulf
-    wtotprime = (wvelp+wisopp)-(wvelc+wisopc)
-    wvelprime = wvelp-wvelc
-    wisopprime = wisopp-wisopc
-
-    # GHGrem
-    #wprime2= (wvp2+wip2)-(wvc+wic)
-    #wvelprime2 = wvp2-wvc
-    #wisopprime2 = wip2-wic
-
-
-    tempcreg = ma.masked_where(rmask,tempc)
-    temppreg = ma.masked_where(rmask,tempp)
-    tareatreg = ma.masked_where(rmask,tareat)
-
-    # PUT INTO A FUNCTION @@@
-    # @@ if swap dims so lev is first, don't need to know # of dims
-    # now also mask out cells below ocean floor:
-    for lii,zz in enumerate(zt):
-        # mask out levels below sea floor
-        tempcreg[lii,...] = ma.masked_where(kmt <= lii,tempcreg[lii,...]) # @@@ do the masks combine? hope so.
-        temppreg[lii,...] = ma.masked_where(kmt <= lii,temppreg[lii,...])
-        tareatreg[lii,...] = ma.masked_where(kmt <= lii, tareatreg[lii,...])
-        wtotprime[lii,...] = ma.masked_where(kmt <= lii,wtotprime[lii,...])
-        wvelprime[lii,...] = ma.masked_where(kmt <= lii,wvelprime[lii,...])
-        wisopprime[lii,...] = ma.masked_where(kmt <= lii,wisopprime[lii,...])
-
-    wtotprimereg = ma.masked_where(rmask,wtotprime)
-    wvelprimereg = ma.masked_where(rmask,wvelprime)
-    wisopprimereg = ma.masked_where(rmask,wisopprime)
-
-    #zonal mean: may not need the weights
-    regzonalarea= ma.sum(tareatreg,axis=2) # only want to sum where there isn't land
-    regzonalareat=np.tile(regzonalarea,(tareatreg.shape[2],1,1))
-    regzonalareat=np.transpose(regzonalareat,(1,2,0))
-    regzonalwgts= tareatreg/regzonalareat
-    regzonalwgts=ma.masked_where(tareatreg.mask,regzonalwgts)
-
-    tempcreg=np.squeeze(ma.average(tempcreg,axis=2,weights=regzonalwgts))
-    temppreg=np.squeeze(ma.average(temppreg,axis=2,weights=regzonalwgts))
-
-    # @@@ NOT weighted
-    wtotprimereg = np.squeeze(ma.mean(wtotprimereg,axis=2))
-    wvelprimereg = np.squeeze(ma.mean(wvelprimereg,axis=2))
-    wisopprimereg = np.squeeze(ma.mean(wisopprimereg,axis=2))
-
-    tbarreg = tempcreg# already zonal meaned MEAN T
-    dtbarreg = ma.diff(tbarreg,axis=0) # delta of MEAN T with height
-
-    # thickness of each layer
-    dzt = np.diff(zt/100.) # convert to m
-    tottransreg = ma.zeros((len(dzt),wtotprimereg.shape[1])) # initialize total heat trans (used to be wtransreg)
-    wveltransreg = ma.zeros((len(dzt),wtotprimereg.shape[1])) # heat trans due to wvel (used to be wtranswvreg)
-    wisoptransreg = ma.zeros((len(dzt),wtotprimereg.shape[1])) # (used to be wtranswireg)
-
-    # -------------- Calc heat trans----
-    # calc heat transport (heating rate) for each level
-    for lii,dz in enumerate(dzt):
-        #print 'ind: ' + str(lii) + ', dz: ' + str(dz)
-
-        #  W prime * (dTbar / dz)
-        tottransreg[lii,...] = wtotprimereg[lii,...]*(dtbarreg[lii,...]/dz)
-        wveltransreg[lii,...] = wvelprimereg[lii,...]*(dtbarreg[lii,...]/dz) # WVEL only
-        wisoptransreg[lii,...] = wisopprimereg[lii,...]*(dtbarreg[lii,...]/dz) # WISOP only
+    wtotprimecregts = ocnregmean_ccsm4(wtotprimects,rmasksh,tareash,kmtsh)
+    wvelprimecregts = ocnregmean_ccsm4(wvelprimects,rmasksh,tareash,kmtsh)
+    wisopprimecregts = ocnregmean_ccsm4(wisopprimects,rmasksh,tareash,kmtsh)
 
 
-
-    onelat = tlat[:,1] # note this is actually one lon. values from -79 to +72
-
-    rho_sw=cnc.getNCvar(filenamec,'rho_sw')
-    cp_sw = cnc.getNCvar(filenamec,'cp_sw')
-    rhocp = 1e-1*cp_sw*rho_sw # [J/K/m^3]
-
-    # tile the layer thickness on T grid
-    dzttile = np.tile(dzt,(tottransreg.shape[1],1))
-    dzttile = np.transpose(dzttile)
-
-    # multiply by layer thickness to get W/m2
-    totwreg = tottransreg*rhocp*dzttile
-    totwvreg = wveltransreg*rhocp*dzttile
-    totwireg = wisoptransreg*rhocp*dzttile
-
-    print totwreg.shape
-
-
-    # ---------- average the PIG region with depth ------
     
-     # trying to avoid cells too far south 
-    Nlim=-65   # 65 to 74 is good for pig
-    Slim=-74
 
-    tareay = tarea[:,0] # because we are dealing w/ SH only, doesn't matter what lon we choose
-    # now tile tareay for each depth
-    tareayt = np.tile(tareay,(len(zt)-1,1)) # for transport (or when a dt or dz is involved)
-    # create weights:
-    totareay = ma.sum(tareayt[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1)
-    totareayt = np.tile(totareay,(len(tareayt[0,np.logical_and(onelat<= Nlim,onelat>Slim)]),1))
-    totareayt = np.transpose(totareayt,(1,0))
-    wgts = tareayt[:,np.logical_and(onelat<= Nlim,onelat>Slim)] / totareayt
+    # ======== calc heat transport using climo data. loop through scenarios ==========
+    #fnames = ('b40.rcp8_5.1deg.006','geo2035ensavg','rcp8_5GHGrem1850')
+    fnames = ('geo2035ensavg','rcp8_5GHGrem1850')
+    coldt={'geo2035ensavg': mediumblue, 'rcp8_5GHGrem1850': darkolivegreen3, 'b40.rcp8_5.1deg.006': firebrick}
 
-    #tareaytw = np.tile(tareay,(len(zt),1)) # for all 60 levels
-    tareaytw = tareat[...,0] # already tile to 60 levels @@@@
-    totareayw = ma.sum(tareaytw[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1) # @@@@ change to ma.sum
-    totareaytw = np.tile(totareayw,(len(tareaytw[0,np.logical_and(onelat<= Nlim,onelat>Slim)]),1))
-    totareaytw = np.transpose(totareaytw,(1,0))
-    wgtsw = tareaytw[:,np.logical_and(onelat<= Nlim,onelat>Slim)] / totareaytw
+    totwregdt = {}
+    totwvregdt = {}
+    totwiregdt = {}
+    wavgregdt = {}
+    wvavgregdt = {}
+    wiavgregdt = {}
+
+    for fname in fnames:
+        # read in the data
+        if climo:
+            if fname=='b40.rcp8_5.1deg.006':
+                filenamep = basepath + fname + '/ocn_proc/' + var + '/' + var + '.' + fname  + '.pop.ANN' + timeperp + '.nc'
+                filenamepb = basepath + fname + '/ocn_proc/' + varb + '/' + varb + '.' + fname  + '.pop.ANN' + timeperp + '.nc'
+                filenamept = basepath + fname + '/ocn_proc/' + vart + '/' + vart + '.' + fname  + '.pop.ANN' + timeperp + '.nc'
+            else:
+                filenamep = filenamept = filenamepb = basepath2 + fname + '/' + fname + '.pop.ANN.' + timeperp + '.nc' 
+        else:
+            filenamep = basepath + fname + '/ocn_proc/' + var + '/' + var + '.' + fname  + '.pop.' + timeperp + '.' + reg + '.nc'
+            filenamepb = basepath + fname + '/ocn_proc/' + varb + '/' + varb + '.' + fname  + '.pop.' + timeperp + '.' + reg + '.nc'
+            filenamept = basepath + fname + '/ocn_proc/' + vart + '/' + vart + '.' + fname  + '.pop.' + timeperp + '.' + reg + '.nc'
+        
+        print filenamep
+
+        #wvelc = np.squeeze(cnc.getNCvar(filenamec,var))/100. # convert to m/s
+        #wisopc = np.squeeze(cnc.getNCvar(filenamec,varb))/100.
+        #tempc = np.squeeze(cnc.getNCvar(filenamec,vart))
+
+        wvelp = np.squeeze(cnc.getNCvar(filenamep,var))/100.
+        wisopp = np.squeeze(cnc.getNCvar(filenamepb,varb))/100.
+        tempp = np.squeeze(cnc.getNCvar(filenamept,vart))
+
+        if climo:
+            (nlev,nlat,nlon) = tempc.shape # on T grid
+            (nlevw,nlatw,nlonw) = wvelc.shape # on U grid
+        else:
+            (ntime,nlev,nlat,nlon) = tempc.shape # on T grid
+            (ntimew,nlevw,nlatw,nlonw) = wvelc.shape # on U grid
+
+        #print tempc.shape # @@
+
+        # Create the mask for the region: PIG
+        #lonlims = [230,280]; region = 'PIG'; strlims='80W-120W'
+        #rmaskout = np.logical_and(tlon>lonlims[0], tlon<lonlims[1]) # region mask! this masks OUT the region itself
+        #rmask = np.logical_or(tlon<=lonlims[0],tlon>=lonlims[1]) # use this one for averaging. keep only the region
+
+        """# tile the mask
+        rmask = np.tile(rmask,(len(zt),1,1))
+        print rmask.shape # @@
+
+        # tile area with depth
+        tareat = np.tile(tarea,(len(zt),1,1))"""
+
+        # TAKE INTO ACCOUNT the time dimension @@@@@
+
+        # for each level, calc wprime*dTvar/dz
+        wtotprime = (wvelp+wisopp)-(wvelc+wisopc)
+        wvelprime = wvelp-wvelc
+        wisopprime = wisopp-wisopc
+
+        junk,totwreg = calcheattrans_ccsm4(wtotprime,tempc,zt,rmask,tarea,kmt,rhocp)
+        junk,totwvreg = calcheattrans_ccsm4(wvelprime,tempc,zt,rmask,tarea,kmt,rhocp) # tempc is tbar
+        junk,totwireg = calcheattrans_ccsm4(wisopprime,tempc,zt,rmask,tarea,kmt,rhocp)
+
+        wtotprimereg = ocnregmean_ccsm4(wtotprime,rmask,tarea,kmt)
+        wvelprimereg = ocnregmean_ccsm4(wvelprime,rmask,tarea,kmt)
+        wisopprimereg = ocnregmean_ccsm4(wisopprime,rmask,tarea,kmt)
+
+        """tempcreg = ma.masked_where(rmask,tempc)
+        temppreg = ma.masked_where(rmask,tempp)
+        tareatreg = ma.masked_where(rmask,tareat)
+
+        # PUT INTO A FUNCTION @@@
+        # @@ if swap dims so lev is first, don't need to know # of dims
+        # now also mask out cells below ocean floor:
+        for lii,zz in enumerate(zt):
+            # mask out levels below sea floor
+            tempcreg[lii,...] = ma.masked_where(kmt <= lii,tempcreg[lii,...]) # @@@ do the masks combine? hope so.
+            temppreg[lii,...] = ma.masked_where(kmt <= lii,temppreg[lii,...])
+            tareatreg[lii,...] = ma.masked_where(kmt <= lii, tareatreg[lii,...])
+            wtotprime[lii,...] = ma.masked_where(kmt <= lii,wtotprime[lii,...])
+            wvelprime[lii,...] = ma.masked_where(kmt <= lii,wvelprime[lii,...])
+            wisopprime[lii,...] = ma.masked_where(kmt <= lii,wisopprime[lii,...])
+
+        wtotprimereg = ma.masked_where(rmask,wtotprime)
+        wvelprimereg = ma.masked_where(rmask,wvelprime)
+        wisopprimereg = ma.masked_where(rmask,wisopprime)
+
+        #zonal mean: may not need the weights
+        regzonalarea= ma.sum(tareatreg,axis=2) # only want to sum where there isn't land
+        regzonalareat=np.tile(regzonalarea,(tareatreg.shape[2],1,1))
+        regzonalareat=np.transpose(regzonalareat,(1,2,0))
+        regzonalwgts= tareatreg/regzonalareat
+        regzonalwgts=ma.masked_where(tareatreg.mask,regzonalwgts)
+
+        tempcreg=np.squeeze(ma.average(tempcreg,axis=2,weights=regzonalwgts))
+        temppreg=np.squeeze(ma.average(temppreg,axis=2,weights=regzonalwgts))
+
+        # @@@ NOT weighted
+        wtotprimereg = np.squeeze(ma.mean(wtotprimereg,axis=2))
+        wvelprimereg = np.squeeze(ma.mean(wvelprimereg,axis=2))
+        wisopprimereg = np.squeeze(ma.mean(wisopprimereg,axis=2))
+
+        tbarreg = tempcreg# already zonal meaned MEAN T
+        dtbarreg = ma.diff(tbarreg,axis=0) # delta of MEAN T with height
+
+        # thickness of each layer
+        dzt = np.diff(zt/100.) # convert to m
+        tottransreg = ma.zeros((len(dzt),wtotprimereg.shape[1])) # initialize total heat trans (used to be wtransreg)
+        wveltransreg = ma.zeros((len(dzt),wtotprimereg.shape[1])) # heat trans due to wvel (used to be wtranswvreg)
+        wisoptransreg = ma.zeros((len(dzt),wtotprimereg.shape[1])) # (used to be wtranswireg)
+
+        # -------------- Calc heat trans----
+        # calc heat transport (heating rate) for each level
+        for lii,dz in enumerate(dzt):
+            #print 'ind: ' + str(lii) + ', dz: ' + str(dz)
+
+            #  W prime * (dTbar / dz)
+            tottransreg[lii,...] = wtotprimereg[lii,...]*(dtbarreg[lii,...]/dz)
+            wveltransreg[lii,...] = wvelprimereg[lii,...]*(dtbarreg[lii,...]/dz) # WVEL only
+            wisoptransreg[lii,...] = wisopprimereg[lii,...]*(dtbarreg[lii,...]/dz) # WISOP only
+
+        #rho_sw=cnc.getNCvar(filenamec,'rho_sw')
+        #cp_sw = cnc.getNCvar(filenamec,'cp_sw')
+        #rhocp = 1e-1*cp_sw*rho_sw # [J/K/m^3]
+
+        # tile the layer thickness on T grid
+        dzttile = np.tile(dzt,(tottransreg.shape[1],1))
+        dzttile = np.transpose(dzttile)
+
+        # multiply by layer thickness to get W/m2
+        totwreg = tottransreg*rhocp*dzttile
+        totwvreg = wveltransreg*rhocp*dzttile
+        totwireg = wisoptransreg*rhocp*dzttile
+
+        print totwreg.shape"""
 
 
-    # meridional average with depth: vertical heat transport
-    totwreg = ma.average(totwreg[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgts)
-    totwvreg = ma.average(totwvreg[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgts)
-    totwireg = ma.average(totwireg[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgts)
+        
+        # ---------- average the PIG region with depth ------
+
+        """onelat = tlat[:,1] # note this is actually one lon. values from -79 to +72
+
+         # trying to avoid cells too far south 
+        Nlim=-65   # 65 to 74 is good for pig
+        Slim=-74
+
+        tareay = tarea[:,0] # because we are dealing w/ SH only, doesn't matter what lon we choose
+        # now tile tareay for each depth
+        tareayt = np.tile(tareay,(len(zt)-1,1)) # for transport (or when a dt or dz is involved)
+        # create weights:
+        totareay = ma.sum(tareayt[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1)
+        totareayt = np.tile(totareay,(len(tareayt[0,np.logical_and(onelat<= Nlim,onelat>Slim)]),1))
+        totareayt = np.transpose(totareayt,(1,0))
+        wgts = tareayt[:,np.logical_and(onelat<= Nlim,onelat>Slim)] / totareayt
+
+        tareaytw = np.tile(tareay,(len(zt),1)) # for all 60 levels
+        #tareaytw = tareat[...,0] # already tile to 60 levels @@@@
+        totareayw = ma.sum(tareaytw[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1) # @@@@ change to ma.sum
+        totareaytw = np.tile(totareayw,(len(tareaytw[0,np.logical_and(onelat<= Nlim,onelat>Slim)]),1))
+        totareaytw = np.transpose(totareaytw,(1,0))
+        wgtsw = tareaytw[:,np.logical_and(onelat<= Nlim,onelat>Slim)] / totareaytw"""
 
 
-    # meridional average w PRIME with depth
-    wavgreg=ma.average(wtotprimereg[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgtsw)
-    wvavgreg=ma.average(wvelprimereg[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgtsw)
-    wiavgreg=ma.average(wisopprimereg[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgtsw)
+
+        totwmeravg = ocnmeridavgwithdepth_ccsm4(totwreg,tlatsh,tareash)
+        totwvmeravg = ocnmeridavgwithdepth_ccsm4(totwvreg,tlatsh,tareash)
+        totwimeravg = ocnmeridavgwithdepth_ccsm4(totwireg,tlatsh,tareash)
+
+        # meridional average with depth: vertical heat transport
+        #totwreg = ma.average(totwreg[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgts)
+        #totwvreg = ma.average(totwvreg[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgts)
+        #totwireg = ma.average(totwireg[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgts)
+
+        totwregdt[fname] = totwmeravg
+        totwvregdt[fname] = totwvmeravg
+        totwiregdt[fname] = totwimeravg
+
+
+        wmeridavg = ocnmeridavgwithdepth_ccsm4(wtotprimereg,tlatsh,tareash)
+        wvmeridavg = ocnmeridavgwithdepth_ccsm4(wvelprimereg,tlatsh,tareash)
+        wimeridavg = ocnmeridavgwithdepth_ccsm4(wisopprimereg,tlatsh,tareash)
+
+        # meridional average w PRIME with depth
+        #wavgreg=ma.average(wtotprimereg[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgtsw)
+        #wvavgreg=ma.average(wvelprimereg[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgtsw)
+        #wiavgreg=ma.average(wisopprimereg[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgtsw)
+
+        wavgregdt[fname] = wmeridavg
+        wvavgregdt[fname] = wvmeridavg
+        wiavgregdt[fname] = wimeridavg
     
-    # climo dTbar, averaged meridionally
-    dTbaravgreg=ma.average(dtbarreg[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgts)
+        dTbaravgreg = ocnmeridavgwithdepth_ccsm4(dtbarreg,tlatsh,tareash)
 
+        # climo dTbar, averaged meridionally
+        #dTbaravgreg=ma.average(dtbarreg[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgts)
+        
+        
 
 
 
     # PLOT HEAT TRANS FOR PAPER ====================
     s2day = 60*60*24
     sec2yr = s2day*365
-
-    mediumblue = ccm.get_linecolor('mediumblue') # Sulf
-    dodgerblue = ccm.get_linecolor('dodgerblue') # GHGrem
-    darkolivegreen3 = ccm.get_linecolor('darkolivegreen3') # GHGrem
-    firebrick = ccm.get_linecolor('firebrick') # RCP8.5
 
     ylim=500
 
@@ -960,12 +1205,15 @@ if oceanwvel:
     fig2.set_size_inches(14,4)
     ax = axs[2] #fig2.add_subplot(131,sharey=True)
 
-    ax.plot(-1*totwreg,zt[1:]/100.,color=mediumblue,linewidth=4)
-    #ax.plot(-1*totw2reg,zt[1:]/100.,color=darkolivegreen3,linewidth=4) # GHGrem
-    ax.plot(-1*totwvreg,zt[1:]/100.,color=mediumblue,linewidth=2,linestyle='--')
-    #ax.plot(-1*totwv2reg,zt[1:]/100.,color=darkolivegreen3,linewidth=2,linestyle='--')
-    ax.plot(-1*totwireg,zt[1:]/100.,color=mediumblue,linewidth=2)#,linestyle=':')
-    #ax.plot(-1*totwi2reg,zt[1:]/100.,color=darkolivegreen3,linewidth=2)#3,linestyle=':')
+    ax.plot(-1*totwregdt[casenamep],zt[1:]/100.,color=coldt[casenamep],linewidth=4)
+    ax.plot(-1*totwregdt[casenamep2],zt[1:]/100.,color=coldt[casenamep2],linewidth=4) # GHGrem
+    #ax.plot(-1*totwregdt[casenamep3],zt[1:]/100.,color=coldt[casenamep3],linewidth=4) # GHGrem
+    ax.plot(-1*totwvregdt[casenamep],zt[1:]/100.,color=coldt[casenamep],linewidth=2,linestyle='--')
+    ax.plot(-1*totwvregdt[casenamep2],zt[1:]/100.,color=coldt[casenamep2],linewidth=2,linestyle='--')
+    #ax.plot(-1*totwvregdt[casenamep3],zt[1:]/100.,color=coldt[casenamep3],linewidth=2,linestyle='--')
+    ax.plot(-1*totwiregdt[casenamep],zt[1:]/100.,color=coldt[casenamep],linewidth=2)#,linestyle=':')
+    ax.plot(-1*totwiregdt[casenamep2],zt[1:]/100.,color=coldt[casenamep2],linewidth=2)#3,linestyle=':')
+    #ax.plot(-1*totwiregdt[casenamep3],zt[1:]/100.,color=coldt[casenamep3],linewidth=2)#3,linestyle=':')
 
     yticks=np.arange(0,ylim,100)
     ax.plot([0,0],[0,1000],'k')
@@ -983,12 +1231,15 @@ if oceanwvel:
     ax.invert_yaxis()
 
     ax2=axs[0] #fig2.add_subplot(132,sharey=True)
-    ax2.plot(wavgreg*sec2yr,zt/100.,color=mediumblue,linewidth=4)
-   # ax2.plot(wavg2reg*sec2yr,zt/100.,color=darkolivegreen3,linewidth=4)
-    ax2.plot(wvavgreg*sec2yr,zt/100.,color=mediumblue,linewidth=2,linestyle='--')
-    #ax2.plot(wvavg2reg*sec2yr,zt/100.,color=darkolivegreen3,linewidth=2,linestyle='--')
-    ax2.plot(wiavgreg*sec2yr,zt/100.,color=mediumblue,linewidth=2)#,linestyle='-.')
-    #ax2.plot(wiavg2reg*sec2yr,zt/100.,color=darkolivegreen3,linewidth=2)#,linestyle='-.')
+    ax2.plot(wavgregdt[casenamep]*sec2yr,zt/100.,color=coldt[casenamep],linewidth=4)
+    ax2.plot(wavgregdt[casenamep2]*sec2yr,zt/100.,color=coldt[casenamep2],linewidth=4)
+    #ax2.plot(wavgregdt[casenamep3]*sec2yr,zt/100.,color=coldt[casenamep3],linewidth=4)
+    ax2.plot(wvavgregdt[casenamep]*sec2yr,zt/100.,color=coldt[casenamep],linewidth=2,linestyle='--')
+    ax2.plot(wvavgregdt[casenamep2]*sec2yr,zt/100.,color=coldt[casenamep2],linewidth=2,linestyle='--')
+    #ax2.plot(wvavgregdt[casenamep3]*sec2yr,zt/100.,color=coldt[casenamep3],linewidth=2,linestyle='--')
+    ax2.plot(wiavgregdt[casenamep]*sec2yr,zt/100.,color=coldt[casenamep],linewidth=2)#,linestyle='-.')
+    ax2.plot(wiavgregdt[casenamep2]*sec2yr,zt/100.,color=coldt[casenamep2],linewidth=2)#,linestyle='-.')
+    #ax2.plot(wiavgregdt[casenamep3]*sec2yr,zt/100.,color=coldt[casenamep3],linewidth=2)#,linestyle='-.')
 
     ax2.plot([0,0],[0,1000],'k')
     ax2.set_ylim((0,ylim))
