@@ -715,7 +715,7 @@ def ocnmeridavgwithdepth_ccsm4(fld,tlat,tarea,Nlim=-65,Slim=-74):
     print 'ocnmeridavg: wgts.shape ' + str(wgts.shape) + ' tareayt.shape ' + str(tareayt.shape)
 
     # meridional average with depth
-    fldavg = ma.average(fld[...,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgts)
+    fldavg = ma.average(fld[...,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=ndims-1,weights=wgts)
 
     if ndims==3:
         fldavg = np.transpose(fldavg) # should come out time x depth
@@ -893,11 +893,12 @@ if ocean:
 if oceanwvel:
 
     climo=True # test with climo files first.
+    dosigma=True
 
     mediumblue = ccm.get_linecolor('mediumblue') # Sulf
     dodgerblue = ccm.get_linecolor('dodgerblue') # GHGrem
     darkolivegreen3 = ccm.get_linecolor('darkolivegreen3') # GHGrem
-    firebrick = ccm.get_linecolor('firebrick') # RCP8.5
+    firebrick = ccm.get_linecolor('firebrick1') # RCP8.5
 
     var='WVEL'
     varb='WISOP'
@@ -963,51 +964,72 @@ if oceanwvel:
 
 
     # ======= calc sigma from control for significance =====
-    wvelcts = np.squeeze(cnc.getNCvar(filenamecw,var))/100. # convert to m/s
-    wisopcts = np.squeeze(cnc.getNCvar(filenamecb,varb))/100.
-    tempcts = np.squeeze(cnc.getNCvar(filenamect,vart))
-    #   need to get coords and fix tarea/rmask for SH dimensions
-    nlatsh=wvelcts.shape[2]
-    nlonsh=wvelcts.shape[3]
-    tlatsh = np.squeeze(cnc.getNCvar(filenamecw,'TLAT'))
-    tlonsh = np.squeeze(cnc.getNCvar(filenamecw,'TLONG'))
-    rmasksh=rmask[tlat<0].reshape((nlatsh,nlonsh))
-    tareash=tarea[tlat<0].reshape((nlatsh,nlonsh))
-    kmtsh=kmt[tlat<0].reshape((nlatsh,nlonsh))
-    tempcsh = tempc[:,tlat<0].reshape((tempc.shape[0],nlatsh,nlonsh))
+    if dosigma:
+        wvelcts = np.squeeze(cnc.getNCvar(filenamecw,var))/100. # convert to m/s
+        wisopcts = np.squeeze(cnc.getNCvar(filenamecb,varb))/100.
+        tempcts = np.squeeze(cnc.getNCvar(filenamect,vart))
+        #   need to get coords and fix tarea/rmask for SH dimensions
+        nlatsh=wvelcts.shape[2]
+        nlonsh=wvelcts.shape[3]
+        tlatsh = np.squeeze(cnc.getNCvar(filenamecw,'TLAT'))
+        tlonsh = np.squeeze(cnc.getNCvar(filenamecw,'TLONG'))
+        rmasksh=rmask[tlat<0].reshape((nlatsh,nlonsh))
+        tareash=tarea[tlat<0].reshape((nlatsh,nlonsh))
+        kmtsh=kmt[tlat<0].reshape((nlatsh,nlonsh))
+        tempcsh = tempc[:,tlat<0].reshape((tempc.shape[0],nlatsh,nlonsh))
 
-    wvelprimects = wvelcts - wvelc[:,tlat<0].reshape((wvelc.shape[0],nlatsh,nlonsh)) # anom from itself climo
-    wisopprimects = wisopcts - wisopc[:,tlat<0].reshape((wisopc.shape[0],nlatsh,nlonsh)) # anom from itself climo
-    wtotprimects = wvelprimects + wisopprimects
+        wvelprimects = wvelcts - wvelc[:,tlat<0].reshape((wvelc.shape[0],nlatsh,nlonsh)) # anom from itself climo
+        wisopprimects = wisopcts - wisopc[:,tlat<0].reshape((wisopc.shape[0],nlatsh,nlonsh)) # anom from itself climo
+        wtotprimects = wvelprimects + wisopprimects
 
-    dtbarreg,totwcregts = calcheattrans_ccsm4(wtotprimects,tempcsh,zt,rmasksh,tareash,kmtsh,rhocp) # time x depth x lat
+        dtbarreg,totwcregts = calcheattrans_ccsm4(wtotprimects,tempcsh,zt,rmasksh,tareash,kmtsh,rhocp) # time x depth x lat
+        totwmeravgts = ocnmeridavgwithdepth_ccsm4(totwcregts,tlatsh,tareash)
+        totwmeravgstd = totwmeravgts.std(axis=0) # std dev with depth
 
-    wtotprimecregts = ocnregmean_ccsm4(wtotprimects,rmasksh,tareash,kmtsh)
-    wvelprimecregts = ocnregmean_ccsm4(wvelprimects,rmasksh,tareash,kmtsh)
-    wisopprimecregts = ocnregmean_ccsm4(wisopprimects,rmasksh,tareash,kmtsh)
+        dtbarreg,totwvcregts = calcheattrans_ccsm4(wvelprimects,tempcsh,zt,rmasksh,tareash,kmtsh,rhocp) # time x depth x lat
+        totwvmeravgts = ocnmeridavgwithdepth_ccsm4(totwvcregts,tlatsh,tareash)
+        totwvmeravgstd = totwvmeravgts.std(axis=0) # std dev with depth
 
+        dtbarreg,totwicregts = calcheattrans_ccsm4(wisopprimects,tempcsh,zt,rmasksh,tareash,kmtsh,rhocp) # time x depth x lat
+        totwimeravgts = ocnmeridavgwithdepth_ccsm4(totwicregts,tlatsh,tareash)
+        totwimeravgstd = totwimeravgts.std(axis=0) # std dev with depth
 
+        wtotprimecregts = ocnregmean_ccsm4(wtotprimects,rmasksh,tareash,kmtsh)
+        wvelprimecregts = ocnregmean_ccsm4(wvelprimects,rmasksh,tareash,kmtsh)
+        wisopprimecregts = ocnregmean_ccsm4(wisopprimects,rmasksh,tareash,kmtsh)
+
+        wtotprimemeravgts = ocnmeridavgwithdepth_ccsm4(wtotprimecregts,tlatsh,tareash)
+        wtotprimemeravgstd = wtotprimemeravgts.std(axis=0)
+        wvelprimemeravgts = ocnmeridavgwithdepth_ccsm4(wvelprimecregts,tlatsh,tareash)
+        wvelprimemeravgstd = wvelprimemeravgts.std(axis=0)
+        wisopprimemeravgts = ocnmeridavgwithdepth_ccsm4(wisopprimecregts,tlatsh,tareash)
+        wisopprimemeravgstd = wisopprimemeravgts.std(axis=0)
     
 
     # ======== calc heat transport using climo data. loop through scenarios ==========
-    #fnames = ('b40.rcp8_5.1deg.006','geo2035ensavg','rcp8_5GHGrem1850')
-    fnames = ('geo2035ensavg','rcp8_5GHGrem1850')
+    fnames = ('b40.rcp8_5.1deg.006','geo2035ensavg','rcp8_5GHGrem1850')
+    #fnames = ('geo2035ensavg','rcp8_5GHGrem1850')
     coldt={'geo2035ensavg': mediumblue, 'rcp8_5GHGrem1850': darkolivegreen3, 'b40.rcp8_5.1deg.006': firebrick}
 
     totwregdt = {}
     totwvregdt = {}
     totwiregdt = {}
+    totwregdtm = {}
+    totwvregdtm = {}
+    totwiregdtm = {}
     wavgregdt = {}
     wvavgregdt = {}
     wiavgregdt = {}
-
+    wavgregdtm = {}
+    wvavgregdtm = {}
+    wiavgregdtm = {}
     for fname in fnames:
         # read in the data
         if climo:
             if fname=='b40.rcp8_5.1deg.006':
-                filenamep = basepath + fname + '/ocn_proc/' + var + '/' + var + '.' + fname  + '.pop.ANN' + timeperp + '.nc'
-                filenamepb = basepath + fname + '/ocn_proc/' + varb + '/' + varb + '.' + fname  + '.pop.ANN' + timeperp + '.nc'
-                filenamept = basepath + fname + '/ocn_proc/' + vart + '/' + vart + '.' + fname  + '.pop.ANN' + timeperp + '.nc'
+                filenamep = basepath + fname + '/ocn_proc/' + var + '/' + var + '.' + fname  + '.pop.ANN.' + timeperp + '.nc'
+                filenamepb = basepath + fname + '/ocn_proc/' + varb + '/' + varb + '.' + fname  + '.pop.ANN.' + timeperp + '.nc'
+                filenamept = basepath + fname + '/ocn_proc/' + vart + '/' + vart + '.' + fname  + '.pop.ANN.' + timeperp + '.nc'
             else:
                 filenamep = filenamept = filenamepb = basepath2 + fname + '/' + fname + '.pop.ANN.' + timeperp + '.nc' 
         else:
@@ -1171,7 +1193,6 @@ if oceanwvel:
         totwvregdt[fname] = totwvmeravg
         totwiregdt[fname] = totwimeravg
 
-
         wmeridavg = ocnmeridavgwithdepth_ccsm4(wtotprimereg,tlatsh,tareash)
         wvmeridavg = ocnmeridavgwithdepth_ccsm4(wvelprimereg,tlatsh,tareash)
         wimeridavg = ocnmeridavgwithdepth_ccsm4(wisopprimereg,tlatsh,tareash)
@@ -1190,8 +1211,13 @@ if oceanwvel:
         # climo dTbar, averaged meridionally
         #dTbaravgreg=ma.average(dtbarreg[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgts)
         
-        
-
+        if dosigma:
+            totwregdtm[fname] = ma.masked_where(np.abs(totwmeravg)<totwmeravgstd,totwmeravg)
+            totwvregdtm[fname] = ma.masked_where(np.abs(totwvmeravg)<totwvmeravgstd,totwvmeravg)
+            totwiregdtm[fname] = ma.masked_where(np.abs(totwimeravg)<totwimeravgstd,totwimeravg)
+            wavgregdtm[fname] = ma.masked_where(np.abs(wmeridavg)<wtotprimemeravgstd,wmeridavg)
+            wvavgregdtm[fname] = ma.masked_where(np.abs(wvmeridavg)<wvelprimemeravgstd,wvmeridavg)
+            wiavgregdtm[fname] = ma.masked_where(np.abs(wimeridavg)<wisopprimemeravgstd,wimeridavg)
 
 
     # PLOT HEAT TRANS FOR PAPER ====================
@@ -1207,21 +1233,45 @@ if oceanwvel:
 
     ax.plot(-1*totwregdt[casenamep],zt[1:]/100.,color=coldt[casenamep],linewidth=4)
     ax.plot(-1*totwregdt[casenamep2],zt[1:]/100.,color=coldt[casenamep2],linewidth=4) # GHGrem
-    #ax.plot(-1*totwregdt[casenamep3],zt[1:]/100.,color=coldt[casenamep3],linewidth=4) # GHGrem
+    ax.plot(-1*totwregdt[casenamep3],zt[1:]/100.,color=coldt[casenamep3],linewidth=4) # GHGrem
+    if dosigma:
+        #ax.plot(-1*totwregdtm[casenamep],zt[1:]/100.,color=coldt[casenamep],linewidth=6,alpha=0.5)
+        #ax.plot(-1*totwregdtm[casenamep2],zt[1:]/100.,color=coldt[casenamep2],linewidth=6,alpha=0.5)
+        #ax.plot(-1*totwregdtm[casenamep3],zt[1:]/100.,color=coldt[casenamep3],linewidth=6,alpha=0.5)
+        ax.plot(-1*totwregdtm[casenamep],zt[1:]/100.,color='0.6',linewidth=7,alpha=0.5)
+        ax.plot(-1*totwregdtm[casenamep2],zt[1:]/100.,color='0.6',linewidth=7,alpha=0.5)
+        ax.plot(-1*totwregdtm[casenamep3],zt[1:]/100.,color='0.6',linewidth=7,alpha=0.5)
+
     ax.plot(-1*totwvregdt[casenamep],zt[1:]/100.,color=coldt[casenamep],linewidth=2,linestyle='--')
     ax.plot(-1*totwvregdt[casenamep2],zt[1:]/100.,color=coldt[casenamep2],linewidth=2,linestyle='--')
-    #ax.plot(-1*totwvregdt[casenamep3],zt[1:]/100.,color=coldt[casenamep3],linewidth=2,linestyle='--')
+    ax.plot(-1*totwvregdt[casenamep3],zt[1:]/100.,color=coldt[casenamep3],linewidth=2,linestyle='--')
+    if dosigma:
+        #ax.plot(-1*totwvregdtm[casenamep],zt[1:]/100.,color=coldt[casenamep],linewidth=6,alpha=0.5,linestyle='--')
+        #ax.plot(-1*totwvregdtm[casenamep2],zt[1:]/100.,color=coldt[casenamep2],linewidth=6,alpha=0.5,linestyle='--')
+        #ax.plot(-1*totwvregdtm[casenamep3],zt[1:]/100.,color=coldt[casenamep3],linewidth=6,alpha=0.5,linestyle='--')
+        ax.plot(-1*totwvregdtm[casenamep],zt[1:]/100.,color='0.6',linewidth=5,alpha=0.5)#,linestyle='--')
+        ax.plot(-1*totwvregdtm[casenamep2],zt[1:]/100.,color='0.6',linewidth=5,alpha=0.5)#,linestyle='--')
+        ax.plot(-1*totwvregdtm[casenamep3],zt[1:]/100.,color='0.6',linewidth=5,alpha=0.5)#,linestyle='--')
+
     ax.plot(-1*totwiregdt[casenamep],zt[1:]/100.,color=coldt[casenamep],linewidth=2)#,linestyle=':')
     ax.plot(-1*totwiregdt[casenamep2],zt[1:]/100.,color=coldt[casenamep2],linewidth=2)#3,linestyle=':')
-    #ax.plot(-1*totwiregdt[casenamep3],zt[1:]/100.,color=coldt[casenamep3],linewidth=2)#3,linestyle=':')
+    ax.plot(-1*totwiregdt[casenamep3],zt[1:]/100.,color=coldt[casenamep3],linewidth=2)#3,linestyle=':')
+    if dosigma:
+        #ax.plot(-1*totwiregdtm[casenamep],zt[1:]/100.,color=coldt[casenamep],linewidth=4,alpha=0.5)
+        #ax.plot(-1*totwiregdtm[casenamep2],zt[1:]/100.,color=coldt[casenamep2],linewidth=4,alpha=0.5)
+        #ax.plot(-1*totwiregdtm[casenamep3],zt[1:]/100.,color=coldt[casenamep3],linewidth=4,alpha=0.5)
+        ax.plot(-1*totwiregdtm[casenamep],zt[1:]/100.,color='0.6',linewidth=5,alpha=0.5)
+        ax.plot(-1*totwiregdtm[casenamep2],zt[1:]/100.,color='0.6',linewidth=5,alpha=0.5)
+        ax.plot(-1*totwiregdtm[casenamep3],zt[1:]/100.,color='0.6',linewidth=5,alpha=0.5)
+
 
     yticks=np.arange(0,ylim,100)
     ax.plot([0,0],[0,1000],'k')
-    ax.legend(('Sulf','GHGrem'),loc='best',fancybox=True,framealpha=0.5)
+    ax.legend(('Sulf','GHGrem','RCP8.5'),loc='best',fancybox=True,framealpha=0.5)
     ax.set_ylim((0,ylim))
-    ax.set_xlim(-.15,.15)
-    ax.set_xticks([-0.15,-0.10,-0.05, 0, 0.05, 0.1, 0.15])
-    ax.set_xticklabels([-0.15,'',-0.05, 0, .05,'', 0.15], fontsize=18)
+    ax.set_xlim(-.25,.15)
+    ax.set_xticks([-.25,-.20,-0.15,-0.10,-0.05, 0, 0.05, 0.1, 0.15])
+    ax.set_xticklabels([-.25,'',-0.15,'',-0.05, 0, .05,'', 0.15], fontsize=18)
     ax.set_yticks(yticks)
     ax.set_yticklabels(yticks,fontsize=18)
     #ax.set_title('VHT (W/m$^2$)',fontsize=18)
@@ -1233,17 +1283,32 @@ if oceanwvel:
     ax2=axs[0] #fig2.add_subplot(132,sharey=True)
     ax2.plot(wavgregdt[casenamep]*sec2yr,zt/100.,color=coldt[casenamep],linewidth=4)
     ax2.plot(wavgregdt[casenamep2]*sec2yr,zt/100.,color=coldt[casenamep2],linewidth=4)
-    #ax2.plot(wavgregdt[casenamep3]*sec2yr,zt/100.,color=coldt[casenamep3],linewidth=4)
+    ax2.plot(wavgregdt[casenamep3]*sec2yr,zt/100.,color=coldt[casenamep3],linewidth=4)
+    if dosigma:
+        ax2.plot(wavgregdtm[casenamep]*sec2yr,zt/100.,color='0.6',linewidth=7,alpha=0.5)
+        ax2.plot(wavgregdtm[casenamep2]*sec2yr,zt/100.,color='0.6',linewidth=7,alpha=0.5)
+        ax2.plot(wavgregdtm[casenamep3]*sec2yr,zt/100.,color='0.6',linewidth=7,alpha=0.5)
+
     ax2.plot(wvavgregdt[casenamep]*sec2yr,zt/100.,color=coldt[casenamep],linewidth=2,linestyle='--')
     ax2.plot(wvavgregdt[casenamep2]*sec2yr,zt/100.,color=coldt[casenamep2],linewidth=2,linestyle='--')
-    #ax2.plot(wvavgregdt[casenamep3]*sec2yr,zt/100.,color=coldt[casenamep3],linewidth=2,linestyle='--')
+    ax2.plot(wvavgregdt[casenamep3]*sec2yr,zt/100.,color=coldt[casenamep3],linewidth=2,linestyle='--')
+    if dosigma:
+        ax2.plot(wvavgregdtm[casenamep]*sec2yr,zt/100.,color='0.6',linewidth=5,alpha=0.5)
+        ax2.plot(wvavgregdtm[casenamep2]*sec2yr,zt/100.,color='0.6',linewidth=5,alpha=0.5)
+        ax2.plot(wvavgregdtm[casenamep3]*sec2yr,zt/100.,color='0.6',linewidth=5,alpha=0.5)
+
     ax2.plot(wiavgregdt[casenamep]*sec2yr,zt/100.,color=coldt[casenamep],linewidth=2)#,linestyle='-.')
     ax2.plot(wiavgregdt[casenamep2]*sec2yr,zt/100.,color=coldt[casenamep2],linewidth=2)#,linestyle='-.')
-    #ax2.plot(wiavgregdt[casenamep3]*sec2yr,zt/100.,color=coldt[casenamep3],linewidth=2)#,linestyle='-.')
+    ax2.plot(wiavgregdt[casenamep3]*sec2yr,zt/100.,color=coldt[casenamep3],linewidth=2)#,linestyle='-.')
+    if dosigma:
+        ax2.plot(wiavgregdtm[casenamep]*sec2yr,zt/100.,color='0.6',linewidth=5,alpha=0.5)
+        ax2.plot(wiavgregdtm[casenamep2]*sec2yr,zt/100.,color='0.6',linewidth=5,alpha=0.5)
+        ax2.plot(wiavgregdtm[casenamep3]*sec2yr,zt/100.,color='0.6',linewidth=5,alpha=0.5)
+
 
     ax2.plot([0,0],[0,1000],'k')
     ax2.set_ylim((0,ylim))
-    ax2.set_xlim(-10,8)
+    ax2.set_xlim(-10,12)
     ax2.set_xticks([-10,-8,-6,-4,-2, 0, 2, 4, 6, 8, 10])
     ax2.set_xticklabels([-10,'',-6,'',-2,0,2, '',6,'',10], fontsize=18)
     ax2.set_title('$\Delta$w (m/yr)',fontsize=18)
@@ -1264,8 +1329,12 @@ if oceanwvel:
     ax3.invert_yaxis()
 
     if printtofile:
-        fig2.savefig('WAISpap_vertheattrans_wvels_dTbarnegwrmwithdepth_' + str(np.abs(Slim)) + 'S-' + str(np.abs(Nlim)) + 
-                     'S_ylim' + str(ylim) + '_' + region + '.pdf')
+        if dosigma:
+            fig2.savefig('WAISpap_vertheattrans_wvels_dTbarnegwrmwithdepth_' + str(np.abs(Slim)) + 'S-' + str(np.abs(Nlim)) + 
+                         'S_ylim' + str(ylim) + '_' + region + '2sig.pdf')
+        else:
+            fig2.savefig('WAISpap_vertheattrans_wvels_dTbarnegwrmwithdepth_' + str(np.abs(Slim)) + 'S-' + str(np.abs(Nlim)) + 
+                         'S_ylim' + str(ylim) + '_' + region + '2.pdf')
 
 
 if oceants:
