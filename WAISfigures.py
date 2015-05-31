@@ -9,10 +9,10 @@ plt.close('all')
 
 printtofile=False
 
-atmos=True
+atmos=False
 atmosts=False
 ocean=False
-oceanwvel=False
+oceanwvel=True
 oceants=False
 
 basepath2 = '/Users/kelly/School/DATA/'
@@ -324,7 +324,7 @@ if atmos:
              'Sulf': ccm.get_linecolor('mediumblue'),
              'GHGrem': ccm.get_linecolor('darkolivegreen3') }
 
-    printtofile=True
+    printtofile=False
 
     fig,axs = plt.subplots(1,2,sharex=True)
     fig.set_size_inches(14,3.2) # match zonal mean ocean TEMP
@@ -725,7 +725,7 @@ def ocnmeridavgwithdepth_ccsm4(fld,tlat,tarea,Nlim=-65,Slim=-74):
 
 if ocean:
 
-    printtofile=True
+    printtofile=False
 
     # /Volumes/MyPassport2TB/DATA/ccsm4/b40.20th.track1.1deg.006/ocn_proc/TEMP/TEMP.b40.20th.track1.1deg.006.pop.h.1970-1999.nc
     var='TEMP'
@@ -1146,38 +1146,40 @@ if oceanwvel:
     fig2.set_size_inches(14,4)
     ax = axs[2] #fig2.add_subplot(131,sharey=True)
 
-    ax.plot(-1*totwregdt[casenamep]*sec2yr,zt[1:]/100.,color=coldt[casenamep],linewidth=4)
-    ax.plot(-1*totwregdt[casenamep2]*sec2yr,zt[1:]/100.,color=coldt[casenamep2],linewidth=4) # GHGrem
-    ax.plot(-1*totwregdt[casenamep3]*sec2yr,zt[1:]/100.,color=coldt[casenamep3],linewidth=4) # GHGrem
+    # remove the mult by -1 b/c an advection tendency is multiplied by -1 (and I had it there b/c
+    # my vertical temp gradient needed its sign reversed)
+    ax.plot(totwregdt[casenamep]*sec2yr,zt[1:]/100.,color=coldt[casenamep],linewidth=4)
+    ax.plot(totwregdt[casenamep2]*sec2yr,zt[1:]/100.,color=coldt[casenamep2],linewidth=4) # GHGrem
+    ax.plot(totwregdt[casenamep3]*sec2yr,zt[1:]/100.,color=coldt[casenamep3],linewidth=4) # GHGrem
     if dosigma:
         #ax.plot(-1*totwregdtm[casenamep],zt[1:]/100.,color=coldt[casenamep],linewidth=6,alpha=0.5)
         #ax.plot(-1*totwregdtm[casenamep2],zt[1:]/100.,color=coldt[casenamep2],linewidth=6,alpha=0.5)
         #ax.plot(-1*totwregdtm[casenamep3],zt[1:]/100.,color=coldt[casenamep3],linewidth=6,alpha=0.5)
-        ax.plot(-1*totwregdtm[casenamep]*sec2yr,zt[1:]/100.,color='0.6',linewidth=7,alpha=0.5)
-        ax.plot(-1*totwregdtm[casenamep2]*sec2yr,zt[1:]/100.,color='0.6',linewidth=7,alpha=0.5)
-        ax.plot(-1*totwregdtm[casenamep3]*sec2yr,zt[1:]/100.,color='0.6',linewidth=7,alpha=0.5)
+        ax.plot(totwregdtm[casenamep]*sec2yr,zt[1:]/100.,color='0.6',linewidth=7,alpha=0.5)
+        ax.plot(totwregdtm[casenamep2]*sec2yr,zt[1:]/100.,color='0.6',linewidth=7,alpha=0.5)
+        ax.plot(totwregdtm[casenamep3]*sec2yr,zt[1:]/100.,color='0.6',linewidth=7,alpha=0.5)
 
-    ax.plot(-1*totwvregdt[casenamep]*sec2yr,zt[1:]/100.,color=coldt[casenamep],linewidth=2,linestyle='--')
-    ax.plot(-1*totwvregdt[casenamep2]*sec2yr,zt[1:]/100.,color=coldt[casenamep2],linewidth=2,linestyle='--')
-    ax.plot(-1*totwvregdt[casenamep3]*sec2yr,zt[1:]/100.,color=coldt[casenamep3],linewidth=2,linestyle='--')
+    ax.plot(totwvregdt[casenamep]*sec2yr,zt[1:]/100.,color=coldt[casenamep],linewidth=2,linestyle='--')
+    ax.plot(totwvregdt[casenamep2]*sec2yr,zt[1:]/100.,color=coldt[casenamep2],linewidth=2,linestyle='--')
+    ax.plot(totwvregdt[casenamep3]*sec2yr,zt[1:]/100.,color=coldt[casenamep3],linewidth=2,linestyle='--')
     if dosigma:
         #ax.plot(-1*totwvregdtm[casenamep],zt[1:]/100.,color=coldt[casenamep],linewidth=6,alpha=0.5,linestyle='--')
         #ax.plot(-1*totwvregdtm[casenamep2],zt[1:]/100.,color=coldt[casenamep2],linewidth=6,alpha=0.5,linestyle='--')
         #ax.plot(-1*totwvregdtm[casenamep3],zt[1:]/100.,color=coldt[casenamep3],linewidth=6,alpha=0.5,linestyle='--')
-        ax.plot(-1*totwvregdtm[casenamep]*sec2yr,zt[1:]/100.,color='0.6',linewidth=5,alpha=0.5)#,linestyle='--')
-        ax.plot(-1*totwvregdtm[casenamep2]*sec2yr,zt[1:]/100.,color='0.6',linewidth=5,alpha=0.5)#,linestyle='--')
-        ax.plot(-1*totwvregdtm[casenamep3]*sec2yr,zt[1:]/100.,color='0.6',linewidth=5,alpha=0.5)#,linestyle='--')
+        ax.plot(totwvregdtm[casenamep]*sec2yr,zt[1:]/100.,color='0.6',linewidth=5,alpha=0.5)#,linestyle='--')
+        ax.plot(totwvregdtm[casenamep2]*sec2yr,zt[1:]/100.,color='0.6',linewidth=5,alpha=0.5)#,linestyle='--')
+        ax.plot(totwvregdtm[casenamep3]*sec2yr,zt[1:]/100.,color='0.6',linewidth=5,alpha=0.5)#,linestyle='--')
 
-    ax.plot(-1*totwiregdt[casenamep]*sec2yr,zt[1:]/100.,color=coldt[casenamep],linewidth=2)#,linestyle=':')
-    ax.plot(-1*totwiregdt[casenamep2]*sec2yr,zt[1:]/100.,color=coldt[casenamep2],linewidth=2)#3,linestyle=':')
-    ax.plot(-1*totwiregdt[casenamep3]*sec2yr,zt[1:]/100.,color=coldt[casenamep3],linewidth=2)#3,linestyle=':')
+    ax.plot(totwiregdt[casenamep]*sec2yr,zt[1:]/100.,color=coldt[casenamep],linewidth=2)#,linestyle=':')
+    ax.plot(totwiregdt[casenamep2]*sec2yr,zt[1:]/100.,color=coldt[casenamep2],linewidth=2)#3,linestyle=':')
+    ax.plot(totwiregdt[casenamep3]*sec2yr,zt[1:]/100.,color=coldt[casenamep3],linewidth=2)#3,linestyle=':')
     if dosigma:
         #ax.plot(-1*totwiregdtm[casenamep],zt[1:]/100.,color=coldt[casenamep],linewidth=4,alpha=0.5)
         #ax.plot(-1*totwiregdtm[casenamep2],zt[1:]/100.,color=coldt[casenamep2],linewidth=4,alpha=0.5)
         #ax.plot(-1*totwiregdtm[casenamep3],zt[1:]/100.,color=coldt[casenamep3],linewidth=4,alpha=0.5)
-        ax.plot(-1*totwiregdtm[casenamep]*sec2yr,zt[1:]/100.,color='0.6',linewidth=5,alpha=0.5)
-        ax.plot(-1*totwiregdtm[casenamep2]*sec2yr,zt[1:]/100.,color='0.6',linewidth=5,alpha=0.5)
-        ax.plot(-1*totwiregdtm[casenamep3]*sec2yr,zt[1:]/100.,color='0.6',linewidth=5,alpha=0.5)
+        ax.plot(totwiregdtm[casenamep]*sec2yr,zt[1:]/100.,color='0.6',linewidth=5,alpha=0.5)
+        ax.plot(totwiregdtm[casenamep2]*sec2yr,zt[1:]/100.,color='0.6',linewidth=5,alpha=0.5)
+        ax.plot(totwiregdtm[casenamep3]*sec2yr,zt[1:]/100.,color='0.6',linewidth=5,alpha=0.5)
 
 
     yticks=np.arange(0,ylim,100)
@@ -1187,13 +1189,13 @@ if oceanwvel:
     #ax.set_xlim(-.25,.15) # these are for when the units were W/m^2. changed May 30,2015
     #ax.set_xticks([-.25,-.20,-0.15,-0.10,-0.05, 0, 0.05, 0.1, 0.15])
     #ax.set_xticklabels([-.25,'',-0.15,'',-0.05, 0, .05,'', 0.15], fontsize=18)
-    ax.set_xlim(-.20,.12)
-    ax.set_xticks([-.20,-0.15,-0.10,-0.05, 0, 0.05, 0.1])
-    ax.set_xticklabels([-.20,'',-0.10,'', 0, '', .10], fontsize=18)
+    ax.set_xlim(-.12,.20)
+    ax.set_xticks([-0.10,-0.05, 0, 0.05, 0.1,0.15,0.20])
+    ax.set_xticklabels([-0.10,'', 0, '', .10,'',.20], fontsize=18)
     ax.set_yticks(yticks)
     ax.set_yticklabels(yticks,fontsize=18)
     #ax.set_title('VHT (W/m$^2$)',fontsize=18)
-    ax.set_title('$\Delta$w*d$\overline{T}$/dz ($^\circ$C/yr)',fontsize=18)
+    ax.set_title('-$\Delta$w*d$\overline{T}$/dz ($^\circ$C/yr)',fontsize=18)
     ax.set_ylabel('Depth (m)',fontsize=18)
     #plt.title(region + ' Avg vert heat trans (W/m2) ' + str(np.abs(Slim)) + 'S-' + str(np.abs(Nlim)) + 'S at e/ lev')
     ax.invert_yaxis()
@@ -1249,10 +1251,10 @@ if oceanwvel:
     if printtofile:
         if dosigma:
             fig2.savefig('WAISpap_vertheattrans_wvels_dTbarnegwrmwithdepth_' + str(np.abs(Slim)) + 'S-' + str(np.abs(Nlim)) + 
-                         'S_ylim' + str(ylim) + '_' + region + '2sig.pdf')
+                         'S_ylim' + str(ylim) + '_' + region + '3sig.pdf')
         else:
             fig2.savefig('WAISpap_vertheattrans_wvels_dTbarnegwrmwithdepth_' + str(np.abs(Slim)) + 'S-' + str(np.abs(Nlim)) + 
-                         'S_ylim' + str(ylim) + '_' + region + '2.pdf')
+                         'S_ylim' + str(ylim) + '_' + region + '3.pdf')
 
 
 if oceants:
