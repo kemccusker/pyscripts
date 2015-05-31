@@ -12,10 +12,11 @@ write_temptimeseries=False # write the temperature timeseries to netcdf
 euranom=False
 nhanom=False # if both False and temptimeseries=True, do eur - nh
 
-write_siatimeseries=True # write the sea ice area timeseries to netcdf
+write_siatimeseries=False # write the sea ice area timeseries to netcdf
 write_tempmap=False
 write_simsicmap=False
 write_nsidcsicmap=False
+write_simsatmap=True; casename='E4' # E4 cold, E1 warm
 
 printtofile=False
 plt.close('all')
@@ -806,4 +807,130 @@ if write_nsidcsicmap:
     outlats[:] = lat
     outlons[:] = lon
     outfld[:] = np.expand_dims(sicdiff,axis=0)
+    outnc.close()
+
+
+
+if write_simsatmap:
+    # SAT anom for cold or warm cases in the Average SIC forcing ensemble
+    casename='E1'
+    fnamec,fnamep=con.build_filepathpair(casename,'st')
+    lat=cnc.getNCvar(fnamec,'lat')
+    lon=cnc.getNCvar(fnamep,'lon')
+    ctl=cnc.getNCvar(fnamec,'ST',seas=sea).mean(axis=0)
+    pt=cnc.getNCvar(fnamep,'ST',seas=sea).mean(axis=0)
+    stdiff=pt-ctl
+
+    # test
+    plt.figure()
+    cplt.kemmap(pt-ctl,lat,lon,type='eabksstere',cmap='blue2red_20',cmin=-1,cmax=1)
+
+
+    from netCDF4 import Dataset
+
+    outfile=casename + 'sim_ST_' + sea + '_2002-12_minus_1979-89_map.nc'
+    outnc = Dataset(outfile,'w',format='NETCDF3_CLASSIC')
+
+    # create the dimensions
+    outtime = outnc.createDimension('time', None)
+    outlat = outnc.createDimension('lat',len(lat))
+    outlon = outnc.createDimension('lon',len(lon))
+
+    # create variables
+    outtimes = outnc.createVariable('time','f8',('time',)) # f8 and d are the same dtype
+    outlats = outnc.createVariable('lat','d',('lat',))
+    outlons = outnc.createVariable('lon','d',('lon',))
+    outfld = outnc.createVariable('ST','f4',('time','lat','lon',),fill_value=1.0e38)
+
+    # add attributes to variables
+    outfld.units = 'deg C'
+    outfld.long_name = 'Surface air temperature anomaly, seasonal avg: ' + sea + ', 2002-12 minus 1979-89'
+
+    outtimes.long_name = 'time'
+    outtimes.units = 'days since 1800-01-01 00:00:00'
+    outtimes.calendar = '365_day'
+
+    outlats.units = 'degrees_north'
+    outlats.long_name = 'Latitude'
+    outlats.standard_name = 'latitude'
+
+    outlons.units = 'degrees_east'
+    outlons.long_name = 'Longitude'
+    outlons.standard_name = 'longitude'
+    
+    # global attributes
+    import time
+
+    outnc.title = 'original files: kemctl1' + casename.lower() + '_st_001-121_ts.nc, kem1pert2' + casename.lower() + '_st_001-121_ts.nc. , Seasonal avg: ' + sea + ', 2002-12 minus 1979-89'
+
+    outnc.creation_date = time.ctime(time.time())
+    outnc.created_by = 'Kelly E. McCusker, CCCma / U. of Victoria'
+
+    # set the data to the variables: important to have [:]!
+    outtimes[:] = gistime[11] # one time (filler) for map
+    outlats[:] = lat
+    outlons[:] = lon
+    outfld[:] = np.expand_dims(stdiff,axis=0)
+    outnc.close()
+
+if write_simz500map:
+    # Z500 anom for cold or warm cases in the Average SIC forcing ensemble
+    casename='E1'
+    fnamec,fnamep=con.build_filepathpair(casename,'gz50000')
+    lat=cnc.getNCvar(fnamec,'lat')
+    lon=cnc.getNCvar(fnamep,'lon')
+    ctl=cnc.getNCvar(fnamec,'PHI',seas=sea).mean(axis=0)*1/con.get_g()
+    pt=cnc.getNCvar(fnamep,'PHI',seas=sea).mean(axis=0)*1/con.get_g()
+    gzdiff=pt-ctl
+
+    # test
+    plt.figure()
+    cplt.kemmap(pt-ctl,lat,lon,type='eabksstere',cmap='blue2red_20',cmin=-10,cmax=10)
+
+
+    from netCDF4 import Dataset
+
+    outfile=casename + 'sim_Z500_' + sea + '_2002-12_minus_1979-89_map.nc'
+    outnc = Dataset(outfile,'w',format='NETCDF3_CLASSIC')
+
+    # create the dimensions
+    outtime = outnc.createDimension('time', None)
+    outlat = outnc.createDimension('lat',len(lat))
+    outlon = outnc.createDimension('lon',len(lon))
+
+    # create variables
+    outtimes = outnc.createVariable('time','f8',('time',)) # f8 and d are the same dtype
+    outlats = outnc.createVariable('lat','d',('lat',))
+    outlons = outnc.createVariable('lon','d',('lon',))
+    outfld = outnc.createVariable('GZ','f4',('time','lat','lon',),fill_value=1.0e38)
+
+    # add attributes to variables
+    outfld.units = 'm'
+    outfld.long_name = 'Geopotential height at 500 hPa anomaly, seasonal avg: ' + sea + ', 2002-12 minus 1979-89'
+
+    outtimes.long_name = 'time'
+    outtimes.units = 'days since 1800-01-01 00:00:00'
+    outtimes.calendar = '365_day'
+
+    outlats.units = 'degrees_north'
+    outlats.long_name = 'Latitude'
+    outlats.standard_name = 'latitude'
+
+    outlons.units = 'degrees_east'
+    outlons.long_name = 'Longitude'
+    outlons.standard_name = 'longitude'
+    
+    # global attributes
+    import time
+
+    outnc.title = 'original files: kemctl1' + casename.lower() + '_gz50000_001-121_ts.nc, kem1pert2' + casename.lower() + '_gz50000_001-121_ts.nc. , Seasonal avg: ' + sea + ', 2002-12 minus 1979-89'
+
+    outnc.creation_date = time.ctime(time.time())
+    outnc.created_by = 'Kelly E. McCusker, CCCma / U. of Victoria'
+
+    # set the data to the variables: important to have [:]!
+    outtimes[:] = gistime[11] # one time (filler) for map
+    outlats[:] = lat
+    outlons[:] = lon
+    outfld[:] = np.expand_dims(gzdiff,axis=0)
     outnc.close()
