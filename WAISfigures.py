@@ -9,10 +9,10 @@ plt.close('all')
 
 printtofile=False
 
-atmos=False
+atmos=True
 atmosts=False
 ocean=False
-oceanwvel=True
+oceanwvel=False
 oceants=False
 
 basepath2 = '/Users/kelly/School/DATA/'
@@ -324,7 +324,7 @@ if atmos:
              'Sulf': ccm.get_linecolor('mediumblue'),
              'GHGrem': ccm.get_linecolor('darkolivegreen3') }
 
-    printtofile=False
+    printtofile=True
 
     fig,axs = plt.subplots(1,2,sharex=True)
     fig.set_size_inches(14,3.2) # match zonal mean ocean TEMP
@@ -358,8 +358,8 @@ if atmos:
         plotfldm = ma.masked_where(pvalsws>siglev, plotfld)
         ax.plot(lat,plotfldm, color=coldt[fname],linewidth=6,alpha=0.7)
 
-    print '@@@ fix legend...'
-    ax.set_xlim(-75,-40)
+    #ax.set_xlim(-75,-40)
+    ax.set_xlim(-77,-40)
     ax.axhline(y=0,color='k')
     ax.set_xticks(np.arange(-75,-35,5))
     ax.set_xticklabels(['','70$^\circ$S','','60$^\circ$S','',\
@@ -422,7 +422,8 @@ if atmos:
         savedt[fname] = plotfldwscm # @@@
         savepvaldt[fname] = pvalswsc
 
-    ax.set_xlim(-75,-40)
+    #ax.set_xlim(-75,-40)
+    ax.set_xlim(-77,-40)
     ax.axhline(y=0,color='k')
     ax.set_xticklabels(['','70$^\circ$S','','60$^\circ$S','',\
                         '50$^\circ$S','','40$^\circ$S'],fontsize=18)
@@ -431,7 +432,7 @@ if atmos:
     ax.set_title(r'$\Delta$ ( $\nabla$ x TAU ) (10$^{-8}$ N/m$^3$)',fontsize=18)
 
     if printtofile:
-        fig.savefig('TAUX_curlTAUX_allruns_zonmean_ANN.pdf')
+        fig.savefig('TAUX_curlTAUX_allruns_zonmean_ANN2.pdf')
 
     printtofile=False
 
@@ -669,9 +670,9 @@ def calcheattrans_ccsm4(wprime,tbar,zt,rmask,tarea,kmt,rhocp):
         #print 'ind: ' + str(lii) + ', dz: ' + str(dz)
 
         #  W prime * (dTbar / dz)
-        transreg[lii,...] = wprimereg[lii,...]*(dtbarreg[lii,...]/dz) * rhocp * dzt[lii] # @@@ will this work? convert to W/m2
-
-    # @@@@ next, average the given region (PIG)
+        # JUST DO K/S instead of converting to W/m2 !
+        transreg[lii,...] = wprimereg[lii,...]*(dtbarreg[lii,...]/dz)
+        #transreg[lii,...] = wprimereg[lii,...]*(dtbarreg[lii,...]/dz) * rhocp * dzt[lii] # @@@ will this work? convert to W/m2
 
      # now put time back in first dim if necessary:
     if ndims==3:
@@ -724,10 +725,11 @@ def ocnmeridavgwithdepth_ccsm4(fld,tlat,tarea,Nlim=-65,Slim=-74):
 
 if ocean:
 
+    printtofile=True
 
     # /Volumes/MyPassport2TB/DATA/ccsm4/b40.20th.track1.1deg.006/ocn_proc/TEMP/TEMP.b40.20th.track1.1deg.006.pop.h.1970-1999.nc
     var='TEMP'
-    reg='SH' # SH or PIG
+    reg='PIG' # SH or PIG
     lonlims = [230,280]; strlims='80W-120W' # for PIG
 
     basepath='/Volumes/MyPassport2TB/DATA/ccsm4/'
@@ -764,9 +766,9 @@ if ocean:
     tlatc=cnc.getNCvar(filenameclim,'TLAT')
     tlonc=cnc.getNCvar(filenameclim,'TLONG')
 
-    zt = cnc.getNCvar(filenameclim, 'z_t')
-    tlat = cnc.getNCvar(filenameclim,'TLAT') # these are the shape of the var
-    tlon = cnc.getNCvar(filenameclim,'TLONG') 
+    zt = cnc.getNCvar(filenamec, 'z_t')
+    tlat = cnc.getNCvar(filenamec,'TLAT') # these are the shape of the var
+    tlon = cnc.getNCvar(filenamec,'TLONG') 
 
     fldc = cnc.getNCvar(filenamec,var)
     fldp = cnc.getNCvar(filenamep,var)
@@ -822,7 +824,11 @@ if ocean:
 
     
     ylim=800
-    xlims=(-77,-50)
+    #xlims=(-77,-50)
+    if pig:
+        xlims=(-75,-40)
+    else:
+        xlims=(-77,-40)
     ylims=(0,ylim)
 
     cmlen=float(20)
@@ -847,9 +853,16 @@ if ocean:
     ax.set_yticks(np.arange(0,900,100))
     ax.set_yticklabels([0,'',200,'',400,'',600,'',800],fontsize=18)
     ax.set_xlim(xlims)
-    ax.set_xticks(np.arange(-75,-45,5))
-    ax.set_xticklabels(['75$^\circ$S', '70$^\circ$S', '65$^\circ$S', \
-                        '60$^\circ$S', '55$^\circ$S', '50$^\circ$S'],fontsize=18)
+    #ax.set_xticks(np.arange(-75,-45,5))
+    #ax.set_xticklabels(['75$^\circ$S', '70$^\circ$S', '65$^\circ$S', \
+    #                    '60$^\circ$S', '55$^\circ$S', '50$^\circ$S'],fontsize=18)
+    if pig:
+        ax.set_xticks(np.arange(-70,-35,5))
+        ax.set_xticklabels(['70$^\circ$S', '', '60$^\circ$S', '', '50$^\circ$S','', '40$^\circ$S'],fontsize=18)
+    else:
+        ax.set_xticks(np.arange(-75,-35,5))
+        ax.set_xticklabels(['', '70$^\circ$S', '', '60$^\circ$S', '', '50$^\circ$S','', '40$^\circ$S'],fontsize=18)
+
     ax.set_title(regstr + 'Sulf',fontsize=18)
     ax.set_ylabel('Depth (m)',fontsize=18)
     if pig:
@@ -872,9 +885,16 @@ if ocean:
     ax2.set_yticks(np.arange(0,900,100))
     ax2.set_yticklabels([0,'',200,'',400,'',600,'',800],fontsize=18)
     ax2.set_xlim(xlims)
-    ax2.set_xticks(np.arange(-75,-45,5))
-    ax2.set_xticklabels(['75$^\circ$S', '70$^\circ$S', '65$^\circ$S', \
-                        '60$^\circ$S', '55$^\circ$S', '50$^\circ$S'],fontsize=18)
+    #ax2.set_xticks(np.arange(-75,-45,5))
+    #ax2.set_xticklabels(['75$^\circ$S', '70$^\circ$S', '65$^\circ$S', \
+    #                    '60$^\circ$S', '55$^\circ$S', '50$^\circ$S'],fontsize=18)
+    if pig:
+        ax2.set_xticks(np.arange(-70,-35,5))
+        ax2.set_xticklabels(['70$^\circ$S', '', '60$^\circ$S', '', '50$^\circ$S','', '40$^\circ$S'],fontsize=18)
+    else:
+        ax2.set_xticks(np.arange(-75,-35,5))
+        ax2.set_xticklabels(['', '70$^\circ$S', '', '60$^\circ$S', '', '50$^\circ$S','', '40$^\circ$S'],fontsize=18)
+
     if pig:
         ax2.axvline(x=-65,linestyle='--',color='k') # @@@ the vert line is to show the area averaged in the VHT plots
 
@@ -885,7 +905,7 @@ if ocean:
 
     if printtofile:
         #fig.savefig('TEMPanom_subplot' + reg + '_ylim' + str(ylims[1]) + 'xlim' + str(xlims[1]) + '_c_sig' + str(1-siglev) + '.png',dpi=400)
-        fig.savefig('TEMPanom_subplot' + reg + '_ylim' + str(ylims[1]) + 'xlim' + str(xlims[1]) + '_c_sig' + str(1-siglev) + 'cont.pdf')
+        fig.savefig('TEMPanom_subplot' + reg + '_ylim' + str(ylims[1]) + 'xlim' + str(xlims[1]) + '_c_sig' + str(1-siglev) + 'cont2.pdf')
 
 
 
@@ -1083,111 +1103,13 @@ if oceanwvel:
         wvelprimereg = ocnregmean_ccsm4(wvelprime,rmask,tarea,kmt)
         wisopprimereg = ocnregmean_ccsm4(wisopprime,rmask,tarea,kmt)
 
-        """tempcreg = ma.masked_where(rmask,tempc)
-        temppreg = ma.masked_where(rmask,tempp)
-        tareatreg = ma.masked_where(rmask,tareat)
-
-        # PUT INTO A FUNCTION @@@
-        # @@ if swap dims so lev is first, don't need to know # of dims
-        # now also mask out cells below ocean floor:
-        for lii,zz in enumerate(zt):
-            # mask out levels below sea floor
-            tempcreg[lii,...] = ma.masked_where(kmt <= lii,tempcreg[lii,...]) # @@@ do the masks combine? hope so.
-            temppreg[lii,...] = ma.masked_where(kmt <= lii,temppreg[lii,...])
-            tareatreg[lii,...] = ma.masked_where(kmt <= lii, tareatreg[lii,...])
-            wtotprime[lii,...] = ma.masked_where(kmt <= lii,wtotprime[lii,...])
-            wvelprime[lii,...] = ma.masked_where(kmt <= lii,wvelprime[lii,...])
-            wisopprime[lii,...] = ma.masked_where(kmt <= lii,wisopprime[lii,...])
-
-        wtotprimereg = ma.masked_where(rmask,wtotprime)
-        wvelprimereg = ma.masked_where(rmask,wvelprime)
-        wisopprimereg = ma.masked_where(rmask,wisopprime)
-
-        #zonal mean: may not need the weights
-        regzonalarea= ma.sum(tareatreg,axis=2) # only want to sum where there isn't land
-        regzonalareat=np.tile(regzonalarea,(tareatreg.shape[2],1,1))
-        regzonalareat=np.transpose(regzonalareat,(1,2,0))
-        regzonalwgts= tareatreg/regzonalareat
-        regzonalwgts=ma.masked_where(tareatreg.mask,regzonalwgts)
-
-        tempcreg=np.squeeze(ma.average(tempcreg,axis=2,weights=regzonalwgts))
-        temppreg=np.squeeze(ma.average(temppreg,axis=2,weights=regzonalwgts))
-
-        # @@@ NOT weighted
-        wtotprimereg = np.squeeze(ma.mean(wtotprimereg,axis=2))
-        wvelprimereg = np.squeeze(ma.mean(wvelprimereg,axis=2))
-        wisopprimereg = np.squeeze(ma.mean(wisopprimereg,axis=2))
-
-        tbarreg = tempcreg# already zonal meaned MEAN T
-        dtbarreg = ma.diff(tbarreg,axis=0) # delta of MEAN T with height
-
-        # thickness of each layer
-        dzt = np.diff(zt/100.) # convert to m
-        tottransreg = ma.zeros((len(dzt),wtotprimereg.shape[1])) # initialize total heat trans (used to be wtransreg)
-        wveltransreg = ma.zeros((len(dzt),wtotprimereg.shape[1])) # heat trans due to wvel (used to be wtranswvreg)
-        wisoptransreg = ma.zeros((len(dzt),wtotprimereg.shape[1])) # (used to be wtranswireg)
-
-        # -------------- Calc heat trans----
-        # calc heat transport (heating rate) for each level
-        for lii,dz in enumerate(dzt):
-            #print 'ind: ' + str(lii) + ', dz: ' + str(dz)
-
-            #  W prime * (dTbar / dz)
-            tottransreg[lii,...] = wtotprimereg[lii,...]*(dtbarreg[lii,...]/dz)
-            wveltransreg[lii,...] = wvelprimereg[lii,...]*(dtbarreg[lii,...]/dz) # WVEL only
-            wisoptransreg[lii,...] = wisopprimereg[lii,...]*(dtbarreg[lii,...]/dz) # WISOP only
-
-        #rho_sw=cnc.getNCvar(filenamec,'rho_sw')
-        #cp_sw = cnc.getNCvar(filenamec,'cp_sw')
-        #rhocp = 1e-1*cp_sw*rho_sw # [J/K/m^3]
-
-        # tile the layer thickness on T grid
-        dzttile = np.tile(dzt,(tottransreg.shape[1],1))
-        dzttile = np.transpose(dzttile)
-
-        # multiply by layer thickness to get W/m2
-        totwreg = tottransreg*rhocp*dzttile
-        totwvreg = wveltransreg*rhocp*dzttile
-        totwireg = wisoptransreg*rhocp*dzttile
-
-        print totwreg.shape"""
-
-
         
         # ---------- average the PIG region with depth ------
-
-        """onelat = tlat[:,1] # note this is actually one lon. values from -79 to +72
-
-         # trying to avoid cells too far south 
-        Nlim=-65   # 65 to 74 is good for pig
-        Slim=-74
-
-        tareay = tarea[:,0] # because we are dealing w/ SH only, doesn't matter what lon we choose
-        # now tile tareay for each depth
-        tareayt = np.tile(tareay,(len(zt)-1,1)) # for transport (or when a dt or dz is involved)
-        # create weights:
-        totareay = ma.sum(tareayt[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1)
-        totareayt = np.tile(totareay,(len(tareayt[0,np.logical_and(onelat<= Nlim,onelat>Slim)]),1))
-        totareayt = np.transpose(totareayt,(1,0))
-        wgts = tareayt[:,np.logical_and(onelat<= Nlim,onelat>Slim)] / totareayt
-
-        tareaytw = np.tile(tareay,(len(zt),1)) # for all 60 levels
-        #tareaytw = tareat[...,0] # already tile to 60 levels @@@@
-        totareayw = ma.sum(tareaytw[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1) # @@@@ change to ma.sum
-        totareaytw = np.tile(totareayw,(len(tareaytw[0,np.logical_and(onelat<= Nlim,onelat>Slim)]),1))
-        totareaytw = np.transpose(totareaytw,(1,0))
-        wgtsw = tareaytw[:,np.logical_and(onelat<= Nlim,onelat>Slim)] / totareaytw"""
-
 
 
         totwmeravg = ocnmeridavgwithdepth_ccsm4(totwreg,tlatsh,tareash)
         totwvmeravg = ocnmeridavgwithdepth_ccsm4(totwvreg,tlatsh,tareash)
         totwimeravg = ocnmeridavgwithdepth_ccsm4(totwireg,tlatsh,tareash)
-
-        # meridional average with depth: vertical heat transport
-        #totwreg = ma.average(totwreg[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgts)
-        #totwvreg = ma.average(totwvreg[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgts)
-        #totwireg = ma.average(totwireg[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgts)
 
         totwregdt[fname] = totwmeravg
         totwvregdt[fname] = totwvmeravg
@@ -1197,19 +1119,11 @@ if oceanwvel:
         wvmeridavg = ocnmeridavgwithdepth_ccsm4(wvelprimereg,tlatsh,tareash)
         wimeridavg = ocnmeridavgwithdepth_ccsm4(wisopprimereg,tlatsh,tareash)
 
-        # meridional average w PRIME with depth
-        #wavgreg=ma.average(wtotprimereg[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgtsw)
-        #wvavgreg=ma.average(wvelprimereg[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgtsw)
-        #wiavgreg=ma.average(wisopprimereg[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgtsw)
-
         wavgregdt[fname] = wmeridavg
         wvavgregdt[fname] = wvmeridavg
         wiavgregdt[fname] = wimeridavg
     
         dTbaravgreg = ocnmeridavgwithdepth_ccsm4(dtbarreg,tlatsh,tareash)
-
-        # climo dTbar, averaged meridionally
-        #dTbaravgreg=ma.average(dtbarreg[:,np.logical_and(onelat<= Nlim,onelat>Slim)],axis=1,weights=wgts)
         
         if dosigma:
             totwregdtm[fname] = ma.masked_where(np.abs(totwmeravg)<totwmeravgstd,totwmeravg)
@@ -1223,6 +1137,7 @@ if oceanwvel:
     # PLOT HEAT TRANS FOR PAPER ====================
     s2day = 60*60*24
     sec2yr = s2day*365
+    Nlim=-65; Slim=-74  # defaults passed into pig avg function
 
     ylim=500
 
@@ -1231,51 +1146,54 @@ if oceanwvel:
     fig2.set_size_inches(14,4)
     ax = axs[2] #fig2.add_subplot(131,sharey=True)
 
-    ax.plot(-1*totwregdt[casenamep],zt[1:]/100.,color=coldt[casenamep],linewidth=4)
-    ax.plot(-1*totwregdt[casenamep2],zt[1:]/100.,color=coldt[casenamep2],linewidth=4) # GHGrem
-    ax.plot(-1*totwregdt[casenamep3],zt[1:]/100.,color=coldt[casenamep3],linewidth=4) # GHGrem
+    ax.plot(-1*totwregdt[casenamep]*sec2yr,zt[1:]/100.,color=coldt[casenamep],linewidth=4)
+    ax.plot(-1*totwregdt[casenamep2]*sec2yr,zt[1:]/100.,color=coldt[casenamep2],linewidth=4) # GHGrem
+    ax.plot(-1*totwregdt[casenamep3]*sec2yr,zt[1:]/100.,color=coldt[casenamep3],linewidth=4) # GHGrem
     if dosigma:
         #ax.plot(-1*totwregdtm[casenamep],zt[1:]/100.,color=coldt[casenamep],linewidth=6,alpha=0.5)
         #ax.plot(-1*totwregdtm[casenamep2],zt[1:]/100.,color=coldt[casenamep2],linewidth=6,alpha=0.5)
         #ax.plot(-1*totwregdtm[casenamep3],zt[1:]/100.,color=coldt[casenamep3],linewidth=6,alpha=0.5)
-        ax.plot(-1*totwregdtm[casenamep],zt[1:]/100.,color='0.6',linewidth=7,alpha=0.5)
-        ax.plot(-1*totwregdtm[casenamep2],zt[1:]/100.,color='0.6',linewidth=7,alpha=0.5)
-        ax.plot(-1*totwregdtm[casenamep3],zt[1:]/100.,color='0.6',linewidth=7,alpha=0.5)
+        ax.plot(-1*totwregdtm[casenamep]*sec2yr,zt[1:]/100.,color='0.6',linewidth=7,alpha=0.5)
+        ax.plot(-1*totwregdtm[casenamep2]*sec2yr,zt[1:]/100.,color='0.6',linewidth=7,alpha=0.5)
+        ax.plot(-1*totwregdtm[casenamep3]*sec2yr,zt[1:]/100.,color='0.6',linewidth=7,alpha=0.5)
 
-    ax.plot(-1*totwvregdt[casenamep],zt[1:]/100.,color=coldt[casenamep],linewidth=2,linestyle='--')
-    ax.plot(-1*totwvregdt[casenamep2],zt[1:]/100.,color=coldt[casenamep2],linewidth=2,linestyle='--')
-    ax.plot(-1*totwvregdt[casenamep3],zt[1:]/100.,color=coldt[casenamep3],linewidth=2,linestyle='--')
+    ax.plot(-1*totwvregdt[casenamep]*sec2yr,zt[1:]/100.,color=coldt[casenamep],linewidth=2,linestyle='--')
+    ax.plot(-1*totwvregdt[casenamep2]*sec2yr,zt[1:]/100.,color=coldt[casenamep2],linewidth=2,linestyle='--')
+    ax.plot(-1*totwvregdt[casenamep3]*sec2yr,zt[1:]/100.,color=coldt[casenamep3],linewidth=2,linestyle='--')
     if dosigma:
         #ax.plot(-1*totwvregdtm[casenamep],zt[1:]/100.,color=coldt[casenamep],linewidth=6,alpha=0.5,linestyle='--')
         #ax.plot(-1*totwvregdtm[casenamep2],zt[1:]/100.,color=coldt[casenamep2],linewidth=6,alpha=0.5,linestyle='--')
         #ax.plot(-1*totwvregdtm[casenamep3],zt[1:]/100.,color=coldt[casenamep3],linewidth=6,alpha=0.5,linestyle='--')
-        ax.plot(-1*totwvregdtm[casenamep],zt[1:]/100.,color='0.6',linewidth=5,alpha=0.5)#,linestyle='--')
-        ax.plot(-1*totwvregdtm[casenamep2],zt[1:]/100.,color='0.6',linewidth=5,alpha=0.5)#,linestyle='--')
-        ax.plot(-1*totwvregdtm[casenamep3],zt[1:]/100.,color='0.6',linewidth=5,alpha=0.5)#,linestyle='--')
+        ax.plot(-1*totwvregdtm[casenamep]*sec2yr,zt[1:]/100.,color='0.6',linewidth=5,alpha=0.5)#,linestyle='--')
+        ax.plot(-1*totwvregdtm[casenamep2]*sec2yr,zt[1:]/100.,color='0.6',linewidth=5,alpha=0.5)#,linestyle='--')
+        ax.plot(-1*totwvregdtm[casenamep3]*sec2yr,zt[1:]/100.,color='0.6',linewidth=5,alpha=0.5)#,linestyle='--')
 
-    ax.plot(-1*totwiregdt[casenamep],zt[1:]/100.,color=coldt[casenamep],linewidth=2)#,linestyle=':')
-    ax.plot(-1*totwiregdt[casenamep2],zt[1:]/100.,color=coldt[casenamep2],linewidth=2)#3,linestyle=':')
-    ax.plot(-1*totwiregdt[casenamep3],zt[1:]/100.,color=coldt[casenamep3],linewidth=2)#3,linestyle=':')
+    ax.plot(-1*totwiregdt[casenamep]*sec2yr,zt[1:]/100.,color=coldt[casenamep],linewidth=2)#,linestyle=':')
+    ax.plot(-1*totwiregdt[casenamep2]*sec2yr,zt[1:]/100.,color=coldt[casenamep2],linewidth=2)#3,linestyle=':')
+    ax.plot(-1*totwiregdt[casenamep3]*sec2yr,zt[1:]/100.,color=coldt[casenamep3],linewidth=2)#3,linestyle=':')
     if dosigma:
         #ax.plot(-1*totwiregdtm[casenamep],zt[1:]/100.,color=coldt[casenamep],linewidth=4,alpha=0.5)
         #ax.plot(-1*totwiregdtm[casenamep2],zt[1:]/100.,color=coldt[casenamep2],linewidth=4,alpha=0.5)
         #ax.plot(-1*totwiregdtm[casenamep3],zt[1:]/100.,color=coldt[casenamep3],linewidth=4,alpha=0.5)
-        ax.plot(-1*totwiregdtm[casenamep],zt[1:]/100.,color='0.6',linewidth=5,alpha=0.5)
-        ax.plot(-1*totwiregdtm[casenamep2],zt[1:]/100.,color='0.6',linewidth=5,alpha=0.5)
-        ax.plot(-1*totwiregdtm[casenamep3],zt[1:]/100.,color='0.6',linewidth=5,alpha=0.5)
+        ax.plot(-1*totwiregdtm[casenamep]*sec2yr,zt[1:]/100.,color='0.6',linewidth=5,alpha=0.5)
+        ax.plot(-1*totwiregdtm[casenamep2]*sec2yr,zt[1:]/100.,color='0.6',linewidth=5,alpha=0.5)
+        ax.plot(-1*totwiregdtm[casenamep3]*sec2yr,zt[1:]/100.,color='0.6',linewidth=5,alpha=0.5)
 
 
     yticks=np.arange(0,ylim,100)
     ax.plot([0,0],[0,1000],'k')
     ax.legend(('Sulf','GHGrem','RCP8.5'),loc='best',fancybox=True,framealpha=0.5)
     ax.set_ylim((0,ylim))
-    ax.set_xlim(-.25,.15)
-    ax.set_xticks([-.25,-.20,-0.15,-0.10,-0.05, 0, 0.05, 0.1, 0.15])
-    ax.set_xticklabels([-.25,'',-0.15,'',-0.05, 0, .05,'', 0.15], fontsize=18)
+    #ax.set_xlim(-.25,.15) # these are for when the units were W/m^2. changed May 30,2015
+    #ax.set_xticks([-.25,-.20,-0.15,-0.10,-0.05, 0, 0.05, 0.1, 0.15])
+    #ax.set_xticklabels([-.25,'',-0.15,'',-0.05, 0, .05,'', 0.15], fontsize=18)
+    ax.set_xlim(-.20,.12)
+    ax.set_xticks([-.20,-0.15,-0.10,-0.05, 0, 0.05, 0.1])
+    ax.set_xticklabels([-.20,'',-0.10,'', 0, '', .10], fontsize=18)
     ax.set_yticks(yticks)
     ax.set_yticklabels(yticks,fontsize=18)
     #ax.set_title('VHT (W/m$^2$)',fontsize=18)
-    ax.set_title('$\Delta$w*d$\overline{T}$/dz (W/m$^2$)',fontsize=18)
+    ax.set_title('$\Delta$w*d$\overline{T}$/dz ($^\circ$C/yr)',fontsize=18)
     ax.set_ylabel('Depth (m)',fontsize=18)
     #plt.title(region + ' Avg vert heat trans (W/m2) ' + str(np.abs(Slim)) + 'S-' + str(np.abs(Nlim)) + 'S at e/ lev')
     ax.invert_yaxis()
