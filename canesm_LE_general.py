@@ -19,9 +19,11 @@ import loadmodeldata as lmd
 # exception handling works below. add to other clauses @@
 
 printtofile=False
-dohist=False
-doregress=True
+dohist=True
+doregress=False
 doscatter=False
+dolongtermavg=True
+
 addobs=True # to scatter plot
 addnat=False
 addsims=True # add the idealized simulations. only good for DJF polar amp vs eurasia SAT
@@ -39,8 +41,8 @@ timeselp='2002-01-01,2012-12-31'
 
 #field1='zg50000.00'; ncfield1='zg'; comp1='Amon'; region1='bksmori'
 #field1='sia'; ncfield1='sianh'; comp1='OImon'; region1='nh'
-field1='sic'; ncfield1='sic'; comp1='OImon'; region1='bksmori' # @@ a hack. prefer SIA
-#field1='tas'; ncfield1='tas'; comp1='Amon'; region1='gt60n' #region1='bksmori'
+#field1='sic'; ncfield1='sic'; comp1='OImon'; region1='bksmori' # @@ a hack. prefer SIA
+field1='tas'; ncfield1='tas'; comp1='Amon'; region1='eurasiamori' #region1='bksmori'
 leconv1= 1 
 sea1='DJF'
 
@@ -614,3 +616,47 @@ if doregress:
     plt.figure()
     plt.hist(histreg.mean(axis=1),alpha=0.5)
     #plt.hist(histnatreg.mean(axis=1),color='.5')"""
+
+
+if dolongtermavg:
+
+    sea='DJF'
+
+    leconv=1
+    field='tas'
+    ncfield='tas'
+    comp='Amon'
+    region='eurasiamori'
+    
+    fdict = {'field': field+region, 'ncfield': ncfield, 'comp': comp}
+
+    casename = 'historical'
+
+    lat=le.get_lat(local=local)
+    lon=le.get_lon(local=local)
+    nlat=len(lat); nlon=len(lon)
+
+    # LOAD 1D DATA
+    lecdat = le.load_LEdata(fdict,casename,timesel=timeselc, rettype='ndarray',conv=leconv,ftype=ftype,local=local)
+    (numen,ntime) = lecdat.shape
+    lepdat=le.load_LEdata(fdict,casename,timesel=timeselp, rettype='ndarray',conv=leconv,ftype=ftype,local=local)
+    lecsea = cutl.seasonalize_monthlyts(lecdat.T,season=sea).mean(axis=0)
+    lepsea = cutl.seasonalize_monthlyts(lepdat.T,season=sea).mean(axis=0)
+    lesea = lepsea - lecsea # numens
+
+    # sample 11 ensemble members: 11 members x 11 years = ~120 yrs to equal AGCM sims
+    # (do this 50 times with diff combos of 11).
+    savesel=np.zeros((50,11))
+    ltavg=np.zeros((50))
+    for ii in np.arange(0,50):
+        
+        #numpy.random.randint(low, high=None, size=None)
+        sel = np.random.randint(0,49,size=11)
+        savesel[ii]=sel
+        ltavg[ii] = lesea[sel].mean()
+        
+
+    # need to test the validity of the randomly selected members @@
+    # also probably add more than 50 b/c the pdf changes a lot w/ each run.
+    plt.figure()
+    plt.hist(ltavg)
