@@ -3,11 +3,14 @@ import numpy as np
 import pandas as pd
 
 basepath='/Users/kelly/Dropbox/projects/Ryan/'
-fname = basepath + 'A-B_peak_height.txt'
+fnameb = basepath + 'B_peak_height.txt'
+fnamea = basepath + 'A_peak_height.txt'
 
 
+sizerange=[100,200]
 
-datdf = pd.read_csv(fname,delimiter="\t")
+datadf = pd.read_csv(fnamea,delimiter="\t")
+datbdf = pd.read_csv(fnameb,delimiter="\t")
 """Int64Index: 807 entries, 0 to 806
 Data columns (total 9 columns):
 Dye/Sample Peak     807  non-null values
@@ -43,6 +46,85 @@ dtypes: float64(2), int64(3), object(4)>
 
 
 
-Aret = datdf.values[datdf['Sample File Name'].values == 'A_A03.fsa']
-Bret = datdf.values[datdf['Sample File Name'].values == 'B_B03.fsa']
+#Aret = datdf.values[datdf['Sample File Name'].values == 'A_A03.fsa']
+#Bret = datdf.values[datdf['Sample File Name'].values == 'B_B03.fsa']
 
+
+acols=datadf.keys()
+bcols=datbdf.keys()
+
+adat = pd.DataFrame(datadf.values[np.logical_and(datadf['Size'] >= sizerange[0], datadf['Size'] <= sizerange[1])], columns=acols)
+bdat = pd.DataFrame(datbdf.values[np.logical_and(datbdf['Size'] >= sizerange[0], datbdf['Size'] <= sizerange[1])], columns=bcols)
+
+
+plt.figure()
+plt.plot(bdat.Size,marker='o',color='r')
+plt.plot(adat.Size,marker='.',color='b')
+plt.title('Size')
+
+
+plt.figure() 
+plt.plot(bdat.Height,marker='o',color='r')
+plt.plot(adat.Height,marker='.',color='b')
+plt.title('Height')
+
+plt.figure()
+plt.plot(bdat.Size,bdat.Height,marker='o',color='r')
+plt.plot(adat.Size,adat.Height,marker='.',color='b')
+plt.xlabel('Size')
+plt.ylabel('Height')
+
+# @@@ question: round Size first and then select based on range? Or other way around...
+
+# @@ the round() call on mac is giving an error (appears to be a bug)
+
+
+
+def myround(vals):
+
+    rndvals=np.zeros(len(vals))
+    for ii in np.arange(0,len(vals)):
+        rndvals[ii] = np.round(vals[ii])
+        print vals[ii],rndvals[ii]
+
+    return rndvals
+
+
+
+def fillarray(size, height,sizerange):
+
+    """ take size and height arrays, round Size. 
+        If an index in sizerange is missing in size, enter 0 for height
+    """
+
+    sizeidx=np.arange(sizerange[0],sizerange[1]+1)
+    rndsize=myround(size)
+    
+    datidx=0 # keep track of the index of size data
+    for ii,index in enumerate(sizeidx):
+        # for each index in size range, check if it exists in size data
+        if sizeidx[ii] == rndsize[datidx]:
+            # we are good, the data exists and is good. move it to final array
+            finsize[ii] = rndsize[datidx]
+        else:
+            # have to loop through rndsize until get to next match, entering zero until then.
+            pass
+
+    return sizeadj,heightadj
+
+
+fig,axs=plt.subplots(2,1)
+ax=axs[0]
+ax.plot(myround(bdat.Size.values),bdat.Height,marker='o',color='r')
+ax.plot(myround(adat.Size.values),adat.Height,marker='.',color='b')
+ax.set_xlabel('Size')
+ax.set_ylabel('Height')
+ax.set_title('Rounded Size')
+ax.legend(('B','A'))
+
+ax=axs[1]
+# @@@ won't work until adjust Size vals with zeros.
+#ax.plot(myround(adat.Size.values),adat.Height-bdat.Height,marker='.',color='k')
+ax.set_xlabel('Size')
+ax.set_ylabel('Height')
+ax.set_title('Difference')
