@@ -67,8 +67,7 @@ def loaddata(fields, simulations, ncfields=None,model='CanAM4',timeper='001-121'
             meantype: 'time','zonal' @@for now. default None, but recommended to choose
                        one if loading multiple variables and multiple simulations at once.
                        It is assumed that time is the first dimension.
-                       If 'time' is the meantype, datadict contains tuples of (mean,std)
-            filetype: 'diff','ctl','pert'
+            filetype: 'diff','ctl','pert','pval'
                        Default is diff where both ctl and pert are read in and differenced.
             region:   any of the regions in constants -> region dict. default None.
 
@@ -112,9 +111,10 @@ def loaddata(fields, simulations, ncfields=None,model='CanAM4',timeper='001-121'
     # @@@@@ add handling of sia!
 
 
-    datadict = dict.fromkeys(fields,{})
-    for fii,field in enumerate(fields):
-
+    #datadict = dict.fromkeys(fields,{})
+    #for fii,field in enumerate(fields):
+    if 1: # GET RID OF FIELD dim too  5/8/2015
+        fii=0; field=fields[0]
         if ncfields==None:
             ncfield=field.upper()
         else:
@@ -128,7 +128,7 @@ def loaddata(fields, simulations, ncfields=None,model='CanAM4',timeper='001-121'
 
         for sim in simulations:
             print sim # @@
-            timdict = dict.fromkeys(tf)
+            #timdict = dict.fromkeys(tf)
 
             # construct filename here @@
             fnamec,fnamep = con.build_filepathpair(sim,field)
@@ -152,35 +152,46 @@ def loaddata(fields, simulations, ncfields=None,model='CanAM4',timeper='001-121'
             if meantype=='zonal':
                 ncparams['calc'] = 'zm'
 
-            if filetype=='diff':
-                fld = cnc.getNCvar(fnamep,ncfield,timesel=timesel,**ncparams) -\
-                      cnc.getNCvar(fnamec,ncfield,timesel=timesel,**ncparams)
+            if filetype=='diff' or filetype=='pval':
+                pert = cnc.getNCvar(fnamep,ncfield,timesel=timesel,**ncparams)
+                ctl =  cnc.getNCvar(fnamec,ncfield,timesel=timesel,**ncparams)
+                fld = pert - ctl
             elif filetype=='ctl':
                 fld = cnc.getNCvar(fnamec,ncfield,timesel=timesel,**ncparams)
             elif filetype=='pert':
                 fld = cnc.getNCvar(fnamep,ncfield,timesel=timesel,**ncparams)
             else:
-                print "filetype not supported! ['diff'|'ctl'|'pert']"
+                print "filetype not supported! ['diff'|'ctl'|'pert'|'pval']"
                 return -1
 
             if region != None:
                 lat=cnc.getNCvar(fnamec,'lat'); lon=cnc.getNCvar(fnamec,'lon')
-                fld = cutl.calc_regmean(fld,lat,lon,region)
+                if filetype=='pval':
+                    pert = cutl.calc_regmean(pert,lat,lon,region)
+                    ctl = cutl.calc_regmean(ctl,lat,lon,region)
+                    (tstat,pval) = cutl.ttest_ind(pert,ctl)
+                    fld=pval
+                else:
+                    fld = cutl.calc_regmean(fld,lat,lon,region)
 
             if meantype=='time':
-                #fldstd = np.std(fld,axis=0)
-                fld = np.mean(fld,axis=0)
-                #timdict[tfkey] = fld #,fldstd
-                timdict=fld
+                if filetype=='pval':
+                    # this is an error. filetype supercedes meantype so time avg won't be done
+                    print 'filetype=pval and meantype-time. Ignore meantype and return pvals @@'
+                    timdict=fld
+                else:
+                    #fldstd = np.std(fld,axis=0)
+                    fld = np.mean(fld,axis=0)
+                    #timdict[tfkey] = fld #,fldstd
+                    timdict=fld
             else:
                 #timdict[tfkey] = fld
                 timdict=fld
 
             simdict[sim] = timdict
 
-        datadict[field]=simdict
+        #datadict[field]=simdict
         # can I set attributes to a dictionary? @@ like for nfields, nsims, ntimes?
 
-
-
-    return datadict
+    #return datadict
+    return simdict
