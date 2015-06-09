@@ -85,7 +85,7 @@ def myround(vals):
     rndvals=np.zeros(len(vals))
     for ii in np.arange(0,len(vals)):
         rndvals[ii] = np.round(vals[ii])
-        print vals[ii],rndvals[ii]
+        #print vals[ii],rndvals[ii]
 
     return rndvals
 
@@ -97,34 +97,105 @@ def fillarray(size, height,sizerange):
         If an index in sizerange is missing in size, enter 0 for height
     """
 
-    sizeidx=np.arange(sizerange[0],sizerange[1]+1)
+    sizeidx=np.arange(sizerange[0],sizerange[1]+1) # add extra to get through loop last time
     rndsize=myround(size)
-    
+    print '@@@@@@ rndsize ' + str(rndsize)
+
+
+    finsize=np.zeros(sizeidx[:-1].shape)
+    finheight=np.zeros(sizeidx[:-1].shape)
+
     datidx=0 # keep track of the index of size data
-    for ii,index in enumerate(sizeidx):
+    ii=0 # keep track of index into sizerange
+    for index in sizeidx:
+        print datidx,ii,index
+
+        # first check if datidx is past the length of the size array
+        if datidx==len(rndsize):
+            # We are done. Rest of size and height array is zero
+            print 'SIZE ARRAY IS DONE. SET the rest to zero...: ' + str(datidx) 
+            break
+        # now check if ii is pas the length of the size range array
+        if ii==len(sizeidx[:-1]):
+            print 'SIZE RANGE is done.... what to do with rest of size array? @@ ' + str(rndsize.shape) + ', ' + str(datidx) + ', ' + str(rndsize[datidx:])
+            break
+
         # for each index in size range, check if it exists in size data
         if sizeidx[ii] == rndsize[datidx]:
+            print 'Data good: ' + str(datidx) + ', ' + str(ii) + ', ' + str(index) +\
+                ': ' + str(sizeidx[ii]) + ' == ' + str(rndsize[datidx])
             # we are good, the data exists and is good. move it to final array
             finsize[ii] = rndsize[datidx]
+            finheight[ii] = height[datidx]
+            datidx+=1
+            ii+=1
         else:
             # have to loop through rndsize until get to next match, entering zero until then.
-            pass
+            keepgoing=True
+            while keepgoing:
+                print 'Entering zero: ' + str(datidx) + ', ' + str(ii) + ', ' + str(index) +\
+                    ': ' + str(sizeidx[ii]) + ' == ' + str(rndsize[datidx])
 
-    return sizeadj,heightadj
+                if  sizeidx[ii] > rndsize[datidx]:
+                    print 'We have a repeat Size value! ' + str(sizeidx[ii-1]) + ', height choices: ' +\
+                        str(height[ii-1]) + '* and ' + str(height[ii]) + ' (* is saved in return array)'
+                    datidx+=1 # move forward in Size array
+                    
+                else:                                                               
+                    finsize[ii] = sizeidx[ii] # put correct size in and move on
+                    finheight[ii] = 0
+                    #datidx+=1
+                    ii+=1
+
+                # check the next index: now does Size match?
+                if sizeidx[ii] == rndsize[datidx]:
+                    keepgoing=False
+                    print 'YES ' + str(sizeidx[ii]) + ' == ' + str(rndsize[datidx])
+                    # jump out of while loop
+
+    return finsize,finheight
 
 
-fig,axs=plt.subplots(2,1)
+
+
+
+print '======= FILL ARRAYS ================'
+bsizernd=myround(bdat.Size.values)
+
+bsizeadj,bheightadj=fillarray(bdat.Size.values, bdat.Height, sizerange)
+
+asizernd=myround(adat.Size.values)
+asizeadj,aheightadj=fillarray(adat.Size.values, adat.Height, sizerange)
+
+
+
+fig,axs=plt.subplots(3,1)
+fig.set_size_inches(8,10)
 ax=axs[0]
-ax.plot(myround(bdat.Size.values),bdat.Height,marker='o',color='r')
-ax.plot(myround(adat.Size.values),adat.Height,marker='.',color='b')
-ax.set_xlabel('Size')
+ax.plot(bsizernd,bdat.Height,marker='o',color='r')
+ax.plot(asizernd,adat.Height,marker='.',color='b')
+#ax.set_xlabel('Size')
 ax.set_ylabel('Height')
-ax.set_title('Rounded Size')
+ax.set_title('Size Range (' + str(sizerange[0]) + '-' + str(sizerange[1]) + ')')
+ax.set_xlim(sizerange)
 ax.legend(('B','A'))
 
 ax=axs[1]
+ax.plot(bsizeadj,bheightadj,marker='o',color='r')
+ax.plot(asizeadj,aheightadj,marker='.',color='b')
+#ax.set_xlabel('Size')
+ax.set_ylabel('Adjusted Height')
+ax.set_xlim(sizerange)
+ax.legend(('B','A'))
+
+
+ax=axs[2]
 # @@@ won't work until adjust Size vals with zeros.
-#ax.plot(myround(adat.Size.values),adat.Height-bdat.Height,marker='.',color='k')
+ax.plot(asizeadj,aheightadj-bheightadj,marker='.',color='k')
+ax.axhline(y=0,color='k')
 ax.set_xlabel('Size')
 ax.set_ylabel('Height')
-ax.set_title('Difference')
+ax.set_title('Difference (A-B)')
+ax.set_xlim(sizerange)
+fig.savefig('peakal.pdf')
+
