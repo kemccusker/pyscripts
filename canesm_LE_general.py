@@ -28,7 +28,7 @@ addobs=True # to scatter plot
 addnat=False
 addsims=True # add the idealized simulations. only good for DJF polar amp vs eurasia SAT
 
-local=True
+local=False
 
 performop1 = False
 #op1='div'; region1op='gm' # polar amp: gt60n / gm
@@ -573,50 +573,47 @@ if doregress:
                     + '_regresson_' + fieldr + regionr + sear + normstr + '.pdf') 
 
 
+def sample120yravg(lesea,numsamp,nummems=11,allowreps=True):
+    """ this function does not care about repeat indices.
+        Just choose 11 random ens members, and do it numsamp
+        times.
 
+        nummems: number of members to choose. default 11 (for 11mem x 11yr = 122yr)
+        allowreps: default True. allow repeat indices to be chosen
 
+        returns ltavg, ltsigma (average & std of each nummem set. len numsamp)
+    """
 
-    """    #Got memory errors when trying to read in everything @@
-           #But one LE works
-    flist=le.build_filenames(fdict,casename,ftype='fullts')
-    numens=len(flist)
-    fname = flist[0]
-    lat=cnc.getNCvar(fname,'lat')
-    nlat=len(lat)
-    lon=cnc.getNCvar(fname,'lon')
-    nlon=len(lon)
+    # sample 11 ensemble members: 11 members x 11 years = ~120 yrs to equal AGCM sims
+    # (do this numsamp times with diff combos of 11).
+    savesel=np.zeros((numsamp,nummems))
+    ltavg=np.zeros((numsamp)) # 'lt' = longterm avg
+    ltsigma=np.zeros((numsamp))
 
-    histcdat = histcdat.reshape((numens,ntime,nlat,nlon))
-    histpdat = histpdat.reshape((numens,ntime,nlat,nlon))
+    lelist=list(lesea)
 
-    #histnatcdat = histnatcdat.reshape((numens,ntime,nlat,nlon))
-    #histnatpdat = histnatpdat.reshape((numens,ntime,nlat,nlon))
+    for ii in np.arange(0,numsamp):
+        
+        #sel = np.random.randint(0,len(lesea),size=nummems) # out of the number of ens members
+        
+        sel = random.sample(np.arange(0,len(lelist)),nummems) # no duplicates!
+        print len(lelist) 
+        print sel
+        savesel[ii]=sel
 
-    # Now, seasonal average and regional average here
-    nyr = ntime/12.-1 # @@@@@@ hack for laptop. data probably not correct @@@@ actually needed on linux too...
+        #c=[ a[i] for i in b] # how to select multiple elements of list w/ indices
+        tmp = np.array([lelist[ind] for ind in sel]) # select members
+        if allowreps==False:
+            # now delete those members
+            sel.sort(reverse=True) # if remove the indices starting from end, shouldn't fail.
+            for ind in sel: 
+                print 'deleting index ' + str(ind)
+                del lelist[ind] 
 
-    #histcsea = np.zeros((numens,nyr,nlat,lon)
-    histreg = np.zeros((numens,nyr))
-    #histnatreg = np.zeros((numens,nyr))
+        ltavg[ii] = tmp.mean()
+        ltsigma[ii]= tmp.std()
 
-    for nii in range(0,numens):
-
-        histcsea = cutl.seasonalize_monthlyts(histcdat[nii,...],season=sea)
-        histpsea = cutl.seasonalize_monthlyts(histpdat[nii,...],season=sea)
-        ctl = cutl.calc_regmean(histcsea,lat,lon,region=region)
-        pert = cutl.calc_regmean(histpsea,lat,lon,region=region)
-        histreg[nii,...] = pert - ctl
-
-        #histnatcsea = cutl.seasonalize_monthlyts(histnatcdat[nii,...],season=sea)
-        #histnatpsea = cutl.seasonalize_monthlyts(histnatpdat[nii,...],season=sea)
-        #ctlnat = cutl.calc_regmean(histnatcsea,lat,lon,region=region)
-        #pertnat = cutl.calc_regmean(histnatpsea,lat,lon,region=region)
-        #histnatreg[nii,...] = pertnat - ctlnat
-
-    plt.figure()
-    plt.hist(histreg.mean(axis=1),alpha=0.5)
-    #plt.hist(histnatreg.mean(axis=1),color='.5')"""
-
+    return ltavg,ltsigma
 
 if dolongtermavg:
     import matplotlib.patches as mpatches
@@ -624,15 +621,20 @@ if dolongtermavg:
 
     printtofile=True
 
-    addraw=True # add the decadal diffs?
-    subnh=True
+    numsamp=100 # how many times to sample 11 ens members
+
+    addraw=False # add the decadal diffs?
+    subnh=False # @@@@ when subtracting, prob should subtract the mean NH temp, not individual runs
     substr='' # for filename
     ttlstr=' ' 
+    prstr=''
+    option2=True # otherwise, original method of selectin 11 members numsamp times.
+    if option2:
+        numsamp=50
 
     sea='DJF'
     siglevel=0.1
 
-    numsamp=100 # how many times to sample 11 ens members
     leconv=1
     field='tas'
     ncfield='tas'
@@ -687,17 +689,36 @@ if dolongtermavg:
     #Get Y points via Normal PDF with fitted parameters
     rawpdf_fitted = norm.pdf(rawxx,loc=rawmean,scale=rawsd)
 
-    # sample 11 ensemble members: 11 members x 11 years = ~120 yrs to equal AGCM sims
-    # (do this numsamp times with diff combos of 11).
-    savesel=np.zeros((numsamp,11))
-    ltavg=np.zeros((numsamp)) # 'lt' = longterm avg
-    for ii in np.arange(0,numsamp):
-        
-        #numpy.random.randint(low, high=None, size=None)
-        sel = np.random.randint(0,len(lesea)-1,size=11) # out of the number of ens members (inclusive)
-        savesel[ii]=sel
-        ltavg[ii] = lesea[sel].mean()
-        
+
+    # second option: choose 4 random, non-overlapping groups of 11 members x 11-yrs
+    #                do this numsamp times. Compare with sigma of 5 AGCM sims
+    if option2:
+        ltavg2=np.zeros(numsamp)
+        ltsigma2=np.zeros(numsamp)
+        for ns in np.arange(0,numsamp):
+            # returns 4 avgs and sigmas across e/ of the 12 selected members
+            avgtmp,sigmajunk = sample120yravg(lesea,4,nummems=11,allowreps=False)
+            ltavg2[ns]=avgtmp.mean()
+            ltsigma2[ns]=avgtmp.std()
+
+        ltavg=ltavg2
+        ltsigma=ltsigma2
+        prstr='opt2'        
+    else: # I don't think this makes as much sense for estimating sigma convergence? @@
+
+        # sample 11 ensemble members: 11 members x 11 years = ~120 yrs to equal AGCM sims
+        # (do this numsamp times with diff combos of 11).        
+        ltavg,ltsigma = sample120yravg(lesea,numsamp) # option one.
+
+        # the sigma returned here isn't really appropriate for comparison with the AGCM sims.
+        # This is because it is the sigma across each 12 member selection
+        # instead, now should randomly select 3-5 elements from ltavg and compute 
+        #   sigma across those small sets. For non-repeating selections of 4, 
+        #   can only run 12 times if original numsamp is 50.
+        nummems2=4
+        ltavg2,ltsigma2= sample120yravg(ltavg,numsamp/nummems2,nummems=nummems2,allowreps=False)
+
+
     # Now calc the pdf associated with the hist
     ltpdf=norm.fit(ltavg)
     ltmean=ltpdf[0]
@@ -710,9 +731,21 @@ if dolongtermavg:
 
 
     # add sims
-    sims=('E1','E2','E3','E4','E5','R1','R2','R3','R4','R5','NSIDC')
+    sims=('E1','E2','E3','E4','E5','R1','R2','R3','R4','R5','NSIDC'); simsstr=''
+    simsRN=('R1','R2','R3','R4','R5','NSIDC')
+    simsR=('R1','R2','R3','R4','R5')
+    sims=simsRN; simsstr='Ronly'
     simflddf = pd.DataFrame(lmd.loaddata((simfield1,),sims,ncfields=(simncfield1,), timefreq=sea, 
                                          meantype='time',region=region),index=sims)*simconv1
+
+    # for estimating sigma:
+    simflddfr = pd.DataFrame(lmd.loaddata((simfield1,),simsR,ncfields=(simncfield1,), timefreq=sea, 
+                                          meantype='time',region=region),index=simsR)*simconv1
+    simval=simflddfr.values[0,:]
+    simstds = [simval[1:].std(), simval[[0,2,3,4]].std(), simval[[0, 1, 3, 4]].std(), 
+               simval[[0, 1, 2, 4]].std(), simval[0:-1].std()]
+
+    simsigma=simval.std()
     if subnh:
         simsubcdf = pd.DataFrame(lmd.loaddata((simfield1,),sims,ncfields=(simncfield1,), timefreq=sea, 
                                              filetype='ctl',region='nh'))*simconv1
@@ -756,7 +789,41 @@ if dolongtermavg:
 
             substr='_subnh'
             ttlstr='-NH '
+
     # ========= make the figures =========
+
+    if option2:
+        # how does sigma converge with n?
+        fig,ax=plt.subplots(1,1)
+        ax.hist(ltsigma,color=ltcol,alpha=0.5)
+        ax.axvline(simsigma,color='0.3',linewidth=3)
+        for ll in np.arange(0,5):
+            ax.axvline(simstds[ll],color='0.3',linewidth=1)
+        ax.set_title('$\sigma$ across sets of 4 Estimated 120-year Eurasian' + ttlstr + 'SAT change (DJF)')
+        ax.set_ylabel('Density')
+        ltlg=mpatches.Patch(color=ltcol,alpha=0.5)
+        simlg=mlines.Line2D([],[],color='0.3',linewidth=3) # all five
+        simslg=mlines.Line2D([],[],color='0.3',linewidth=1)
+        ax.set_xlabel('n=' + str(numsamp))
+        ax.legend((ltlg,simlg,simslg),('120-yr avg Historical','5 SIC forcings', 'combos of 4 SIC forcings'), 
+                  loc='upper left',frameon=False)
+        if printtofile:
+            fig.savefig(field + region + substr + 'SIGMA_' + sea + '_LEsims' +\
+                        simsstr + 'obs_est120yravg_hist' + prstr + '.pdf')
+    else:
+        fig,ax=plt.subplots(1,1)
+        ax.hist(ltsigma,color=ltcol,alpha=0.5)
+        ax.axvline(simsigma,color='0.3',linewidth=3)
+        ax.set_title('$\sigma$ across sets of 4 Estimated 120-year Eurasian' + ttlstr + 'SAT change (DJF)')
+        ax.set_ylabel('Density')
+        ltlg=mpatches.Patch(color=ltcol,alpha=0.5)
+        simlg=mlines.Line2D([],[],color='0.3',linewidth=3)
+        ax.set_xlabel('n=' + str(numsamp))
+        ax.legend((ltlg,simlg),('120-yr avg Historical','SIC forcings'), 
+                  loc='upper right',frameon=False)
+        if printtofile:
+            fig.savefig(field + region + substr + 'SIGMA_' + sea + '_LEsims' +\
+                        simsstr + 'obs_est120yravg_hist' + prstr + '.pdf')
 
     # need to test the validity of the randomly selected members @@
     # also probably add more than 50 b/c the pdf changes a lot w/ each run.
@@ -786,13 +853,13 @@ if dolongtermavg:
     ax.axvline(x=0,color='k',linestyle='--')
     ax.set_ylabel('Density')
     ax.set_title('Estimated 120-year Eurasian' + ttlstr + 'SAT change (DJF)')
-    ax.set_xlabel('$\Delta$ SAT ($^\circ$C)')
+    ax.set_xlabel('$\Delta$ SAT ($^\circ$C); n=' + str(numsamp))
     ax.legend((ltlg,simlg,nsidclg,obslg),('120-yr avg Historical','SIC forcings','NSIDC SIC forcing','Observations'),
               loc='upper left',frameon=False)
 
     
     if printtofile:
-        fig.savefig(field + region + substr + '_' + sea + '_LEsimsobs_est120yravg_hist.pdf')
+        fig.savefig(field + region + substr + '_' + sea + '_LEsims' + simsstr + 'obs_est120yravg_hist' + prstr + '.pdf')
 
     if addraw:
         # add RAW for comparison
@@ -803,4 +870,38 @@ if dolongtermavg:
                   ('120-yr avg Historical','Historical','SIC forcings','Observations'),
                   loc='upper left',frameon=False)
         if printtofile:
-            fig.savefig(field + region + substr + '_' + sea + '_LEsimsobs_est120yravgraw_hist.pdf')
+            fig.savefig(field + region + substr + '_' + sea + '_LEsims' + simsstr + 'obs_est120yravgraw_hist' + prstr + '.pdf')
+
+
+
+
+    # ==== estimate sigma uncertainty ====
+    # Need sia too
+    leconvsia=1
+    fieldsia='sia'
+    ncfieldsia='sia'
+    compsia='OImon'
+    regionsia='nh'
+
+    fdictsia = {'field': fieldsia+regionsia, 'ncfield': ncfieldsia+regionsia, 'comp': compsia}
+
+    lecsia = le.load_LEdata(fdictsia,casename,timesel=timeselc, rettype='ndarray',conv=leconvsia,ftype=ftype,local=local)
+    (numensi,ntimesi) = lecsia.shape
+    lepsia=le.load_LEdata(fdictsia,casename,timesel=timeselp, rettype='ndarray',conv=leconvsia,ftype=ftype,local=local)
+    lecsisea = cutl.seasonalize_monthlyts(lecsia.T,season=sea).mean(axis=0)
+    lepsisea = cutl.seasonalize_monthlyts(lepsia.T,season=sea).mean(axis=0)
+    lesisea = lepsisea - lecsisea # numens
+
+    lesistd = lesisea.std() # compare to std of option 1 histogram?
+
+    # add sims
+    simsR=('R1','R2','R3','R4','R5')
+    # make sia: @@@@@@@@@@@@@@@@@@@@@
+    """# for estimating sigma:
+    simflddfr = pd.DataFrame(lmd.loaddata((simfield1,),simsR,ncfields=(simncfield1,), timefreq=sea, 
+                                          meantype='time',region=region),index=simsR)*simconv1
+    simval=simflddfr.values[0,:]
+    simstds = [simval[1:].std(), simval[[0,2,3,4]].std(), simval[[0, 1, 3, 4]].std(), 
+               simval[[0, 1, 2, 4]].std(), simval[0:-1].std()]
+
+    simsigma=simval.std()"""
