@@ -151,6 +151,9 @@ def build_filenames(fielddict, ens, ftype='fullts',timesel=None,verb=True,local=
 
     if local:
         basepath = '/HOME/rkm/work/DATA/CanESM2/LE/'
+    else:
+        basepath=bp['basepath']
+
         
     field=fielddict['field']
     comp=fielddict['comp']
