@@ -18,7 +18,7 @@ def load_LEdata(fielddict, ens, seas=None, timesel=None,infodict=None,ftype='ful
     """ def loadLEdata(fielddict, seas=('DJF','MAM','JJA','SON'), timesel=None, infodict=None, calctype=None, calcdict=None)
 
             ftype: type of filename to build. Right now just 'fullts' for full timeseries
-              or '1950-2020_climo'
+              or '1950-2020_climo' or 'ensmean'
             seas has to be a tuple
             rettype: 'dict' or 'ndarray' as return type. 
                       default is dict of DataFrames (to make a Panel). 
@@ -129,15 +129,19 @@ def build_filenames(fielddict, ens, ftype='fullts',timesel=None,verb=True,local=
 
         ftype: type of filename to build. Right now just 'fullts' for full timeseries
               or 'fullclimo' for '1950-2020_climo' or, given timesel:
-              for styr-enyr_climo.
+              for styr-enyr_climo. or 'ensmean'
         local: is the data on /raid/ra40 or ~/work/DATA (local=True)
               
         returns a list of all filenames (50). @@add original 5?!
         
     """
-
+    ensmean=False
     if ftype=='fullts':
         suff='195001-202012'
+    elif ftype=='ensmean':
+        # assume fullts
+        suff='195001-202012'
+        ensmean=True
     elif ftype=='fullclimo':
         suff=ftype
     else: # climo with specified years
@@ -158,17 +162,25 @@ def build_filenames(fielddict, ens, ftype='fullts',timesel=None,verb=True,local=
     field=fielddict['field']
     comp=fielddict['comp']
     
-    sims = get_sims(ens)
-
     flist=[]
-    for sim in sims:
-        for eii in range(1,ensnum+1):
+    if ensmean: # @@ note, should add the casename to ensmean filename!
+        fname = basepath + ens + '-ens' + '/' + field + '/' + field + '_' + comp + '_CanESM2_ensmean_' +\
+                suff + '.nc'
+        if verb:
+            print fname
+        flist.append(fname)
 
-            fname=basepath + sim + '/' + field + '/' + field + '_' + comp + '_CanESM2_' +\
-               sim + '_r' + str(eii) + 'i1p1_' + suff + '.nc'
-            if verb:
-                print fname
-            flist.append(fname)
+    else:
+        sims = get_sims(ens)
+        
+        for sim in sims:
+            for eii in range(1,ensnum+1):
+
+                fname=basepath + sim + '/' + field + '/' + field + '_' + comp + '_CanESM2_' +\
+                   sim + '_r' + str(eii) + 'i1p1_' + suff + '.nc'
+                if verb:
+                    print fname
+                flist.append(fname)
 
     return flist
         
