@@ -585,5 +585,7 @@ if __name__ == "__main__":
     register_cccmacms()
     show_cccmacms()
     show_linecolors()
+    print 'http://wiki.scipy.org/Cookbook/Matplotlib/Show_colormaps'
+    print 'http://matplotlib.org/1.2.1/examples/pylab_examples/show_colormaps.html'
 else:
     register_cccmacms()
