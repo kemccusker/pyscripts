@@ -15,20 +15,24 @@ import loadLE as le
 import constants as con
 import matplotlib.font_manager as fm
 import loadmodeldata as lmd
+import matplotlib.patches as mpatches
+import matplotlib.lines as mlines
 
 # exception handling works below. add to other clauses @@
 
 printtofile=False
-dohist=True
-doregress=False
+dohist=False
+doregress=True
 doscatter=False
-dolongtermavg=True
+dolongtermavg=False
 
 addobs=True # to scatter plot
 addnat=False
 addsims=True # add the idealized simulations. only good for DJF polar amp vs eurasia SAT
 
-local=False
+local=True
+
+conditional=True # plot scatter conditional on 3rd var
 
 performop1 = False
 #op1='div'; region1op='gm' # polar amp: gt60n / gm
@@ -38,22 +42,30 @@ op2='sub'; region2op='nh'
 
 timeselc='1979-01-01,1989-12-31'
 timeselp='2002-01-01,2012-12-31'
+timeselall = '1979-01-01,2012-12-31'
 
-#field1='zg50000.00'; ncfield1='zg'; comp1='Amon'; region1='bksmori'
+# x field
+field1='zg50000.00'; ncfield1='zg'; comp1='Amon'; region1='bksmori'
 #field1='sia'; ncfield1='sianh'; comp1='OImon'; region1='nh'
 #field1='sic'; ncfield1='sic'; comp1='OImon'; region1='bksmori' # @@ a hack. prefer SIA
-field1='tas'; ncfield1='tas'; comp1='Amon'; region1='eurasiamori' #region1='bksmori'
+#field1='tas'; ncfield1='tas'; comp1='Amon'; region1='eurasiamori' #region1='bksmori'
 leconv1= 1 
 sea1='DJF'
 
+# y field
 field2='tas'; ncfield2='tas'; comp2='Amon'; region2='eurasiamori'
 #field2='zg50000.00'; ncfield2='zg'; comp2='Amon'; region2='bksmori'
 leconv2=1
 sea2='DJF'
 
+fieldcnd = 'sic'; ncfieldcnd='sic'; compcnd='OImon'; regioncnd='bksmori'
+leconvcnd=1
+seacnd=sea1
+cmincnd=-10; cmaxcnd=1
+
 xlab=ylab=None
-#xlab = '$\Delta$ DJF Barents-Kara Seas Z500 (m)'
-#ylab = '$\Delta$ DJF SAT(Eurasia) - SAT(NH) ($^\circ$C)'
+xlab = '$\Delta$ DJF Barents-Kara Seas Z500 (m)'
+ylab = '$\Delta$ DJF SAT(Eurasia) - SAT(NH) ($^\circ$C)'
 #ylab = '$\Delta$ DJF Eurasian SAT ($^\circ$C)'
 
 simconv1=simconv2=1
@@ -73,6 +85,8 @@ ftype='fullts' # 'fullclimo' or 'climo' or 'fullts'
 
 fdict1 = {'field': field1+region1, 'ncfield': ncfield1, 'comp': comp1}
 fdict2 = {'field': field2+region2, 'ncfield': ncfield2, 'comp': comp2}
+fdictcnd = {'field': fieldcnd+regioncnd, 'ncfield': ncfieldcnd, 'comp': compcnd}
+
 
 if doscatter:
 
@@ -107,7 +121,7 @@ if doscatter:
         lefld1=lepsea1.mean(axis=1)-lecsea1.mean(axis=1)
 
     lecdat2 = le.load_LEdata(fdict2,casename,timesel=timeselc, rettype='ndarray',conv=leconv2,ftype=ftype,local=local)
-    (numens2,ntime2) = lecdat1.shape
+    (numens2,ntime2) = lecdat2.shape
     lepdat2=le.load_LEdata(fdict2,casename,timesel=timeselp, rettype='ndarray',conv=leconv2,ftype=ftype,local=local)
     lecsea2 = cutl.seasonalize_monthlyts(lecdat2.T,season=sea2).T
     lepsea2 = cutl.seasonalize_monthlyts(lepdat2.T,season=sea2).T
@@ -123,6 +137,15 @@ if doscatter:
         lefld2=lepsea2.mean(axis=1)-lecsea2.mean(axis=1)
 
     lemm, lebb, lerval, lepval, lestd_err = sp.stats.linregress(lefld1,lefld2)
+
+    if conditional:
+        lecdatcnd = le.load_LEdata(fdictcnd,casename,timesel=timeselc, rettype='ndarray',conv=leconvcnd,ftype=ftype,local=local)
+        (numenscnd,ntimecnd) = lecdatcnd.shape
+        lepdatcnd=le.load_LEdata(fdictcnd,casename,timesel=timeselp, rettype='ndarray',conv=leconvcnd,ftype=ftype,local=local)
+        lecseacnd = cutl.seasonalize_monthlyts(lecdatcnd.T,season=seacnd).T
+        lepseacnd = cutl.seasonalize_monthlyts(lepdatcnd.T,season=seacnd).T
+        leseacnd = lepseacnd - lecseacnd
+        lefldcnd=lepseacnd.mean(axis=1)-lecseacnd.mean(axis=1)
 
     # historicalNat
     casename2='historicalNat'
@@ -223,22 +246,92 @@ if doscatter:
                 obsreg2=obsreg2.mean()
         else:
             print 'this field not supported with addobs @@: ' + field2; addobs=False
+
+
+    if addsims:
+        sims=('E1','E2','E3','E4','E5','R1','R2','R3','R4','R5')
+        # why did this work before? had to change to Series (jun 11 2015)
+        flddf1 = pd.Series(lmd.loaddata((simfield1,),sims,ncfields=(simncfield1,), timefreq=sea1, 
+                                           meantype='time',region=region1))*simconv1
+
+        if performop1:
+            flddf1op = pd.Series(lmd.loaddata((simfield1,),sims,ncfields=(simncfield1,), timefreq=sea1, 
+                                                 meantype='time',region=region1op))*simconv1
+
+            if op1=='sub': # subtract
+                flddf1 = flddf1 - flddf1op
+            elif op1=='div': # divide
+                flddf1 = flddf1 / flddf1op
+
+        flddf2 = pd.Series(lmd.loaddata((simfield2,),sims,ncfields=(simncfield2,), timefreq=sea2, 
+                                           meantype='time',region=region2))*simconv2
+
+        if performop2:
+            flddf2op = pd.Series(lmd.loaddata((simfield2,),sims,ncfields=(simncfield2,), timefreq=sea2, 
+                                                 meantype='time',region=region2op))*simconv2
+
+            if op2=='sub': # subtract
+                flddf2 = flddf2 - flddf2op
+            elif op2=='div': # divide
+                flddf2 = flddf2 / flddf2op
+
+        simmm, simbb, simrval, simpval, simstd_err = sp.stats.linregress(np.squeeze(flddf1.values),np.squeeze(flddf2.values))
+        print '-------- SIMS slope, rval, pval: ' + str(simmm),str(simrval),str(simpval)
+
+
+    # Example of conditional scatter: 
+    # http://stackoverflow.com/questions/12965075/matplotlib-scatter-plot-colour-as-function-of-third-variable
+    """x = np.linspace(0, 20, 100)
+    y = np.sin(x)
+    z = x + 20 * y
+
+    scaled_z = (z - z.min()) / z.ptp()
+    colors = plt.cm.coolwarm(scaled_z)
+
+    plt.scatter(x, y, marker='+', edgecolors=colors, s=150, linewidths=4)
+    plt.show()"""
+
             
     fig,ax=plt.subplots(1,1)
-    ledat=plt.scatter(lefld1,lefld2,color=ccm.get_linecolor('darkolivegreen3'),marker='*',s=5**2,alpha=0.5)
+    fig.set_size_inches(8,5)
+    if conditional:
+        cmap=plt.cm.afmhot #autumn # Greens_r #OrRd_r # coolwarm_r
+        #markerdt={'marker': 'o', 'linewidth':0}
+        
+        scaled_cnd = (lefldcnd - lefldcnd.min()) / lefldcnd.ptp()
+        cndcolors = plt.cm.afmhot(scaled_cnd,alpha=0.7) #edgecolors=cndcolors
+
+        ledatlg=mlines.Line2D([],[],color=cndcolors[len(cndcolors)/2+5],
+                              markerfacecolor=cndcolors[len(cndcolors)/2+5],marker='o',
+                              linestyle='none',mew=0,markersize=10)
+
+        ledat=ax.scatter(lefld1,lefld2,c=lefldcnd,cmap=cmap,vmin=cmincnd,vmax=cmaxcnd,s=90,alpha=0.7,marker='o', linewidth=0)
+        ledat.set_clim([cmincnd,cmaxcnd])
+
+        cbar_ax = fig.add_axes([.91,.25, .02,.5]) 
+        cb=fig.colorbar(ledat,cax=cbar_ax)#,orientation='horizontal')
+        cb.set_label('$\Delta$ BKS SIC (%)')
+        lcolor='k'
+        leghnds=(ledatlg,)
+    else:
+        ledat=ax.scatter(lefld1,lefld2,color=ccm.get_linecolor('darkolivegreen3'),
+                          marker='*',s=100,alpha=0.5)
+        lcolor=ccm.get_linecolor('darkolivegreen3')
+        leghnds=(ledat,)
+
     axylims = ax.get_ylim()
     axxlims = ax.get_xlim()
     onex=np.linspace(axxlims[0],axxlims[1])
-    ax.plot(onex,lemm*onex + lebb, color=ccm.get_linecolor('darkolivegreen3'),linewidth=1)
+    ax.plot(onex,lemm*onex + lebb, color=lcolor,linewidth=1)
     
 
     obstr=''
-    leghnds=(ledat,)
+    
     legstrs=(casename + ' LE',)
 
     print '-------- LE slope, rval, pval: ' + str(lemm),str(lerval),str(lepval)
     if addnat:
-        ledatn=plt.scatter(lefld1n,lefld2n,color=ccm.get_linecolor('steelblue3'),marker='*',s=5**2,alpha=0.5)
+        ledatn=ax.scatter(lefld1n,lefld2n,color=ccm.get_linecolor('steelblue3'),marker='*',s=5**2,alpha=0.5)
         axylims = ax.get_ylim()
         axxlims = ax.get_xlim()
         onex=np.linspace(axxlims[0],axxlims[1])
@@ -247,7 +340,7 @@ if doscatter:
         legstrs=legstrs + (casename2 + ' LE',)
         print '-------- LENat slope, rval, pval: ' + str(lemmn),str(lervaln),str(lepvaln)
     if addobs:
-        obs=plt.scatter(obsreg1,obsreg2,color='blue',marker='s',s=8**2)
+        obs=ax.scatter(obsreg1,obsreg2,color='blue',marker='s',s=8**2)
         leghnds=leghnds + (obs,)
         legstrs=legstrs + ('Observations',)
         obstr='obs'
@@ -284,12 +377,13 @@ if doscatter:
         legstrs=legstrs + ('Modelled SIC forcing',)
         obstr=obstr+'sims'"""
     if addsims:
-        sims=('E1','E2','E3','E4','E5','R1','R2','R3','R4','R5')
-        flddf1 = pd.DataFrame(lmd.loaddata((simfield1,),sims,ncfields=(simncfield1,), timefreq=sea1, 
+        """sims=('E1','E2','E3','E4','E5','R1','R2','R3','R4','R5')
+        # why did this work before? had to change to Series (jun 11 2015)
+        flddf1 = pd.Series(lmd.loaddata((simfield1,),sims,ncfields=(simncfield1,), timefreq=sea1, 
                                            meantype='time',region=region1))*simconv1
 
         if performop1:
-            flddf1op = pd.DataFrame(lmd.loaddata((simfield1,),sims,ncfields=(simncfield1,), timefreq=sea1, 
+            flddf1op = pd.Series(lmd.loaddata((simfield1,),sims,ncfields=(simncfield1,), timefreq=sea1, 
                                                  meantype='time',region=region1op))*simconv1
 
             if op1=='sub': # subtract
@@ -297,11 +391,11 @@ if doscatter:
             elif op1=='div': # divide
                 flddf1 = flddf1 / flddf1op
 
-        flddf2 = pd.DataFrame(lmd.loaddata((simfield2,),sims,ncfields=(simncfield2,), timefreq=sea2, 
+        flddf2 = pd.Series(lmd.loaddata((simfield2,),sims,ncfields=(simncfield2,), timefreq=sea2, 
                                            meantype='time',region=region2))*simconv2
 
         if performop2:
-            flddf2op = pd.DataFrame(lmd.loaddata((simfield2,),sims,ncfields=(simncfield2,), timefreq=sea2, 
+            flddf2op = pd.Series(lmd.loaddata((simfield2,),sims,ncfields=(simncfield2,), timefreq=sea2, 
                                                  meantype='time',region=region2op))*simconv2
 
             if op2=='sub': # subtract
@@ -310,9 +404,9 @@ if doscatter:
                 flddf2 = flddf2 / flddf2op
 
         simmm, simbb, simrval, simpval, simstd_err = sp.stats.linregress(np.squeeze(flddf1.values),np.squeeze(flddf2.values))
-        print '-------- SIMS slope, rval, pval: ' + str(simmm),str(simrval),str(simpval)
+        print '-------- SIMS slope, rval, pval: ' + str(simmm),str(simrval),str(simpval)"""
 
-        simsh = ax.scatter(flddf1,flddf2,color='0.3',marker='o',s=6**2,alpha=0.7)
+        simsh = ax.scatter(flddf1,flddf2,color='0.3',marker='o',s=120,alpha=0.7)
         #axylims = ax.get_ylim()
         #axxlims = ax.get_xlim()
         onex=np.linspace(axxlims[0],axxlims[1])
@@ -323,10 +417,10 @@ if doscatter:
 
     fontP = fm.FontProperties()
     fontP.set_size('small')
-    plt.legend(leghnds,legstrs,
+    ax.legend(leghnds,legstrs,
                loc='best',fancybox=True,framealpha=0.5,prop=fontP)#,frameon=False) 
 
-    plt.annotate(casename + ' R= ' + '$%.2f$'%(lerval) + ', p='+ '$%.2f$'%(lepval),
+    ax.annotate(casename + ' R= ' + '$%.2f$'%(lerval) + ', p='+ '$%.2f$'%(lepval),
                 xy=(axxlims[0]+.05*axxlims[1], axylims[1]-.1*axylims[1]),
                 xycoords='data')
     if addnat:
@@ -338,16 +432,16 @@ if doscatter:
     if performop1:
         opstr1= op1 + '_' + region1op
     if xlab==None:
-        plt.xlabel(sea1 + ' ' + field1 + ' ' + region1 + ' ' + opstr1)
+        ax.set_xlabel(sea1 + ' ' + field1 + ' ' + region1 + ' ' + opstr1)
     else:
-        plt.xlabel(xlab)
+        ax.set_xlabel(xlab)
     if performop2:
         opstr2= op2 + '_' + region2op
 
     if ylab==None:
-        plt.ylabel(sea2 + ' ' + field2 + ' ' + region2 + ' ' + opstr2)
+        ax.set_ylabel(sea2 + ' ' + field2 + ' ' + region2 + ' ' + opstr2)
     else:
-        plt.ylabel(ylab)
+        ax.set_ylabel(ylab)
 
     axylims = ax.get_ylim()
     if axylims[0]<=0 and axylims[1]>=0:
@@ -357,14 +451,17 @@ if doscatter:
         ax.axvline(x=0,color='k',linewidth=.5,linestyle='--')
 
     if printtofile:
+        if conditional:
+            cnd='cnd'
+        else: cnd=''
         if addnat:
             plt.savefig('scatterregress_' + field1 + region1 + opstr1 + str(sea1) + '_v_' + 
                         field2 + region2 +opstr2 + str(sea2) + '_' + casename + '_' + 
-                        casename2 + '_2002-12_1979-89' + obstr + '.pdf')
+                        casename2 + '_2002-12_1979-89' + obstr + cnd + '.pdf')
         else:
             plt.savefig('scatterregress_' + field1 + region1 + opstr1 + str(sea1) + '_v_' + 
                         field2 + region2 +opstr2 + str(sea2) + '_' + casename + 
-                        '_2002-12_1979-89' + obstr + '.pdf')
+                        '_2002-12_1979-89' + obstr + cnd + '.pdf')
 
 if dohist:
     conv=leconv1 # just assume we are doing variable 1
@@ -408,6 +505,7 @@ if dohist:
 if doregress:
     donorm=True
     addfld=True # add contours of second field
+    ensmean=True
 
     seasp=sea1 # season of spatial field
     sear=sea2 # season of regional avgs
@@ -468,39 +566,69 @@ if doregress:
     lon=le.get_lon(local=local)
     nlat=len(lat); nlon=len(lon)
 
-    # LOAD SPATIAL DATA (contours)
-    lecdatsp = le.load_LEdata(fdictsp,casename,timesel=timeselc, rettype='ndarray',conv=leconvsp,ftype=ftype,local=local)
-    (numensp,ntimesp,nspacesp) = lecdatsp.shape
-    lepdatsp=le.load_LEdata(fdictsp,casename,timesel=timeselp, rettype='ndarray',conv=leconvsp,ftype=ftype,local=local)
-    # time needs to be first dimension
-    lecdatsp = np.transpose(lecdatsp,(1,0,2))
-    lepdatsp = np.transpose(lepdatsp,(1,0,2))
-    lecseasp = cutl.seasonalize_monthlyts(lecdatsp,season=seasp).mean(axis=0) # average the 11 seasonal avgs 
-    lepseasp = cutl.seasonalize_monthlyts(lepdatsp,season=seasp).mean(axis=0) # average the 11 seasonal avgs 
-    leseasp = lepseasp - lecseasp # numens x space.flat
-
-    # LOAD SPATIAL DATA 2 (colors)
-    lecdatsp2 = le.load_LEdata(fdictsp2,casename,timesel=timeselc, rettype='ndarray',conv=leconvsp2,ftype=ftype,local=local)
-    (numensp,ntimesp,nspacesp) = lecdatsp2.shape
-    lepdatsp2=le.load_LEdata(fdictsp2,casename,timesel=timeselp, rettype='ndarray',conv=leconvsp2,ftype=ftype,local=local)
-    # time needs to be first dimension
-    lecdatsp2 = np.transpose(lecdatsp2,(1,0,2))
-    lepdatsp2 = np.transpose(lepdatsp2,(1,0,2))
-    lecseasp2 = cutl.seasonalize_monthlyts(lecdatsp2,season=seasp).mean(axis=0) # average the 11 seasonal avgs 
-    lepseasp2 = cutl.seasonalize_monthlyts(lepdatsp2,season=seasp).mean(axis=0) # average the 11 seasonal avgs 
-    leseasp2 = lepseasp2 - lecseasp2 # numens x space.flat
-
-
     
-    # LOAD 1D DATA
-    lecdatr = le.load_LEdata(fdictr,casename,timesel=timeselc, rettype='ndarray',conv=leconvr,ftype=ftype,local=local)
-    (numenr,ntimer) = lecdatr.shape
-    lepdatr=le.load_LEdata(fdictr,casename,timesel=timeselp, rettype='ndarray',conv=leconvr,ftype=ftype,local=local)
-    lecsear = cutl.seasonalize_monthlyts(lecdatr.T,season=sear).mean(axis=0)
-    lepsear = cutl.seasonalize_monthlyts(lepdatr.T,season=sear).mean(axis=0)
-    lesear = lepsear - lecsear # numens
-    if donorm:
-        lesear=lesear / lesear.std()
+    if ensmean: # then do a regression in time, over the ensemble mean
+         # LOAD SPATIAL DATA (contours)
+        # need to instead get the full time 1979-2012 
+        lealldatsp = le.load_LEdata(fdictsp,casename,timesel=timeselall, rettype='ndarray',conv=leconvsp,ftype='ensmean',local=local)
+        (numensp,ntimesp,nspacesp) = lealldatsp.shape
+        # time needs to be first dimension
+        lealldatsp = np.transpose(lealldatsp,(1,0,2))
+        leallseasp = cutl.seasonalize_monthlyts(lealldatsp,season=seasp).mean(axis=1) # average the ensemble 
+        leseasp = leallseasp # time x space.flat
+
+        # need to instead get the full time 1979-2012 
+        lealldatsp2 = le.load_LEdata(fdictsp2,casename,timesel=timeselall, rettype='ndarray',conv=leconvsp2,ftype='ensmean',local=local)
+        (numensp,ntimesp,nspacesp) = lealldatsp2.shape
+        # time needs to be first dimension
+        lealldatsp2 = np.transpose(lealldatsp2,(1,0,2))
+        leallseasp2 = cutl.seasonalize_monthlyts(lealldatsp2,season=seasp).mean(axis=1) # average the ensemble 
+        leseasp2 = leallseasp2 # time x space.flat
+
+        # LOAD 1D DATA
+        lealldatr = le.load_LEdata(fdictr,casename,timesel=timeselall, rettype='ndarray',conv=leconvr,ftype='ensmean',local=local)
+        (numenr,ntimer) = lealldatr.shape
+        leallsear = cutl.seasonalize_monthlyts(lealldatr.T,season=sear).mean(axis=1)
+        lesear = leallsear # ntime
+        print '@@@@@@@@@@@@@@@@@@@@@@@@ ' + str(lesear.shape)
+        if donorm:
+            lesear=lesear / lesear.std()
+
+    else:
+        # LOAD SPATIAL DATA (contours)
+        lecdatsp = le.load_LEdata(fdictsp,casename,timesel=timeselc, rettype='ndarray',conv=leconvsp,ftype=ftype,local=local)
+        (numensp,ntimesp,nspacesp) = lecdatsp.shape
+        lepdatsp=le.load_LEdata(fdictsp,casename,timesel=timeselp, rettype='ndarray',conv=leconvsp,ftype=ftype,local=local)
+        # time needs to be first dimension
+        lecdatsp = np.transpose(lecdatsp,(1,0,2))
+        lepdatsp = np.transpose(lepdatsp,(1,0,2))
+   
+        lecseasp = cutl.seasonalize_monthlyts(lecdatsp,season=seasp).mean(axis=0) # average the 11 seasonal avgs 
+        lepseasp = cutl.seasonalize_monthlyts(lepdatsp,season=seasp).mean(axis=0) # average the 11 seasonal avgs 
+        leseasp = lepseasp - lecseasp # numens x space.flat
+
+        # LOAD SPATIAL DATA 2 (colors)
+        lecdatsp2 = le.load_LEdata(fdictsp2,casename,timesel=timeselc, rettype='ndarray',conv=leconvsp2,ftype=ftype,local=local)
+        (numensp,ntimesp,nspacesp) = lecdatsp2.shape
+        lepdatsp2=le.load_LEdata(fdictsp2,casename,timesel=timeselp, rettype='ndarray',conv=leconvsp2,ftype=ftype,local=local)
+        # time needs to be first dimension
+        lecdatsp2 = np.transpose(lecdatsp2,(1,0,2))
+        lepdatsp2 = np.transpose(lepdatsp2,(1,0,2))
+        lecseasp2 = cutl.seasonalize_monthlyts(lecdatsp2,season=seasp).mean(axis=0) # average the 11 seasonal avgs 
+        lepseasp2 = cutl.seasonalize_monthlyts(lepdatsp2,season=seasp).mean(axis=0) # average the 11 seasonal avgs 
+        leseasp2 = lepseasp2 - lecseasp2 # numens x space.flat
+
+        # LOAD 1D DATA
+        lecdatr = le.load_LEdata(fdictr,casename,timesel=timeselc, rettype='ndarray',conv=leconvr,ftype=ftype,local=local)
+        (numenr,ntimer) = lecdatr.shape
+        lepdatr=le.load_LEdata(fdictr,casename,timesel=timeselp, rettype='ndarray',conv=leconvr,ftype=ftype,local=local)
+        lecsear = cutl.seasonalize_monthlyts(lecdatr.T,season=sear).mean(axis=0) # this is right b/c of the .T
+        lepsear = cutl.seasonalize_monthlyts(lepdatr.T,season=sear).mean(axis=0)
+        lesear = lepsear - lecsear # numens
+        if donorm:
+            lesear=lesear / lesear.std()
+    
+
 
     #mm, bb, rval, pval, std_err = sp.stats.linregress(lesear,leseasp) # errors. why? @@
     slope,intercept = np.polyfit(lesear,leseasp,1)
@@ -508,15 +636,27 @@ if doregress:
     slope,intercept = np.polyfit(lesear,leseasp2,1)
     bkszg=slope.reshape((nlat,nlon)) # Z500 regress on SIC
 
-    # LOAD 1D DATA (2)
-    lecdatr2 = le.load_LEdata(fdictr2,casename,timesel=timeselc, rettype='ndarray',conv=leconvr2,ftype=ftype,local=local)
-    (numenr2,ntimer2) = lecdatr2.shape
-    lepdatr2=le.load_LEdata(fdictr2,casename,timesel=timeselp, rettype='ndarray',conv=leconvr2,ftype=ftype,local=local)
-    lecsear2 = cutl.seasonalize_monthlyts(lecdatr2.T,season=sear).mean(axis=0)
-    lepsear2 = cutl.seasonalize_monthlyts(lepdatr2.T,season=sear).mean(axis=0)
-    lesear2 = lepsear2 - lecsear2 # numens
-    if donorm:
-        lesear2=lesear2 / lesear2.std()
+    if ensmean:
+        # LOAD 1D DATA
+        lealldatr2 = le.load_LEdata(fdictr2,casename,timesel=timeselall, rettype='ndarray',conv=leconvr2,ftype='ensmean',local=local)
+        (numenr2,ntimer2) = lealldatr2.shape
+        leallsear2 = cutl.seasonalize_monthlyts(lealldatr2.T,season=sear).mean(axis=1)
+        lesear2 = leallsear2 # ntime
+        print '@@@@@@@@@@@@@@@@@@@@@@@@ ' + str(lesear2.shape)
+        if donorm:
+            lesear2=lesear2 / lesear2.std()
+
+        print '@@@@ figure out regression in time....check units etc'
+    else:
+        # LOAD 1D DATA (2)
+        lecdatr2 = le.load_LEdata(fdictr2,casename,timesel=timeselc, rettype='ndarray',conv=leconvr2,ftype=ftype,local=local)
+        (numenr2,ntimer2) = lecdatr2.shape
+        lepdatr2=le.load_LEdata(fdictr2,casename,timesel=timeselp, rettype='ndarray',conv=leconvr2,ftype=ftype,local=local)
+        lecsear2 = cutl.seasonalize_monthlyts(lecdatr2.T,season=sear).mean(axis=0)
+        lepsear2 = cutl.seasonalize_monthlyts(lepdatr2.T,season=sear).mean(axis=0)
+        lesear2 = lepsear2 - lecsear2 # numens
+        if donorm:
+            lesear2=lesear2 / lesear2.std()
 
     #mm, bb, rval, pval, std_err = sp.stats.linregress(lesear,leseasp) # errors. why? @@
     slope,intercept = np.polyfit(lesear2,leseasp,1)
@@ -542,7 +682,7 @@ if doregress:
     # @@ create a figure with regression contours on top of other regression:
     #   e.g. z500 regressed onto BKS SIC contours on SAT regressed onto BKS SIC map
 
-    printtofile=True
+    printtofile=False
     lons, lats = np.meshgrid(lon,lat)
     cmlen=15.
     incr = (cmaxsp2-cminsp2) / (cmlen)
@@ -616,10 +756,8 @@ def sample120yravg(lesea,numsamp,nummems=11,allowreps=True):
     return ltavg,ltsigma
 
 if dolongtermavg:
-    import matplotlib.patches as mpatches
-    import matplotlib.lines as mlines
 
-    printtofile=True
+    printtofile=False
 
     numsamp=100 # how many times to sample 11 ens members
 
@@ -730,7 +868,7 @@ if dolongtermavg:
     ltpdf_fitted = norm.pdf(ltxx,loc=ltmean,scale=ltsd)
 
 
-    # add sims
+    # ========= add sims
     sims=('E1','E2','E3','E4','E5','R1','R2','R3','R4','R5','NSIDC'); simsstr=''
     simsRN=('R1','R2','R3','R4','R5','NSIDC')
     simsR=('R1','R2','R3','R4','R5')
@@ -738,14 +876,16 @@ if dolongtermavg:
     simflddf = pd.DataFrame(lmd.loaddata((simfield1,),sims,ncfields=(simncfield1,), timefreq=sea, 
                                          meantype='time',region=region),index=sims)*simconv1
 
-    # for estimating sigma:
+    # --- for estimating sigma in Individual SIC forcing ensemble only:
     simflddfr = pd.DataFrame(lmd.loaddata((simfield1,),simsR,ncfields=(simncfield1,), timefreq=sea, 
                                           meantype='time',region=region),index=simsR)*simconv1
     simval=simflddfr.values[0,:]
     simstds = [simval[1:].std(), simval[[0,2,3,4]].std(), simval[[0, 1, 3, 4]].std(), 
-               simval[[0, 1, 2, 4]].std(), simval[0:-1].std()]
+               simval[[0, 1, 2, 4]].std(), simval[0:-1].std()] # hack
 
     simsigma=simval.std()
+
+
     if subnh:
         simsubcdf = pd.DataFrame(lmd.loaddata((simfield1,),sims,ncfields=(simncfield1,), timefreq=sea, 
                                              filetype='ctl',region='nh'))*simconv1
