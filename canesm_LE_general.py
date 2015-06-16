@@ -17,20 +17,23 @@ import matplotlib.font_manager as fm
 import loadmodeldata as lmd
 import matplotlib.patches as mpatches
 import matplotlib.lines as mlines
+from scipy.stats import norm
+import random
+import numpy.ma as ma
 
 # exception handling works below. add to other clauses @@
 
 printtofile=False
 dohist=False
-doregress=True
+doregress=False
 doscatter=False
-dolongtermavg=False
+dolongtermavg=True
 
 addobs=True # to scatter plot
 addnat=False
 addsims=True # add the idealized simulations. only good for DJF polar amp vs eurasia SAT
 
-local=True
+local=False
 
 conditional=True # plot scatter conditional on 3rd var
 
@@ -714,12 +717,12 @@ if doregress:
 
 
 def sample120yravg(lesea,numsamp,nummems=11,allowreps=True):
-    """ this function does not care about repeat indices.
-        Just choose 11 random ens members, and do it numsamp
+    """ choose nummems random ens members, and do it numsamp
         times.
 
         nummems: number of members to choose. default 11 (for 11mem x 11yr = 122yr)
-        allowreps: default True. allow repeat indices to be chosen
+        allowreps: default True. allow repeat ensemble indices to be chosen in different
+                   numsamp chunks (never dupes within each nummems selection)
 
         returns ltavg, ltsigma (average & std of each nummem set. len numsamp)
     """
@@ -755,18 +758,51 @@ def sample120yravg(lesea,numsamp,nummems=11,allowreps=True):
 
     return ltavg,ltsigma
 
+def subsamp_sims(simsdf,numyrs=11):
+    """ select 11 year segments from given simsdf (data should be anoms)
+             simsdf.keys(): sims
+             simsdf.index(): time index
+
+             number of total samples will be determined by length of all sim data
+                      and numyrs (e.g. (ntime / numyrs)*numsims)
+    """
+    
+    ntime,numsims=simsdf.values.shape
+    samp = ntime/numyrs
+    allsii=0 # keep track of all sims and all subsamps
+    subsampavg=np.zeros(samp*numsims)
+
+    print 'sample each of ' + str(numsims) + ' sims ' + str(samp) + ' times'
+
+    for nii,sim in enumerate(simsdf.keys()):
+        
+        vals=simsdf[sim].values     
+        
+        # random index to start looping, since we have a remainder when ntime/numyrs
+        startyr = np.random.randint(np.mod(ntime,numyrs))
+        print 'start ' + str(startyr)
+        for sii in np.arange(startyr,samp):
+            
+            subsampavg[allsii] = vals[sii+sii*numyrs:sii+sii*numyrs+numyrs].mean()
+            allsii+=1
+
+    return subsampavg
+
+
 if dolongtermavg:
 
-    printtofile=False
+    longtermLE=False # else, subsample AGCM sims
+
+    printtofile=True
 
     numsamp=100 # how many times to sample 11 ens members
 
     addraw=False # add the decadal diffs?
-    subnh=False # @@@@ when subtracting, prob should subtract the mean NH temp, not individual runs
+    subnh=True # @@@@ when subtracting, prob should subtract the mean NH temp, not individual runs
     substr='' # for filename
     ttlstr=' ' 
     prstr=''
-    option2=True # otherwise, original method of selectin 11 members numsamp times.
+    option2=True # otherwise, original method of selecting 11 members numsamp times. (longtermLE=True)
     if option2:
         numsamp=50
 
@@ -814,7 +850,9 @@ if dolongtermavg:
         subc = le.load_LEdata(fdictsub,casename,timesel=timeselc, rettype='ndarray',conv=leconv,ftype=ftype,local=local)
         subp = le.load_LEdata(fdictsub,casename,timesel=timeselp, rettype='ndarray',conv=leconv,ftype=ftype,local=local)
         sub = cutl.seasonalize_monthlyts(subp.T,season=sea).T - cutl.seasonalize_monthlyts(subc.T,season=sea).T
-        lesea = lesea - sub.mean(axis=1)
+        # @@@ change this to subtract the MEAN hemispheric anom from all ens members
+        #lesea = lesea - sub.mean(axis=1)
+        lesea = lesea - sub.mean(axis=1).mean()
 
     # RAW anomalies (decadal diffs)
     # calc the pdf associated with the hist
@@ -828,53 +866,88 @@ if dolongtermavg:
     rawpdf_fitted = norm.pdf(rawxx,loc=rawmean,scale=rawsd)
 
 
-    # second option: choose 4 random, non-overlapping groups of 11 members x 11-yrs
-    #                do this numsamp times. Compare with sigma of 5 AGCM sims
-    if option2:
-        ltavg2=np.zeros(numsamp)
-        ltsigma2=np.zeros(numsamp)
-        for ns in np.arange(0,numsamp):
-            # returns 4 avgs and sigmas across e/ of the 12 selected members
-            avgtmp,sigmajunk = sample120yravg(lesea,4,nummems=11,allowreps=False)
-            ltavg2[ns]=avgtmp.mean()
-            ltsigma2[ns]=avgtmp.std()
+    if longtermLE:
+        # second option: choose 4 random, non-overlapping groups of 11 members x 11-yrs
+        #                do this numsamp times. Compare with sigma of 5 AGCM sims
+        if option2:
+            ltavg2=np.zeros(numsamp)
+            ltsigma2=np.zeros(numsamp)
+            for ns in np.arange(0,numsamp):
+                # returns 4 avgs and sigmas across e/ of the 12 selected members
+                avgtmp,sigmajunk = sample120yravg(lesea,4,nummems=11,allowreps=False)
+                ltavg2[ns]=avgtmp.mean()
+                ltsigma2[ns]=avgtmp.std()
 
-        ltavg=ltavg2
-        ltsigma=ltsigma2
-        prstr='opt2'        
-    else: # I don't think this makes as much sense for estimating sigma convergence? @@
+            ltavg=ltavg2
+            ltsigma=ltsigma2
+            prstr='opt2'        
+        else: # I don't think this makes as much sense for estimating sigma convergence? @@
 
-        # sample 11 ensemble members: 11 members x 11 years = ~120 yrs to equal AGCM sims
-        # (do this numsamp times with diff combos of 11).        
-        ltavg,ltsigma = sample120yravg(lesea,numsamp) # option one.
+            # sample 11 ensemble members: 11 members x 11 years = ~120 yrs to equal AGCM sims
+            # (do this numsamp times with diff combos of 11).        
+            ltavg,ltsigma = sample120yravg(lesea,numsamp) # option one.
 
-        # the sigma returned here isn't really appropriate for comparison with the AGCM sims.
-        # This is because it is the sigma across each 12 member selection
-        # instead, now should randomly select 3-5 elements from ltavg and compute 
-        #   sigma across those small sets. For non-repeating selections of 4, 
-        #   can only run 12 times if original numsamp is 50.
-        nummems2=4
-        ltavg2,ltsigma2= sample120yravg(ltavg,numsamp/nummems2,nummems=nummems2,allowreps=False)
+            # the sigma returned here isn't really appropriate for comparison with the AGCM sims.
+            # This is because it is the sigma across each 12 member selection
+            # instead, now should randomly select 3-5 elements from ltavg and compute 
+            #   sigma across those small sets. For non-repeating selections of 4, 
+            #   can only run 12 times if original numsamp is 50.
+            nummems2=4
+            ltavg2,ltsigma2= sample120yravg(ltavg,numsamp/nummems2,nummems=nummems2,allowreps=False)
+
+        # Now calc the pdf associated with the hist
+        ltpdf=norm.fit(ltavg)
+        ltmean=ltpdf[0]
+        ltsd=ltpdf[1]
+        #Generate X points
+        ltxlims = [-4*ltsd+ltmean, 4*ltsd+ltmean] # large limits
+        ltxx = np.linspace(ltxlims[0],ltxlims[1],500)
+        #Get Y points via Normal PDF with fitted parameters
+        ltpdf_fitted = norm.pdf(ltxx,loc=ltmean,scale=ltsd)
 
 
-    # Now calc the pdf associated with the hist
-    ltpdf=norm.fit(ltavg)
-    ltmean=ltpdf[0]
-    ltsd=ltpdf[1]
-    #Generate X points
-    ltxlims = [-4*ltsd+ltmean, 4*ltsd+ltmean] # large limits
-    ltxx = np.linspace(ltxlims[0],ltxlims[1],500)
-    #Get Y points via Normal PDF with fitted parameters
-    ltpdf_fitted = norm.pdf(ltxx,loc=ltmean,scale=ltsd)
+    else: # not longtermLE (short term sims instead)
+
+        # here we want to subsample 11-year segments from the sims
+        sims=('E1','E2','E3','E4','E5'); simsstr='sbEonly' # sub
+        #sims=('R1','R2','R3','R4','R5'); simsstr='sbRonly'
+        simflddf = pd.DataFrame(lmd.loaddata((simfield1,),sims,ncfields=(simncfield1,), timefreq=sea, 
+                                             region=region))*simconv1
+
+        
+
+        if subnh:
+            simsubdf = pd.DataFrame(lmd.loaddata((simfield1,),sims,ncfields=(simncfield1,), timefreq=sea, 
+                                                 filetype='diff',region='nh'))*simconv1
+
+            # want to subtract the mean hemispheric avg anomaly
+            simflddf = simflddf - simsubdf.mean(axis=1).mean() # average over sims and then time (should be a scalar)
+
+
+        subsamp = subsamp_sims(simflddf,numyrs=11)
+        plotsims = subsamp
+
+        # Now calc the pdf associated with the hist
+        sspdf=norm.fit(plotsims) # ss = subsamp
+        ssmean=sspdf[0]
+        sssd=sspdf[1]
+        #Generate X points
+        ssxlims = [-4*sssd+ssmean, 4*sssd+ssmean] # large limits
+        ssxx = np.linspace(ssxlims[0],ssxlims[1],500)
+        #Get Y points via Normal PDF with fitted parameters
+        sspdf_fitted = norm.pdf(ssxx,loc=ssmean,scale=sssd)
+
+        print '===== AGCM mean ' + str(ssmean) + ' sigma ' + str(sssd)
 
 
     # ========= add sims
-    sims=('E1','E2','E3','E4','E5','R1','R2','R3','R4','R5','NSIDC'); simsstr=''
-    simsRN=('R1','R2','R3','R4','R5','NSIDC')
-    simsR=('R1','R2','R3','R4','R5')
-    sims=simsRN; simsstr='Ronly'
+    sims=('E1','E2','E3','E4','E5','R1','R2','R3','R4','R5','NSIDC'); #simsstr=''
+    #simsRN=('R1','R2','R3','R4','R5','NSIDC')
+    #simsR=('R1','R2','R3','R4','R5')
+    #sims=simsRN; simsstr='Ronly'
     simflddf = pd.DataFrame(lmd.loaddata((simfield1,),sims,ncfields=(simncfield1,), timefreq=sea, 
                                          meantype='time',region=region),index=sims)*simconv1
+
 
     # --- for estimating sigma in Individual SIC forcing ensemble only:
     simflddfr = pd.DataFrame(lmd.loaddata((simfield1,),simsR,ncfields=(simncfield1,), timefreq=sea, 
@@ -903,11 +976,12 @@ if dolongtermavg:
         simflddf = simfldpdf.mean(axis=0)-simfldcdf.mean(axis=0)
         simfldm = ma.masked_where(pvals>siglevel,simflddf.values)
         # have to calc pvals 
-        
+
     else:
         simpvdf = pd.DataFrame(lmd.loaddata((simfield1,),sims,ncfields=(simncfield1,), timefreq=sea, 
                                             filetype='pval',region=region),index=sims)
         simfldm = ma.masked_where(simpvdf.values>siglevel,simflddf.values)
+
 
     # add obs
     if field == 'tas':
@@ -930,88 +1004,132 @@ if dolongtermavg:
             substr='_subnh'
             ttlstr='-NH '
 
+
+
     # ========= make the figures =========
+    if longtermLE:
+        if option2:
+            # how does sigma converge with n?
+            fig,ax=plt.subplots(1,1)
+            ax.hist(ltsigma,color=ltcol,alpha=0.5)
+            ax.axvline(simsigma,color='0.3',linewidth=3)
+            for ll in np.arange(0,5):
+                ax.axvline(simstds[ll],color='0.3',linewidth=1)
+            ax.set_title('$\sigma$ across sets of 4 Estimated 120-year Eurasian' + ttlstr + 'SAT change (DJF)')
+            ax.set_ylabel('Density')
+            ltlg=mpatches.Patch(color=ltcol,alpha=0.5)
+            simlg=mlines.Line2D([],[],color='0.3',linewidth=3) # all five
+            simslg=mlines.Line2D([],[],color='0.3',linewidth=1)
+            ax.set_xlabel('n=' + str(numsamp))
+            ax.legend((ltlg,simlg,simslg),('120-yr avg Historical','5 SIC forcings', 'combos of 4 SIC forcings'), 
+                      loc='upper left',frameon=False)
+            if printtofile:
+                fig.savefig(field + region + substr + 'SIGMA_' + sea + '_LEsims' +\
+                            simsstr + 'obs_est120yravg_hist' + prstr + '.pdf')
+        else:
+            fig,ax=plt.subplots(1,1)
+            ax.hist(ltsigma,color=ltcol,alpha=0.5)
+            ax.axvline(simsigma,color='0.3',linewidth=3)
+            ax.set_title('$\sigma$ across sets of 4 Estimated 120-year Eurasian' + ttlstr + 'SAT change (DJF)')
+            ax.set_ylabel('Density')
+            ltlg=mpatches.Patch(color=ltcol,alpha=0.5)
+            simlg=mlines.Line2D([],[],color='0.3',linewidth=3)
+            ax.set_xlabel('n=' + str(numsamp))
+            ax.legend((ltlg,simlg),('120-yr avg Historical','SIC forcings'), 
+                      loc='upper right',frameon=False)
+            if printtofile:
+                fig.savefig(field + region + substr + 'SIGMA_' + sea + '_LEsims' +\
+                            simsstr + 'obs_est120yravg_hist' + prstr + '.pdf')
 
-    if option2:
-        # how does sigma converge with n?
+
+        ltlg=mlines.Line2D([],[],color=ltcol,linewidth=2)
+        simlg=mlines.Line2D([],[],color='0.3',linestyle='none',marker='o')
+        nsidclg=mlines.Line2D([],[],color='g',linestyle='none',marker='o')
+        obslg=mlines.Line2D([],[],color='b',linestyle='none',marker='s')
+
         fig,ax=plt.subplots(1,1)
-        ax.hist(ltsigma,color=ltcol,alpha=0.5)
-        ax.axvline(simsigma,color='0.3',linewidth=3)
-        for ll in np.arange(0,5):
-            ax.axvline(simstds[ll],color='0.3',linewidth=1)
-        ax.set_title('$\sigma$ across sets of 4 Estimated 120-year Eurasian' + ttlstr + 'SAT change (DJF)')
+        ax.hist(ltavg,normed=True,color=ltcol,alpha=0.5)
+        ax.plot(ltxx,ltpdf_fitted,color=ltcol,linewidth=2)
+        ax.plot(simflddf.values, np.zeros(len(simflddf)),color='0.3',
+                 marker='o',linestyle='',fillstyle='none',mew=mew,markersize=ms)
+        ax.plot(simfldm,np.zeros(len(simflddf)),color='0.3',
+                 marker='o',linestyle='',fillstyle='full')
+        if subnh: # HACK @@
+            ax.plot(simflddf['NSIDC'],0,color='g',
+                    marker='o',linestyle='',fillstyle='none',mew=mew,markersize=ms,mec='g')
+        else:
+            ax.plot(simflddf['NSIDC'].values[0],0,color='g',
+                    marker='o',linestyle='',fillstyle='none',mew=mew,markersize=ms,mec='g')
+        ax.plot(obsreg,0,color='b',marker='s',fillstyle='full',markersize=ms)# blue for actual obs. green for simulated obs
+        ylims=ax.get_ylim()
+        ax.set_ylim(-0.1,ylims[1])
+        ax.set_yticklabels('')
+        ax.axhline(y=0,color='k')
+        ax.axvline(x=0,color='k',linestyle='--')
         ax.set_ylabel('Density')
-        ltlg=mpatches.Patch(color=ltcol,alpha=0.5)
-        simlg=mlines.Line2D([],[],color='0.3',linewidth=3) # all five
-        simslg=mlines.Line2D([],[],color='0.3',linewidth=1)
-        ax.set_xlabel('n=' + str(numsamp))
-        ax.legend((ltlg,simlg,simslg),('120-yr avg Historical','5 SIC forcings', 'combos of 4 SIC forcings'), 
+        ax.set_title('Estimated 120-year Eurasian' + ttlstr + 'SAT change (DJF)')
+        ax.set_xlabel('$\Delta$ SAT ($^\circ$C); n=' + str(numsamp))
+        ax.legend((ltlg,simlg,nsidclg,obslg),('120-yr avg Historical','SIC forcings','NSIDC SIC forcing','Observations'),
                   loc='upper left',frameon=False)
+
+
         if printtofile:
-            fig.savefig(field + region + substr + 'SIGMA_' + sea + '_LEsims' +\
-                        simsstr + 'obs_est120yravg_hist' + prstr + '.pdf')
-    else:
+            fig.savefig(field + region + substr + '_' + sea + '_LEsims' + simsstr + 'obs_est120yravg_hist' + prstr + '.pdf')
+
+        if addraw:
+            # add RAW for comparison
+            ax.hist(lesea,normed=True,color=hcol,alpha=0.5)
+            ax.plot(rawxx,rawpdf_fitted,color=hcolline,linewidth=2)
+            rawlg=mlines.Line2D([],[],color=hcolline,linewidth=2)
+            ax.legend((ltlg,rawlg,simlg,obslg),
+                      ('120-yr avg Historical','Historical','SIC forcings','Observations'),
+                      loc='upper left',frameon=False)
+            if printtofile:
+                fig.savefig(field + region + substr + '_' + sea + '_LEsims' + simsstr + 'obs_est120yravgraw_hist' + prstr + '.pdf')
+
+    else: # not longtermLE
+
+        sslg=mlines.Line2D([],[],color=ltcol,linewidth=2) # subsamp sims
+        simlg=mlines.Line2D([],[],color='0.3',linestyle='none',marker='o')
+        nsidclg=mlines.Line2D([],[],color='g',linestyle='none',marker='o')
+        obslg=mlines.Line2D([],[],color='b',linestyle='none',marker='s')
+
         fig,ax=plt.subplots(1,1)
-        ax.hist(ltsigma,color=ltcol,alpha=0.5)
-        ax.axvline(simsigma,color='0.3',linewidth=3)
-        ax.set_title('$\sigma$ across sets of 4 Estimated 120-year Eurasian' + ttlstr + 'SAT change (DJF)')
+        #ax.hist(ltavg,normed=True,color=ltcol,alpha=0.5)
+        #ax.plot(ltxx,ltpdf_fitted,color=ltcol,linewidth=2)
+        ax.hist(plotsims,normed=True,color=ltcol,alpha=0.5)
+        ax.plot(ssxx,sspdf_fitted,color=ltcol,linewidth=2)
+        ax.plot(simflddf.values, np.zeros(len(simflddf)),color='0.3',
+                 marker='o',linestyle='',fillstyle='none',mew=mew,markersize=ms)
+        ax.plot(simfldm,np.zeros(len(simflddf)),color='0.3',
+                 marker='o',linestyle='',fillstyle='full')
+        if subnh: # HACK @@
+            ax.plot(simflddf['NSIDC'],0,color='g',
+                    marker='o',linestyle='',fillstyle='none',mew=mew,markersize=ms,mec='g')
+        else:
+            ax.plot(simflddf['NSIDC'].values[0],0,color='g',
+                    marker='o',linestyle='',fillstyle='none',mew=mew,markersize=ms,mec='g')
+        ax.plot(obsreg,0,color='b',marker='s',fillstyle='full',markersize=ms)# blue for actual obs. green for simulated obs
+        ylims=ax.get_ylim()
+        ax.set_ylim(-0.1,ylims[1])
+        ax.set_yticklabels('')
+        ax.axhline(y=0,color='k')
+        ax.axvline(x=0,color='k',linestyle='--')
         ax.set_ylabel('Density')
-        ltlg=mpatches.Patch(color=ltcol,alpha=0.5)
-        simlg=mlines.Line2D([],[],color='0.3',linewidth=3)
-        ax.set_xlabel('n=' + str(numsamp))
-        ax.legend((ltlg,simlg),('120-yr avg Historical','SIC forcings'), 
-                  loc='upper right',frameon=False)
-        if printtofile:
-            fig.savefig(field + region + substr + 'SIGMA_' + sea + '_LEsims' +\
-                        simsstr + 'obs_est120yravg_hist' + prstr + '.pdf')
+        ax.set_title('11-year epochs Eurasian' + ttlstr + 'SAT change (DJF)')
+        ax.set_xlabel('$\Delta$ SAT ($^\circ$C); LE avg= $%.2f$'%(rawmean) + ' AGCM avg= $%.2f$'%(ssmean) )
 
-    # need to test the validity of the randomly selected members @@
-    # also probably add more than 50 b/c the pdf changes a lot w/ each run.
-    fig,ax=plt.subplots(1,1)
-    ax.hist(ltavg,normed=True,color=ltcol,alpha=0.5)
-    ltlg=mlines.Line2D([],[],color=ltcol,linewidth=2)
-    simlg=mlines.Line2D([],[],color='0.3',linestyle='none',marker='o')
-    nsidclg=mlines.Line2D([],[],color='g',linestyle='none',marker='o')
-    obslg=mlines.Line2D([],[],color='b',linestyle='none',marker='s')
-
-    ax.plot(ltxx,ltpdf_fitted,color=ltcol,linewidth=2)
-    ax.plot(simflddf.values, np.zeros(len(simflddf)),color='0.3',
-             marker='o',linestyle='',fillstyle='none',mew=mew,markersize=ms)
-    ax.plot(simfldm,np.zeros(len(simflddf)),color='0.3',
-             marker='o',linestyle='',fillstyle='full')
-    if subnh: # HACK @@
-        ax.plot(simflddf['NSIDC'],0,color='g',
-                marker='o',linestyle='',fillstyle='none',mew=mew,markersize=ms,mec='g')
-    else:
-        ax.plot(simflddf['NSIDC'].values[0],0,color='g',
-                marker='o',linestyle='',fillstyle='none',mew=mew,markersize=ms,mec='g')
-    ax.plot(obsreg,0,color='b',marker='s',fillstyle='full',markersize=ms)# blue for actual obs. green for simulated obs
-    ylims=ax.get_ylim()
-    ax.set_ylim(-0.1,ylims[1])
-    ax.set_yticklabels('')
-    ax.axhline(y=0,color='k')
-    ax.axvline(x=0,color='k',linestyle='--')
-    ax.set_ylabel('Density')
-    ax.set_title('Estimated 120-year Eurasian' + ttlstr + 'SAT change (DJF)')
-    ax.set_xlabel('$\Delta$ SAT ($^\circ$C); n=' + str(numsamp))
-    ax.legend((ltlg,simlg,nsidclg,obslg),('120-yr avg Historical','SIC forcings','NSIDC SIC forcing','Observations'),
-              loc='upper left',frameon=False)
-
-    
-    if printtofile:
-        fig.savefig(field + region + substr + '_' + sea + '_LEsims' + simsstr + 'obs_est120yravg_hist' + prstr + '.pdf')
-
-    if addraw:
-        # add RAW for comparison
+        # add RAW 
         ax.hist(lesea,normed=True,color=hcol,alpha=0.5)
         ax.plot(rawxx,rawpdf_fitted,color=hcolline,linewidth=2)
         rawlg=mlines.Line2D([],[],color=hcolline,linewidth=2)
-        ax.legend((ltlg,rawlg,simlg,obslg),
-                  ('120-yr avg Historical','Historical','SIC forcings','Observations'),
+        ax.legend((rawlg,sslg,simlg,obslg),
+                  ('Historical LE','11-yr subsample SIC forcings','120-yr average SIC forcings','Observations'),
                   loc='upper left',frameon=False)
         if printtofile:
-            fig.savefig(field + region + substr + '_' + sea + '_LEsims' + simsstr + 'obs_est120yravgraw_hist' + prstr + '.pdf')
-
+            now = str(datetime.datetime.now().time())
+            fig.savefig(field + region + substr + '_' + sea + '_LEsims' + simsstr +\
+                        'obs_11yrsubsmpavgraw_hist' + prstr + now + '.pdf')
 
 
 
