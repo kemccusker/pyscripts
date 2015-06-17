@@ -26,8 +26,8 @@ import numpy.ma as ma
 printtofile=False
 dohist=False
 doregress=False
-doscatter=False
-dolongtermavg=True
+doscatter=True
+dolongtermavg=False
 
 addobs=True # to scatter plot
 addnat=False
@@ -64,12 +64,16 @@ sea2='DJF'
 fieldcnd = 'sic'; ncfieldcnd='sic'; compcnd='OImon'; regioncnd='bksmori'
 leconvcnd=1
 seacnd=sea1
-cmincnd=-10; cmaxcnd=1
+cmincnd=-9; cmaxcnd=3 # for 4 color colorbar
 
 xlab=ylab=None
-xlab = '$\Delta$ DJF Barents-Kara Seas Z500 (m)'
-ylab = '$\Delta$ DJF SAT(Eurasia) - SAT(NH) ($^\circ$C)'
-#ylab = '$\Delta$ DJF Eurasian SAT ($^\circ$C)'
+if field2=='tas' and region2=='eurasiamori' and performop2==True and op2=='sub':
+    ylab = '$\Delta$ DJF SAT(Eurasia) - SAT(NH) ($^\circ$C)'
+elif field2=='tas' and region2=='eurasiamori' and performop2==False:
+    ylab = '$\Delta$ DJF Eurasian SAT ($^\circ$C)'
+if field1=='zg50000.00' and region1=='bksmori':
+    xlab = '$\Delta$ DJF Barents-Kara Seas Z500 (m)'
+
 
 simconv1=simconv2=1
 if field1=='tas': simfield1='st'; simncfield1='ST'
@@ -91,7 +95,49 @@ fdict2 = {'field': field2+region2, 'ncfield': ncfield2, 'comp': comp2}
 fdictcnd = {'field': fieldcnd+regioncnd, 'ncfield': ncfieldcnd, 'comp': compcnd}
 
 
+
+def subsamp_sims(simsdf,numyrs=11):
+    """ select 11 year segments from given simsdf (data should be anoms)
+             simsdf.keys(): sims
+             simsdf.index(): time index
+
+             number of total samples will be determined by length of all sim data
+                      and numyrs (e.g. (ntime / numyrs)*numsims)
+
+             returns ndarray of subsample averages
+    """
+    #print simsdf
+
+    ntime,numsims=simsdf.values.shape
+    samp = ntime/numyrs
+    allsii=0 # keep track of all sims and all subsamps
+    subsampavg=np.zeros(samp*numsims)
+
+    print 'sample each of ' + str(numsims) + ' sims ' + str(samp) + ' times'
+
+    for nii,sim in enumerate(simsdf.keys()):
+        
+        vals=simsdf[sim].values     
+        
+        # random index to start looping, since we have a remainder when ntime/numyrs
+        startyr = np.random.randint(np.mod(ntime,numyrs))
+        print 'start ' + str(startyr)
+        for sii in np.arange(startyr,ntime-numyrs,numyrs):
+
+            #print 'sii ' + str(sii) + ', allsii ' + str(allsii)
+            #subsampavg[allsii] = vals[sii+sii*numyrs:sii+sii*numyrs+numyrs].mean()
+            subsampavg[allsii] = vals[sii:sii+numyrs].mean()
+            allsii+=1
+
+    return subsampavg
+
+
+
 if doscatter:
+    printtofile=True
+
+    shorttermsims=True
+    ymin=-2; ymax=3 # for Eurasia SAT v BKS Z500
 
     # historical
     casename='historical'
@@ -142,52 +188,65 @@ if doscatter:
     lemm, lebb, lerval, lepval, lestd_err = sp.stats.linregress(lefld1,lefld2)
 
     if conditional:
-        lecdatcnd = le.load_LEdata(fdictcnd,casename,timesel=timeselc, rettype='ndarray',conv=leconvcnd,ftype=ftype,local=local)
+        lecdatcnd = le.load_LEdata(fdictcnd,casename,timesel=timeselc, 
+                                   rettype='ndarray',conv=leconvcnd,ftype=ftype,local=local)
         (numenscnd,ntimecnd) = lecdatcnd.shape
-        lepdatcnd=le.load_LEdata(fdictcnd,casename,timesel=timeselp, rettype='ndarray',conv=leconvcnd,ftype=ftype,local=local)
+        lepdatcnd=le.load_LEdata(fdictcnd,casename,timesel=timeselp, 
+                                 rettype='ndarray',conv=leconvcnd,ftype=ftype,local=local)
         lecseacnd = cutl.seasonalize_monthlyts(lecdatcnd.T,season=seacnd).T
         lepseacnd = cutl.seasonalize_monthlyts(lepdatcnd.T,season=seacnd).T
         leseacnd = lepseacnd - lecseacnd
         lefldcnd=lepseacnd.mean(axis=1)-lecseacnd.mean(axis=1)
 
-    # historicalNat
-    casename2='historicalNat'
-    lecdat1n = le.load_LEdata(fdict1,casename2,timesel=timeselc, rettype='ndarray',conv=leconv1,ftype=ftype,local=local)
-    (numens1,ntime1) = lecdat1n.shape
-    lepdat1n=le.load_LEdata(fdict1,casename2,timesel=timeselp, rettype='ndarray',conv=leconv1,ftype=ftype,local=local)
-    lecsea1n = cutl.seasonalize_monthlyts(lecdat1n.T,season=sea1).T
-    lepsea1n = cutl.seasonalize_monthlyts(lepdat1n.T,season=sea1).T
-    lesea1n = lepsea1n - lecsea1n
-    if performop1:
-        fdict1op = {'field': field1+region1op, 'ncfield': ncfield1, 'comp': comp1}
-        subc1n = le.load_LEdata(fdict1op,casename2,timesel=timeselc, rettype='ndarray',conv=leconv1,ftype=ftype,local=local)
-        subp1n = le.load_LEdata(fdict1op,casename2,timesel=timeselp, rettype='ndarray',conv=leconv1,ftype=ftype,local=local)
-        sub1n = cutl.seasonalize_monthlyts(subp1n.T,season=sea1).T - cutl.seasonalize_monthlyts(subc1n.T,season=sea1).T
+    if addnat:
+        # historicalNat
+        casename2='historicalNat'
+        lecdat1n = le.load_LEdata(fdict1,casename2,timesel=timeselc, 
+                                  rettype='ndarray',conv=leconv1,ftype=ftype,local=local)
+        (numens1,ntime1) = lecdat1n.shape
+        lepdat1n=le.load_LEdata(fdict1,casename2,timesel=timeselp, 
+                                rettype='ndarray',conv=leconv1,ftype=ftype,local=local)
+        lecsea1n = cutl.seasonalize_monthlyts(lecdat1n.T,season=sea1).T
+        lepsea1n = cutl.seasonalize_monthlyts(lepdat1n.T,season=sea1).T
+        lesea1n = lepsea1n - lecsea1n
+        if performop1:
+            fdict1op = {'field': field1+region1op, 'ncfield': ncfield1, 'comp': comp1}
+            subc1n = le.load_LEdata(fdict1op,casename2,timesel=timeselc, 
+                                    rettype='ndarray',conv=leconv1,ftype=ftype,local=local)
+            subp1n = le.load_LEdata(fdict1op,casename2,timesel=timeselp, 
+                                    rettype='ndarray',conv=leconv1,ftype=ftype,local=local)
+            sub1n = cutl.seasonalize_monthlyts(subp1n.T,season=sea1).T -\
+                    cutl.seasonalize_monthlyts(subc1n.T,season=sea1).T
 
-        if op1=='sub': # subtract
-            lefld1n = lesea1n.mean(axis=1) - sub1n.mean(axis=1)
-        elif op1=='div': # divide
-            lefld1n = lesea1n.mean(axis=1) / sub1n.mean(axis=1)
-    else:
-        lefld1n=lepsea1n.mean(axis=1)-lecsea1n.mean(axis=1)
+            if op1=='sub': # subtract
+                lefld1n = lesea1n.mean(axis=1) - sub1n.mean(axis=1)
+            elif op1=='div': # divide
+                lefld1n = lesea1n.mean(axis=1) / sub1n.mean(axis=1)
+        else:
+            lefld1n=lepsea1n.mean(axis=1)-lecsea1n.mean(axis=1)
 
-    lecdat2n = le.load_LEdata(fdict2,casename2,timesel=timeselc, rettype='ndarray',conv=leconv2,ftype=ftype,local=local)
-    (numens2,ntime2) = lecdat1n.shape
-    lepdat2n=le.load_LEdata(fdict2,casename2,timesel=timeselp, rettype='ndarray',conv=leconv2,ftype=ftype,local=local)
-    lecsea2n = cutl.seasonalize_monthlyts(lecdat2n.T,season=sea2).T
-    lepsea2n = cutl.seasonalize_monthlyts(lepdat2n.T,season=sea2).T
-    lesea2n = lepsea2n - lecsea2n
-    if performop2:
-        if op2=='sub': # subtract
-            fdict2sub = {'field': field2+region2op, 'ncfield': ncfield2, 'comp': comp2}
-            subc2n = le.load_LEdata(fdict2sub,casename2,timesel=timeselc, rettype='ndarray',conv=leconv2,ftype=ftype,local=local)
-            subp2n = le.load_LEdata(fdict2sub,casename2,timesel=timeselp, rettype='ndarray',conv=leconv2,ftype=ftype,local=local)
-            sub2n = cutl.seasonalize_monthlyts(subp2n.T,season=sea2).T - cutl.seasonalize_monthlyts(subc2n.T,season=sea2).T
-            lefld2n = lesea2n.mean(axis=1) - sub2n.mean(axis=1)
-    else:
-        lefld2n=lepsea2n.mean(axis=1)-lecsea2n.mean(axis=1)
+        lecdat2n = le.load_LEdata(fdict2,casename2,timesel=timeselc, 
+                                  rettype='ndarray',conv=leconv2,ftype=ftype,local=local)
+        (numens2,ntime2) = lecdat1n.shape
+        lepdat2n=le.load_LEdata(fdict2,casename2,timesel=timeselp, 
+                                rettype='ndarray',conv=leconv2,ftype=ftype,local=local)
+        lecsea2n = cutl.seasonalize_monthlyts(lecdat2n.T,season=sea2).T
+        lepsea2n = cutl.seasonalize_monthlyts(lepdat2n.T,season=sea2).T
+        lesea2n = lepsea2n - lecsea2n
+        if performop2:
+            if op2=='sub': # subtract
+                fdict2sub = {'field': field2+region2op, 'ncfield': ncfield2, 'comp': comp2}
+                subc2n = le.load_LEdata(fdict2sub,casename2,timesel=timeselc, 
+                                        rettype='ndarray',conv=leconv2,ftype=ftype,local=local)
+                subp2n = le.load_LEdata(fdict2sub,casename2,timesel=timeselp, 
+                                        rettype='ndarray',conv=leconv2,ftype=ftype,local=local)
+                sub2n = cutl.seasonalize_monthlyts(subp2n.T,season=sea2).T -\
+                        cutl.seasonalize_monthlyts(subc2n.T,season=sea2).T
+                lefld2n = lesea2n.mean(axis=1) - sub2n.mean(axis=1)
+        else:
+            lefld2n=lepsea2n.mean(axis=1)-lecsea2n.mean(axis=1)
 
-    lemmn, lebbn, lervaln, lepvaln, lestd_errn = sp.stats.linregress(lefld1n,lefld2n)
+        lemmn, lebbn, lervaln, lepvaln, lestd_errn = sp.stats.linregress(lefld1n,lefld2n)
    
 
     if addobs: # DATA MUST EXIST:hard coded for TAS and Z500 @@
@@ -252,6 +311,7 @@ if doscatter:
 
 
     if addsims:
+        # 120-yr averages
         sims=('E1','E2','E3','E4','E5','R1','R2','R3','R4','R5')
         # why did this work before? had to change to Series (jun 11 2015)
         flddf1 = pd.Series(lmd.loaddata((simfield1,),sims,ncfields=(simncfield1,), timefreq=sea1, 
@@ -262,9 +322,13 @@ if doscatter:
                                                  meantype='time',region=region1op))*simconv1
 
             if op1=='sub': # subtract
-                flddf1 = flddf1 - flddf1op
+                if region1op=='nh':
+                    flddf1 = flddf1 - flddf1op.mean()
+                else:
+                    flddf1 = flddf1 - flddf1op
             elif op1=='div': # divide
                 flddf1 = flddf1 / flddf1op
+        
 
         flddf2 = pd.Series(lmd.loaddata((simfield2,),sims,ncfields=(simncfield2,), timefreq=sea2, 
                                            meantype='time',region=region2))*simconv2
@@ -274,13 +338,59 @@ if doscatter:
                                                  meantype='time',region=region2op))*simconv2
 
             if op2=='sub': # subtract
-                flddf2 = flddf2 - flddf2op
+                if region2op=='nh':
+                    flddf2 = flddf2 - flddf2op.mean()
+                else:
+                    flddf2 = flddf2 - flddf2op
             elif op2=='div': # divide
                 flddf2 = flddf2 / flddf2op
 
         simmm, simbb, simrval, simpval, simstd_err = sp.stats.linregress(np.squeeze(flddf1.values),np.squeeze(flddf2.values))
         print '-------- SIMS slope, rval, pval: ' + str(simmm),str(simrval),str(simpval)
 
+    if shorttermsims:
+        simsss=('E1','E2','E3','E4','E5'); simsstr='sbEonly' # sub smp
+        #simsss=('R1','R2','R3','R4','R5'); simsstr='sbRonly'
+        fldssdf1 = pd.DataFrame(lmd.loaddata((simfield1,),simsss,ncfields=(simncfield1,), timefreq=sea1, 
+                                             region=region1))*simconv1 # "simss" subsample sims
+
+        if performop1:
+            fldssdf1op = pd.Series(lmd.loaddata((simfield1,),simsss,ncfields=(simncfield1,), timefreq=sea1, 
+                                                 meantype='time',region=region1op))*simconv1
+
+            if op1=='sub': # subtract
+                if region1op=='nh':
+                    fldssdf1 = fldssdf1 - fldssdf1op.mean() # want to subtract ens mean nh
+                else:
+                    fldssdf1 = fldssdf1 - fldssdf1op # not sure if want ens mean here...
+            elif op1=='div': # divide
+                fldssdf1 = fldssdf1 / fldssdf1op
+        
+        fldssdf1 = subsamp_sims(fldssdf1,numyrs=11)
+
+        fldssdf2 = pd.DataFrame(lmd.loaddata((simfield2,),simsss,ncfields=(simncfield2,), timefreq=sea2, 
+                                        region=region2))*simconv2
+
+        if performop2:
+            fldssdf2op = pd.Series(lmd.loaddata((simfield2,),simsss,ncfields=(simncfield2,), timefreq=sea2, 
+                                                 meantype='time',region=region2op))*simconv2
+
+            if op2=='sub': # subtract
+                if region2op=='nh':
+                    fldssdf2 = fldssdf2 - fldssdf2op.mean() # want to subtract ens mean nh
+                else:
+                    fldssdf2 = fldssdf2 - fldssdf2op # not sure if want ens mean here...
+            elif op2=='div': # divide
+                fldssdf2 = fldssdf2 / fldssdf2op
+        
+        fldssdf2 = subsamp_sims(fldssdf2,numyrs=11)
+
+        simssmm, simssbb, simssrval, simsspval, simssstd_err = sp.stats.linregress(fldssdf1,
+                                                                                   fldssdf2)
+        print '-------- (subsamp) SIMS slope, rval, pval: ' + str(simssmm),str(simssrval),str(simsspval)
+
+
+        
 
     # Example of conditional scatter: 
     # http://stackoverflow.com/questions/12965075/matplotlib-scatter-plot-colour-as-function-of-third-variable
@@ -294,27 +404,34 @@ if doscatter:
     plt.scatter(x, y, marker='+', edgecolors=colors, s=150, linewidths=4)
     plt.show()"""
 
-            
+    # ========== FIGURE ===========
+
     fig,ax=plt.subplots(1,1)
     fig.set_size_inches(8,5)
     if conditional:
         cmap=plt.cm.afmhot #autumn # Greens_r #OrRd_r # coolwarm_r
         #markerdt={'marker': 'o', 'linewidth':0}
-        
         scaled_cnd = (lefldcnd - lefldcnd.min()) / lefldcnd.ptp()
         cndcolors = plt.cm.afmhot(scaled_cnd,alpha=0.7) #edgecolors=cndcolors
+
+        b2r20cm = plt.cm.get_cmap('blue2red_20')
+        #testcm = plt.cm.autumn.from_list('testcm',plt.cm.autumn(scaled_cnd,alpha=0.7),N=4)
+        testclrs = np.flipud(b2r20cm.colors[[7,11,14,-1],:])
+        #testcm = b2r20cm.from_list('testcm',testclrs,N=4)
+        testcm = matplotlib.colors.ListedColormap(testclrs, name='testcm')
 
         ledatlg=mlines.Line2D([],[],color=cndcolors[len(cndcolors)/2+5],
                               markerfacecolor=cndcolors[len(cndcolors)/2+5],marker='o',
                               linestyle='none',mew=0,markersize=10)
 
-        ledat=ax.scatter(lefld1,lefld2,c=lefldcnd,cmap=cmap,vmin=cmincnd,vmax=cmaxcnd,s=90,alpha=0.7,marker='o', linewidth=0)
+        ledat=ax.scatter(lefld1,lefld2,c=lefldcnd,cmap=testcm,vmin=cmincnd,
+                         vmax=cmaxcnd,s=90,alpha=0.7,marker='o', linewidth=0)
         ledat.set_clim([cmincnd,cmaxcnd])
 
         cbar_ax = fig.add_axes([.91,.25, .02,.5]) 
         cb=fig.colorbar(ledat,cax=cbar_ax)#,orientation='horizontal')
         cb.set_label('$\Delta$ BKS SIC (%)')
-        lcolor='k'
+        lcolor='brown'
         leghnds=(ledatlg,)
     else:
         ledat=ax.scatter(lefld1,lefld2,color=ccm.get_linecolor('darkolivegreen3'),
@@ -327,7 +444,6 @@ if doscatter:
     onex=np.linspace(axxlims[0],axxlims[1])
     ax.plot(onex,lemm*onex + lebb, color=lcolor,linewidth=1)
     
-
     obstr=''
     
     legstrs=(casename + ' LE',)
@@ -343,72 +459,12 @@ if doscatter:
         legstrs=legstrs + (casename2 + ' LE',)
         print '-------- LENat slope, rval, pval: ' + str(lemmn),str(lervaln),str(lepvaln)
     if addobs:
-        obs=ax.scatter(obsreg1,obsreg2,color='blue',marker='s',s=8**2)
+        obs=ax.scatter(obsreg1,obsreg2,color='blue',marker='s',s=60)
         leghnds=leghnds + (obs,)
         legstrs=legstrs + ('Observations',)
         obstr='obs'
 
-    """if addsims and sea1==sea2=='DJF' and performop1==True and op1=='div' and region1=='gt60n' and region1op=='gm':
-        # calculated using, for example:
-        # lmd.loaddata(('st',),('E1','E2','E3','E4','E5','R1','R2','R3','R4','R5'),
-        #              timefreq='DJF',meantype='time',region='eurasiamori')
-        # polaramp is gt60n / gm
-
-        # these are DJF values for E1-5 and R1-5
-        simpolamp = [[  9.98685376],
-                     [ 11.2359957 ],
-                     [ 13.62247628],
-                     [ 12.03047158],
-                     [ 12.47854705],
-                     [ 10.8695116 ],
-                     [ 13.04175298],
-                     [ 10.06997661],
-                     [ 10.7259977 ],
-                     [ 10.69236807]]
-        simeur = [[ 0.27966023],
-                  [-0.03198602],
-                  [ 0.12460408],
-                  [-0.24664229],
-                  [-0.03082406],
-                  [ 0.12214981],
-                  [-0.10484801],
-                  [-0.00995005],
-                  [ 0.35847141],
-                  [ 0.27739474]]
-        simsh = ax.scatter(simpolamp,simeur,color='0.3',marker='o',s=6**2,alpha=0.7)
-        leghnds=leghnds + (simsh,)
-        legstrs=legstrs + ('Modelled SIC forcing',)
-        obstr=obstr+'sims'"""
     if addsims:
-        """sims=('E1','E2','E3','E4','E5','R1','R2','R3','R4','R5')
-        # why did this work before? had to change to Series (jun 11 2015)
-        flddf1 = pd.Series(lmd.loaddata((simfield1,),sims,ncfields=(simncfield1,), timefreq=sea1, 
-                                           meantype='time',region=region1))*simconv1
-
-        if performop1:
-            flddf1op = pd.Series(lmd.loaddata((simfield1,),sims,ncfields=(simncfield1,), timefreq=sea1, 
-                                                 meantype='time',region=region1op))*simconv1
-
-            if op1=='sub': # subtract
-                flddf1 = flddf1 - flddf1op
-            elif op1=='div': # divide
-                flddf1 = flddf1 / flddf1op
-
-        flddf2 = pd.Series(lmd.loaddata((simfield2,),sims,ncfields=(simncfield2,), timefreq=sea2, 
-                                           meantype='time',region=region2))*simconv2
-
-        if performop2:
-            flddf2op = pd.Series(lmd.loaddata((simfield2,),sims,ncfields=(simncfield2,), timefreq=sea2, 
-                                                 meantype='time',region=region2op))*simconv2
-
-            if op2=='sub': # subtract
-                flddf2 = flddf2 - flddf2op
-            elif op2=='div': # divide
-                flddf2 = flddf2 / flddf2op
-
-        simmm, simbb, simrval, simpval, simstd_err = sp.stats.linregress(np.squeeze(flddf1.values),np.squeeze(flddf2.values))
-        print '-------- SIMS slope, rval, pval: ' + str(simmm),str(simrval),str(simpval)"""
-
         simsh = ax.scatter(flddf1,flddf2,color='0.3',marker='o',s=120,alpha=0.7)
         #axylims = ax.get_ylim()
         #axxlims = ax.get_xlim()
@@ -418,11 +474,19 @@ if doscatter:
         legstrs=legstrs + ('Modelled SIC forcing',)
         obstr=obstr+'sims'
 
+    if shorttermsims:
+        simssh = ax.scatter(fldssdf1,fldssdf2,color='0.7',marker='o',s=60,alpha=0.7)
+        onex=np.linspace(axxlims[0],axxlims[1])
+        ax.plot(onex,simssmm*onex + simssbb, color='0.7',linewidth=1)
+        leghnds=leghnds + (simssh,)
+        legstrs=legstrs + ('11-yr Modelled SIC forcing',)
+        obstr=obstr+'sims'
+
     fontP = fm.FontProperties()
     fontP.set_size('small')
     ax.legend(leghnds,legstrs,
                loc='best',fancybox=True,framealpha=0.5,prop=fontP)#,frameon=False) 
-
+    ax.set_ylim((ymin,ymax))
     ax.annotate(casename + ' R= ' + '$%.2f$'%(lerval) + ', p='+ '$%.2f$'%(lepval),
                 xy=(axxlims[0]+.05*axxlims[1], axylims[1]-.1*axylims[1]),
                 xycoords='data')
@@ -758,47 +822,17 @@ def sample120yravg(lesea,numsamp,nummems=11,allowreps=True):
 
     return ltavg,ltsigma
 
-def subsamp_sims(simsdf,numyrs=11):
-    """ select 11 year segments from given simsdf (data should be anoms)
-             simsdf.keys(): sims
-             simsdf.index(): time index
-
-             number of total samples will be determined by length of all sim data
-                      and numyrs (e.g. (ntime / numyrs)*numsims)
-    """
-    
-    ntime,numsims=simsdf.values.shape
-    samp = ntime/numyrs
-    allsii=0 # keep track of all sims and all subsamps
-    subsampavg=np.zeros(samp*numsims)
-
-    print 'sample each of ' + str(numsims) + ' sims ' + str(samp) + ' times'
-
-    for nii,sim in enumerate(simsdf.keys()):
-        
-        vals=simsdf[sim].values     
-        
-        # random index to start looping, since we have a remainder when ntime/numyrs
-        startyr = np.random.randint(np.mod(ntime,numyrs))
-        print 'start ' + str(startyr)
-        for sii in np.arange(startyr,samp):
-            
-            subsampavg[allsii] = vals[sii+sii*numyrs:sii+sii*numyrs+numyrs].mean()
-            allsii+=1
-
-    return subsampavg
-
 
 if dolongtermavg:
 
     longtermLE=False # else, subsample AGCM sims
 
-    printtofile=True
+    printtofile=False
 
     numsamp=100 # how many times to sample 11 ens members
 
     addraw=False # add the decadal diffs?
-    subnh=True # @@@@ when subtracting, prob should subtract the mean NH temp, not individual runs
+    subnh=False # @@@@ when subtracting, prob should subtract the mean NH temp, not individual runs
     substr='' # for filename
     ttlstr=' ' 
     prstr=''
@@ -940,10 +974,10 @@ if dolongtermavg:
         print '===== AGCM mean ' + str(ssmean) + ' sigma ' + str(sssd)
 
 
-    # ========= add sims
+    # ========= add sims (120-yr averages)
     sims=('E1','E2','E3','E4','E5','R1','R2','R3','R4','R5','NSIDC'); #simsstr=''
     #simsRN=('R1','R2','R3','R4','R5','NSIDC')
-    #simsR=('R1','R2','R3','R4','R5')
+    simsR=('R1','R2','R3','R4','R5')
     #sims=simsRN; simsstr='Ronly'
     simflddf = pd.DataFrame(lmd.loaddata((simfield1,),sims,ncfields=(simncfield1,), timefreq=sea, 
                                          meantype='time',region=region),index=sims)*simconv1
