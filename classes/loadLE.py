@@ -135,6 +135,10 @@ def build_filenames(fielddict, ens, ftype='fullts',timesel=None,verb=True,local=
         returns a list of all filenames (50). @@add original 5?!
         
     """
+    if ens=='historicalMisc':
+        pnum='4'
+    else: pnum='1'
+
     ensmean=False
     if ftype=='fullts':
         suff='195001-202012'
@@ -177,7 +181,7 @@ def build_filenames(fielddict, ens, ftype='fullts',timesel=None,verb=True,local=
             for eii in range(1,ensnum+1):
 
                 fname=basepath + sim + '/' + field + '/' + field + '_' + comp + '_CanESM2_' +\
-                   sim + '_r' + str(eii) + 'i1p1_' + suff + '.nc'
+                   sim + '_r' + str(eii) + 'i1p' + pnum + '_' + suff + '.nc'
                 if verb:
                     print fname
                 flist.append(fname)
@@ -201,6 +205,8 @@ def get_sims(ens):
         return ('historical-r1','historical-r2','historical-r3','historical-r4','historical-r5')
     elif ens=='historicalNat':
         return ('historicalNat-r1','historicalNat-r2','historicalNat-r3','historicalNat-r4','historicalNat-r5')
+    elif ens=='historicalMisc':
+        return ('historicalMisc-r1','historicalMisc-r2','historicalMisc-r3','historicalMisc-r4','historicalMisc-r5')
     else:
         print 'ens not defined!! @@' # should throw an exception
         return -1
