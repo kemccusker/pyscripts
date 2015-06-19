@@ -13,7 +13,8 @@ import collections
 import numpy.ma as ma
 import scipy as sp
 import scipy.stats
- 
+from scipy.stats import norm
+
 con = reload(con)
 
 def find_nearest(array,value):
@@ -978,6 +979,31 @@ def ttest_ind(input1,input2,axis=0,effdof=False,equal_var=True):
         
         
     return (tstat,pval)
+
+
+def calc_normfit(input,verb=True):
+    """ use scipy.stats.norm.fit() to calc a pdf mean and sigma
+
+            input: 1d array of data
+
+            returns: fittedpdf, mean, sigma
+    """
+
+    # Now calc the pdf associated with the hist
+    inpdf=norm.fit(input)
+    mn=inpdf[0]
+    sgm=inpdf[1]
+
+    #Generate X points
+    xlims = [-4*sgm+mn, 4*sgm+mn] # large limits
+    xx = np.linspace(xlims[0],xlims[1],500)
+    #Get Y points via Normal PDF with fitted parameters
+    pdf_fitted = norm.pdf(xx,loc=mn,scale=sgm)
+
+    if verb:
+        print '===== mean ' + str(mn) + ' sigma ' + str(sgm)
+
+    return pdf_fitted, mn, sgm, xx
 
 
 """ Trying to figure out correct way to calc 95% confidence interval
