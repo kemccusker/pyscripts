@@ -2105,8 +2105,64 @@ def plot_seasonal_maps(dblob,fielddict,coords,sims,pparams,plottype='diff',vert=
                              + latstr + '2.' + suff)
 
 
+def recurse_splitplot(ensdt, topdt, ytop, currlev, endlev, pvalstop,cdt=None, pdt=None, effdof=False,ax=None,color='k',siglevel=0.05):
+
+    ens={}
+    pvens={}
+
+    print 'currlev ' + str(currlev)
+
+    if currlev>endlev:
+        print 'Done. returning!'
+        return currlev
+    else:
+
+        nextdt={}
+        nextcdt={}
+        nextpdt={}
+        for sii,skey in enumerate(ensdt.keys()):
+
+            vals = np.squeeze(ensdt[skey])
+            lenvals = len(vals)
+            half1 = vals[:lenvals/2.]
+            print 'half1.mean() ' + str(half1.mean())
+
+            half2 = vals[lenvals/2.:]
+            print 'half2.mean() ' + str(half2.mean())
+            ens[sii] = (half1.mean(),half2.mean()) # is this right?! or prev method..
+
+            nextkey = skey # + '1'
+            #nextkey2 = skey + '2'
+            nextdt[nextkey] = (half1,half2) # anoms
+            #nextdt[nextkey2] = half2
+
+            ctlvals = np.squeeze(cdt[skey])
+            pertvals = np.squeeze(pdt[skey])
+            nextcdt[nextkey] = (ctlvals[lenvals/2.:],ctlvals[:lenvals/2.])
+            nextpdt[nextkey] = (pertvals[lenvals/2.:],pertvals[:lenvals/2.])
+            #nextcdt[nextkey2] = ctlvals[:lenvals/2.]
+            #nextpdt[nextkey2] = pertvals[:lenvals/2.]
+
+            (a,sigpv1,b,c) = cutl.calc_pvals(pertvals[:lenvals/2.],ctlvals[:lenvals/2.],effdof=effdof)
+            (a,sigpv2,b,c) = cutl.calc_pvals(pertvals[lenvals/2.:],ctlvals[lenvals/2.:],effdof=effdof)
+            pvens[sii] = (sigpv1,sigpv2)
+
+
+        lev3 = ens
+        lev3pv = pvens
+        print 'lev3pv: ' + str(lev3pv)
+        ybot = ytop-1
+
+        print 'levtop: ' + str(topdt) + ', levbott: ' + str(ens)
+        cplt.plot_onecascade(topdt,lev3,ytop,ybot,ax=ax,color=color,pvalst=pvalstop,pvalsb=lev3pv,siglevel=siglevel)
+        currlev+=1
+
+        currlev = recurse_splitplot(nextdt,ens,ybot,currlev,endlev,pvalstop=lev3pv,cdt=nextcdt,pdt=nextpdt,effdof=effdof,color=color,ax=ax)
+
+
 def plot_uncertainty_cascade(dblob,fielddict,coords,sims,pparams,info=None,seas=None,ax=None,
-                             xlab=None,annlab=None,annloc=(0.1,0.95),color=None,effdof=False,printtofile=False,xlims=None,siglevel=0.05):
+                             xlab=None,annlab=None,annloc=(0.1,0.95),color=None,effdof=False,
+                             printtofile=False,xlims=None,siglevel=0.05,levs=3):
     """ This function should produce a cascade whereby each row of points is connected to
         the previous (higher up on y axis) number of points by straight lines. A la Hawkins
 
@@ -2137,7 +2193,7 @@ def plot_uncertainty_cascade(dblob,fielddict,coords,sims,pparams,info=None,seas=
     region = info['region']
 
     numens=len(shadeens)
-    starty=3*numens # ie 6
+    starty=levs*numens # ie 6
     savey=starty
     #ensname=shadeens[0] # @@@@@@@@
     allensdt,allensmdt = con.build_ensembles(shadeens,dblob,calctype='diff')
@@ -2178,11 +2234,17 @@ def plot_uncertainty_cascade(dblob,fielddict,coords,sims,pparams,info=None,seas=
         #ax.annotate(prname[ensname],xy=(lev1,topy),xycoords='data',textcoords='offset points',xytext=(3,3))
 
         # -------- next level down: (individual ens member means, 120yrs)
+        ensrecurse = {} # use this for recurse splitting and plotting
+        crecurse = {}
+        precurse = {}
         ens=np.zeros((numsims))
         pvens=np.zeros((numsims))
         for sii,skey in enumerate(ensdt.keys()):
             ens[sii] = ensdt[skey][seas[0]].mean() # time mean for each sim
+            ensrecurse[skey] = ensdt[skey][seas[0]]
             pvens[sii] = pvdt[skey][seas[0]]   # pval for each 120yr mean
+            crecurse[skey] = cdt[skey][seas[0]]
+            precurse[skey] = pdt[skey][seas[0]]
 
         lev2 = ens
         lev2pv = pvens
@@ -2193,7 +2255,14 @@ def plot_uncertainty_cascade(dblob,fielddict,coords,sims,pparams,info=None,seas=
             
 
         # ------------ 3rd level down (split timeseries, 60yrs each)
-        
+        print 'finish recurse function for cascade! @@@'
+
+        """# (currdata, topy, boty, currlevel, endlevel.....)
+        currlev=3
+        endlev=4
+        lev = recurse_splitplot(ensrecurse,lev2,y2,currlev,endlev,pvalstop=lev2pv,
+                                cdt=crecurse,pdt=precurse,effdof=effdof,color=col,ax=ax)"""
+
         ens={}
         pvens={}
         for sii,skey in enumerate(ensdt.keys()):
@@ -2211,7 +2280,7 @@ def plot_uncertainty_cascade(dblob,fielddict,coords,sims,pparams,info=None,seas=
             (a,sigpv1,b,c) = cutl.calc_pvals(pertvals[:lenvals/2.],ctlvals[:lenvals/2.],effdof=effdof)
             (a,sigpv2,b,c) = cutl.calc_pvals(pertvals[lenvals/2.:],ctlvals[lenvals/2.:],effdof=effdof)
             pvens[sii] = (sigpv1,sigpv2)
-            
+
 
 
         lev3 = ens
@@ -2252,25 +2321,25 @@ def plot_uncertainty_cascade(dblob,fielddict,coords,sims,pparams,info=None,seas=
             (a,npv1,b,c) = cutl.calc_pvals(nsidcp[:lenn/2.],nsidcc[:lenn/2.],effdof=effdof)
             (a,npv2,b,c) = cutl.calc_pvals(nsidcp[lenn/2.:],nsidcc[lenn/2.:],effdof=effdof)
             lev3pv = ((npv1,npv2),)
-            
+
             cplt.plot_onecascade(lev2,lev3,y2,y3,ax=ax,color='b',pvalst=lev2pv,pvalsb=lev3pv,siglevel=siglevel)
 
             lev2 = (nsidc.mean(),)
             lev2pv = (nsidcpv,)
             lev3 = ( (nhalf1.mean(),nhalf2.mean()), )
             lev3pv = ((npv1,npv2), )
-            
+
             cplt.plot_onecascade(lev2,lev3,y2,y3,ax=ax,color='g',pvalst=lev2pv,pvalsb=lev3pv,siglevel=siglevel)
 
 
-        starty=starty-3
+        starty=starty-levs
 
     if xlims!=None:
         ax.set_xlim(xlims)
 
     ax.set_xticklabels(ax.get_xticks(), fontProperties)
     #ax.set_yticklabels(ax.get_yticks(), fontProperties)
-    ax.set_ylim(.5,3*numens+1)
+    ax.set_ylim(.5,levs*numens+1)
     ax.set_yticklabels('')
     axxlims=ax.get_xlim()
     if axxlims[0]<=0 and axxlims[1]>=0:
