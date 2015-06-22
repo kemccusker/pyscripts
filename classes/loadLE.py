@@ -14,7 +14,8 @@ ensnum=10
 #  Make this a class! CanESM2LE
 
 def load_LEdata(fielddict, ens, seas=None, timesel=None,infodict=None,ftype='fullts',
-                calctype=None, calcdict=None, rettype='dict',conv=1, region=None,local=False):
+                calctype=None, calcdict=None, rettype='dict',conv=1, region=None,local=False,
+                orig=None):
     """ def loadLEdata(fielddict, seas=('DJF','MAM','JJA','SON'), timesel=None, infodict=None, calctype=None, calcdict=None)
 
             ftype: type of filename to build. Right now just 'fullts' for full timeseries
@@ -34,7 +35,7 @@ def load_LEdata(fielddict, ens, seas=None, timesel=None,infodict=None,ftype='ful
     ncfield=fielddict['ncfield']
     comp = fielddict['comp']
 
-    flist = build_filenames(fielddict, ens,ftype=ftype,timesel=timesel,local=local)
+    flist = build_filenames(fielddict, ens,ftype=ftype,timesel=timesel,local=local,orig=orig)
 
     fname1 = flist[0]
     print ' @@ fname1 ' + fname1
@@ -123,8 +124,20 @@ def load_LEdata(fielddict, ens, seas=None, timesel=None,infodict=None,ftype='ful
         
     return fldret
 
+def load_originalfive(fielddict, ens,seas=None, timesel=None,infodict=None,ftype='fullts',
+                      calctype=None, calcdict=None, rettype='dict',conv=1, region=None,local=False,
+                      orig='just'):
+    """ orig='just' means just load the original 5 runs. 
+        orig='add' means add the original 5 to the full LE.
+    """
 
-def build_filenames(fielddict, ens, ftype='fullts',timesel=None,verb=True,local=False):
+    return load_LEdata(fielddict, ens, seas=seas, timesel=timesel, infodict=infodict,
+                       ftype=ftype, calctype=calctype, calcdict=calcdict, rettype=rettype,
+                       conv=conv, region=region, local=local,orig=orig)
+    
+
+
+def build_filenames(fielddict, ens, ftype='fullts',timesel=None,verb=True,local=False,orig=None):
     """ here we know that each 'sim' has 10 sub-ensemble members
 
         ftype: type of filename to build. Right now just 'fullts' for full timeseries
@@ -167,23 +180,48 @@ def build_filenames(fielddict, ens, ftype='fullts',timesel=None,verb=True,local=
     comp=fielddict['comp']
     
     flist=[]
-    if ensmean: # @@ note, should add the casename to ensmean filename!
-        fname = basepath + ens + '-ens' + '/' + field + '/' + field + '_' + comp + '_CanESM2_ensmean_' +\
-                suff + '.nc'
-        if verb:
-            print fname
-        flist.append(fname)
+    if orig=='just':
+        if ens=='historical':
+            casename='historicalrcp45'
 
+        orignum=5
+        basedir='/HOME/rkm/work/DATA/CanESM2/' + casename
+
+        for eii in np.arange(1,orignum+1):
+            fname=basedir + '/' + field + '/' + field + '_' + comp + '_CanESM2_' +\
+                   casename + '_r' + str(eii) + 'i1p' + pnum + '_185001-201212.nc'
+
+            flist.append(fname)
     else:
-        sims = get_sims(ens)
-        
-        for sim in sims:
-            for eii in range(1,ensnum+1):
+        if ensmean: # @@ note, should add the casename to ensmean filename!
+            fname = basepath + ens + '-ens' + '/' + field + '/' + field + '_' + comp + '_CanESM2_ensmean_' +\
+                    suff + '.nc'
+            if verb:
+                print fname
+            flist.append(fname)
 
-                fname=basepath + sim + '/' + field + '/' + field + '_' + comp + '_CanESM2_' +\
-                   sim + '_r' + str(eii) + 'i1p' + pnum + '_' + suff + '.nc'
-                if verb:
-                    print fname
+        else:
+            sims = get_sims(ens)
+
+            for sim in sims:
+                for eii in range(1,ensnum+1):
+
+                    fname=basepath + sim + '/' + field + '/' + field + '_' + comp + '_CanESM2_' +\
+                       sim + '_r' + str(eii) + 'i1p' + pnum + '_' + suff + '.nc'
+                    if verb:
+                        print fname
+                    flist.append(fname)
+        if orig=='add':
+            if ens=='historical':
+                casename='historicalrcp45'
+                
+            orignum=5
+            basedir='/HOME/rkm/work/DATA/CanESM2/' + casename
+
+            for eii in np.arange(1,orignum+1):
+                fname=basedir + '/' + field + '/' + field + '_' + comp + '_CanESM2_' +\
+                       casename + '_r' + str(eii) + 'i1p' + pnum + '_185001-201212.nc'
+                
                 flist.append(fname)
 
     return flist
