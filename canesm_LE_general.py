@@ -17,6 +17,7 @@ import matplotlib.font_manager as fm
 import loadmodeldata as lmd
 import matplotlib.patches as mpatches
 import matplotlib.lines as mlines
+import matplotlib.colors as mcolors
 from scipy.stats import norm
 import random
 import numpy.ma as ma
@@ -64,7 +65,7 @@ sea2='DJF'
 fieldcnd = 'sic'; ncfieldcnd='sic'; compcnd='OImon'; regioncnd='bksmori'
 leconvcnd=1
 seacnd=sea1
-cmincnd=-9; cmaxcnd=3 # for 4 color colorbar
+cmincnd=-12; cmaxcnd=3 # for 5 color colorbar
 
 xlab=ylab=None
 if field2=='tas' and region2=='eurasiamori' and performop2==True and op2=='sub':
@@ -407,25 +408,28 @@ if doscatter:
     # ========== FIGURE ===========
 
     fig,ax=plt.subplots(1,1)
-    fig.set_size_inches(8,5)
+    fig.set_size_inches(10,5.5)
     if conditional:
-        cmap=plt.cm.afmhot #autumn # Greens_r #OrRd_r # coolwarm_r
+        #cmap=plt.cm.afmhot #autumn # Greens_r #OrRd_r # coolwarm_r
         #markerdt={'marker': 'o', 'linewidth':0}
-        scaled_cnd = (lefldcnd - lefldcnd.min()) / lefldcnd.ptp()
-        cndcolors = plt.cm.afmhot(scaled_cnd,alpha=0.7) #edgecolors=cndcolors
+        #scaled_cnd = (lefldcnd - lefldcnd.min()) / lefldcnd.ptp()
+        #cndcolors = plt.cm.afmhot(scaled_cnd,alpha=0.7) #edgecolors=cndcolors
 
         b2r20cm = plt.cm.get_cmap('blue2red_20')
         #testcm = plt.cm.autumn.from_list('testcm',plt.cm.autumn(scaled_cnd,alpha=0.7),N=4)
-        testclrs = np.flipud(b2r20cm.colors[[7,11,14,-1],:])
+        #testclrs = np.flipud(b2r20cm.colors[[7,11,14,-1],:]) # 4 color clims -9 to 3
+        testclrs = np.flipud(b2r20cm.colors[[6,11,14,-3,-1],:]) 
+        #testclrs = np.flipud(b2r20cm.colors[[6,11,11,-3,-1],:]) 
+        #testclrs = np.flipud(b2r20cm.colors[[6,11,13,13,-1],:]) # 5 color clims -12 to 3
         #testcm = b2r20cm.from_list('testcm',testclrs,N=4)
-        testcm = matplotlib.colors.ListedColormap(testclrs, name='testcm')
+        testcm = mcolors.ListedColormap(testclrs, name='testcm')
 
-        ledatlg=mlines.Line2D([],[],color=cndcolors[len(cndcolors)/2+5],
-                              markerfacecolor=cndcolors[len(cndcolors)/2+5],marker='o',
-                              linestyle='none',mew=0,markersize=10)
+        ledatlg=mlines.Line2D([],[],color=testclrs[2],
+                              markerfacecolor=testclrs[2],marker='o',
+                              linestyle='none',mew=0,markersize=8)
 
         ledat=ax.scatter(lefld1,lefld2,c=lefldcnd,cmap=testcm,vmin=cmincnd,
-                         vmax=cmaxcnd,s=90,alpha=0.7,marker='o', linewidth=0)
+                         vmax=cmaxcnd,s=60,alpha=0.9,marker='o', linewidth=0)
         ledat.set_clim([cmincnd,cmaxcnd])
 
         cbar_ax = fig.add_axes([.91,.25, .02,.5]) 
@@ -475,7 +479,7 @@ if doscatter:
         obstr=obstr+'sims'
 
     if shorttermsims:
-        simssh = ax.scatter(fldssdf1,fldssdf2,color='0.7',marker='o',s=60,alpha=0.7)
+        simssh = ax.scatter(fldssdf1,fldssdf2,color='0.7',marker='o',s=50,alpha=0.7)
         onex=np.linspace(axxlims[0],axxlims[1])
         ax.plot(onex,simssmm*onex + simssbb, color='0.7',linewidth=1)
         leghnds=leghnds + (simssh,)
@@ -485,15 +489,15 @@ if doscatter:
     fontP = fm.FontProperties()
     fontP.set_size('small')
     ax.legend(leghnds,legstrs,
-               loc='best',fancybox=True,framealpha=0.5,prop=fontP)#,frameon=False) 
+               loc='best',fancybox=True,framealpha=0.5,prop=fontP,frameon=False) 
     ax.set_ylim((ymin,ymax))
-    ax.annotate(casename + ' R= ' + '$%.2f$'%(lerval) + ', p='+ '$%.2f$'%(lepval),
+    """ax.annotate(casename + ' R= ' + '$%.2f$'%(lerval) + ', p='+ '$%.2f$'%(lepval),
                 xy=(axxlims[0]+.05*axxlims[1], axylims[1]-.1*axylims[1]),
                 xycoords='data')
     if addnat:
         plt.annotate(casename2 + ' R= ' + '$%.2f$'%(lervaln) + ', p='+ '$%.2f$'%(lepvaln),
                     xy=(axxlims[0]+.05*axxlims[1], axylims[1]-.2*axylims[1]),
-                    xycoords='data')
+                    xycoords='data')"""
 
     opstr1 = opstr2 = ''
     if performop1:
@@ -829,8 +833,10 @@ if dolongtermavg:
     addsims=False # 120-yr avg AGCM sims
     addnat=True
     addmisc=True
+    appendorig=False # append original historical runs? (for now 6/22/15)
+    addorig=True # just add orig points to distribution curve (not histogram)
 
-    printtofile=True
+    printtofile=False
 
     numsamp=100 # how many times to sample 11 ens members, for longtermLE=True
     addraw=False # add the decadal diffs?  for longtermLE=True
@@ -840,7 +846,6 @@ if dolongtermavg:
 
     subnh=False # @@@@ when subtracting, prob should subtract the mean NH temp, not individual runs
     substr='' # for filename
-    ttlstr=' ' 
     prstr=''
 
     sea='DJF'
@@ -851,7 +856,15 @@ if dolongtermavg:
     ncfield='tas'
     comp='Amon'
     region='eurasiamori'
-    
+    #region='gt60n'
+
+    field='sia'; ncfield='sianh'; comp='OImon'; region='nh';
+
+    if region=='eurasiamori': ttlstr='Eurasian'
+    elif region=='gm': ttlstr='Global'
+    elif region=='gt60': ttlstr='Polar (>60N)'
+    else: ttlstr=''
+
     simconv1=1
     if field=='tas': simfield1='st'; simncfield1='ST'
     elif field=='zg50000.00': simfield1='gz50000'; simncfield1='PHI'; simconv1=1/con.get_g()
@@ -864,13 +877,16 @@ if dolongtermavg:
 
     mew=1.5; ms=7
     firebrick=ccm.get_linecolor('firebrick')
-    hcol=ccm.get_linecolor('darkolivegreen3')
-    hcolline=ccm.get_linecolor('darkolivegreen3')#'darkseagreen4')
-    ltcol=ccm.get_linecolor('darkseagreen4')
+    hcol='0.7'#ccm.get_linecolor('darkolivegreen3')
+    hcolline='0.7'#ccm.get_linecolor('darkolivegreen3')#'darkseagreen4')
+
+    ltcol='0.5'#ccm.get_linecolor('darkseagreen4')
+
     natcol=ccm.get_linecolor('steelblue3')
     natcolline=ccm.get_linecolor('steelblue3')#4')
     miscol=ccm.get_linecolor('orange3') #'deepskyblue')
     miscolline=ccm.get_linecolor('orange3') #'deepskyblue')
+    obscol=ccm.get_linecolor('midnightblue') #'b'
 
     lat=le.get_lat(local=local)
     lon=le.get_lon(local=local)
@@ -880,9 +896,16 @@ if dolongtermavg:
     lecdat = le.load_LEdata(fdict,casename,timesel=timeselc, rettype='ndarray',conv=leconv,ftype=ftype,local=local)
     (numen,ntime) = lecdat.shape
     lepdat=le.load_LEdata(fdict,casename,timesel=timeselp, rettype='ndarray',conv=leconv,ftype=ftype,local=local)
-    lecsea = cutl.seasonalize_monthlyts(lecdat.T,season=sea).mean(axis=0)
+    lecsea = cutl.seasonalize_monthlyts(lecdat.T,season=sea,verb=True).mean(axis=0)
     lepsea = cutl.seasonalize_monthlyts(lepdat.T,season=sea).mean(axis=0)
     lesea = lepsea - lecsea # numens
+
+    # load original five in case:
+    or5c=le.load_originalfive(fdict, casename,timesel=timeselc, rettype='ndarray',conv=leconv,ftype=ftype)
+    or5p=le.load_originalfive(fdict, casename,timesel=timeselp, rettype='ndarray',conv=leconv,ftype=ftype)
+    or5csea=cutl.seasonalize_monthlyts(or5c.T,season=sea,verb=True).mean(axis=0)
+    or5psea=cutl.seasonalize_monthlyts(or5p.T,season=sea,verb=True).mean(axis=0)
+    or5sea = or5psea-or5csea
 
     if subnh:
         fdictsub = {'field': field+'nh', 'ncfield': ncfield, 'comp': comp}
@@ -893,18 +916,20 @@ if dolongtermavg:
         #lesea = lesea - sub.mean(axis=1)
         lesea = lesea - sub.mean(axis=1).mean()
 
+        # load original five in case:
+        subor5c=le.load_originalfive(fdictsub, casename,timesel=timeselc, rettype='ndarray',conv=leconv,ftype=ftype)
+        subor5p=le.load_originalfive(fdictsub, casename,timesel=timeselp, rettype='ndarray',conv=leconv,ftype=ftype)
+        subor5=cutl.seasonalize_monthlyts(or5csub.T,season=sea,verb=True).T - \
+                    cutl.seasonalize_monthlyts(or5psub.T,season=sea,verb=True).T
+        or5sea = or5sea - subor5.mean(axis=1).mean() # @@@@ should remove the total mean of all 55 in this case?
+
+    if appendorig:
+        lesea = np.hstack((lesea,or5sea))
+
     # RAW anomalies (decadal diffs)
     # calc the pdf associated with the hist
-    rawpdf_fitted,rawmean,rawsd,rawxx = cutl.calc_normfit(lesea)
-
-    """rawpdf=norm.fit(lesea)
-    rawmean=rawpdf[0]
-    rawsd=rawpdf[1]
-    #Generate X points
-    rawxlims = [-4*rawsd+rawmean, 4*rawsd+rawmean] # large limits
-    rawxx = np.linspace(rawxlims[0],rawxlims[1],500)
-    #Get Y points via Normal PDF with fitted parameters
-    rawpdf_fitted = norm.pdf(rawxx,loc=rawmean,scale=rawsd)"""
+    rawpdf_fitted,rawmean,rawsd,rawxx = cutl.calc_normfit(lesea) # to get mean
+    #rawpdf_fitted,rawxx = cutl.calc_kernel(lesea)
 
     if addnat:
         lencdat = le.load_LEdata(fdict,'historicalNat',timesel=timeselc, rettype='ndarray',conv=leconv,ftype=ftype,local=local)
@@ -924,6 +949,7 @@ if dolongtermavg:
             lensea = lensea - nsub.mean(axis=1).mean()
 
         rawnpdf_fitted,rawnmean,rawnsd,rawnxx = cutl.calc_normfit(lensea)
+        #rawnpdf_fitted,rawnxx = cutl.calc_kernel(lensea)
 
     if addmisc:
         lemcdat = le.load_LEdata(fdict,'historicalMisc',timesel=timeselc, 
@@ -947,7 +973,7 @@ if dolongtermavg:
             lemsea = lemsea - msub.mean(axis=1).mean()
 
         rawmpdf_fitted,rawmmean,rawmsd,rawmxx = cutl.calc_normfit(lemsea)
-
+        #rawmpdf_fitted,rawmxx = cutl.calc_kernel(lemsea)
 
 
     if longtermLE:
@@ -981,28 +1007,15 @@ if dolongtermavg:
 
         ltpdf_fitted,ltmean,ltsd,ltxx = cutl.calc_normfit(ltavg)
 
-        """# Now calc the pdf associated with the hist
-        ltpdf=norm.fit(ltavg)
-        ltmean=ltpdf[0]
-        ltsd=ltpdf[1]
-        #Generate X points
-        ltxlims = [-4*ltsd+ltmean, 4*ltsd+ltmean] # large limits
-        ltxx = np.linspace(ltxlims[0],ltxlims[1],500)
-        #Get Y points via Normal PDF with fitted parameters
-        ltpdf_fitted = norm.pdf(ltxx,loc=ltmean,scale=ltsd)"""
-
 
     else: # not longtermLE (short term sims instead)
 
         # here we want to subsample 11-year segments from the sims
-        #sims=('E1','E2','E3','E4','E5'); simsstr='sbEonly' # sub
+        sims=('E1','E2','E3','E4','E5'); simsstr='sbEonly' # sub
         #sims=('R1','R2','R3','R4','R5'); simsstr='sbRonly'
-        sims=('R1','R2','R3','R4','R5','E1','E2','E3','E4','E5'); simsstr='sbERboth'
+        #sims=('R1','R2','R3','R4','R5','E1','E2','E3','E4','E5'); simsstr='sbERboth'
         simflddf = pd.DataFrame(lmd.loaddata((simfield1,),sims,ncfields=(simncfield1,), timefreq=sea, 
                                              region=region))*simconv1
-
-        
-
         if subnh:
             simsubdf = pd.DataFrame(lmd.loaddata((simfield1,),sims,ncfields=(simncfield1,), timefreq=sea, 
                                                  filetype='diff',region='nh'))*simconv1
@@ -1015,18 +1028,47 @@ if dolongtermavg:
         plotsims = subsamp
         print '==== AGCM '
         sspdf_fitted,ssmean,sssd,ssxx = cutl.calc_normfit(plotsims)
+        #sspdf_fitted,ssxx = cutl.calc_kernel(plotsims)
 
-        """# Now calc the pdf associated with the hist
-        sspdf=norm.fit(plotsims) # ss = subsamp
-        ssmean=sspdf[0]
-        sssd=sspdf[1]
-        #Generate X points
-        ssxlims = [-4*sssd+ssmean, 4*sssd+ssmean] # large limits
-        ssxx = np.linspace(ssxlims[0],ssxlims[1],500)
-        #Get Y points via Normal PDF with fitted parameters
-        sspdf_fitted = norm.pdf(ssxx,loc=ssmean,scale=sssd)
+        # do each ens separately, for testing stats (maybe not plotting)
+        sims2=('R1','R2','R3','R4','R5'); #simsstr='sbRonly'
+        sim2flddf = pd.DataFrame(lmd.loaddata((simfield1,),sims2,ncfields=(simncfield1,), timefreq=sea, 
+                                             region=region))*simconv1
+        if subnh:
+            sim2subdf = pd.DataFrame(lmd.loaddata((simfield1,),sims2,ncfields=(simncfield1,), timefreq=sea, 
+                                                 filetype='diff',region='nh'))*simconv1
 
-        print '===== AGCM mean ' + str(ssmean) + ' sigma ' + str(sssd)"""
+            # want to subtract the mean hemispheric avg anomaly
+            sim2flddf = sim2flddf - sim2subdf.mean(axis=1).mean() # average over sims and then time (should be a scalar)
+
+
+        subsamp2 = subsamp_sims(sim2flddf,numyrs=11)
+        plotsims2 = subsamp2
+        print '==== AGCM2 '
+        ss2pdf_fitted,ss2mean,ss2sd,ss2xx = cutl.calc_normfit(plotsims2)
+        #ss2pdf_fitted,ss2xx = cutl.calc_kernel(plotsims2)
+
+        tstat, pval = sp.stats.ttest_ind(plotsims,plotsims2)
+        lstat, lpval = sp.stats.levene(plotsims,plotsims2)
+        print '==== testing ANT vs TOT ===='
+        print 'TSTAT: ' + str(tstat) + ' PVAL: ' + str(pval)
+        if pval<=siglevel:
+             print 'The ensemble means are significantly different (' + str(1-siglevel) + ')'
+        print 'LSTAT: ' + str(lstat) + ' PVAL: ' + str(lpval)
+        if lpval<=siglevel:
+             print 'The ensemble variances are significantly different (' + str(1-siglevel) + ')'
+
+
+        tstat, pval = sp.stats.ttest_ind(plotsims,lesea)
+        lstat, lpval = sp.stats.levene(plotsims,lesea)
+        print '==== testing ANT vs ALL LE ===='
+        print 'TSTAT: ' + str(tstat) + ' PVAL: ' + str(pval)
+        if pval<=siglevel:
+             print 'The ensemble means are significantly different (' + str(1-siglevel) + ')'
+        print 'LSTAT: ' + str(lstat) + ' PVAL: ' + str(lpval)
+        if lpval<=siglevel:
+             print 'The ensemble variances are significantly different (' + str(1-siglevel) + ')'
+
 
 
     if addsims:
@@ -1092,9 +1134,47 @@ if dolongtermavg:
             obsreg = (obsregp-obssubp).mean() - (obsregc-obssubc).mean()
 
             substr='_subnh'
-            ttlstr='-NH '
+            ttlstr=ttlstr+'-NH '
+    elif field == 'sia':
+        nsidcfile = '/HOME/rkm/work/BCs/NSIDC/td_bootstrap_197811_latest_128_64_sicn_1978111600-2013121612.nc'
+        latns=cnc.getNCvar(nsidcfile,'lat')
+        lonns=cnc.getNCvar(nsidcfile,'lon')
+        nsidcsel='1979-01-01,2011-12-31'
+        nsidcyrs=np.arange(1979,2012)
+        if sea=='DJF':
+            nsidcyrs=nsidcyrs[:-1]
+        nsidcfldc=cnc.getNCvar(nsidcfile,'SICN',timesel=timeselc,seas=sea)
+        nsidcfldp=cnc.getNCvar(nsidcfile,'SICN',timesel=timeselp,seas=sea)
+        obsreg=cutl.calc_regtotseaicearea(nsidcfldp,latns,lonns,region='nh',isarea=False).mean() -\
+                  cutl.calc_regtotseaicearea(nsidcfldc,latns,lonns,region='nh',isarea=False).mean()
 
+    """# TEST OUT TIMESERIES OF LE VS OBS
+    testfld='tas'; testreg='gt60n'; testsea='DJF'
 
+    gmdt={'field':testfld+testreg,'ncfield': ncfield,'comp':comp}
+    lebase = le.load_LEdata(gmdt,'historical',rettype='ndarray',
+                            conv=leconv,timesel='1951-01-01,1980-12-31',ftype=ftype,local=local)
+    #lebase = cutl.annualize_monthlyts(lebase.T).mean(axis=0)
+    lebase = cutl.seasonalize_monthlyts(lebase.T,season=testsea).mean(axis=0)
+    legm = le.load_LEdata(gmdt,'historical',rettype='ndarray',
+                          conv=leconv,ftype=ftype,local=local)
+    legm=cutl.seasonalize_monthlyts(legm.T,season=testsea)
+    legmanom=legm-lebase
+    gisgm=cnc.getNCvar(gisfile,'tempanomaly',timesel='1950-01-01,2020-12-31',seas=testsea)
+    gisgm=cutl.calc_regmean(gisgm,latgis,longis,testreg)
+    xxle=np.arange(1950,1950+len(legm))
+    xxgis=np.arange(1950,1950+len(gisgm))
+
+    leleg=mlines.Line2D([],[],color='0.5')
+    gisleg=mlines.Line2D([],[],color='black',linewidth=2)
+    plt.figure()
+    plt.plot(xxle,legmanom,color='0.5')
+    plt.plot(xxgis,gisgm,color='black',linewidth=2)
+    plt.title(testreg + ' ' + testsea +' SAT anom (base 1951-80)')
+    plt.xlabel('years')
+    plt.legend((leleg,gisleg),('Historical LE','GIStemp1200'),loc='best',frameon=False)
+    if printtofile:
+        plt.savefig(testfld + testreg + '_anom_1951-80base_HistoricalLE_GIStemp_timeseries.pdf')"""
 
     # ========= make the figures =========
     if longtermLE:
@@ -1105,7 +1185,7 @@ if dolongtermavg:
             ax.axvline(simsigma,color='0.3',linewidth=3)
             for ll in np.arange(0,5):
                 ax.axvline(simstds[ll],color='0.3',linewidth=1)
-            ax.set_title('$\sigma$ across sets of 4 Estimated 120-year Eurasian' + ttlstr + 'SAT change (DJF)')
+            ax.set_title('$\sigma$ across sets of 4 Estimated 120-year ' + ttlstr + 'SAT change (DJF)')
             ax.set_ylabel('Density')
             ltlg=mpatches.Patch(color=ltcol,alpha=0.5)
             simlg=mlines.Line2D([],[],color='0.3',linewidth=3) # all five
@@ -1120,7 +1200,7 @@ if dolongtermavg:
             fig,ax=plt.subplots(1,1)
             ax.hist(ltsigma,color=ltcol,alpha=0.5)
             ax.axvline(simsigma,color='0.3',linewidth=3)
-            ax.set_title('$\sigma$ across sets of 4 Estimated 120-year Eurasian' + ttlstr + 'SAT change (DJF)')
+            ax.set_title('$\sigma$ across sets of 4 Estimated 120-year ' + ttlstr + 'SAT change (DJF)')
             ax.set_ylabel('Density')
             ltlg=mpatches.Patch(color=ltcol,alpha=0.5)
             simlg=mlines.Line2D([],[],color='0.3',linewidth=3)
@@ -1157,7 +1237,7 @@ if dolongtermavg:
         ax.axhline(y=0,color='k')
         ax.axvline(x=0,color='k',linestyle='--')
         ax.set_ylabel('Density')
-        ax.set_title('Estimated 120-year Eurasian' + ttlstr + 'SAT change (DJF)')
+        ax.set_title('Estimated 120-year ' + ttlstr + 'SAT change (' + sea +')')
         ax.set_xlabel('$\Delta$ SAT ($^\circ$C); n=' + str(numsamp))
         ax.legend((ltlg,simlg,nsidclg,obslg),('120-yr avg Historical','SIC forcings','NSIDC SIC forcing','Observations'),
                   loc='upper left',frameon=False)
@@ -1182,21 +1262,25 @@ if dolongtermavg:
         sslg=mlines.Line2D([],[],color=ltcol,linewidth=2) # subsamp sims
         simlg=mlines.Line2D([],[],color='0.3',linestyle='none',marker='o')
         nsidclg=mlines.Line2D([],[],color='g',linestyle='none',marker='o')
-        obslg=mlines.Line2D([],[],color='b',linestyle='none',marker='s')
+        obslg=mlines.Line2D([],[],color=obscol,linestyle='none',marker='s')
         rawlg=mlines.Line2D([],[],color=hcolline,linewidth=2)
         rawnlg=mlines.Line2D([],[],color=natcolline,linewidth=2)
         rawmlg=mlines.Line2D([],[],color=miscolline,linewidth=2)
 
         prstr =''
         legh = (sslg,rawlg)
-        legstr = ('AGCM','CGCM')
+        legstr = ('AGCM Ice','CGCM All')
 
         fig,ax=plt.subplots(1,1)
         fig.set_size_inches(10,7)
         #ax.hist(ltavg,normed=True,color=ltcol,alpha=0.5)
         #ax.plot(ltxx,ltpdf_fitted,color=ltcol,linewidth=2)
-        ax.hist(plotsims,normed=True,color=ltcol,alpha=0.4,histtype='stepfilled')
-        ax.plot(ssxx,sspdf_fitted,color=ltcol,linewidth=3)
+        if field=='sia':
+            legh=(rawlg,)
+            legstr=('CGCM All',)
+        else:
+            ax.hist(plotsims,normed=True,color=ltcol,alpha=0.4)#,histtype='stepfilled')
+            ax.plot(ssxx,sspdf_fitted,color=ltcol,linewidth=3)
 
         if addsims:
             prstr=prstr+'120yrsims_'
@@ -1215,33 +1299,44 @@ if dolongtermavg:
                         marker='o',linestyle='',fillstyle='none',mew=mew,markersize=ms,mec='g')
 
         #ax.plot(obsreg,0,color='b',marker='s',fillstyle='full',markersize=ms)# blue for actual obs. green for simulated obs
-        obslg=ax.axvline(obsreg,color='b',linewidth=2)
+        obslg=ax.axvline(obsreg,color=obscol,linewidth=2)
 
         ylims=ax.get_ylim()
-        ax.set_ylim(-0.1,ylims[1])
+        #ax.set_ylim(-0.1,ylims[1])
         ax.set_yticklabels('')
         ax.axhline(y=0,color='k')
         ax.axvline(x=0,color='k',linestyle='--')
         ax.set_ylabel('Density')
-        ax.set_title('11-year epochs Eurasian' + ttlstr + 'SAT change (DJF)')
+        if field=='sia':
+            ax.set_title('Arctic sea-ice area change (DJF)')
+        else:
+            ax.set_title('11-year epochs ' + ttlstr + ' SAT change (' + sea + ')')
         xlab = '$\Delta$ SAT ($^\circ$C); AGCM= $%.2f$'%(ssmean)+ ' CGCM= $%.2f$'%(rawmean)
 
         # add RAW LE
-        ax.hist(lesea,normed=True,color=hcol,alpha=0.3,histtype='stepfilled')
+        ax.hist(lesea,normed=True,color=hcol,alpha=0.3)#,histtype='stepfilled')
         ax.plot(rawxx,rawpdf_fitted,color=hcolline,linewidth=3)
+        fs='full'
+        for eii in range(0,5):
+            # search for difforig[eii] nearest to axx, 
+            # then plot apdf_fitted[axx] as marker, filled or not based on sig.
+            plotx = or5sea[eii]
+            idx = cutl.find_nearest(rawxx,plotx)
+            ploty = rawpdf_fitted[idx]
+            ax.plot(plotx,ploty,marker='o',color=hcolline,mec=hcolline,fillstyle=fs,mew=mew,markersize=ms)
+
 
         al =0.9; histtype='step'
         #al =0.3; histtype='stepfilled'
         if addnat:
-            ax.hist(lensea,normed=True,color=natcol,alpha=al,histtype=histtype)
+            #ax.hist(lensea,normed=True,color=natcol,alpha=al,histtype=histtype)
             ax.plot(rawnxx,rawnpdf_fitted,color=natcolline,linewidth=2,alpha=al)
             legh = legh + (rawnlg,)
             legstr = legstr + ('CGCM Nat',)
             prstr = prstr+'nat'
             xlab = xlab + ' Nat=$%.2f$'%(rawnmean) 
         if addmisc:
-            
-            ax.hist(lemsea,normed=True,color=miscol,alpha=al,histtype=histtype)
+            #ax.hist(lemsea,normed=True,color=miscol,alpha=al,histtype=histtype)
             ax.plot(rawmxx,rawmpdf_fitted,color=miscolline,linewidth=2,alpha=al)
             legh = legh + (rawmlg,)
             legstr = legstr + ('CGCM Aero',)
@@ -1252,6 +1347,13 @@ if dolongtermavg:
         legh=legh+(obslg,)
         legstr=legstr+('Obs',)
 
+        if field=='sia':
+            xlab = '$\Delta$ Sea Ice Area (millions of km$^2$)' # for paper.
+            xtlabs = ax.get_xticks()/1e12
+            ax.set_xticklabels(xtlabs)
+        else:
+            xlab = '$\Delta$ SAT ($^\circ$C)' # for paper.
+
         ax.legend(legh,legstr, loc='upper left',frameon=False)
         ax.set_xlabel(xlab)
 
@@ -1260,6 +1362,26 @@ if dolongtermavg:
             fig.savefig(field + region + substr + '_' + sea + '_LEsims' + simsstr +\
                         'obs_11yrsubsmpavgraw_hist' + prstr + now + '.pdf')
 
+
+    # TESTING kernel shape
+    kernel=sp.stats.gaussian_kde(lesea)
+    kernel2=sp.stats.gaussian_kde(lesea,bw_method='silverman')
+    kernelf1=sp.stats.gaussian_kde(lesea,bw_method=1)
+    kernelfp7=sp.stats.gaussian_kde(lesea,bw_method=.7)
+    kernelfp35=sp.stats.gaussian_kde(lesea,bw_method=.35)
+    kernelfp25=sp.stats.gaussian_kde(lesea,bw_method=.25)
+
+    plt.figure()
+    plt.plot(rawxx,kernel(rawxx),'b--')
+    plt.plot(rawxx,kernel2(rawxx),'r--')
+    plt.plot(rawxx,kernelf1(rawxx),'g--')
+    plt.plot(rawxx,kernelfp7(rawxx),'c--')
+    plt.plot(rawxx,kernelfp35(rawxx),'m--')
+    plt.plot(rawxx,kernelfp25(rawxx),color='orange',linestyle='--')
+    plt.hist(lesea,normed=True,color=hcol,alpha=0.3,histtype='stepfilled')
+    plt.legend(('scott (scale=0.457)','silverman (scale=0.484)',
+                'scale=1','scale=0.7','scale=0.35','scale=0.25','orig'),
+                loc='best')
 
 
     """# ==== estimate sigma uncertainty ====
