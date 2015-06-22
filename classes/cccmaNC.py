@@ -323,7 +323,7 @@ def getNCvar(filename,field,timesel=None,levsel=None,monsel=None,seas=None,calc=
             
         try:
             var_scale = ncvar.scale_factor
-            
+            print 'var_scale ' + str(var_scale)
         except:
             var_scale = 1
             
