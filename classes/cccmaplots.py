@@ -833,7 +833,7 @@ def plot_onecascade(topdata,bottdata,topy,botty,ax=None, mparams=None, lparams=N
         
     tlen = len(topdata) # this should match bottdata length
     if tlen != len(bottdata):
-        print 'topdata length is not equal to bottdata length!'
+        print 'topdata length is not equal to bottdata length! ' + str(tlen) + '!=' + str(len(bottdata))
         return
 
     for tii,td in enumerate(topdata):
