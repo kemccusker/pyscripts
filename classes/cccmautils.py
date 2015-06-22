@@ -249,7 +249,7 @@ def polar_mean_areawgted3d(fld,lat,lon,latlim=60,hem='nh',cellareas=None,include
         
     return pm
 
-def annualize_monthlyts(input, includenan=0):
+def annualize_monthlyts(input, includenan=0,verb=False):
     """ It is expected that the input variable is 3 dimension, with time being first
         But on 5/6/2014 I tried to generalize to any dimension...needs to be tested.
     """
@@ -257,6 +257,9 @@ def annualize_monthlyts(input, includenan=0):
     # time must be first dimension
     # figure out nyears (truncate if only some months in last year)
     dims = input.shape
+    if verb:
+        print 'dims ' + str(dims)
+
     nt = input.shape[0] # number of times
     nyrs = nt/12        # I think this will automatically return an integer
 
@@ -269,14 +272,26 @@ def annualize_monthlyts(input, includenan=0):
         diml = list(dims[1:]) # this one is for wgts array
         diml.append(1) # insert size nyrs into first dimension
         diml = tuple(diml)
-        
+        if verb:
+            print 'diml ' + str(diml)
+
         diml2 = list(dims[1:]) # this one is for initializing the timeseries array
         diml2.insert(0,nyrs) # insert size nyrs into first dimension
+        if verb:
+            print 'diml2 ' + str(diml2) 
+
+            print 'wgts.shape ' + str(wgts.shape)
 
         wgts = np.tile(wgts,diml) # make a weights array for each grid pt
-        # put the 3rd dim (2) in first spot, 1st dim (0) in second spot, 2nd dim (1) in third spot
-        # this effectively shifts the dimensions back to time,dim2,dim3
-        wgts = np.transpose(wgts,(2,0,1))
+        if verb:
+            print 'wgts.shape after tile ' + str(wgts.shape)
+
+        if len(dims)==3:
+            # put the 3rd dim (2) in first spot, 1st dim (0) in second spot, 2nd dim (1) in third spot
+            # this effectively shifts the dimensions back to time,dim2,dim3
+            wgts = np.transpose(wgts,(2,0,1))
+        elif len(dims)==2:
+            wgts = wgts.T #np.transpose(wgts,(2,0,1))
     else:
         diml2 = nyrs,
 
@@ -291,7 +306,7 @@ def annualize_monthlyts(input, includenan=0):
 
     return annts
 
-def seasonalize_monthlyts(input,season=None,includenan=0,mo=0,climo=0):
+def seasonalize_monthlyts(input,season=None,includenan=0,mo=0,climo=0,verb=False):
 
     if season == None and mo==0:
         print 'Must specify either season or mo! Months indexed starting from 1'
@@ -314,7 +329,7 @@ def seasonalize_monthlyts(input,season=None,includenan=0,mo=0,climo=0):
         seasts = input[(mo-1)::12,...] # increments of 12 months
         return seasts
     elif season=='ANN':
-        return annualize_monthlyts(input,includenan)
+        return annualize_monthlyts(input,includenan,verb=verb)
     elif season=='DJF':
         # do weighted average for requested season
         
@@ -986,7 +1001,9 @@ def calc_normfit(input,verb=True):
 
             input: 1d array of data
 
-            returns: fittedpdf, mean, sigma
+                   default # of return vals is 500
+
+            returns: fittedpdf, mean, sigma, x values
     """
 
     # Now calc the pdf associated with the hist
@@ -1004,6 +1021,19 @@ def calc_normfit(input,verb=True):
         print '===== mean ' + str(mn) + ' sigma ' + str(sgm)
 
     return pdf_fitted, mn, sgm, xx
+
+
+def calc_kernel(input):
+    """ use scipy.stats.gaussian_kde() to calc a pdf 
+
+            input: 1d array of data
+            returns pdf, x values
+    """
+    
+    kernel = sp.stats.gaussian_kde(input)
+    pdf,mn,sgm,xx= calc_normfit(input) # just to get x values
+    
+    return kernel(xx), xx
 
 
 """ Trying to figure out correct way to calc 95% confidence interval
