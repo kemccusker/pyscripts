@@ -27,7 +27,7 @@ plt.ion()
        # coords = {'lat': con.get_t63lat(), 'lon': con.get_t63lon()}
 
 
-printtofile=True
+printtofile=False
 
 field = 'st'
 smclim=True
@@ -46,7 +46,7 @@ plottype='calcregunccascade'
 projtype='nh' #'eastere' # 'nh','sh','sq','eastere','nastere','eabksstere','ealamb','eabkslamb'
 
 # None, nh, polcap60, polcap65, polcap70, eurasia, eurasiamori, eurasiasth,eurasiathin,eurasiathinw,eurasiathine,ntham, nthatl, bks, bksmori, soo
-region='polcap60' #'eurasia' #'eurasiamori'
+region='eurasiamori' #'polcap60' #'eurasia' #'eurasiamori'
 screen=True # just for seasonalvert
 seacyclatlim=60
 withlat=False
