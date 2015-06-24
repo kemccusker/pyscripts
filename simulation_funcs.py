@@ -2251,6 +2251,8 @@ def plot_uncertainty_cascade(dblob,fielddict,coords,sims,pparams,info=None,seas=
         print 'lev2pv: ' + str(lev2pv)
         y2 = topy-1 #* np.ones(len(lev2))
 
+        print 'lev1,lev2'
+        print lev1,lev2
         cplt.plot_onecascade((lev1,),(lev2,),topy,y2,ax=ax,color=col,pvalst=(pvmdt,),pvalsb=(lev2pv,),siglevel=siglevel)
             
 
@@ -2285,7 +2287,7 @@ def plot_uncertainty_cascade(dblob,fielddict,coords,sims,pparams,info=None,seas=
 
         lev3 = ens
         lev3pv = pvens
-        print 'lev3pv: ' + str(lev3pv)
+        #print 'lev3pv: ' + str(lev3pv)
         y3 = y2-1
 
         print 'lev2: ' + str(lev2) + ', lev3: ' + str(lev3)
