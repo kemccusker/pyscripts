@@ -41,7 +41,7 @@ field2='gz'
 #field2='pmsl'
 level2=50000
 
-# seasonalmap, seasonalvert, plotzonmean, plotseacyc, pattcorrwithtime, plotregmean,calcregmeanwithtime, calcregunccascade,timetosig, timetosigsuper, plotscatter
+# seasonalmap, seasonalvert, plotzonmean, plotseacyc, pattcorrwithtime, plotregmean,calcregmeanwithtime, calcregunccascade,calccomposites, timetosig, timetosigsuper, plotscatter
 plottype='calcregunccascade' 
 projtype='nh' #'eastere' # 'nh','sh','sq','eastere','nastere','eabksstere','ealamb','eabkslamb'
 
