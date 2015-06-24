@@ -829,6 +829,8 @@ def sample120yravg(lesea,numsamp,nummems=11,allowreps=True):
 
 if dolongtermavg:
 
+    extra=False # timeseries, testing kernel density estimates
+
     longtermLE=False # else, subsample AGCM sims
     addsims=False # 120-yr avg AGCM sims
     addnat=True
@@ -836,7 +838,7 @@ if dolongtermavg:
     appendorig=False # append original historical runs? (for now 6/22/15)
     addorig=True # just add orig points to distribution curve (not histogram)
 
-    printtofile=False
+    printtofile=True
 
     numsamp=100 # how many times to sample 11 ens members, for longtermLE=True
     addraw=False # add the decadal diffs?  for longtermLE=True
@@ -858,7 +860,7 @@ if dolongtermavg:
     region='eurasiamori'
     #region='gt60n'
 
-    field='sia'; ncfield='sianh'; comp='OImon'; region='nh';
+    #field='sia'; ncfield='sianh'; comp='OImon'; region='nh';
 
     if region=='eurasiamori': ttlstr='Eurasian'
     elif region=='gm': ttlstr='Global'
@@ -1016,19 +1018,31 @@ if dolongtermavg:
         #sims=('R1','R2','R3','R4','R5','E1','E2','E3','E4','E5'); simsstr='sbERboth'
         simflddf = pd.DataFrame(lmd.loaddata((simfield1,),sims,ncfields=(simncfield1,), timefreq=sea, 
                                              region=region))*simconv1
+        osimflddf = pd.DataFrame(lmd.loaddata((simfield1,),('NSIDC',),ncfields=(simncfield1,), timefreq=sea, 
+                                             region=region))*simconv1
         if subnh:
             simsubdf = pd.DataFrame(lmd.loaddata((simfield1,),sims,ncfields=(simncfield1,), timefreq=sea, 
                                                  filetype='diff',region='nh'))*simconv1
-
             # want to subtract the mean hemispheric avg anomaly
             simflddf = simflddf - simsubdf.mean(axis=1).mean() # average over sims and then time (should be a scalar)
-
+            osimsubdf = pd.DataFrame(lmd.loaddata((simfield1,),('NSIDC',),ncfields=(simncfield1,), timefreq=sea, 
+                                                 filetype='diff',region='nh'))*simconv1
+            # want to subtract the mean hemispheric avg anomaly
+            osimflddf = osimflddf - osimsubdf.mean(axis=1).mean() # average over sims and then time (should be a scalar)
 
         subsamp = subsamp_sims(simflddf,numyrs=11)
         plotsims = subsamp
         print '==== AGCM '
         sspdf_fitted,ssmean,sssd,ssxx = cutl.calc_normfit(plotsims)
         #sspdf_fitted,ssxx = cutl.calc_kernel(plotsims)
+
+        # mean and conf-int: @@@@@
+        # ci = sp.stats.t.interval(1-siglevel, df, loc= meananom, scale=stder)
+
+        osubsamp = subsamp_sims(osimflddf,numyrs=11)
+        print '==== NSIDC AGCM '
+        osspdf_fitted,ossmean,osssd,ossxx = cutl.calc_normfit(osubsamp)
+
 
         # do each ens separately, for testing stats (maybe not plotting)
         sims2=('R1','R2','R3','R4','R5'); #simsstr='sbRonly'
@@ -1069,6 +1083,25 @@ if dolongtermavg:
         if lpval<=siglevel:
              print 'The ensemble variances are significantly different (' + str(1-siglevel) + ')'
 
+        tstat, pval = sp.stats.ttest_ind(lesea,lensea)
+        lstat, lpval = sp.stats.levene(lesea,lensea)
+        print '==== testing LE vs Nat LE ===='
+        print 'TSTAT: ' + str(tstat) + ' PVAL: ' + str(pval)
+        if pval<=siglevel:
+             print 'The ensemble means are significantly different (' + str(1-siglevel) + ')'
+        print 'LSTAT: ' + str(lstat) + ' PVAL: ' + str(lpval)
+        if lpval<=siglevel:
+             print 'The ensemble variances are significantly different (' + str(1-siglevel) + ')'
+
+        tstat, pval = sp.stats.ttest_ind(lesea,lemsea)
+        lstat, lpval = sp.stats.levene(lesea,lemsea)
+        print '==== testing LE vs Aero LE ===='
+        print 'TSTAT: ' + str(tstat) + ' PVAL: ' + str(pval)
+        if pval<=siglevel:
+             print 'The ensemble means are significantly different (' + str(1-siglevel) + ')'
+        print 'LSTAT: ' + str(lstat) + ' PVAL: ' + str(lpval)
+        if lpval<=siglevel:
+             print 'The ensemble variances are significantly different (' + str(1-siglevel) + ')'
 
 
     if addsims:
@@ -1148,33 +1181,6 @@ if dolongtermavg:
         obsreg=cutl.calc_regtotseaicearea(nsidcfldp,latns,lonns,region='nh',isarea=False).mean() -\
                   cutl.calc_regtotseaicearea(nsidcfldc,latns,lonns,region='nh',isarea=False).mean()
 
-    """# TEST OUT TIMESERIES OF LE VS OBS
-    testfld='tas'; testreg='gt60n'; testsea='DJF'
-
-    gmdt={'field':testfld+testreg,'ncfield': ncfield,'comp':comp}
-    lebase = le.load_LEdata(gmdt,'historical',rettype='ndarray',
-                            conv=leconv,timesel='1951-01-01,1980-12-31',ftype=ftype,local=local)
-    #lebase = cutl.annualize_monthlyts(lebase.T).mean(axis=0)
-    lebase = cutl.seasonalize_monthlyts(lebase.T,season=testsea).mean(axis=0)
-    legm = le.load_LEdata(gmdt,'historical',rettype='ndarray',
-                          conv=leconv,ftype=ftype,local=local)
-    legm=cutl.seasonalize_monthlyts(legm.T,season=testsea)
-    legmanom=legm-lebase
-    gisgm=cnc.getNCvar(gisfile,'tempanomaly',timesel='1950-01-01,2020-12-31',seas=testsea)
-    gisgm=cutl.calc_regmean(gisgm,latgis,longis,testreg)
-    xxle=np.arange(1950,1950+len(legm))
-    xxgis=np.arange(1950,1950+len(gisgm))
-
-    leleg=mlines.Line2D([],[],color='0.5')
-    gisleg=mlines.Line2D([],[],color='black',linewidth=2)
-    plt.figure()
-    plt.plot(xxle,legmanom,color='0.5')
-    plt.plot(xxgis,gisgm,color='black',linewidth=2)
-    plt.title(testreg + ' ' + testsea +' SAT anom (base 1951-80)')
-    plt.xlabel('years')
-    plt.legend((leleg,gisleg),('Historical LE','GIStemp1200'),loc='best',frameon=False)
-    if printtofile:
-        plt.savefig(testfld + testreg + '_anom_1951-80base_HistoricalLE_GIStemp_timeseries.pdf')"""
 
     # ========= make the figures =========
     if longtermLE:
@@ -1260,8 +1266,10 @@ if dolongtermavg:
     else: # not longtermLE
 
         sslg=mlines.Line2D([],[],color=ltcol,linewidth=2) # subsamp sims
+        ss2lg=mlines.Line2D([],[],color='k',linewidth=2) # subsamp sims2 (variable bc)
         simlg=mlines.Line2D([],[],color='0.3',linestyle='none',marker='o')
         nsidclg=mlines.Line2D([],[],color='g',linestyle='none',marker='o')
+        nsidclg2=mlines.Line2D([],[],color='g',linewidth=2)
         obslg=mlines.Line2D([],[],color=obscol,linestyle='none',marker='s')
         rawlg=mlines.Line2D([],[],color=hcolline,linewidth=2)
         rawnlg=mlines.Line2D([],[],color=natcolline,linewidth=2)
@@ -1281,7 +1289,18 @@ if dolongtermavg:
         else:
             ax.hist(plotsims,normed=True,color=ltcol,alpha=0.4)#,histtype='stepfilled')
             ax.plot(ssxx,sspdf_fitted,color=ltcol,linewidth=3)
+            
+            ax.plot(ss2xx,ss2pdf_fitted,color='k',linewidth=2) # variable boundary forcings
 
+            #ax.hist(osubsamp,normed=True,color='g',alpha=0.3)
+            #ax.plot(ossxx,osspdf_fitted,color='g',linewidth=2)
+            #prstr=prstr+'addRsimsnsidcsim_'
+            #legstr=legstr+('AGCM NSIDC','AGCM var ICE')
+            #legh=legh+(nsidclg2,ss2lg)
+
+            prstr=prstr+'addRsims_'
+            legstr=legstr+('AGCM var ICE',)
+            legh=legh+(ss2lg,)
         if addsims:
             prstr=prstr+'120yrsims_'
             legstr=legstr+('120-yr AGCM',)
@@ -1363,25 +1382,90 @@ if dolongtermavg:
                         'obs_11yrsubsmpavgraw_hist' + prstr + now + '.pdf')
 
 
-    # TESTING kernel shape
-    kernel=sp.stats.gaussian_kde(lesea)
-    kernel2=sp.stats.gaussian_kde(lesea,bw_method='silverman')
-    kernelf1=sp.stats.gaussian_kde(lesea,bw_method=1)
-    kernelfp7=sp.stats.gaussian_kde(lesea,bw_method=.7)
-    kernelfp35=sp.stats.gaussian_kde(lesea,bw_method=.35)
-    kernelfp25=sp.stats.gaussian_kde(lesea,bw_method=.25)
+    if extra: # ===================================================
+        # TESTING kernel shape
+        kernel=sp.stats.gaussian_kde(lesea)
+        kernel2=sp.stats.gaussian_kde(lesea,bw_method='silverman')
+        kernelf1=sp.stats.gaussian_kde(lesea,bw_method=1)
+        kernelfp7=sp.stats.gaussian_kde(lesea,bw_method=.7)
+        kernelfp35=sp.stats.gaussian_kde(lesea,bw_method=.35)
+        kernelfp25=sp.stats.gaussian_kde(lesea,bw_method=.25)
 
-    plt.figure()
-    plt.plot(rawxx,kernel(rawxx),'b--')
-    plt.plot(rawxx,kernel2(rawxx),'r--')
-    plt.plot(rawxx,kernelf1(rawxx),'g--')
-    plt.plot(rawxx,kernelfp7(rawxx),'c--')
-    plt.plot(rawxx,kernelfp35(rawxx),'m--')
-    plt.plot(rawxx,kernelfp25(rawxx),color='orange',linestyle='--')
-    plt.hist(lesea,normed=True,color=hcol,alpha=0.3,histtype='stepfilled')
-    plt.legend(('scott (scale=0.457)','silverman (scale=0.484)',
-                'scale=1','scale=0.7','scale=0.35','scale=0.25','orig'),
-                loc='best')
+        plt.figure()
+        plt.plot(rawxx,kernel(rawxx),'b--')
+        plt.plot(rawxx,kernel2(rawxx),'r--')
+        plt.plot(rawxx,kernelf1(rawxx),'g--')
+        plt.plot(rawxx,kernelfp7(rawxx),'c--')
+        plt.plot(rawxx,kernelfp35(rawxx),'m--')
+        plt.plot(rawxx,kernelfp25(rawxx),color='orange',linestyle='--')
+        plt.hist(lesea,normed=True,color=hcol,alpha=0.3,histtype='stepfilled')
+        plt.legend(('scott (scale=0.457)','silverman (scale=0.484)',
+                    'scale=1','scale=0.7','scale=0.35','scale=0.25','orig'),
+                    loc='best')
+
+
+
+        # TEST OUT TIMESERIES OF LE VS OBS
+        testfld='tas'; testreg='eurasiamori'; testsea='DJF'
+        les = ('historical','historicalNat','historicalMisc')
+        lecols = {'historical':hcol,'historicalNat':natcol,'historicalMisc':miscol}
+
+        gmdt={'field':testfld+testreg,'ncfield': ncfield,'comp':comp}
+
+        legmanom={}
+        for lename in les:
+
+            lebase = le.load_LEdata(gmdt,lename,rettype='ndarray',
+                                    conv=leconv,timesel='1951-01-01,1980-12-31',ftype=ftype,local=local)
+            #lebase = cutl.annualize_monthlyts(lebase.T).mean(axis=0)
+            lebase = cutl.seasonalize_monthlyts(lebase.T,season=testsea).mean(axis=0)
+            legm = le.load_LEdata(gmdt,lename,rettype='ndarray',
+                                  conv=leconv,ftype=ftype,local=local)
+            legm=cutl.seasonalize_monthlyts(legm.T,season=testsea)
+            legmanom[lename]=legm-lebase
+
+        gisgm=cnc.getNCvar(gisfile,'tempanomaly',timesel='1950-01-01,2020-12-31',seas=testsea)
+        gisgm=cutl.calc_regmean(gisgm,latgis,longis,testreg)
+        xxle=np.arange(1950,1950+len(legm))
+        xxgis=np.arange(1950,1950+len(gisgm))
+
+        leleg=mlines.Line2D([],[],color='0.5')
+        gisleg=mlines.Line2D([],[],color='black',linewidth=2)
+
+        legs=[]
+        legsstr=[]
+        plt.figure()
+        for lename in les:
+            legs.append(mlines.Line2D([],[],color=lecols[lename]))
+            legsstr.append(lename)
+            plt.plot(xxle,legmanom[lename],color=lecols[lename],alpha=0.5)
+
+        legs.append(gisleg)
+        legsstr.append('GIStemp1200')
+
+        plt.plot(xxgis,gisgm,color='black',linewidth=2)
+        plt.title(testreg + ' ' + testsea +' SAT anom (base 1951-80)')
+        plt.xlabel('years')
+        plt.legend((leleg,gisleg),('Historical LE','GIStemp1200'),loc='best',frameon=False)
+        plt.legend(legs,legsstr,loc='best',frameon=False)
+        if printtofile:
+            plt.savefig(testfld + testreg + '_anom_1951-80base_HistoricalLENatMisc_GIStemp_timeseries.pdf')
+
+        # Which ens member matches observations the best?
+        # Test with Historical LE:
+        lehist = legmanom[lename]
+        lehist=lehist[:-7,:] # to match obs
+        ccoef=np.zeros(lehist.shape[1])
+        for ii in np.arange(0,lehist.shape[1]):
+            # for each ens, calc corr coef
+            ccoef[ii] = np.corrcoef(lehist[:,ii],gisgm)[0,1]
+
+        # @@@@ ideally would like to plot the "max correlation" ens
+        # member in the timeseries. Also ideally, if testing eurasiamori,
+        # check only since the year 2000 or something.
+
+
+        # OR pick out the 5 coldest Eurasia's and 5 warmest: what is the diff?
 
 
     """# ==== estimate sigma uncertainty ====
