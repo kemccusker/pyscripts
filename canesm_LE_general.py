@@ -34,7 +34,7 @@ addobs=True # to scatter plot
 addnat=False
 addsims=True # add the idealized simulations. only good for DJF polar amp vs eurasia SAT
 
-local=False
+local=True
 
 conditional=True # plot scatter conditional on 3rd var
 
@@ -852,6 +852,7 @@ if dolongtermavg:
 
     sea='DJF'
     siglevel=0.1
+    cisiglevel=0.05
 
     leconv=1
     field='tas'
@@ -860,7 +861,7 @@ if dolongtermavg:
     region='eurasiamori'
     #region='gt60n'
 
-    #field='sia'; ncfield='sianh'; comp='OImon'; region='nh';
+    field='sia'; ncfield='sianh'; comp='OImon'; region='nh';
 
     if region=='eurasiamori': ttlstr='Eurasian'
     elif region=='gm': ttlstr='Global'
@@ -932,6 +933,10 @@ if dolongtermavg:
     # calc the pdf associated with the hist
     rawpdf_fitted,rawmean,rawsd,rawxx = cutl.calc_normfit(lesea) # to get mean
     #rawpdf_fitted,rawxx = cutl.calc_kernel(lesea)
+    rawdf = len(lesea)-1
+    rawstder = rawsd / np.sqrt(rawdf+1)
+    rawci = sp.stats.t.interval(1-cisiglevel, rawdf, loc=rawmean, scale=rawstder)
+
 
     if addnat:
         lencdat = le.load_LEdata(fdict,'historicalNat',timesel=timeselc, rettype='ndarray',conv=leconv,ftype=ftype,local=local)
@@ -952,6 +957,9 @@ if dolongtermavg:
 
         rawnpdf_fitted,rawnmean,rawnsd,rawnxx = cutl.calc_normfit(lensea)
         #rawnpdf_fitted,rawnxx = cutl.calc_kernel(lensea)
+        rawndf = len(lensea)-1
+        rawnstder = rawnsd / np.sqrt(rawndf+1)
+        rawnci = sp.stats.t.interval(1-cisiglevel, rawndf, loc=rawnmean, scale=rawnstder)
 
     if addmisc:
         lemcdat = le.load_LEdata(fdict,'historicalMisc',timesel=timeselc, 
@@ -976,7 +984,9 @@ if dolongtermavg:
 
         rawmpdf_fitted,rawmmean,rawmsd,rawmxx = cutl.calc_normfit(lemsea)
         #rawmpdf_fitted,rawmxx = cutl.calc_kernel(lemsea)
-
+        rawmdf = len(lemsea)-1
+        rawmstder = rawmsd / np.sqrt(rawmdf+1)
+        rawmci = sp.stats.t.interval(1-cisiglevel, rawmdf, loc=rawmmean, scale=rawmstder)
 
     if longtermLE:
         # second option: choose 4 random, non-overlapping groups of 11 members x 11-yrs
@@ -1035,14 +1045,19 @@ if dolongtermavg:
         print '==== AGCM '
         sspdf_fitted,ssmean,sssd,ssxx = cutl.calc_normfit(plotsims)
         #sspdf_fitted,ssxx = cutl.calc_kernel(plotsims)
+        ssdf = len(subsamp)-1
+        ssstder = sssd / np.sqrt(ssdf+1)
 
         # mean and conf-int: @@@@@
-        # ci = sp.stats.t.interval(1-siglevel, df, loc= meananom, scale=stder)
+        # ci = sp.stats.t.interval(1-cisiglevel, df, loc= meananom, scale=stder)
+        ssci = sp.stats.t.interval(1-cisiglevel, ssdf, loc=ssmean, scale=ssstder)
 
         osubsamp = subsamp_sims(osimflddf,numyrs=11)
         print '==== NSIDC AGCM '
         osspdf_fitted,ossmean,osssd,ossxx = cutl.calc_normfit(osubsamp)
-
+        ossdf = len(osubsamp)-1
+        ossstder = osssd / np.sqrt(ossdf+1)
+        ossci = sp.stats.t.interval(1-cisiglevel, ossdf, loc=ossmean, scale=ossstder)
 
         # do each ens separately, for testing stats (maybe not plotting)
         sims2=('R1','R2','R3','R4','R5'); #simsstr='sbRonly'
@@ -1061,6 +1076,10 @@ if dolongtermavg:
         print '==== AGCM2 '
         ss2pdf_fitted,ss2mean,ss2sd,ss2xx = cutl.calc_normfit(plotsims2)
         #ss2pdf_fitted,ss2xx = cutl.calc_kernel(plotsims2)
+        ss2df = len(subsamp2)-1
+        ss2stder = ss2sd / np.sqrt(ss2df+1)
+        ss2ci = sp.stats.t.interval(1-cisiglevel, ss2df, loc=ss2mean, scale=ss2stder)
+
 
         tstat, pval = sp.stats.ttest_ind(plotsims,plotsims2)
         lstat, lpval = sp.stats.levene(plotsims,plotsims2)
@@ -1109,15 +1128,19 @@ if dolongtermavg:
         sims=('E1','E2','E3','E4','E5','R1','R2','R3','R4','R5','NSIDC'); #simsstr=''
         #simsRN=('R1','R2','R3','R4','R5','NSIDC')
         simsR=('R1','R2','R3','R4','R5')
+        simsE=('E1','E2','E3','E4','E5')
         #sims=simsRN; simsstr='Ronly'
-        simflddf = pd.DataFrame(lmd.loaddata((simfield1,),sims,ncfields=(simncfield1,), timefreq=sea, 
-                                             meantype='time',region=region),index=sims)*simconv1
-
+        #simflddf = pd.DataFrame(lmd.loaddata((simfield1,),sims,ncfields=(simncfield1,), timefreq=sea, 
+        #                                     meantype='time',region=region),index=sims)*simconv1
+        simflddf = pd.Series(lmd.loaddata((simfield1,),sims,ncfields=(simncfield1,), timefreq=sea, 
+                                             meantype='time',region=region))*simconv1
 
         # --- for estimating sigma in Individual SIC forcing ensemble only:
-        simflddfr = pd.DataFrame(lmd.loaddata((simfield1,),simsR,ncfields=(simncfield1,), timefreq=sea, 
-                                              meantype='time',region=region),index=simsR)*simconv1
-        simval=simflddfr.values[0,:]
+        #simflddfr = pd.DataFrame(lmd.loaddata((simfield1,),simsR,ncfields=(simncfield1,), timefreq=sea, 
+        #                                      meantype='time',region=region),index=simsR)*simconv1
+        simflddfr = pd.Series(lmd.loaddata((simfield1,),simsR,ncfields=(simncfield1,), timefreq=sea, 
+                                              meantype='time',region=region))*simconv1
+        simval=simflddfr.values
         simstds = [simval[1:].std(), simval[[0,2,3,4]].std(), simval[[0, 1, 3, 4]].std(), 
                    simval[[0, 1, 2, 4]].std(), simval[0:-1].std()] # hack
 
@@ -1143,9 +1166,10 @@ if dolongtermavg:
             # have to calc pvals 
 
         else:
-            simpvdf = pd.DataFrame(lmd.loaddata((simfield1,),sims,ncfields=(simncfield1,), timefreq=sea, 
-                                                filetype='pval',region=region),index=sims)
-            simfldm = ma.masked_where(simpvdf.values>siglevel,simflddf.values)
+            simpvdf = pd.Series(lmd.loaddata((simfield1,),sims,ncfields=(simncfield1,), timefreq=sea, 
+                                                filetype='pval',region=region))#,index=sims)
+            simfldm = simflddf.mask(simpvdf>siglevel)
+            #simfldm = ma.masked_where(simpvdf.values>siglevel,simflddf.values)
 
 
     # add obs
@@ -1263,13 +1287,18 @@ if dolongtermavg:
             if printtofile:
                 fig.savefig(field + region + substr + '_' + sea + '_LEsims' + simsstr + 'obs_est120yravgraw_hist' + prstr + '.pdf')
 
-    else: # not longtermLE
+    else: # not longtermLE figs ===============================================
+
+
+        if field=='sia' and region=='nh':
+            obscol='g' #@@@@@
 
         sslg=mlines.Line2D([],[],color=ltcol,linewidth=2) # subsamp sims
         ss2lg=mlines.Line2D([],[],color='k',linewidth=2) # subsamp sims2 (variable bc)
+        ss2lg2=mlines.Line2D([],[],color='k',linewidth=2,mew=2,marker='|')
         simlg=mlines.Line2D([],[],color='0.3',linestyle='none',marker='o')
         nsidclg=mlines.Line2D([],[],color='g',linestyle='none',marker='o')
-        nsidclg2=mlines.Line2D([],[],color='g',linewidth=2)
+        nsidclg2=mlines.Line2D([],[],color='g',linewidth=2,mew=2,marker='|')
         obslg=mlines.Line2D([],[],color=obscol,linestyle='none',marker='s')
         rawlg=mlines.Line2D([],[],color=hcolline,linewidth=2)
         rawnlg=mlines.Line2D([],[],color=natcolline,linewidth=2)
@@ -1281,16 +1310,15 @@ if dolongtermavg:
 
         fig,ax=plt.subplots(1,1)
         fig.set_size_inches(10,7)
-        #ax.hist(ltavg,normed=True,color=ltcol,alpha=0.5)
-        #ax.plot(ltxx,ltpdf_fitted,color=ltcol,linewidth=2)
+
         if field=='sia':
             legh=(rawlg,)
             legstr=('CGCM All',)
         else:
-            ax.hist(plotsims,normed=True,color=ltcol,alpha=0.4)#,histtype='stepfilled')
+            ax.hist(plotsims,normed=True,color=ltcol,alpha=0.4,histtype='stepfilled')
             ax.plot(ssxx,sspdf_fitted,color=ltcol,linewidth=3)
             
-            ax.plot(ss2xx,ss2pdf_fitted,color='k',linewidth=2) # variable boundary forcings
+            #ax.plot(ss2xx,ss2pdf_fitted,color='k',linewidth=2) # variable boundary forcings
 
             #ax.hist(osubsamp,normed=True,color='g',alpha=0.3)
             #ax.plot(ossxx,osspdf_fitted,color='g',linewidth=2)
@@ -1298,42 +1326,34 @@ if dolongtermavg:
             #legstr=legstr+('AGCM NSIDC','AGCM var ICE')
             #legh=legh+(nsidclg2,ss2lg)
 
-            prstr=prstr+'addRsims_'
-            legstr=legstr+('AGCM var ICE',)
-            legh=legh+(ss2lg,)
+            #prstr=prstr+'addRsims_'
+            #legstr=legstr+('AGCM var ICE',)
+            #legh=legh+(ss2lg,)
         if addsims:
             prstr=prstr+'120yrsims_'
-            legstr=legstr+('120-yr AGCM',)
-            legh=legh+(simlg,)
+            simsy=-0.02
+            for es in simsE:
+                ax.plot(simflddf[es],simsy,color=ltcol,
+                        marker='o',linestyle='',fillstyle='none',mew=mew,markersize=ms)
+                ax.plot(simfldm[es],simsy,color=ltcol,alpha=0.6,
+                        marker='o',linestyle='',fillstyle='full')
+            for rs in simsR:
+                ax.plot(simflddf[rs],simsy,color='k',
+                        marker='o',linestyle='',fillstyle='none',mew=mew,markersize=ms)
+                ax.plot(simfldm[rs],simsy,color='k',alpha=0.6,
+                        marker='o',linestyle='',fillstyle='full') 
 
-            ax.plot(simflddf.values, np.zeros(len(simflddf)),color='0.3',
-                     marker='o',linestyle='',fillstyle='none',mew=mew,markersize=ms)
-            ax.plot(simfldm,np.zeros(len(simflddf)),color='0.3',
-                     marker='o',linestyle='',fillstyle='full')
             if subnh: # HACK @@
-                ax.plot(simflddf['NSIDC'],0,color='g',
+                ax.plot(simflddf['NSIDC'],simsy,color='g',
                         marker='o',linestyle='',fillstyle='none',mew=mew,markersize=ms,mec='g')
             else:
-                ax.plot(simflddf['NSIDC'].values[0],0,color='g',
+                ax.plot(simflddf['NSIDC'],simsy,color='g',
                         marker='o',linestyle='',fillstyle='none',mew=mew,markersize=ms,mec='g')
-
-        #ax.plot(obsreg,0,color='b',marker='s',fillstyle='full',markersize=ms)# blue for actual obs. green for simulated obs
-        obslg=ax.axvline(obsreg,color=obscol,linewidth=2)
-
-        ylims=ax.get_ylim()
-        #ax.set_ylim(-0.1,ylims[1])
-        ax.set_yticklabels('')
-        ax.axhline(y=0,color='k')
-        ax.axvline(x=0,color='k',linestyle='--')
-        ax.set_ylabel('Density')
-        if field=='sia':
-            ax.set_title('Arctic sea-ice area change (DJF)')
-        else:
-            ax.set_title('11-year epochs ' + ttlstr + ' SAT change (' + sea + ')')
-        xlab = '$\Delta$ SAT ($^\circ$C); AGCM= $%.2f$'%(ssmean)+ ' CGCM= $%.2f$'%(rawmean)
+                ax.plot(simfldm['NSIDC'],simsy,color='g',alpha=0.6,
+                        marker='o',linestyle='',fillstyle='full')
 
         # add RAW LE
-        ax.hist(lesea,normed=True,color=hcol,alpha=0.3)#,histtype='stepfilled')
+        ax.hist(lesea,normed=True,color=hcol,alpha=0.3,histtype='stepfilled')
         ax.plot(rawxx,rawpdf_fitted,color=hcolline,linewidth=3)
         fs='full'
         for eii in range(0,5):
@@ -1343,6 +1363,31 @@ if dolongtermavg:
             idx = cutl.find_nearest(rawxx,plotx)
             ploty = rawpdf_fitted[idx]
             ax.plot(plotx,ploty,marker='o',color=hcolline,mec=hcolline,fillstyle=fs,mew=mew,markersize=ms)
+
+        #ax.plot(obsreg,0,color='b',marker='s',fillstyle='full',markersize=ms)# blue for actual obs. green for simulated obs
+        obslg=ax.axvline(obsreg,color=obscol,linewidth=2)
+        if field=='sia' and region=='nh':
+            plotx=obsreg
+            idx=cutl.find_nearest(rawxx,plotx)
+            ploty=rawpdf_fitted[idx]
+            ax.plot(plotx,ploty,marker='o',color=obscol,mec=obscol,fillstyle=fs,mew=mew,markersize=ms)
+
+
+        ylims=ax.get_ylim()
+        print ylims # @@@@
+        if field=='sia':
+            pass
+        elif field=='tas':
+            ax.set_ylim(-0.05,ylims[1])
+        ax.set_yticklabels('')
+        ax.axhline(y=0,color='k')
+        ax.axvline(x=0,color='k',linestyle='--')
+        ax.set_ylabel('Density')
+        if field=='sia':
+            ax.set_title('Arctic sea-ice area change (DJF)')
+        else:
+            ax.set_title('11-year epochs ' + ttlstr + ' SAT change (' + sea + ')')
+        xlab = '$\Delta$ SAT ($^\circ$C); AGCM= $%.2f$'%(ssmean)+ ' CGCM= $%.2f$'%(rawmean)
 
 
         al =0.9; histtype='step'
@@ -1364,7 +1409,10 @@ if dolongtermavg:
         
         xlab = xlab + ' Obs=$%.2f$'%(obsreg) 
         legh=legh+(obslg,)
-        legstr=legstr+('Obs',)
+        if field=='sia':
+            legstr=legstr+('NSIDC Obs',)
+        else:
+            legstr=legstr+('Obs',)
 
         if field=='sia':
             xlab = '$\Delta$ Sea Ice Area (millions of km$^2$)' # for paper.
@@ -1373,13 +1421,62 @@ if dolongtermavg:
         else:
             xlab = '$\Delta$ SAT ($^\circ$C)' # for paper.
 
+
+        """ http://matplotlib.org/examples/pylab_examples/axes_demo.html
+        a = axes([.65, .6, .2, .2], axisbg='y')
+
+        """
+        # #  INSET!
+        inax = fig.add_axes([.71, .69, .18, .2])
+        top=2.5
+        yy=top
+        if field!='sia':
+            yy=top=5.5
+            inax.plot(ssmean, yy, linestyle='none',marker='s',mec=ltcol,color=ltcol)
+            inax.plot(ssci, (yy,yy), linewidth=2,marker='|',markersize=6,mew=2,mec=ltcol,color=ltcol)
+            yy=yy-1
+        inax.plot(rawmean, yy, linestyle='none',marker='s',mec=hcolline,color=hcolline)
+        inax.plot(rawci, (yy,yy), linewidth=2,marker='|',markersize=6,mew=2,mec=hcolline,color=hcolline)
+        yy=yy-1
+        inax.plot(rawnmean, yy, linestyle='none',marker='s',mec=natcolline,color=natcolline)
+        inax.plot(rawnci, (yy,yy), linewidth=2,marker='|',markersize=6,mew=2,mec=natcolline,color=natcolline)
+        yy=yy-1
+        inax.plot(rawmmean, yy, linestyle='none',marker='s',mec=miscolline,color=miscolline)
+        inax.plot(rawmci, (yy,yy), linewidth=2,marker='|',markersize=6,mew=2,mec=miscolline,color=miscolline)   
+        yy=yy-1
+        if field!='sia':
+            inax.plot(ss2mean, yy, linestyle='none',marker='s',mec='k',color='k')
+            inax.plot(ss2ci, (yy,yy), linewidth=2,marker='|',markersize=6,mew=2,mec='k',color='k')
+            yy=yy-1
+            inax.plot(ossmean, yy, linestyle='none',marker='s',mec='g',color='g')
+            inax.plot(ossci, (yy,yy), linewidth=2,marker='|',markersize=6,mew=2,mec='g',color='g')
+
+        inax.axvline(x=0,linestyle='--',color='k')
+        inax.axvline(x=obsreg,color=obscol,linewidth=2,alpha=0.7)
+        inax.set_yticklabels('')
+        inax.set_yticks([])
+        inax.set_ylim(0,top+.5)
+        if field=='tas' and region=='eurasiamori':
+            inax.set_xlim(-1,1.55) # taseurasiamori limits
+            inax.set_xticklabels((-1,'',0,'',1,''))
+            legh=legh+(ss2lg2,nsidclg2)
+            legstr=legstr+('AGCM var ICE','AGCM NSIDC ICE')
+        elif field=='sia' and region=='nh':
+            inax.set_xlim(-1.4e12,0) 
+            inax.set_xticklabels(('',-1.2,'',-0.8,'',-0.4,'',0))
+
+        if addsims:
+            legstr=legstr+('120-yr AGCM',)
+            legh=legh+(simlg,)
+
         ax.legend(legh,legstr, loc='upper left',frameon=False)
         ax.set_xlabel(xlab)
+
 
         if printtofile:
             now = str(datetime.datetime.now().time())
             fig.savefig(field + region + substr + '_' + sea + '_LEsims' + simsstr +\
-                        'obs_11yrsubsmpavgraw_hist' + prstr + now + '.pdf')
+                        'obs_11yrsubsmpavgraw_histinset' + prstr + now + '.pdf')
 
 
     if extra: # ===================================================
