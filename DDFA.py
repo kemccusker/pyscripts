@@ -75,6 +75,7 @@ plt.xlabel('Size')
 plt.ylabel('Height')
 
 # @@@ question: round Size first and then select based on range? Or other way around...
+#               ANS: round first, then select
 
 # @@ the round() call on mac is giving an error (appears to be a bug)
 
@@ -91,7 +92,7 @@ def myround(vals):
 
 
 
-def fillarray(size, height,sizerange):
+def fillarray(size, height,sizerange, verb=True):
 
     """ take size and height arrays, round Size. 
         If an index in sizerange is missing in size, enter 0 for height
@@ -99,7 +100,8 @@ def fillarray(size, height,sizerange):
 
     sizeidx=np.arange(sizerange[0],sizerange[1]+1) # add extra to get through loop last time
     rndsize=myround(size)
-    print '@@@@@@ rndsize ' + str(rndsize)
+    if verb:
+        print '@@@@@@ rndsize ' + str(rndsize)
 
 
     finsize=np.zeros(sizeidx[:-1].shape)
@@ -108,22 +110,27 @@ def fillarray(size, height,sizerange):
     datidx=0 # keep track of the index of size data
     ii=0 # keep track of index into sizerange
     for index in sizeidx:
-        print datidx,ii,index
+        if verb:
+            print datidx,ii,index
 
         # first check if datidx is past the length of the size array
         if datidx==len(rndsize):
             # We are done. Rest of size and height array is zero
-            print 'SIZE ARRAY IS DONE. SET the rest to zero...: ' + str(datidx) 
+            if verb:
+                print '   SIZE ARRAY IS DONE. SET the rest to zero...: ' + str(datidx) 
             break
         # now check if ii is pas the length of the size range array
         if ii==len(sizeidx[:-1]):
-            print 'SIZE RANGE is done.... what to do with rest of size array? @@ ' + str(rndsize.shape) + ', ' + str(datidx) + ', ' + str(rndsize[datidx:])
+            if verb:
+                print '   SIZE RANGE is done.... what to do with rest of size array? @@ rndsize.shape ' + str(rndsize.shape) +\
+                    ', datidx ' + str(datidx) + ', rest of rndsize array: ' + str(rndsize[datidx:])
             break
 
         # for each index in size range, check if it exists in size data
         if sizeidx[ii] == rndsize[datidx]:
-            print 'Data good: ' + str(datidx) + ', ' + str(ii) + ', ' + str(index) +\
-                ': ' + str(sizeidx[ii]) + ' == ' + str(rndsize[datidx])
+            if verb:
+                print '   Data good: ' + str(datidx) + ', ' + str(ii) + ', ' + str(index) +\
+                    ': ' + str(sizeidx[ii]) + ' == ' + str(rndsize[datidx])
             # we are good, the data exists and is good. move it to final array
             finsize[ii] = rndsize[datidx]
             finheight[ii] = height[datidx]
@@ -133,11 +140,12 @@ def fillarray(size, height,sizerange):
             # have to loop through rndsize until get to next match, entering zero until then.
             keepgoing=True
             while keepgoing:
-                print 'Entering zero: ' + str(datidx) + ', ' + str(ii) + ', ' + str(index) +\
-                    ': ' + str(sizeidx[ii]) + ' == ' + str(rndsize[datidx])
+                if verb:
+                    print '   Entering zero: ' + str(datidx) + ', ' + str(ii) + ', ' + str(index) +\
+                        ': ' + str(sizeidx[ii]) + ' != ' + str(rndsize[datidx])
 
                 if  sizeidx[ii] > rndsize[datidx]:
-                    print 'We have a repeat Size value! ' + str(sizeidx[ii-1]) + ', height choices: ' +\
+                    print '   We have a repeat Size value! Size:' + str(sizeidx[ii-1]) + ', Height choices: ' +\
                         str(height[ii-1]) + '* and ' + str(height[ii]) + ' (* is saved in return array)'
                     datidx+=1 # move forward in Size array
                     
@@ -150,8 +158,9 @@ def fillarray(size, height,sizerange):
                 # check the next index: now does Size match?
                 if sizeidx[ii] == rndsize[datidx]:
                     keepgoing=False
-                    print 'YES ' + str(sizeidx[ii]) + ' == ' + str(rndsize[datidx])
-                    # jump out of while loop
+                    if verb:
+                        print '  YES ' + str(sizeidx[ii]) + ' == ' + str(rndsize[datidx])
+                    # jump out of while loop by setting keepgoing to False
 
     return finsize,finheight
 
