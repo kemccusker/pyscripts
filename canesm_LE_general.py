@@ -27,8 +27,8 @@ import numpy.ma as ma
 printtofile=False
 dohist=False
 doregress=False
-doscatter=False
-dolongtermavg=True
+doscatter=True
+dolongtermavg=False
 
 addobs=True # to scatter plot
 addnat=False
@@ -87,6 +87,8 @@ elif field2=='zg50000.00': simfield2='gz50000'; simncfield2='PHI'; simconv2=1/co
 elif field2=='sia': simfield2='sicn'; simncfield2='SICN'; print '@@ danger, sia actually sicn average'
 else: print 'cannot addsims for ' + field2; addsims=False
 
+if fieldcnd=='sic': simfieldcnd='sicn'; simncfieldcnd='SICN'; simconvcnd=100
+
 
 ftype='fullts' # 'fullclimo' or 'climo' or 'fullts'
 
@@ -97,7 +99,7 @@ fdictcnd = {'field': fieldcnd+regioncnd, 'ncfield': ncfieldcnd, 'comp': compcnd}
 
 
 
-def subsamp_sims(simsdf,numyrs=11):
+def subsamp_sims(simsdf,numyrs=11,styears=None):
     """ select 11 year segments from given simsdf (data should be anoms)
              simsdf.keys(): sims
              simsdf.index(): time index
@@ -105,7 +107,7 @@ def subsamp_sims(simsdf,numyrs=11):
              number of total samples will be determined by length of all sim data
                       and numyrs (e.g. (ntime / numyrs)*numsims)
 
-             returns ndarray of subsample averages
+             returns ndarray of subsample averages, and startyrs
     """
     #print simsdf
 
@@ -115,14 +117,22 @@ def subsamp_sims(simsdf,numyrs=11):
     subsampavg=np.zeros(samp*numsims)
 
     print 'sample each of ' + str(numsims) + ' sims ' + str(samp) + ' times'
+    savstyears = np.zeros((numsims))
 
     for nii,sim in enumerate(simsdf.keys()):
         
+        print sim
         vals=simsdf[sim].values     
         
-        # random index to start looping, since we have a remainder when ntime/numyrs
-        startyr = np.random.randint(np.mod(ntime,numyrs))
+        if styears == None:
+            # random index to start looping, since we have a remainder when ntime/numyrs
+            startyr = np.random.randint(np.mod(ntime,numyrs))
+        else:
+            # start years were passed in: use them
+            startyr = styears[nii]
+
         print 'start ' + str(startyr)
+        savstyears[nii] = startyr
         for sii in np.arange(startyr,ntime-numyrs,numyrs):
 
             #print 'sii ' + str(sii) + ', allsii ' + str(allsii)
@@ -130,12 +140,15 @@ def subsamp_sims(simsdf,numyrs=11):
             subsampavg[allsii] = vals[sii:sii+numyrs].mean()
             allsii+=1
 
-    return subsampavg
+    return subsampavg,savstyears
 
 
 
 if doscatter:
     printtofile=True
+    addnat=True
+    addmisc=True
+    savedat=True # save data to ascii for John
 
     shorttermsims=True
     ymin=-2; ymax=3 # for Eurasia SAT v BKS Z500
@@ -249,6 +262,79 @@ if doscatter:
 
         lemmn, lebbn, lervaln, lepvaln, lestd_errn = sp.stats.linregress(lefld1n,lefld2n)
    
+        if conditional:
+            lecdatncnd = le.load_LEdata(fdictcnd,casename2,timesel=timeselc, 
+                                       rettype='ndarray',conv=leconvcnd,ftype=ftype,local=local)
+            (numensncnd,ntimencnd) = lecdatncnd.shape
+            lepdatncnd=le.load_LEdata(fdictcnd,casename2,timesel=timeselp, 
+                                     rettype='ndarray',conv=leconvcnd,ftype=ftype,local=local)
+            lecseancnd = cutl.seasonalize_monthlyts(lecdatncnd.T,season=seacnd).T
+            lepseancnd = cutl.seasonalize_monthlyts(lepdatncnd.T,season=seacnd).T
+            leseancnd = lepseancnd - lecseancnd
+            lefldncnd=lepseancnd.mean(axis=1)-lecseancnd.mean(axis=1)
+
+
+    if addmisc:
+        # historicalMisc
+        casename3='historicalMisc'
+        lecdat1m = le.load_LEdata(fdict1,casename3,timesel=timeselc, 
+                                  rettype='ndarray',conv=leconv1,ftype=ftype,local=local)
+        (numens1m,ntime1m) = lecdat1m.shape
+        lepdat1m=le.load_LEdata(fdict1,casename3,timesel=timeselp, 
+                                rettype='ndarray',conv=leconv1,ftype=ftype,local=local)
+        lecsea1m = cutl.seasonalize_monthlyts(lecdat1m.T,season=sea1).T
+        lepsea1m = cutl.seasonalize_monthlyts(lepdat1m.T,season=sea1).T
+        lesea1m = lepsea1m - lecsea1m
+        if performop1:
+            fdict1op = {'field': field1+region1op, 'ncfield': ncfield1, 'comp': comp1}
+            subc1m = le.load_LEdata(fdict1op,casename3,timesel=timeselc, 
+                                    rettype='ndarray',conv=leconv1,ftype=ftype,local=local)
+            subp1m = le.load_LEdata(fdict1op,casename3,timesel=timeselp, 
+                                    rettype='ndarray',conv=leconv1,ftype=ftype,local=local)
+            sub1m = cutl.seasonalize_monthlyts(subp1m.T,season=sea1).T -\
+                    cutl.seasonalize_monthlyts(subc1m.T,season=sea1).T
+
+            if op1=='sub': # subtract
+                lefld1m = lesea1m.mean(axis=1) - sub1m.mean(axis=1)
+            elif op1=='div': # divide
+                lefld1m = lesea1m.mean(axis=1) / sub1m.mean(axis=1)
+        else:
+            lefld1m=lepsea1m.mean(axis=1)-lecsea1m.mean(axis=1)
+
+        lecdat2m = le.load_LEdata(fdict2,casename3,timesel=timeselc, 
+                                  rettype='ndarray',conv=leconv2,ftype=ftype,local=local)
+        (numens2m,ntime2m) = lecdat1m.shape
+        lepdat2m=le.load_LEdata(fdict2,casename3,timesel=timeselp, 
+                                rettype='ndarray',conv=leconv2,ftype=ftype,local=local)
+        lecsea2m = cutl.seasonalize_monthlyts(lecdat2m.T,season=sea2).T
+        lepsea2m = cutl.seasonalize_monthlyts(lepdat2m.T,season=sea2).T
+        lesea2m = lepsea2m - lecsea2m
+        if performop2:
+            if op2=='sub': # subtract
+                fdict2sub = {'field': field2+region2op, 'ncfield': ncfield2, 'comp': comp2}
+                subc2m = le.load_LEdata(fdict2sub,casename3,timesel=timeselc, 
+                                        rettype='ndarray',conv=leconv2,ftype=ftype,local=local)
+                subp2m = le.load_LEdata(fdict2sub,casename3,timesel=timeselp, 
+                                        rettype='ndarray',conv=leconv2,ftype=ftype,local=local)
+                sub2m = cutl.seasonalize_monthlyts(subp2m.T,season=sea2).T -\
+                        cutl.seasonalize_monthlyts(subc2m.T,season=sea2).T
+                lefld2m = lesea2m.mean(axis=1) - sub2m.mean(axis=1)
+        else:
+            lefld2m=lepsea2m.mean(axis=1)-lecsea2m.mean(axis=1)
+
+        lemmm, lebbm, lervalm, lepvalm, lestd_errm = sp.stats.linregress(lefld1m,lefld2m)
+   
+        if conditional:
+            lecdatmcnd = le.load_LEdata(fdictcnd,casename3,timesel=timeselc, 
+                                       rettype='ndarray',conv=leconvcnd,ftype=ftype,local=local)
+            (numensmcnd,ntimemcnd) = lecdatmcnd.shape
+            lepdatmcnd=le.load_LEdata(fdictcnd,casename3,timesel=timeselp, 
+                                     rettype='ndarray',conv=leconvcnd,ftype=ftype,local=local)
+            lecseamcnd = cutl.seasonalize_monthlyts(lecdatmcnd.T,season=seacnd).T
+            lepseamcnd = cutl.seasonalize_monthlyts(lepdatmcnd.T,season=seacnd).T
+            leseamcnd = lepseamcnd - lecseamcnd
+            lefldmcnd=lepseamcnd.mean(axis=1)-lecseamcnd.mean(axis=1)
+
 
     if addobs: # DATA MUST EXIST:hard coded for TAS and Z500 @@
         graveraint= 9.80665 # m/s2 (different from Canadian models)
@@ -367,7 +453,7 @@ if doscatter:
             elif op1=='div': # divide
                 fldssdf1 = fldssdf1 / fldssdf1op
         
-        fldssdf1 = subsamp_sims(fldssdf1,numyrs=11)
+        fldssdf1,styrs = subsamp_sims(fldssdf1,numyrs=11)
 
         fldssdf2 = pd.DataFrame(lmd.loaddata((simfield2,),simsss,ncfields=(simncfield2,), timefreq=sea2, 
                                         region=region2))*simconv2
@@ -384,12 +470,108 @@ if doscatter:
             elif op2=='div': # divide
                 fldssdf2 = fldssdf2 / fldssdf2op
         
-        fldssdf2 = subsamp_sims(fldssdf2,numyrs=11)
+        fldssdf2,styrs = subsamp_sims(fldssdf2,numyrs=11,styears=styrs)
 
         simssmm, simssbb, simssrval, simsspval, simssstd_err = sp.stats.linregress(fldssdf1,
                                                                                    fldssdf2)
-        print '-------- (subsamp) SIMS slope, rval, pval: ' + str(simssmm),str(simssrval),str(simsspval)
+        print '-------- (subsamp) SIMS ' + simsstr + ' slope, rval, pval: ' + str(simssmm),str(simssrval),str(simsspval)
 
+        # SIC for output file
+        if conditional:
+            fldssdfcnd = pd.DataFrame(lmd.loaddata((simfieldcnd,),simsss,ncfields=(simncfieldcnd,), timefreq=seacnd, 
+                                                 region=region1))*simconvcnd # "simss" subsample sims
+            fldssdfcnd,styrs = subsamp_sims(fldssdfcnd,numyrs=11,styears=styrs)
+
+
+
+        simsssr=('R1','R2','R3','R4','R5'); simsstr=simsstr+'sbRonly'
+        fldssrdf1 = pd.DataFrame(lmd.loaddata((simfield1,),simsssr,ncfields=(simncfield1,), timefreq=sea1, 
+                                             region=region1))*simconv1 # "simss" subsample sims
+
+        if performop1:
+            fldssrdf1op = pd.Series(lmd.loaddata((simfield1,),simsssr,ncfields=(simncfield1,), timefreq=sea1, 
+                                                 meantype='time',region=region1op))*simconv1
+
+            if op1=='sub': # subtract
+                if region1op=='nh':
+                    fldssrdf1 = fldssrdf1 - fldssrdf1op.mean() # want to subtract ens mean nh
+                else:
+                    fldssrdf1 = fldssrdf1 - fldssrdf1op # not sure if want ens mean here...
+            elif op1=='div': # divide
+                fldssrdf1 = fldssrdf1 / fldssrdf1op
+        
+        fldssrdf1,styrsr = subsamp_sims(fldssrdf1,numyrs=11)
+
+        fldssrdf2 = pd.DataFrame(lmd.loaddata((simfield2,),simsssr,ncfields=(simncfield2,), timefreq=sea2, 
+                                        region=region2))*simconv2
+
+        if performop2:
+            fldssrdf2op = pd.Series(lmd.loaddata((simfield2,),simsssr,ncfields=(simncfield2,), timefreq=sea2, 
+                                                 meantype='time',region=region2op))*simconv2
+
+            if op2=='sub': # subtract
+                if region2op=='nh':
+                    fldssrdf2 = fldssrdf2 - fldssrdf2op.mean() # want to subtract ens mean nh
+                else:
+                    fldssrdf2 = fldssrdf2 - fldssrdf2op # not sure if want ens mean here...
+            elif op2=='div': # divide
+                fldssrdf2 = fldssrdf2 / fldssrdf2op
+        
+        fldssrdf2,styrsr = subsamp_sims(fldssrdf2,numyrs=11,styears=styrsr)
+
+        simssrmm, simssrbb, simssrrval, simssrpval, simssrstd_err = sp.stats.linregress(fldssrdf1,
+                                                                                   fldssrdf2)
+        print '-------- (subsamp) SIMS sbRonly slope, rval, pval: ' + str(simssrmm),str(simssrrval),str(simssrpval)
+
+        if conditional:
+            fldssrdfcnd = pd.DataFrame(lmd.loaddata((simfieldcnd,),simsssr,ncfields=(simncfieldcnd,), timefreq=seacnd, 
+                                                 region=region1))*simconvcnd # "simss" subsample sims
+            fldssrdfcnd,styrsr = subsamp_sims(fldssrdfcnd,numyrs=11,styears=styrsr)
+
+
+        simssso=('NSIDC',); simsstr=simsstr+'sbNSIDC'
+        fldssodf1 = pd.DataFrame(lmd.loaddata((simfield1,),simssso,ncfields=(simncfield1,), timefreq=sea1, 
+                                             region=region1))*simconv1 # "simss" subsample sims
+
+        if performop1:
+            fldssodf1op = pd.Series(lmd.loaddata((simfield1,),simssso,ncfields=(simncfield1,), timefreq=sea1, 
+                                                 meantype='time',region=region1op))*simconv1
+
+            if op1=='sub': # subtract
+                if region1op=='nh':
+                    fldssodf1 = fldssodf1 - fldssodf1op.mean() # want to subtract ens mean nh
+                else:
+                    fldssodf1 = fldssodf1 - fldssodf1op # not sure if want ens mean here...
+            elif op1=='div': # divide
+                fldssodf1 = fldssodf1 / fldssodf1op
+        
+        fldssodf1,styrso = subsamp_sims(fldssodf1,numyrs=11)
+
+        fldssodf2 = pd.DataFrame(lmd.loaddata((simfield2,),simssso,ncfields=(simncfield2,), timefreq=sea2, 
+                                        region=region2))*simconv2
+
+        if performop2:
+            fldssodf2op = pd.Series(lmd.loaddata((simfield2,),simssso,ncfields=(simncfield2,), timefreq=sea2, 
+                                                 meantype='time',region=region2op))*simconv2
+
+            if op2=='sub': # subtract
+                if region2op=='nh':
+                    fldssodf2 = fldssodf2 - fldssodf2op.mean() # want to subtract ens mean nh
+                else:
+                    fldssodf2 = fldssodf2 - fldssodf2op # not sure if want ens mean here...
+            elif op2=='div': # divide
+                fldssodf2 = fldssodf2 / fldssodf2op
+        
+        fldssodf2,styrso = subsamp_sims(fldssodf2,numyrs=11,styears=styrso)
+
+        simssomm, simssobb, simssorval, simssopval, simssostd_err = sp.stats.linregress(fldssodf1,
+                                                                                   fldssodf2)
+        print '-------- (subsamp) SIMS NSIDC slope, rval, pval: ' + str(simssomm),str(simssorval),str(simssopval)
+
+        if conditional:
+            fldssodfcnd = pd.DataFrame(lmd.loaddata((simfieldcnd,),simssso,ncfields=(simncfieldcnd,), timefreq=seacnd, 
+                                                 region=region1))*simconvcnd # "simss" subsample sims
+            fldssodfcnd,styrso = subsamp_sims(fldssodfcnd,numyrs=11,styears=styrso)
 
         
 
@@ -462,6 +644,15 @@ if doscatter:
         leghnds=leghnds + (ledatn,)
         legstrs=legstrs + (casename2 + ' LE',)
         print '-------- LENat slope, rval, pval: ' + str(lemmn),str(lervaln),str(lepvaln)
+    if addmisc:
+        ledatm=ax.scatter(lefld1m,lefld2m,color=ccm.get_linecolor('orange3'),marker='*',s=5**2,alpha=0.5)
+        axylims = ax.get_ylim()
+        axxlims = ax.get_xlim()
+        onex=np.linspace(axxlims[0],axxlims[1])
+        ax.plot(onex,lemmm*onex + lebbm, color=ccm.get_linecolor('orange3'),linewidth=1)
+        leghnds=leghnds + (ledatm,)
+        legstrs=legstrs + (casename3 + ' LE',)
+        print '-------- LEMisc slope, rval, pval: ' + str(lemmm),str(lervalm),str(lepvalm)    
     if addobs:
         obs=ax.scatter(obsreg1,obsreg2,color='blue',marker='s',s=60)
         leghnds=leghnds + (obs,)
@@ -479,12 +670,26 @@ if doscatter:
         obstr=obstr+'sims'
 
     if shorttermsims:
-        simssh = ax.scatter(fldssdf1,fldssdf2,color='0.7',marker='o',s=50,alpha=0.7)
+        simssh = ax.scatter(fldssdf1,fldssdf2,color='0.7',marker='o',s=40,alpha=0.7)
         onex=np.linspace(axxlims[0],axxlims[1])
         ax.plot(onex,simssmm*onex + simssbb, color='0.7',linewidth=1)
+        # R sims too
+        ax.scatter(fldssrdf1,fldssrdf2,color='purple',marker='o',s=40,alpha=0.7)
+        onex=np.linspace(axxlims[0],axxlims[1])
+        ax.plot(onex,simssrmm*onex + simssrbb, color='purple',linewidth=1)
+
         leghnds=leghnds + (simssh,)
         legstrs=legstrs + ('11-yr Modelled SIC forcing',)
         obstr=obstr+'sims'
+
+        # NSIDC sim too
+        simssho = ax.scatter(fldssodf1,fldssodf2,color='g',marker='o',s=50,alpha=0.7)
+        onex=np.linspace(axxlims[0],axxlims[1])
+        ax.plot(onex,simssomm*onex + simssobb, color='g',linewidth=1)
+
+        leghnds=leghnds + (simssho,)
+        legstrs=legstrs + ('11-yr NSIDC SIC forcing',)
+        obstr=obstr+'nsidcsim'
 
     fontP = fm.FontProperties()
     fontP.set_size('small')
@@ -522,17 +727,34 @@ if doscatter:
         ax.axvline(x=0,color='k',linewidth=.5,linestyle='--')
 
     if printtofile:
+        now = str(datetime.datetime.now().time())
         if conditional:
             cnd='cnd'
         else: cnd=''
         if addnat:
             plt.savefig('scatterregress_' + field1 + region1 + opstr1 + str(sea1) + '_v_' + 
                         field2 + region2 +opstr2 + str(sea2) + '_' + casename + '_' + 
-                        casename2 + '_2002-12_1979-89' + obstr + cnd + '.pdf')
+                        casename2 + '_2002-12_1979-89' + obstr + cnd + now+ '.pdf')
         else:
             plt.savefig('scatterregress_' + field1 + region1 + opstr1 + str(sea1) + '_v_' + 
                         field2 + region2 +opstr2 + str(sea2) + '_' + casename + 
-                        '_2002-12_1979-89' + obstr + cnd + '.pdf')
+                        '_2002-12_1979-89' + obstr + cnd + now+ '.pdf')
+
+
+    if savedat:
+
+        # write ascii file for john:
+        agcmout1=np.hstack((fldssrdfcnd,fldssodfcnd,fldssdfcnd)) # column 1
+        agcmout2=np.hstack((fldssrdf2,fldssodf2,fldssdf2)) # column 2
+        agcmout3=np.hstack((fldssrdf1,fldssodf1,fldssdf1)) # column 3
+        agcmout = np.vstack((agcmout1,agcmout2,agcmout3)).T
+        np.savetxt('agcmout2.ascii',agcmout,delimiter='\t')
+
+        cgcmout1=np.hstack((lefldcnd,lefldncnd,lefldmcnd))
+        cgcmout2=np.hstack((lefld2,lefld2n,lefld2m))
+        cgcmout3=np.hstack((lefld1,lefld1n,lefld1m))
+        cgcmout = np.vstack((cgcmout1,cgcmout2,cgcmout3)).T
+        np.savetxt('cgcmout.ascii',cgcmout,delimiter='\t')
 
 if dohist:
     conv=leconv1 # just assume we are doing variable 1
@@ -861,7 +1083,7 @@ if dolongtermavg:
     region='eurasiamori'
     #region='gt60n'
 
-    field='sia'; ncfield='sianh'; comp='OImon'; region='nh';
+    #field='sia'; ncfield='sianh'; comp='OImon'; region='nh';
 
     if region=='eurasiamori': ttlstr='Eurasian'
     elif region=='gm': ttlstr='Global'
@@ -889,7 +1111,7 @@ if dolongtermavg:
     natcolline=ccm.get_linecolor('steelblue3')#4')
     miscol=ccm.get_linecolor('orange3') #'deepskyblue')
     miscolline=ccm.get_linecolor('orange3') #'deepskyblue')
-    obscol=ccm.get_linecolor('midnightblue') #'b'
+    obscol='k' #ccm.get_linecolor('midnightblue') #'b'
 
     lat=le.get_lat(local=local)
     lon=le.get_lon(local=local)
@@ -936,7 +1158,7 @@ if dolongtermavg:
     rawdf = len(lesea)-1
     rawstder = rawsd / np.sqrt(rawdf+1)
     rawci = sp.stats.t.interval(1-cisiglevel, rawdf, loc=rawmean, scale=rawstder)
-
+    rawcif = sp.stats.t.interval(1-cisiglevel, rawdf, loc=rawmean, scale=rawsd)
 
     if addnat:
         lencdat = le.load_LEdata(fdict,'historicalNat',timesel=timeselc, rettype='ndarray',conv=leconv,ftype=ftype,local=local)
@@ -960,6 +1182,7 @@ if dolongtermavg:
         rawndf = len(lensea)-1
         rawnstder = rawnsd / np.sqrt(rawndf+1)
         rawnci = sp.stats.t.interval(1-cisiglevel, rawndf, loc=rawnmean, scale=rawnstder)
+        rawncif = sp.stats.t.interval(1-cisiglevel, rawndf, loc=rawnmean, scale=rawnsd)
 
     if addmisc:
         lemcdat = le.load_LEdata(fdict,'historicalMisc',timesel=timeselc, 
@@ -987,6 +1210,7 @@ if dolongtermavg:
         rawmdf = len(lemsea)-1
         rawmstder = rawmsd / np.sqrt(rawmdf+1)
         rawmci = sp.stats.t.interval(1-cisiglevel, rawmdf, loc=rawmmean, scale=rawmstder)
+        rawmcif = sp.stats.t.interval(1-cisiglevel, rawmdf, loc=rawmmean, scale=rawmsd)
 
     if longtermLE:
         # second option: choose 4 random, non-overlapping groups of 11 members x 11-yrs
@@ -1050,7 +1274,8 @@ if dolongtermavg:
 
         # mean and conf-int: @@@@@
         # ci = sp.stats.t.interval(1-cisiglevel, df, loc= meananom, scale=stder)
-        ssci = sp.stats.t.interval(1-cisiglevel, ssdf, loc=ssmean, scale=ssstder)
+        ssci = sp.stats.t.interval(1-cisiglevel, ssdf, loc=ssmean, scale=ssstder) # this is mean value's 5-95%
+        sscif = sp.stats.t.interval(1-cisiglevel, ssdf, loc=ssmean, scale=sssd) # full range. don't divide by n. this is pdf 5-95%
 
         osubsamp = subsamp_sims(osimflddf,numyrs=11)
         print '==== NSIDC AGCM '
@@ -1058,6 +1283,7 @@ if dolongtermavg:
         ossdf = len(osubsamp)-1
         ossstder = osssd / np.sqrt(ossdf+1)
         ossci = sp.stats.t.interval(1-cisiglevel, ossdf, loc=ossmean, scale=ossstder)
+        osscif = sp.stats.t.interval(1-cisiglevel, ossdf, loc=ossmean, scale=osssd)
 
         # do each ens separately, for testing stats (maybe not plotting)
         sims2=('R1','R2','R3','R4','R5'); #simsstr='sbRonly'
@@ -1079,7 +1305,7 @@ if dolongtermavg:
         ss2df = len(subsamp2)-1
         ss2stder = ss2sd / np.sqrt(ss2df+1)
         ss2ci = sp.stats.t.interval(1-cisiglevel, ss2df, loc=ss2mean, scale=ss2stder)
-
+        ss2cif = sp.stats.t.interval(1-cisiglevel, ss2df, loc=ss2mean, scale=ss2sd)
 
         tstat, pval = sp.stats.ttest_ind(plotsims,plotsims2)
         lstat, lpval = sp.stats.levene(plotsims,plotsims2)
@@ -1162,7 +1388,7 @@ if dolongtermavg:
             print pvals.shape
 
             simflddf = simfldpdf.mean(axis=0)-simfldcdf.mean(axis=0)
-            simfldm = ma.masked_where(pvals>siglevel,simflddf.values)
+            simfldm =simflddf.mask(simpvdf>siglevel)# ma.masked_where(pvals>siglevel,simflddf.values)
             # have to calc pvals 
 
         else:
@@ -1171,6 +1397,26 @@ if dolongtermavg:
             simfldm = simflddf.mask(simpvdf>siglevel)
             #simfldm = ma.masked_where(simpvdf.values>siglevel,simflddf.values)
 
+    else: # just add NSIDC
+        sims=('NSIDC',)
+        simflddf = pd.Series(lmd.loaddata((simfield1,),sims,ncfields=(simncfield1,), timefreq=sea, 
+                                             meantype='time',region=region))*simconv1
+        if subnh:
+            simsubcdf = pd.DataFrame(lmd.loaddata((simfield1,),sims,ncfields=(simncfield1,), timefreq=sea, 
+                                                 filetype='ctl',region='nh'))*simconv1
+            simsubpdf = pd.DataFrame(lmd.loaddata((simfield1,),sims,ncfields=(simncfield1,), timefreq=sea, 
+                                                 filetype='pert',region='nh'))*simconv1
+            simfldcdf = pd.DataFrame(lmd.loaddata((simfield1,),sims,ncfields=(simncfield1,), timefreq=sea, 
+                                           filetype='ctl',region=region))*simconv1
+            simfldpdf = pd.DataFrame(lmd.loaddata((simfield1,),sims,ncfields=(simncfield1,), timefreq=sea, 
+                                           filetype='pert',region=region))*simconv1
+            simfldcdf=simfldcdf-simsubcdf
+            simfldpdf=simfldpdf-simsubpdf
+            (tstat,pvals)=cutl.ttest_ind(simfldpdf.values,simfldcdf.values,axis=0) 
+            print pvals.shape
+
+            simflddf = simfldpdf.mean(axis=0)-simfldcdf.mean(axis=0)
+            simfldm =simflddf.mask(simpvdf>siglevel)# ma.masked_where(pvals>siglevel,simflddf.values)
 
     # add obs
     if field == 'tas':
@@ -1289,9 +1535,10 @@ if dolongtermavg:
 
     else: # not longtermLE figs ===============================================
 
+        fsz=18
 
-        if field=='sia' and region=='nh':
-            obscol='g' #@@@@@
+        #if field=='sia' and region=='nh':
+        #    obscol='g' #@@@@@
 
         sslg=mlines.Line2D([],[],color=ltcol,linewidth=2) # subsamp sims
         ss2lg=mlines.Line2D([],[],color='k',linewidth=2) # subsamp sims2 (variable bc)
@@ -1305,18 +1552,18 @@ if dolongtermavg:
         rawmlg=mlines.Line2D([],[],color=miscolline,linewidth=2)
 
         prstr =''
-        legh = (sslg,rawlg)
-        legstr = ('AGCM Ice','CGCM All')
+        #legh = (sslg,rawlg)
+        #legstr = ('AGCM Ice','CGCM All')
+        # actually add AGCM to end
+        legh = (rawlg,)
+        legstr = ('CGCM All',)
 
         fig,ax=plt.subplots(1,1)
         fig.set_size_inches(10,7)
 
-        if field=='sia':
-            legh=(rawlg,)
-            legstr=('CGCM All',)
-        else:
-            ax.hist(plotsims,normed=True,color=ltcol,alpha=0.4,histtype='stepfilled')
-            ax.plot(ssxx,sspdf_fitted,color=ltcol,linewidth=3)
+        if field!='sia':
+            #ax.hist(plotsims2,normed=True,color=ltcol,alpha=0.4,histtype='stepfilled')
+            ax.plot(ss2xx,ss2pdf_fitted,color=ltcol,linewidth=3)
             
             #ax.plot(ss2xx,ss2pdf_fitted,color='k',linewidth=2) # variable boundary forcings
 
@@ -1356,22 +1603,32 @@ if dolongtermavg:
         ax.hist(lesea,normed=True,color=hcol,alpha=0.3,histtype='stepfilled')
         ax.plot(rawxx,rawpdf_fitted,color=hcolline,linewidth=3)
         fs='full'
-        for eii in range(0,5):
+        for eii in range(0,5): # orig five
             # search for difforig[eii] nearest to axx, 
             # then plot apdf_fitted[axx] as marker, filled or not based on sig.
             plotx = or5sea[eii]
             idx = cutl.find_nearest(rawxx,plotx)
             ploty = rawpdf_fitted[idx]
-            ax.plot(plotx,ploty,marker='o',color=hcolline,mec=hcolline,fillstyle=fs,mew=mew,markersize=ms)
+            ax.plot(plotx,ploty,marker='o',color=hcolline,mec='k',fillstyle=fs,mew=1,markersize=ms)
+            # @@@ check significance?
 
-        #ax.plot(obsreg,0,color='b',marker='s',fillstyle='full',markersize=ms)# blue for actual obs. green for simulated obs
-        obslg=ax.axvline(obsreg,color=obscol,linewidth=2)
-        if field=='sia' and region=='nh':
+        #obslg=ax.axvline(obsreg,color=obscol,linewidth=2) # vert line for obs
+        #if field=='sia' and region=='nh':
+        if 1: # do no matter if sia or tas
             plotx=obsreg
             idx=cutl.find_nearest(rawxx,plotx)
             ploty=rawpdf_fitted[idx]
             ax.plot(plotx,ploty,marker='o',color=obscol,mec=obscol,fillstyle=fs,mew=mew,markersize=ms)
+            ax.annotate('Obs',xy=(plotx,ploty),xytext=(-28,2),
+                        textcoords='offset points') # label the marker on the pdf curve
 
+        if field!='sia':
+            nsx= simflddf['NSIDC']
+            idx=cutl.find_nearest(rawxx,nsx)
+            nsy=rawpdf_fitted[idx]
+            ax.plot(nsx,nsy,marker='o',color='g',mec='g',fillstyle=fs,mew=mew,markersize=ms)
+            ax.annotate('NSIDC AGCM',xy=(nsx,nsy),xytext=(5,-2),
+                        textcoords='offset points') # label the marker on the pdf curve
 
         ylims=ax.get_ylim()
         print ylims # @@@@
@@ -1382,11 +1639,11 @@ if dolongtermavg:
         ax.set_yticklabels('')
         ax.axhline(y=0,color='k')
         ax.axvline(x=0,color='k',linestyle='--')
-        ax.set_ylabel('Density')
-        if field=='sia':
-            ax.set_title('Arctic sea-ice area change (DJF)')
-        else:
-            ax.set_title('11-year epochs ' + ttlstr + ' SAT change (' + sea + ')')
+        ax.set_ylabel('Density',fontsize=fsz)
+        #if field=='sia':
+        #    ax.set_title('Arctic sea-ice area change (DJF)')
+        #else:
+        #    ax.set_title('11-year epochs ' + ttlstr + ' SAT change (' + sea + ')')
         xlab = '$\Delta$ SAT ($^\circ$C); AGCM= $%.2f$'%(ssmean)+ ' CGCM= $%.2f$'%(rawmean)
 
 
@@ -1408,18 +1665,18 @@ if dolongtermavg:
             xlab = xlab + ' Aero=$%.2f$'%(rawmmean) 
         
         xlab = xlab + ' Obs=$%.2f$'%(obsreg) 
-        legh=legh+(obslg,)
-        if field=='sia':
-            legstr=legstr+('NSIDC Obs',)
-        else:
-            legstr=legstr+('Obs',)
+        #legh=legh+(obslg,)
+        #if field=='sia':
+        #    legstr=legstr+('NSIDC Obs',)
+        #else:
+        #    legstr=legstr+('Obs',)
 
         if field=='sia':
-            xlab = '$\Delta$ Sea Ice Area (millions of km$^2$)' # for paper.
+            xlab = 'Change in Sea Ice Area (millions of km$^2$)' # for paper.
             xtlabs = ax.get_xticks()/1e12
             ax.set_xticklabels(xtlabs)
         else:
-            xlab = '$\Delta$ SAT ($^\circ$C)' # for paper.
+            xlab = 'Change in Eurasian SAT ($^\circ$C)' # for paper.
 
 
         """ http://matplotlib.org/examples/pylab_examples/axes_demo.html
@@ -1431,25 +1688,32 @@ if dolongtermavg:
         top=2.5
         yy=top
         if field!='sia':
-            yy=top=5.5
-            inax.plot(ssmean, yy, linestyle='none',marker='s',mec=ltcol,color=ltcol)
-            inax.plot(ssci, (yy,yy), linewidth=2,marker='|',markersize=6,mew=2,mec=ltcol,color=ltcol)
-            yy=yy-1
+            yy=top=3.5
         inax.plot(rawmean, yy, linestyle='none',marker='s',mec=hcolline,color=hcolline)
         inax.plot(rawci, (yy,yy), linewidth=2,marker='|',markersize=6,mew=2,mec=hcolline,color=hcolline)
+        inax.plot(rawcif, (yy,yy), linewidth=2,marker='|',markersize=6,mew=2,mec=hcolline,color=hcolline)
         yy=yy-1
         inax.plot(rawnmean, yy, linestyle='none',marker='s',mec=natcolline,color=natcolline)
         inax.plot(rawnci, (yy,yy), linewidth=2,marker='|',markersize=6,mew=2,mec=natcolline,color=natcolline)
+        inax.plot(rawncif, (yy,yy), linewidth=2,marker='|',markersize=6,mew=2,mec=natcolline,color=natcolline)
         yy=yy-1
         inax.plot(rawmmean, yy, linestyle='none',marker='s',mec=miscolline,color=miscolline)
         inax.plot(rawmci, (yy,yy), linewidth=2,marker='|',markersize=6,mew=2,mec=miscolline,color=miscolline)   
+        inax.plot(rawmcif, (yy,yy), linewidth=2,marker='|',markersize=6,mew=2,mec=miscolline,color=miscolline)   
         yy=yy-1
         if field!='sia':
-            inax.plot(ss2mean, yy, linestyle='none',marker='s',mec='k',color='k')
-            inax.plot(ss2ci, (yy,yy), linewidth=2,marker='|',markersize=6,mew=2,mec='k',color='k')
+            inax.plot(ss2mean, yy, linestyle='none',marker='s',mec=ltcol,color=ltcol)
+            inax.plot(ss2ci, (yy,yy), linewidth=2,marker='|',markersize=6,mew=2,mec=ltcol,color=ltcol)
+            inax.plot(ss2cif, (yy,yy), linewidth=2,marker='|',markersize=6,mew=2,mec=ltcol,color=ltcol)
             yy=yy-1
-            inax.plot(ossmean, yy, linestyle='none',marker='s',mec='g',color='g')
-            inax.plot(ossci, (yy,yy), linewidth=2,marker='|',markersize=6,mew=2,mec='g',color='g')
+        ##if field!='sia':
+        ##    inax.plot(ss2mean, yy, linestyle='none',marker='s',mec='k',color='k')
+        ##    inax.plot(ss2ci, (yy,yy), linewidth=2,marker='|',markersize=6,mew=2,mec='k',color='k')
+        ##    inax.plot(ss2cif, (yy,yy), linewidth=2,marker='|',markersize=6,mew=2,mec='k',color='k')
+        ##    yy=yy-1
+        ##    inax.plot(ossmean, yy, linestyle='none',marker='s',mec='g',color='g')
+        ##    inax.plot(ossci, (yy,yy), linewidth=2,marker='|',markersize=6,mew=2,mec='g',color='g')
+        ##    inax.plot(osscif, (yy,yy), linewidth=2,marker='|',markersize=6,mew=2,mec='g',color='g')
 
         inax.axvline(x=0,linestyle='--',color='k')
         inax.axvline(x=obsreg,color=obscol,linewidth=2,alpha=0.7)
@@ -1457,26 +1721,65 @@ if dolongtermavg:
         inax.set_yticks([])
         inax.set_ylim(0,top+.5)
         if field=='tas' and region=='eurasiamori':
-            inax.set_xlim(-1,1.55) # taseurasiamori limits
-            inax.set_xticklabels((-1,'',0,'',1,''))
-            legh=legh+(ss2lg2,nsidclg2)
-            legstr=legstr+('AGCM var ICE','AGCM NSIDC ICE')
+            inax.set_xlim(-1.2,1.8) # taseurasiamori limits
+            xticks=inax.get_xticks()
+            inax.set_xticklabels(('','-1','','0','','1','','2'))
+            #legh=legh+(ss2lg2,nsidclg2)
+            #legstr=legstr+('AGCM var ICE','AGCM NSIDC ICE')
         elif field=='sia' and region=='nh':
             inax.set_xlim(-1.4e12,0) 
             inax.set_xticklabels(('',-1.2,'',-0.8,'',-0.4,'',0))
+        inax.set_xlabel('Mean change')
+        # add 'Obs' annotation
+        if field=='sia':
+            tlabx=0.5;tlabx2=0.49; tlaby=tlaby2=0.7
+            labx=0.41; laby=0.56
+        elif field=='tas':
+            # NOT WORKING?
+            tlabx=0.02; tlaby=0.85 # text position
+            #labx=0.03; laby=0.84; # start of arrow
+            tlabx2=0.25; tlaby2=0.69 # head of arrow
+
+        #txt = inax.annotate('Obs',xy=(tlabx,tlaby), xycoords='axes fraction')
+
+        # xytext location of annotation; xy is the data point to be connected by arrow from annotation
+        # In this case, annotation is empty but it's meant to be 'Obs' above, so just a little offset
+        # The data is the obs line
+        """ann = inax.annotate('',xy=(tlabx2,tlaby2),xycoords='axes fraction', 
+                            xytext=(labx, laby), textcoords='axes fraction',
+                            arrowprops=dict(arrowstyle='-',connectionstyle='arc3',facecolor='k',
+                                            edgecolor='k',patchB=txt,patchA=txt),
+                            verticalalignment='center')"""
+        ann = inax.annotate('Obs',xy=(tlabx2,tlaby2),xycoords='axes fraction',
+                            xytext=(tlabx,tlaby),textcoords='axes fraction',
+                            arrowprops=dict(arrowstyle='-',connectionstyle='arc3',facecolor='k', edgecolor='k'))
 
         if addsims:
             legstr=legstr+('120-yr AGCM',)
             legh=legh+(simlg,)
+        # add AGCM Ice to legend
+        legstr=legstr+('AGCM Ice',)
+        legh=legh+(sslg,)
 
-        ax.legend(legh,legstr, loc='upper left',frameon=False)
-        ax.set_xlabel(xlab)
+        #loc can be a 2-tuple giving x, y of the lower-left corner of the legend in axes coordinates 
+        #ax.legend(legh,legstr, loc='upper left',frameon=False)
+        ax.legend(legh,legstr, loc=(0.75,0.43),frameon=False)
+        ax.set_xlabel(xlab,fontsize=fsz)
 
+        # panel labels
+        if field=='sia':
+            ax.annotate('a.',xy=(0.01,1.01),xycoords='axes fraction',fontsize=fsz)
+        elif field=='tas':
+            ax.annotate('b.',xy=(0.01,1.01),xycoords='axes fraction',fontsize=fsz)
 
         if printtofile:
             now = str(datetime.datetime.now().time())
             fig.savefig(field + region + substr + '_' + sea + '_LEsims' + simsstr +\
                         'obs_11yrsubsmpavgraw_histinset' + prstr + now + '.pdf')
+
+
+
+
 
 
     if extra: # ===================================================
