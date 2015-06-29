@@ -4,7 +4,11 @@
     into area-averages and such.
 
 """
+import matplotlib.pyplot as plt 
+import numpy as np
+import scipy as sp
 import pandas as pd
+import cccmaNC as cnc
 import cccmaplots as cplt
 import cccmautils as cutl
 import cccmacmaps as ccm
@@ -21,14 +25,16 @@ import matplotlib.colors as mcolors
 from scipy.stats import norm
 import random
 import numpy.ma as ma
+import scipy.io as sio
+
 
 # exception handling works below. add to other clauses @@
 
 printtofile=False
 dohist=False
 doregress=False
-doscatter=True
-dolongtermavg=False
+doscatter=False
+dolongtermavg=True
 
 addobs=True # to scatter plot
 addnat=False
@@ -743,6 +749,15 @@ if doscatter:
 
     if savedat:
 
+        # plot the sic data:
+        plt.figure()
+        plt.plot(fldssrdfcnd,color='purple',linestyle='none',marker='o')
+        plt.plot(fldssdfcnd,color='0.5',linestyle='none',marker='o')
+        plt.plot(fldssodfcnd,color='g',linestyle='none',marker='o')
+        plt.plot(lefldcnd,color='blue',linestyle='none',marker='o',alpha=0.5)
+        plt.title('SIC data')
+        plt.legend(('AGCM var','AGCM mean','AGCM NSIDC','Hist LE'),loc='best')
+
         # write ascii file for john:
         agcmout1=np.hstack((fldssrdfcnd,fldssodfcnd,fldssdfcnd)) # column 1
         agcmout2=np.hstack((fldssrdf2,fldssodf2,fldssdf2)) # column 2
@@ -1049,6 +1064,706 @@ def sample120yravg(lesea,numsamp,nummems=11,allowreps=True):
     return ltavg,ltsigma
 
 
+def plot_shorttermpdf(fig,ax,field,region,xxdat,pdfdat,histdat,meandat,cidat,cifdat,pointdat):
+
+    fsz=18
+
+    mew=1.5; ms=7
+    firebrick=ccm.get_linecolor('firebrick')
+    hcol='0.7'#ccm.get_linecolor('darkolivegreen3')
+    hcolline='0.7'#ccm.get_linecolor('darkolivegreen3')#'darkseagreen4')
+    ltcol='0.5'#ccm.get_linecolor('darkseagreen4')
+    natcol=ccm.get_linecolor('steelblue3')
+    natcolline=ccm.get_linecolor('steelblue3')#4')
+    miscol=ccm.get_linecolor('orange3') #'deepskyblue')
+    miscolline=ccm.get_linecolor('orange3') #'deepskyblue')
+    obscol='k' #ccm.get_linecolor('midnightblue') #'b'
+
+    sslg=mlines.Line2D([],[],color=ltcol,linewidth=2) # subsamp sims
+    ss2lg=mlines.Line2D([],[],color='k',linewidth=2) # subsamp sims2 (variable bc)
+    ss2lg2=mlines.Line2D([],[],color='k',linewidth=2,mew=2,marker='|')
+    simlg=mlines.Line2D([],[],color='0.3',linestyle='none',marker='o')
+    nsidclg=mlines.Line2D([],[],color='g',linestyle='none',marker='o')
+    nsidclg2=mlines.Line2D([],[],color='g',linewidth=2,mew=2,marker='|')
+    obslg=mlines.Line2D([],[],color=obscol,linestyle='none',marker='s')
+    rawlg=mlines.Line2D([],[],color=hcolline,linewidth=2)
+    rawnlg=mlines.Line2D([],[],color=natcolline,linewidth=2)
+    rawmlg=mlines.Line2D([],[],color=miscolline,linewidth=2)
+
+    prstr =''
+    #legh = (sslg,rawlg)
+    #legstr = ('AGCM Ice','CGCM All')
+    # actually add AGCM to end
+    legh = (rawlg,)
+    legstr = ('CGCM All',)
+
+    skey='obs'
+    obsreg= np.squeeze(pointdat[skey])
+    skey='orig'
+    or5sea= np.squeeze(pointdat[skey])
+    skey='AGCM120'
+    simflddf={}
+    simflddf['NSIDC']= np.squeeze(pointdat[skey])
+
+    skey='AGCM2'
+    ss2xx = np.squeeze(xxdat[skey]); ss2pdf_fitted=np.squeeze(pdfdat[skey]); 
+    ss2mean= np.squeeze(meandat[skey]); ss2ci= np.squeeze(cidat[skey]); ss2cif= np.squeeze(cifdat[skey])
+    skey='AGCM'
+    ssxx =  np.squeeze(xxdat[skey]); sspdf_fitted= np.squeeze(pdfdat[skey]); 
+    ssmean= np.squeeze(meandat[skey]); ssci= np.squeeze(cidat[skey]); sscif= np.squeeze(cifdat[skey])
+
+    skey='histle'
+    lesea= histdat[skey]; rawxx=xxdat[skey]; rawpdf_fitted=pdfdat[skey]; 
+    rawmean=meandat[skey]; rawci=cidat[skey]; rawcif=cifdat[skey]
+    skey='histnat'
+    lensea= histdat[skey]; rawnxx=xxdat[skey]; rawnpdf_fitted=pdfdat[skey]; 
+    rawnmean=meandat[skey]; rawnci=cidat[skey]; rawncif=cifdat[skey]
+    skey='histmisc'
+    lemsea= histdat[skey]; rawmxx=xxdat[skey]; rawmpdf_fitted=pdfdat[skey]; 
+    rawmmean=meandat[skey]; rawmci=cidat[skey]; rawmcif=cifdat[skey]
+
+    if field!='sia':
+        #ax.hist(plotsims2,normed=True,color=ltcol,alpha=0.4,histtype='stepfilled')
+        ax.plot(ss2xx,ss2pdf_fitted,color=ltcol,linewidth=3)
+
+        #ax.plot(ss2xx,ss2pdf_fitted,color='k',linewidth=2) # variable boundary forcings
+
+        #ax.hist(osubsamp,normed=True,color='g',alpha=0.3)
+        #ax.plot(ossxx,osspdf_fitted,color='g',linewidth=2)
+        #prstr=prstr+'addRsimsnsidcsim_'
+        #legstr=legstr+('AGCM NSIDC','AGCM var ICE')
+        #legh=legh+(nsidclg2,ss2lg)
+
+        #prstr=prstr+'addRsims_'
+        #legstr=legstr+('AGCM var ICE',)
+        #legh=legh+(ss2lg,)
+    if addsims:
+        prstr=prstr+'120yrsims_'
+        simsy=-0.02
+        for es in simsE:
+            ax.plot(simflddf[es],simsy,color=ltcol,
+                    marker='o',linestyle='',fillstyle='none',mew=mew,markersize=ms)
+            ax.plot(simfldm[es],simsy,color=ltcol,alpha=0.6,
+                    marker='o',linestyle='',fillstyle='full')
+        for rs in simsR:
+            ax.plot(simflddf[rs],simsy,color='k',
+                    marker='o',linestyle='',fillstyle='none',mew=mew,markersize=ms)
+            ax.plot(simfldm[rs],simsy,color='k',alpha=0.6,
+                    marker='o',linestyle='',fillstyle='full') 
+
+        if subnh: # HACK @@
+            ax.plot(simflddf['NSIDC'],simsy,color='g',
+                    marker='o',linestyle='',fillstyle='none',mew=mew,markersize=ms,mec='g')
+        else:
+            ax.plot(simflddf['NSIDC'],simsy,color='g',
+                    marker='o',linestyle='',fillstyle='none',mew=mew,markersize=ms,mec='g')
+            ax.plot(simfldm['NSIDC'],simsy,color='g',alpha=0.6,
+                    marker='o',linestyle='',fillstyle='full')
+
+    # add RAW LE
+    #print 'plotting LE histogram.............' + str(lesea) #@@
+
+    ax.hist(lesea,normed=True,color=hcol,alpha=0.3,histtype='stepfilled')
+    ax.plot(rawxx,rawpdf_fitted,color=hcolline,linewidth=3)
+    fs='full'
+    for eii in range(0,5): # orig five
+        # search for difforig[eii] nearest to axx, 
+        # then plot apdf_fitted[axx] as marker, filled or not based on sig.
+        plotx = or5sea[eii]
+        idx = cutl.find_nearest(rawxx,plotx)
+        ploty = rawpdf_fitted[idx]
+        ax.plot(plotx,ploty,marker='o',color=hcolline,mec='k',fillstyle=fs,mew=1,markersize=ms)
+        # @@@ check significance?
+
+
+    if field!='sia':
+        nsx= simflddf['NSIDC']
+        idx=cutl.find_nearest(ss2xx,nsx)
+        nsy=ss2pdf_fitted[idx]
+        ax.plot(nsx,nsy,marker='o',color='g',mec='g',fillstyle=fs,mew=mew,markersize=ms)
+        ax.annotate('Obs AGCM',xy=(nsx,nsy),xytext=(10,20),
+                    textcoords='offset points',fontsize=fsz,
+                    arrowprops=dict(arrowstyle='-',connectionstyle='arc3',
+                                    facecolor='k', edgecolor='k')) # label the marker on the pdf curve
+
+    ylims=ax.get_ylim()
+    print '@@@ YLIMS: ' + str(ylims) # @@@@
+    if field=='sia':
+        ax.set_ylim(0,2e-12)
+        obsanny=1.8e-12
+        offsetpts=(15,0)
+    elif field=='tas':
+        #ax.set_ylim(-0.05,ylims[1])
+        obsanny=0.8
+        offsetpts=(-50,0)
+    ax.set_ylabel('Density',fontsize=fsz)
+    ax.set_yticklabels('')
+    ax.axhline(y=0,color='k')
+    ax.axvline(x=0,color='k',linestyle='--')
+    
+
+    xlab = '$\Delta$ SAT ($^\circ$C); AGCM= $%.2f$'%(ssmean)+ ' CGCM= $%.2f$'%(rawmean)
+
+    #obslg=ax.axvline(obsreg,color=obscol,linewidth=2) # vert line for obs
+    #if field=='sia' and region=='nh':
+    if 1: # do no matter if sia or tas
+        #plotx=obsreg
+        #idx=cutl.find_nearest(rawxx,plotx)
+        #ploty=rawpdf_fitted[idx]
+        #ax.plot(plotx,ploty,marker='o',color=obscol,mec=obscol,fillstyle=fs,mew=mew,markersize=ms)
+        #ax.annotate('Obs',xy=(plotx,ploty),xytext=(-28,2),
+        #            textcoords='offset points') # label the marker on the pdf curve
+        ax.axvline(x=obsreg,color=obscol,linewidth=2)
+        ax.annotate('Obs',xy=(obsreg,obsanny),xytext=offsetpts,
+                    textcoords='offset points',
+                    arrowprops=dict(arrowstyle='-',connectionstyle='arc3',
+                                    facecolor='k', edgecolor='k'),fontsize=fsz) # label vertical obs line
+
+    al =0.9; histtype='step'
+    #al =0.3; histtype='stepfilled'
+    if addnat:
+        #ax.hist(lensea,normed=True,color=natcol,alpha=al,histtype=histtype)
+        ax.plot(rawnxx,rawnpdf_fitted,color=natcolline,linewidth=2,alpha=al)
+        legh = legh + (rawnlg,)
+        legstr = legstr + ('CGCM Nat',)
+        prstr = prstr+'nat'
+        xlab = xlab + ' Nat=$%.2f$'%(rawnmean) 
+    if addmisc:
+        #ax.hist(lemsea,normed=True,color=miscol,alpha=al,histtype=histtype)
+        ax.plot(rawmxx,rawmpdf_fitted,color=miscolline,linewidth=2,alpha=al)
+        legh = legh + (rawmlg,)
+        legstr = legstr + ('CGCM Aero',)
+        prstr = prstr+'misc'
+        xlab = xlab + ' Aero=$%.2f$'%(rawmmean) 
+
+    xlab = xlab + ' Obs=$%.2f$'%(obsreg) 
+    #legh=legh+(obslg,)
+    #if field=='sia':
+    #    legstr=legstr+('NSIDC Obs',)
+    #else:
+    #    legstr=legstr+('Obs',)
+
+    if field=='sia':
+        ax.set_xlim((-2.5e12,1.5e12))
+        xlab = 'Change in sea ice area, $\Delta$SIC (millions of km$^2$)' # for paper.
+        xtlabs = ax.get_xticks()/1e12
+        ax.set_xticklabels(xtlabs)
+        axesloc=[.71, .69, .18, .2]
+    else:
+        ax.set_xlim((-2.5,5))
+        xlab = 'Change in Eurasian surface air temperature, $\Delta$SAT ($^\circ$C)' # for paper.
+        axesloc=[.71, .69, .18, .2]
+
+    axesloc=[.69, .69, .29, .3] # for inset
+
+    """ http://matplotlib.org/examples/pylab_examples/axes_demo.html
+    a = axes([.65, .6, .2, .2], axisbg='y')
+
+    """
+    # #  INSET!
+    # http://stackoverflow.com/questions/17458580/embedding-small-plots-inside-subplots-in-matplotlib
+    pos=ax.get_position()
+    wid=pos.width
+    height=pos.height
+    inax_pos = ax.transAxes.transform(axesloc[0:2])
+    transFigure = fig.transFigure.inverted()
+    infig_pos = transFigure.transform(inax_pos)
+    xpos=infig_pos[0]
+    ypos=infig_pos[1]
+    wid*=axesloc[2] # not sure about this?
+    height*=axesloc[3] # and this?
+    print 'add_axes: ' + str([xpos,ypos,wid,height])
+    inax = fig.add_axes([xpos,ypos,wid,height])
+
+    #inax = fig.add_axes(axesloc)
+    top=2.5
+    yy=top
+    if field!='sia':
+        yy=top=3.5
+    inax.plot(rawmean, yy, linestyle='none',marker='s',mec=hcolline,color=hcolline)
+    inax.plot(rawci, (yy,yy), linewidth=2,marker='|',markersize=6,mew=2,mec=hcolline,color=hcolline)
+    inax.plot(rawcif, (yy,yy), linewidth=2,marker='|',markersize=6,mew=2,mec=hcolline,color=hcolline)
+    yy=yy-1
+    inax.plot(rawnmean, yy, linestyle='none',marker='s',mec=natcolline,color=natcolline)
+    inax.plot(rawnci, (yy,yy), linewidth=2,marker='|',markersize=6,mew=2,mec=natcolline,color=natcolline)
+    inax.plot(rawncif, (yy,yy), linewidth=2,marker='|',markersize=6,mew=2,mec=natcolline,color=natcolline)
+    yy=yy-1
+    inax.plot(rawmmean, yy, linestyle='none',marker='s',mec=miscolline,color=miscolline)
+    inax.plot(rawmci, (yy,yy), linewidth=2,marker='|',markersize=6,mew=2,mec=miscolline,color=miscolline)   
+    inax.plot(rawmcif, (yy,yy), linewidth=2,marker='|',markersize=6,mew=2,mec=miscolline,color=miscolline)   
+    yy=yy-1
+    if field!='sia':
+        inax.plot(ss2mean, yy, linestyle='none',marker='s',mec=ltcol,color=ltcol)
+        inax.plot(ss2ci, (yy,yy), linewidth=2,marker='|',markersize=6,mew=2,mec=ltcol,color=ltcol)
+        inax.plot(ss2cif, (yy,yy), linewidth=2,marker='|',markersize=6,mew=2,mec=ltcol,color=ltcol)
+        yy=yy-1
+    ##if field!='sia':
+    ##    inax.plot(ss2mean, yy, linestyle='none',marker='s',mec='k',color='k')
+    ##    inax.plot(ss2ci, (yy,yy), linewidth=2,marker='|',markersize=6,mew=2,mec='k',color='k')
+    ##    inax.plot(ss2cif, (yy,yy), linewidth=2,marker='|',markersize=6,mew=2,mec='k',color='k')
+    ##    yy=yy-1
+    ##    inax.plot(ossmean, yy, linestyle='none',marker='s',mec='g',color='g')
+    ##    inax.plot(ossci, (yy,yy), linewidth=2,marker='|',markersize=6,mew=2,mec='g',color='g')
+    ##    inax.plot(osscif, (yy,yy), linewidth=2,marker='|',markersize=6,mew=2,mec='g',color='g')
+
+    inax.axvline(x=0,linestyle='--',color='k')
+    inax.axvline(x=obsreg,color=obscol,linewidth=2,alpha=0.7)
+    inax.set_yticklabels('')
+    inax.set_yticks([])
+    inax.set_ylim(0,top+.5)
+    if field=='tas' and region=='eurasiamori':
+        inax.set_xlim(-1.4,1.8) # taseurasiamori limits
+        xticks=inax.get_xticks()
+        inax.set_xticklabels(('','-1','','0','','1','','2'))
+        #legh=legh+(ss2lg2,nsidclg2)
+        #legstr=legstr+('AGCM var ICE','AGCM NSIDC ICE')
+    elif field=='sia' and region=='nh':
+        inax.set_xlim(-1.4e12,0) 
+        inax.set_xticklabels(('',-1.2,'',-0.8,'',-0.4,'',0))
+    inax.set_xlabel('Mean change',fontsize=fsz-2)
+    # add 'Obs' annotation
+    if field=='sia':
+        #tlabx=0.5;tlabx2=0.49; tlaby=tlaby2=0.7
+        #labx=0.41; laby=0.56
+        laby=1.8 # data coord
+        offsetpts=(20,15)
+    elif field=='tas':
+        # NOT WORKING?
+        #tlabx=0.02; tlaby=0.85 # text position
+        #labx=0.03; laby=0.84; # start of arrow
+        #tlabx2=0.25; tlaby2=0.69 # head of arrow
+        laby=2.65 # data coord
+        offsetpts=(-40,20)
+    
+    inax.annotate('Obs',xy=(obsreg,laby),xytext=offsetpts,
+                  textcoords='offset points',
+                  arrowprops=dict(arrowstyle='-',connectionstyle='arc3',
+                                  facecolor='k', edgecolor='k'),fontsize=fsz-2) # label vertical obs line
+
+    if addsims:
+        legstr=legstr+('120-yr AGCM',)
+        legh=legh+(simlg,)
+
+    fontP = fm.FontProperties()
+    fontP.set_size(fsz-2)
+        
+    # add AGCM Ice to legend
+    if field=='tas':
+        #legstr=legstr+('AGCM Ice',)
+        #legh=legh+(sslg,)
+        ax.legend((sslg,),('AGCM Ice',), loc=(0.71,0.5),frameon=False,prop=fontP)
+    elif field=='sia':
+        ax.legend(legh,legstr, loc=(0.71,0.41),frameon=False,prop=fontP)
+
+    ax.set_xlabel(xlab,fontsize=fsz)
+
+    # panel labels
+    if field=='sia':
+        ax.annotate('a',xy=(0.01,1.01),xycoords='axes fraction',fontsize=fsz,fontweight='bold')
+    elif field=='tas':
+        ax.annotate('b',xy=(0.01,1.01),xycoords='axes fraction',fontsize=fsz,fontweight='bold')
+
+    return ax,prstr
+# end plot_shorttermpdf() function -------------------------------------
+
+def calc_shorttermpdf(fdict,field,region,sea,timesel,subnh=False,addnat=True,addmisc=True,addsims=False,verb=True):
+    """
+         returns retdict, simsstr
+            retdict = {'xxdat': xxdat, 'pdfdat': pdfdat, 'meandat': meandat,
+                       'cidat': cidat, 'cifdat': cifdat, 'histdat': histdat,
+                       'pointdat',pointdat}
+    
+    """
+    timeselc=timesel[0]; timeselp=timesel[1]
+    ncfield=fdict['ncfield']
+    comp=fdict['comp']
+
+    # ===== put in function =====
+    simconv1=1
+    if field=='tas': simfield1='st'; simncfield1='ST'
+    elif field=='zg50000.00': simfield1='gz50000'; simncfield1='PHI'; simconv1=1/con.get_g()
+    elif field=='sia': simfield1='sicn'; simncfield1='SICN'; print '@@ danger, sia actually sicn average'
+    else: print 'cannot addsims for ' + field;
+
+    casename = 'historical'
+
+    # LOAD 1D DATA
+
+    lecdat = le.load_LEdata(fdict,casename,timesel=timeselc, 
+                            rettype='ndarray',conv=leconv,ftype=ftype,local=local,verb=verb)
+    (numen,ntime) = lecdat.shape
+    lepdat=le.load_LEdata(fdict,casename,timesel=timeselp, 
+                          rettype='ndarray',conv=leconv,ftype=ftype,local=local,verb=verb)
+    lecsea = cutl.seasonalize_monthlyts(lecdat.T,season=sea,verb=True).mean(axis=0)
+    lepsea = cutl.seasonalize_monthlyts(lepdat.T,season=sea).mean(axis=0)
+    lesea = lepsea - lecsea # numens
+
+    # load original five in case:
+    or5c=le.load_originalfive(fdict, casename,timesel=timeselc, 
+                              rettype='ndarray',conv=leconv,ftype=ftype,verb=verb)
+    or5p=le.load_originalfive(fdict, casename,timesel=timeselp, 
+                              rettype='ndarray',conv=leconv,ftype=ftype,verb=verb)
+    or5csea=cutl.seasonalize_monthlyts(or5c.T,season=sea,verb=True).mean(axis=0)
+    or5psea=cutl.seasonalize_monthlyts(or5p.T,season=sea,verb=True).mean(axis=0)
+    or5sea = or5psea-or5csea
+
+    if subnh:
+        fdictsub = {'field': field+'nh', 'ncfield': ncfield, 'comp': comp}
+        subc = le.load_LEdata(fdictsub,casename,timesel=timeselc, 
+                              rettype='ndarray',conv=leconv,ftype=ftype,local=local,verb=verb)
+        subp = le.load_LEdata(fdictsub,casename,timesel=timeselp, 
+                              rettype='ndarray',conv=leconv,ftype=ftype,local=local,verb=verb)
+        sub = cutl.seasonalize_monthlyts(subp.T,season=sea).T - cutl.seasonalize_monthlyts(subc.T,season=sea).T
+        # @@@ change this to subtract the MEAN hemispheric anom from all ens members
+        #lesea = lesea - sub.mean(axis=1)
+        lesea = lesea - sub.mean(axis=1).mean()
+
+        # load original five in case:
+        subor5c=le.load_originalfive(fdictsub, casename,timesel=timeselc, 
+                                     rettype='ndarray',conv=leconv,ftype=ftype,verb=verb)
+        subor5p=le.load_originalfive(fdictsub, casename,timesel=timeselp, 
+                                     rettype='ndarray',conv=leconv,ftype=ftype,verb=verb)
+        subor5=cutl.seasonalize_monthlyts(or5csub.T,season=sea,verb=True).T - \
+                    cutl.seasonalize_monthlyts(or5psub.T,season=sea,verb=True).T
+        or5sea = or5sea - subor5.mean(axis=1).mean() # @@@@ should remove the total mean of all 55 in this case?
+
+    if appendorig:
+        lesea = np.hstack((lesea,or5sea))
+
+    # RAW anomalies (decadal diffs)
+    # calc the pdf associated with the hist
+    rawpdf_fitted,rawmean,rawsd,rawxx = cutl.calc_normfit(lesea) # to get mean
+    #rawpdf_fitted,rawxx = cutl.calc_kernel(lesea)
+    rawdf = len(lesea)-1
+    rawstder = rawsd / np.sqrt(rawdf+1)
+    rawci = sp.stats.t.interval(1-cisiglevel, rawdf, loc=rawmean, scale=rawstder)
+    rawcif = sp.stats.t.interval(1-cisiglevel, rawdf, loc=rawmean, scale=rawsd)
+
+    if addnat:
+        lencdat = le.load_LEdata(fdict,'historicalNat',timesel=timeselc, 
+                                 rettype='ndarray',conv=leconv,ftype=ftype,local=local,verb=verb)
+        (numenn,ntimen) = lencdat.shape
+        lenpdat=le.load_LEdata(fdict,'historicalNat',timesel=timeselp, 
+                               rettype='ndarray',conv=leconv,ftype=ftype,local=local,verb=verb)
+        lencsea = cutl.seasonalize_monthlyts(lencdat.T,season=sea).mean(axis=0)
+        lenpsea = cutl.seasonalize_monthlyts(lenpdat.T,season=sea).mean(axis=0)
+        lensea = lenpsea - lencsea # numens
+
+        if subnh:
+            fdictsub = {'field': field+'nh', 'ncfield': ncfield, 'comp': comp}
+            nsubc = le.load_LEdata(fdictsub,'historicalNat',timesel=timeselc, 
+                                   rettype='ndarray',conv=leconv,ftype=ftype,local=local,verb=verb)
+            nsubp = le.load_LEdata(fdictsub,'historicalNat',timesel=timeselp, 
+                                   rettype='ndarray',conv=leconv,ftype=ftype,local=local,verb=verb)
+            nsub = cutl.seasonalize_monthlyts(nsubp.T,season=sea).T - cutl.seasonalize_monthlyts(nsubc.T,season=sea).T
+            # @@@ change this to subtract the MEAN hemispheric anom from all ens members
+            #lesea = lesea - sub.mean(axis=1)
+            lensea = lensea - nsub.mean(axis=1).mean()
+
+        rawnpdf_fitted,rawnmean,rawnsd,rawnxx = cutl.calc_normfit(lensea)
+        #rawnpdf_fitted,rawnxx = cutl.calc_kernel(lensea)
+        rawndf = len(lensea)-1
+        rawnstder = rawnsd / np.sqrt(rawndf+1)
+        rawnci = sp.stats.t.interval(1-cisiglevel, rawndf, loc=rawnmean, scale=rawnstder)
+        rawncif = sp.stats.t.interval(1-cisiglevel, rawndf, loc=rawnmean, scale=rawnsd)
+
+    if addmisc:
+        lemcdat = le.load_LEdata(fdict,'historicalMisc',timesel=timeselc, 
+                                 rettype='ndarray',conv=leconv,ftype=ftype,local=local,verb=verb)
+        (numenm,ntimem) = lemcdat.shape
+        lempdat=le.load_LEdata(fdict,'historicalMisc',timesel=timeselp, 
+                               rettype='ndarray',conv=leconv,ftype=ftype,local=local,verb=verb)
+        lemcsea = cutl.seasonalize_monthlyts(lemcdat.T,season=sea).mean(axis=0)
+        lempsea = cutl.seasonalize_monthlyts(lempdat.T,season=sea).mean(axis=0)
+        lemsea = lempsea - lemcsea # numens
+
+        if subnh:
+            fdictsub = {'field': field+'nh', 'ncfield': ncfield, 'comp': comp}
+            msubc = le.load_LEdata(fdictsub,'historicalMisc',timesel=timeselc, 
+                                   rettype='ndarray',conv=leconv,ftype=ftype,local=local,verb=verb)
+            msubp = le.load_LEdata(fdictsub,'historicalMisc',timesel=timeselp, 
+                                   rettype='ndarray',conv=leconv,ftype=ftype,local=local,verb=verb)
+            msub = cutl.seasonalize_monthlyts(msubp.T,season=sea).T - cutl.seasonalize_monthlyts(msubc.T,season=sea).T
+            # @@@ change this to subtract the MEAN hemispheric anom from all ens members
+            #lesea = lesea - sub.mean(axis=1)
+            lemsea = lemsea - msub.mean(axis=1).mean()
+
+        rawmpdf_fitted,rawmmean,rawmsd,rawmxx = cutl.calc_normfit(lemsea)
+        #rawmpdf_fitted,rawmxx = cutl.calc_kernel(lemsea)
+        rawmdf = len(lemsea)-1
+        rawmstder = rawmsd / np.sqrt(rawmdf+1)
+        rawmci = sp.stats.t.interval(1-cisiglevel, rawmdf, loc=rawmmean, scale=rawmstder)
+        rawmcif = sp.stats.t.interval(1-cisiglevel, rawmdf, loc=rawmmean, scale=rawmsd)
+
+    """if longtermLE:
+        # second option: choose 4 random, non-overlapping groups of 11 members x 11-yrs
+        #                do this numsamp times. Compare with sigma of 5 AGCM sims
+        if option2:
+            ltavg2=np.zeros(numsamp)
+            ltsigma2=np.zeros(numsamp)
+            for ns in np.arange(0,numsamp):
+                # returns 4 avgs and sigmas across e/ of the 12 selected members
+                avgtmp,sigmajunk = sample120yravg(lesea,4,nummems=11,allowreps=False)
+                ltavg2[ns]=avgtmp.mean()
+                ltsigma2[ns]=avgtmp.std()
+
+            ltavg=ltavg2
+            ltsigma=ltsigma2
+            prstr='opt2'        
+        else: # I don't think this makes as much sense for estimating sigma convergence? @@
+
+            # sample 11 ensemble members: 11 members x 11 years = ~120 yrs to equal AGCM sims
+            # (do this numsamp times with diff combos of 11).        
+            ltavg,ltsigma = sample120yravg(lesea,numsamp) # option one.
+
+            # the sigma returned here isn't really appropriate for comparison with the AGCM sims.
+            # This is because it is the sigma across each 12 member selection
+            # instead, now should randomly select 3-5 elements from ltavg and compute 
+            #   sigma across those small sets. For non-repeating selections of 4, 
+            #   can only run 12 times if original numsamp is 50.
+            nummems2=4
+            ltavg2,ltsigma2= sample120yravg(ltavg,numsamp/nummems2,nummems=nummems2,allowreps=False)
+
+        ltpdf_fitted,ltmean,ltsd,ltxx = cutl.calc_normfit(ltavg)"""
+
+
+    #else: # not longtermLE (short term sims instead)
+
+    # here we want to subsample 11-year segments from the sims
+    sims=('E1','E2','E3','E4','E5'); simsstr='sbEonly' # sub
+    #sims=('R1','R2','R3','R4','R5'); simsstr='sbRonly'
+    #sims=('R1','R2','R3','R4','R5','E1','E2','E3','E4','E5'); simsstr='sbERboth'
+    simflddf = pd.DataFrame(lmd.loaddata((simfield1,),sims,ncfields=(simncfield1,), timefreq=sea, 
+                                         region=region))*simconv1
+    osimflddf = pd.DataFrame(lmd.loaddata((simfield1,),('NSIDC',),ncfields=(simncfield1,), timefreq=sea, 
+                                         region=region))*simconv1
+    if subnh:
+        simsubdf = pd.DataFrame(lmd.loaddata((simfield1,),sims,ncfields=(simncfield1,), timefreq=sea, 
+                                             filetype='diff',region='nh'))*simconv1
+        # want to subtract the mean hemispheric avg anomaly
+        simflddf = simflddf - simsubdf.mean(axis=1).mean() # average over sims and then time (should be a scalar)
+        osimsubdf = pd.DataFrame(lmd.loaddata((simfield1,),('NSIDC',),ncfields=(simncfield1,), timefreq=sea, 
+                                             filetype='diff',region='nh'))*simconv1
+        # want to subtract the mean hemispheric avg anomaly
+        osimflddf = osimflddf - osimsubdf.mean(axis=1).mean() # average over sims and then time (should be a scalar)
+
+    subsamp,styearsss = subsamp_sims(simflddf,numyrs=11)
+    plotsims = subsamp
+    print '==== AGCM '
+    sspdf_fitted,ssmean,sssd,ssxx = cutl.calc_normfit(plotsims)
+    #sspdf_fitted,ssxx = cutl.calc_kernel(plotsims)
+    ssdf = len(subsamp)-1
+    ssstder = sssd / np.sqrt(ssdf+1)
+
+    # mean and conf-int: @@@@@
+    # ci = sp.stats.t.interval(1-cisiglevel, df, loc= meananom, scale=stder)
+    ssci = sp.stats.t.interval(1-cisiglevel, ssdf, loc=ssmean, scale=ssstder) # this is mean value's 5-95%
+    sscif = sp.stats.t.interval(1-cisiglevel, ssdf, loc=ssmean, scale=sssd) # full range. don't divide by n. this is pdf 5-95%
+
+    osubsamp,styearsns = subsamp_sims(osimflddf,numyrs=11)
+    print '==== NSIDC AGCM '
+    osspdf_fitted,ossmean,osssd,ossxx = cutl.calc_normfit(osubsamp)
+    ossdf = len(osubsamp)-1
+    ossstder = osssd / np.sqrt(ossdf+1)
+    ossci = sp.stats.t.interval(1-cisiglevel, ossdf, loc=ossmean, scale=ossstder)
+    osscif = sp.stats.t.interval(1-cisiglevel, ossdf, loc=ossmean, scale=osssd)
+
+    # do each ens separately, for testing stats (maybe not plotting)
+    sims2=('R1','R2','R3','R4','R5'); #simsstr='sbRonly'
+    sim2flddf = pd.DataFrame(lmd.loaddata((simfield1,),sims2,ncfields=(simncfield1,), timefreq=sea, 
+                                         region=region))*simconv1
+    if subnh:
+        sim2subdf = pd.DataFrame(lmd.loaddata((simfield1,),sims2,ncfields=(simncfield1,), timefreq=sea, 
+                                             filetype='diff',region='nh'))*simconv1
+
+        # want to subtract the mean hemispheric avg anomaly
+        sim2flddf = sim2flddf - sim2subdf.mean(axis=1).mean() # average over sims and then time (should be a scalar)
+
+
+    subsamp2,styears2 = subsamp_sims(sim2flddf,numyrs=11)
+    plotsims2 = subsamp2
+    print '==== AGCM2 '
+    ss2pdf_fitted,ss2mean,ss2sd,ss2xx = cutl.calc_normfit(plotsims2)
+    #ss2pdf_fitted,ss2xx = cutl.calc_kernel(plotsims2)
+    ss2df = len(subsamp2)-1
+    ss2stder = ss2sd / np.sqrt(ss2df+1)
+    ss2ci = sp.stats.t.interval(1-cisiglevel, ss2df, loc=ss2mean, scale=ss2stder)
+    ss2cif = sp.stats.t.interval(1-cisiglevel, ss2df, loc=ss2mean, scale=ss2sd)
+
+    tstat, pval = sp.stats.ttest_ind(plotsims,plotsims2)
+    lstat, lpval = sp.stats.levene(plotsims,plotsims2)
+    print '==== testing ANT vs TOT ===='
+    print 'TSTAT: ' + str(tstat) + ' PVAL: ' + str(pval)
+    if pval<=siglevel:
+         print 'The ensemble means are significantly different (' + str(1-siglevel) + ')'
+    print 'LSTAT: ' + str(lstat) + ' PVAL: ' + str(lpval)
+    if lpval<=siglevel:
+         print 'The ensemble variances are significantly different (' + str(1-siglevel) + ')'
+
+
+    tstat, pval = sp.stats.ttest_ind(plotsims,lesea)
+    lstat, lpval = sp.stats.levene(plotsims,lesea)
+    print '==== testing ANT vs ALL LE ===='
+    print 'TSTAT: ' + str(tstat) + ' PVAL: ' + str(pval)
+    if pval<=siglevel:
+         print 'The ensemble means are significantly different (' + str(1-siglevel) + ')'
+    print 'LSTAT: ' + str(lstat) + ' PVAL: ' + str(lpval)
+    if lpval<=siglevel:
+         print 'The ensemble variances are significantly different (' + str(1-siglevel) + ')'
+
+    tstat, pval = sp.stats.ttest_ind(lesea,lensea)
+    lstat, lpval = sp.stats.levene(lesea,lensea)
+    print '==== testing LE vs Nat LE ===='
+    print 'TSTAT: ' + str(tstat) + ' PVAL: ' + str(pval)
+    if pval<=siglevel:
+         print 'The ensemble means are significantly different (' + str(1-siglevel) + ')'
+    print 'LSTAT: ' + str(lstat) + ' PVAL: ' + str(lpval)
+    if lpval<=siglevel:
+         print 'The ensemble variances are significantly different (' + str(1-siglevel) + ')'
+
+    tstat, pval = sp.stats.ttest_ind(lesea,lemsea)
+    lstat, lpval = sp.stats.levene(lesea,lemsea)
+    print '==== testing LE vs Aero LE ===='
+    print 'TSTAT: ' + str(tstat) + ' PVAL: ' + str(pval)
+    if pval<=siglevel:
+         print 'The ensemble means are significantly different (' + str(1-siglevel) + ')'
+    print 'LSTAT: ' + str(lstat) + ' PVAL: ' + str(lpval)
+    if lpval<=siglevel:
+         print 'The ensemble variances are significantly different (' + str(1-siglevel) + ')'
+
+    if addsims:
+        # ========= add sims (120-yr averages)
+        sims=('E1','E2','E3','E4','E5','R1','R2','R3','R4','R5','NSIDC'); #simsstr=''
+        #simsRN=('R1','R2','R3','R4','R5','NSIDC')
+        simsR=('R1','R2','R3','R4','R5')
+        simsE=('E1','E2','E3','E4','E5')
+        #sims=simsRN; simsstr='Ronly'
+        #simflddf = pd.DataFrame(lmd.loaddata((simfield1,),sims,ncfields=(simncfield1,), timefreq=sea, 
+        #                                     meantype='time',region=region),index=sims)*simconv1
+        simflddf = pd.Series(lmd.loaddata((simfield1,),sims,ncfields=(simncfield1,), timefreq=sea, 
+                                             meantype='time',region=region))*simconv1
+
+        # --- for estimating sigma in Individual SIC forcing ensemble only:
+        #simflddfr = pd.DataFrame(lmd.loaddata((simfield1,),simsR,ncfields=(simncfield1,), timefreq=sea, 
+        #                                      meantype='time',region=region),index=simsR)*simconv1
+        simflddfr = pd.Series(lmd.loaddata((simfield1,),simsR,ncfields=(simncfield1,), timefreq=sea, 
+                                              meantype='time',region=region))*simconv1
+        simval=simflddfr.values
+        simstds = [simval[1:].std(), simval[[0,2,3,4]].std(), simval[[0, 1, 3, 4]].std(), 
+                   simval[[0, 1, 2, 4]].std(), simval[0:-1].std()] # hack
+
+        simsigma=simval.std()
+
+
+        if subnh:
+            simsubcdf = pd.DataFrame(lmd.loaddata((simfield1,),sims,ncfields=(simncfield1,), timefreq=sea, 
+                                                 filetype='ctl',region='nh'))*simconv1
+            simsubpdf = pd.DataFrame(lmd.loaddata((simfield1,),sims,ncfields=(simncfield1,), timefreq=sea, 
+                                                 filetype='pert',region='nh'))*simconv1
+            simfldcdf = pd.DataFrame(lmd.loaddata((simfield1,),sims,ncfields=(simncfield1,), timefreq=sea, 
+                                           filetype='ctl',region=region))*simconv1
+            simfldpdf = pd.DataFrame(lmd.loaddata((simfield1,),sims,ncfields=(simncfield1,), timefreq=sea, 
+                                           filetype='pert',region=region))*simconv1
+            simfldcdf=simfldcdf-simsubcdf
+            simfldpdf=simfldpdf-simsubpdf
+            (tstat,pvals)=cutl.ttest_ind(simfldpdf.values,simfldcdf.values,axis=0) 
+            print pvals.shape
+
+            simflddf = simfldpdf.mean(axis=0)-simfldcdf.mean(axis=0)
+            simfldm =simflddf.mask(simpvdf>siglevel)# ma.masked_where(pvals>siglevel,simflddf.values)
+            # have to calc pvals 
+
+        else:
+            simpvdf = pd.Series(lmd.loaddata((simfield1,),sims,ncfields=(simncfield1,), timefreq=sea, 
+                                                filetype='pval',region=region))#,index=sims)
+            simfldm = simflddf.mask(simpvdf>siglevel)
+            #simfldm = ma.masked_where(simpvdf.values>siglevel,simflddf.values)
+
+    else: # just add NSIDC
+        sims=('NSIDC',)
+        simflddf = pd.Series(lmd.loaddata((simfield1,),sims,ncfields=(simncfield1,), timefreq=sea, 
+                                             meantype='time',region=region))*simconv1
+        if subnh:
+            simsubcdf = pd.DataFrame(lmd.loaddata((simfield1,),sims,ncfields=(simncfield1,), timefreq=sea, 
+                                                 filetype='ctl',region='nh'))*simconv1
+            simsubpdf = pd.DataFrame(lmd.loaddata((simfield1,),sims,ncfields=(simncfield1,), timefreq=sea, 
+                                                 filetype='pert',region='nh'))*simconv1
+            simfldcdf = pd.DataFrame(lmd.loaddata((simfield1,),sims,ncfields=(simncfield1,), timefreq=sea, 
+                                           filetype='ctl',region=region))*simconv1
+            simfldpdf = pd.DataFrame(lmd.loaddata((simfield1,),sims,ncfields=(simncfield1,), timefreq=sea, 
+                                           filetype='pert',region=region))*simconv1
+            simfldcdf=simfldcdf-simsubcdf
+            simfldpdf=simfldpdf-simsubpdf
+            (tstat,pvals)=cutl.ttest_ind(simfldpdf.values,simfldcdf.values,axis=0) 
+            print pvals.shape
+
+            simflddf = simfldpdf.mean(axis=0)-simfldcdf.mean(axis=0)
+            simfldm =simflddf.mask(simpvdf>siglevel)# ma.masked_where(pvals>siglevel,simflddf.values)
+
+    # add obs
+    if field == 'tas':
+        gisfile = '/HOME/rkm/work/DATA/GISS/gistemp1200_ERSST.nc'
+        latgis=cnc.getNCvar(gisfile,'lat')
+        longis=cnc.getNCvar(gisfile,'lon')
+        gissatc= cnc.getNCvar(gisfile,'tempanomaly',timesel=timeselc,seas=sea) 
+        gissatp= cnc.getNCvar(gisfile,'tempanomaly',timesel=timeselp,seas=sea)
+        obsregc=cutl.calc_regmean(gissatc,latgis,longis,region)
+        obsregp=cutl.calc_regmean(gissatp,latgis,longis,region)
+        (tstat,obspv) = cutl.ttest_ind(obsregp,obsregc)
+        obsreg = obsregp.mean()-obsregc.mean()
+
+        if subnh:
+            obssubc=cutl.calc_regmean(gissatc,latgis,longis,'nh')
+            obssubp=cutl.calc_regmean(gissatp,latgis,longis,'nh')
+            (tstat,obspv) = cutl.ttest_ind(obsregp-obssubp,obsregc-obssubc)
+            obsreg = (obsregp-obssubp).mean() - (obsregc-obssubc).mean()
+
+            substr='_subnh'
+            ttlstr=ttlstr+'-NH '
+    elif field == 'sia':
+        nsidcfile = '/HOME/rkm/work/BCs/NSIDC/td_bootstrap_197811_latest_128_64_sicn_1978111600-2013121612.nc'
+        latns=cnc.getNCvar(nsidcfile,'lat')
+        lonns=cnc.getNCvar(nsidcfile,'lon')
+        nsidcsel='1979-01-01,2011-12-31'
+        nsidcyrs=np.arange(1979,2012)
+        if sea=='DJF':
+            nsidcyrs=nsidcyrs[:-1]
+        nsidcfldc=cnc.getNCvar(nsidcfile,'SICN',timesel=timeselc,seas=sea)
+        nsidcfldp=cnc.getNCvar(nsidcfile,'SICN',timesel=timeselp,seas=sea)
+        obsreg=cutl.calc_regtotseaicearea(nsidcfldp,latns,lonns,region='nh',isarea=False).mean() -\
+                  cutl.calc_regtotseaicearea(nsidcfldc,latns,lonns,region='nh',isarea=False).mean()
+
+    xxdat={}; pdfdat={}; meandat={}; cidat={}; cifdat={}; histdat={}; pointdat={}
+    # save data to call plot function
+    skey='AGCM2'
+    xxdat[skey]=ss2xx; pdfdat[skey]=ss2pdf_fitted
+    meandat[skey]=ss2mean; cidat[skey]=ss2ci; cifdat[skey]=ss2cif
+    skey='AGCM'
+    xxdat[skey]=ssxx; pdfdat[skey]=sspdf_fitted
+    meandat[skey]=ssmean; cidat[skey]=ssci; cifdat[skey]=sscif
+    skey='histle'
+    histdat[skey]=lesea; xxdat[skey]=rawxx; pdfdat[skey]=rawpdf_fitted
+    meandat[skey]=rawmean; cidat[skey]=rawci; cifdat[skey]=rawcif
+    skey='histnat'
+    histdat[skey]=lensea; xxdat[skey]=rawnxx; pdfdat[skey]=rawnpdf_fitted
+    meandat[skey]=rawnmean; cidat[skey]=rawnci; cifdat[skey]=rawncif
+    skey='histmisc'
+    histdat[skey]=lemsea; xxdat[skey]=rawmxx; pdfdat[skey]=rawmpdf_fitted
+    meandat[skey]=rawmmean; cidat[skey]=rawmci; cifdat[skey]=rawmcif
+
+    pointdat['obs']=obsreg
+    pointdat['orig']=or5sea
+    pointdat['AGCM120']=simflddf['NSIDC'] # hack: to save to mat file has to be an array only
+
+    retdict = {'xxdat': xxdat, 'pdfdat': pdfdat, 'meandat': meandat,
+               'cidat': cidat, 'cifdat': cifdat, 'histdat': histdat,
+               'pointdat':pointdat}
+
+    return retdict, simsstr
+
+# end calc_shorttermpdf() function ------------------------------------------------------------------------
+
+
 if dolongtermavg:
 
     extra=False # timeseries, testing kernel density estimates
@@ -1090,16 +1805,6 @@ if dolongtermavg:
     elif region=='gt60': ttlstr='Polar (>60N)'
     else: ttlstr=''
 
-    simconv1=1
-    if field=='tas': simfield1='st'; simncfield1='ST'
-    elif field=='zg50000.00': simfield1='gz50000'; simncfield1='PHI'; simconv1=1/con.get_g()
-    elif field=='sia': simfield1='sicn'; simncfield1='SICN'; print '@@ danger, sia actually sicn average'
-    else: print 'cannot addsims for ' + field;
-
-    fdict = {'field': field+region, 'ncfield': ncfield, 'comp': comp}
-
-    casename = 'historical'
-
     mew=1.5; ms=7
     firebrick=ccm.get_linecolor('firebrick')
     hcol='0.7'#ccm.get_linecolor('darkolivegreen3')
@@ -1116,6 +1821,18 @@ if dolongtermavg:
     lat=le.get_lat(local=local)
     lon=le.get_lon(local=local)
     nlat=len(lat); nlon=len(lon)
+
+    fdict = {'field': field+region, 'ncfield': ncfield, 'comp': comp}
+
+    # ===== put in function =====
+    """simconv1=1
+    if field=='tas': simfield1='st'; simncfield1='ST'
+    elif field=='zg50000.00': simfield1='gz50000'; simncfield1='PHI'; simconv1=1/con.get_g()
+    elif field=='sia': simfield1='sicn'; simncfield1='SICN'; print '@@ danger, sia actually sicn average'
+    else: print 'cannot addsims for ' + field;
+
+    casename = 'historical'
+
 
     # LOAD 1D DATA
     lecdat = le.load_LEdata(fdict,casename,timesel=timeselc, rettype='ndarray',conv=leconv,ftype=ftype,local=local)
@@ -1264,7 +1981,7 @@ if dolongtermavg:
             # want to subtract the mean hemispheric avg anomaly
             osimflddf = osimflddf - osimsubdf.mean(axis=1).mean() # average over sims and then time (should be a scalar)
 
-        subsamp = subsamp_sims(simflddf,numyrs=11)
+        subsamp,styearsss = subsamp_sims(simflddf,numyrs=11)
         plotsims = subsamp
         print '==== AGCM '
         sspdf_fitted,ssmean,sssd,ssxx = cutl.calc_normfit(plotsims)
@@ -1277,7 +1994,7 @@ if dolongtermavg:
         ssci = sp.stats.t.interval(1-cisiglevel, ssdf, loc=ssmean, scale=ssstder) # this is mean value's 5-95%
         sscif = sp.stats.t.interval(1-cisiglevel, ssdf, loc=ssmean, scale=sssd) # full range. don't divide by n. this is pdf 5-95%
 
-        osubsamp = subsamp_sims(osimflddf,numyrs=11)
+        osubsamp,styearsns = subsamp_sims(osimflddf,numyrs=11)
         print '==== NSIDC AGCM '
         osspdf_fitted,ossmean,osssd,ossxx = cutl.calc_normfit(osubsamp)
         ossdf = len(osubsamp)-1
@@ -1297,7 +2014,7 @@ if dolongtermavg:
             sim2flddf = sim2flddf - sim2subdf.mean(axis=1).mean() # average over sims and then time (should be a scalar)
 
 
-        subsamp2 = subsamp_sims(sim2flddf,numyrs=11)
+        subsamp2,styears2 = subsamp_sims(sim2flddf,numyrs=11)
         plotsims2 = subsamp2
         print '==== AGCM2 '
         ss2pdf_fitted,ss2mean,ss2sd,ss2xx = cutl.calc_normfit(plotsims2)
@@ -1347,7 +2064,6 @@ if dolongtermavg:
         print 'LSTAT: ' + str(lstat) + ' PVAL: ' + str(lpval)
         if lpval<=siglevel:
              print 'The ensemble variances are significantly different (' + str(1-siglevel) + ')'
-
 
     if addsims:
         # ========= add sims (120-yr averages)
@@ -1449,7 +2165,7 @@ if dolongtermavg:
         nsidcfldc=cnc.getNCvar(nsidcfile,'SICN',timesel=timeselc,seas=sea)
         nsidcfldp=cnc.getNCvar(nsidcfile,'SICN',timesel=timeselp,seas=sea)
         obsreg=cutl.calc_regtotseaicearea(nsidcfldp,latns,lonns,region='nh',isarea=False).mean() -\
-                  cutl.calc_regtotseaicearea(nsidcfldc,latns,lonns,region='nh',isarea=False).mean()
+                  cutl.calc_regtotseaicearea(nsidcfldc,latns,lonns,region='nh',isarea=False).mean()"""
 
 
     # ========= make the figures =========
@@ -1535,250 +2251,73 @@ if dolongtermavg:
 
     else: # not longtermLE figs ===============================================
 
-        fsz=18
+        loadmat=True
+        savemat=False
+        vertical=True
+        keys=('xxdat', 'histdat', 'meandat', 'pdfdat', 'cidat', 'pointdat', 'cifdat')
 
-        #if field=='sia' and region=='nh':
-        #    obscol='g' #@@@@@
+        fielda='sia'; ncfielda='sianh'; compa='OImon'; regiona='nh';
+        fdicta = {'field': fielda+regiona, 'ncfield': ncfielda, 'comp': compa}
 
-        sslg=mlines.Line2D([],[],color=ltcol,linewidth=2) # subsamp sims
-        ss2lg=mlines.Line2D([],[],color='k',linewidth=2) # subsamp sims2 (variable bc)
-        ss2lg2=mlines.Line2D([],[],color='k',linewidth=2,mew=2,marker='|')
-        simlg=mlines.Line2D([],[],color='0.3',linestyle='none',marker='o')
-        nsidclg=mlines.Line2D([],[],color='g',linestyle='none',marker='o')
-        nsidclg2=mlines.Line2D([],[],color='g',linewidth=2,mew=2,marker='|')
-        obslg=mlines.Line2D([],[],color=obscol,linestyle='none',marker='s')
-        rawlg=mlines.Line2D([],[],color=hcolline,linewidth=2)
-        rawnlg=mlines.Line2D([],[],color=natcolline,linewidth=2)
-        rawmlg=mlines.Line2D([],[],color=miscolline,linewidth=2)
+        if loadmat:
+            when='12:11:11.295534' # choose which set of files to load
+            retdict = dict.fromkeys(keys)
+            retdicta = dict.fromkeys(keys)
 
-        prstr =''
-        #legh = (sslg,rawlg)
-        #legstr = ('AGCM Ice','CGCM All')
-        # actually add AGCM to end
-        legh = (rawlg,)
-        legstr = ('CGCM All',)
-
-        fig,ax=plt.subplots(1,1)
-        fig.set_size_inches(10,7)
-
-        if field!='sia':
-            #ax.hist(plotsims2,normed=True,color=ltcol,alpha=0.4,histtype='stepfilled')
-            ax.plot(ss2xx,ss2pdf_fitted,color=ltcol,linewidth=3)
+            matbase = 'pymatfiles/' + field + region + substr + '_' + sea + '_LEsims' + simsstr +\
+                      'obs_11yrsubsmpavgraw_histinset'
             
-            #ax.plot(ss2xx,ss2pdf_fitted,color='k',linewidth=2) # variable boundary forcings
-
-            #ax.hist(osubsamp,normed=True,color='g',alpha=0.3)
-            #ax.plot(ossxx,osspdf_fitted,color='g',linewidth=2)
-            #prstr=prstr+'addRsimsnsidcsim_'
-            #legstr=legstr+('AGCM NSIDC','AGCM var ICE')
-            #legh=legh+(nsidclg2,ss2lg)
-
-            #prstr=prstr+'addRsims_'
-            #legstr=legstr+('AGCM var ICE',)
-            #legh=legh+(ss2lg,)
-        if addsims:
-            prstr=prstr+'120yrsims_'
-            simsy=-0.02
-            for es in simsE:
-                ax.plot(simflddf[es],simsy,color=ltcol,
-                        marker='o',linestyle='',fillstyle='none',mew=mew,markersize=ms)
-                ax.plot(simfldm[es],simsy,color=ltcol,alpha=0.6,
-                        marker='o',linestyle='',fillstyle='full')
-            for rs in simsR:
-                ax.plot(simflddf[rs],simsy,color='k',
-                        marker='o',linestyle='',fillstyle='none',mew=mew,markersize=ms)
-                ax.plot(simfldm[rs],simsy,color='k',alpha=0.6,
-                        marker='o',linestyle='',fillstyle='full') 
-
-            if subnh: # HACK @@
-                ax.plot(simflddf['NSIDC'],simsy,color='g',
-                        marker='o',linestyle='',fillstyle='none',mew=mew,markersize=ms,mec='g')
-            else:
-                ax.plot(simflddf['NSIDC'],simsy,color='g',
-                        marker='o',linestyle='',fillstyle='none',mew=mew,markersize=ms,mec='g')
-                ax.plot(simfldm['NSIDC'],simsy,color='g',alpha=0.6,
-                        marker='o',linestyle='',fillstyle='full')
-
-        # add RAW LE
-        ax.hist(lesea,normed=True,color=hcol,alpha=0.3,histtype='stepfilled')
-        ax.plot(rawxx,rawpdf_fitted,color=hcolline,linewidth=3)
-        fs='full'
-        for eii in range(0,5): # orig five
-            # search for difforig[eii] nearest to axx, 
-            # then plot apdf_fitted[axx] as marker, filled or not based on sig.
-            plotx = or5sea[eii]
-            idx = cutl.find_nearest(rawxx,plotx)
-            ploty = rawpdf_fitted[idx]
-            ax.plot(plotx,ploty,marker='o',color=hcolline,mec='k',fillstyle=fs,mew=1,markersize=ms)
-            # @@@ check significance?
-
-        #obslg=ax.axvline(obsreg,color=obscol,linewidth=2) # vert line for obs
-        #if field=='sia' and region=='nh':
-        if 1: # do no matter if sia or tas
-            plotx=obsreg
-            idx=cutl.find_nearest(rawxx,plotx)
-            ploty=rawpdf_fitted[idx]
-            ax.plot(plotx,ploty,marker='o',color=obscol,mec=obscol,fillstyle=fs,mew=mew,markersize=ms)
-            ax.annotate('Obs',xy=(plotx,ploty),xytext=(-28,2),
-                        textcoords='offset points') # label the marker on the pdf curve
-
-        if field!='sia':
-            nsx= simflddf['NSIDC']
-            idx=cutl.find_nearest(rawxx,nsx)
-            nsy=rawpdf_fitted[idx]
-            ax.plot(nsx,nsy,marker='o',color='g',mec='g',fillstyle=fs,mew=mew,markersize=ms)
-            ax.annotate('NSIDC AGCM',xy=(nsx,nsy),xytext=(5,-2),
-                        textcoords='offset points') # label the marker on the pdf curve
-
-        ylims=ax.get_ylim()
-        print ylims # @@@@
-        if field=='sia':
-            pass
-        elif field=='tas':
-            ax.set_ylim(-0.05,ylims[1])
-        ax.set_yticklabels('')
-        ax.axhline(y=0,color='k')
-        ax.axvline(x=0,color='k',linestyle='--')
-        ax.set_ylabel('Density',fontsize=fsz)
-        #if field=='sia':
-        #    ax.set_title('Arctic sea-ice area change (DJF)')
-        #else:
-        #    ax.set_title('11-year epochs ' + ttlstr + ' SAT change (' + sea + ')')
-        xlab = '$\Delta$ SAT ($^\circ$C); AGCM= $%.2f$'%(ssmean)+ ' CGCM= $%.2f$'%(rawmean)
+            for key in keys:
+                matname =  matbase + '_' + key +'_' + when + '.mat'
+                retdict[key] = sio.loadmat(matname, squeeze_me=True)
+                
+                matname =  matbase + '_' + key +'a_' + when + '.mat'
+                retdicta[key] = sio.loadmat(matname,squeeze_me=True)
 
 
-        al =0.9; histtype='step'
-        #al =0.3; histtype='stepfilled'
-        if addnat:
-            #ax.hist(lensea,normed=True,color=natcol,alpha=al,histtype=histtype)
-            ax.plot(rawnxx,rawnpdf_fitted,color=natcolline,linewidth=2,alpha=al)
-            legh = legh + (rawnlg,)
-            legstr = legstr + ('CGCM Nat',)
-            prstr = prstr+'nat'
-            xlab = xlab + ' Nat=$%.2f$'%(rawnmean) 
-        if addmisc:
-            #ax.hist(lemsea,normed=True,color=miscol,alpha=al,histtype=histtype)
-            ax.plot(rawmxx,rawmpdf_fitted,color=miscolline,linewidth=2,alpha=al)
-            legh = legh + (rawmlg,)
-            legstr = legstr + ('CGCM Aero',)
-            prstr = prstr+'misc'
-            xlab = xlab + ' Aero=$%.2f$'%(rawmmean) 
-        
-        xlab = xlab + ' Obs=$%.2f$'%(obsreg) 
-        #legh=legh+(obslg,)
-        #if field=='sia':
-        #    legstr=legstr+('NSIDC Obs',)
-        #else:
-        #    legstr=legstr+('Obs',)
-
-        if field=='sia':
-            xlab = 'Change in Sea Ice Area (millions of km$^2$)' # for paper.
-            xtlabs = ax.get_xticks()/1e12
-            ax.set_xticklabels(xtlabs)
         else:
-            xlab = 'Change in Eurasian SAT ($^\circ$C)' # for paper.
+            retdicta,simsstra = calc_shorttermpdf(fdicta,fielda,regiona,
+                                                  sea,(timeselc,timeselp),
+                                                  verb=False)
 
+            retdict,simsstr = calc_shorttermpdf(fdict,field,region,
+                                                sea,(timeselc,timeselp),
+                                                verb=False)
 
-        """ http://matplotlib.org/examples/pylab_examples/axes_demo.html
-        a = axes([.65, .6, .2, .2], axisbg='y')
+        if vertical:
+            fig,axs=plt.subplots(2,1)
+            fig.set_size_inches(10,18)
+            fig.subplots_adjust(hspace=.15)
+        else:
+            fig,axs=plt.subplots(1,2)
+            fig.set_size_inches(18,8)
+            fig.subplots_adjust(wspace=.03)
 
-        """
-        # #  INSET!
-        inax = fig.add_axes([.71, .69, .18, .2])
-        top=2.5
-        yy=top
-        if field!='sia':
-            yy=top=3.5
-        inax.plot(rawmean, yy, linestyle='none',marker='s',mec=hcolline,color=hcolline)
-        inax.plot(rawci, (yy,yy), linewidth=2,marker='|',markersize=6,mew=2,mec=hcolline,color=hcolline)
-        inax.plot(rawcif, (yy,yy), linewidth=2,marker='|',markersize=6,mew=2,mec=hcolline,color=hcolline)
-        yy=yy-1
-        inax.plot(rawnmean, yy, linestyle='none',marker='s',mec=natcolline,color=natcolline)
-        inax.plot(rawnci, (yy,yy), linewidth=2,marker='|',markersize=6,mew=2,mec=natcolline,color=natcolline)
-        inax.plot(rawncif, (yy,yy), linewidth=2,marker='|',markersize=6,mew=2,mec=natcolline,color=natcolline)
-        yy=yy-1
-        inax.plot(rawmmean, yy, linestyle='none',marker='s',mec=miscolline,color=miscolline)
-        inax.plot(rawmci, (yy,yy), linewidth=2,marker='|',markersize=6,mew=2,mec=miscolline,color=miscolline)   
-        inax.plot(rawmcif, (yy,yy), linewidth=2,marker='|',markersize=6,mew=2,mec=miscolline,color=miscolline)   
-        yy=yy-1
-        if field!='sia':
-            inax.plot(ss2mean, yy, linestyle='none',marker='s',mec=ltcol,color=ltcol)
-            inax.plot(ss2ci, (yy,yy), linewidth=2,marker='|',markersize=6,mew=2,mec=ltcol,color=ltcol)
-            inax.plot(ss2cif, (yy,yy), linewidth=2,marker='|',markersize=6,mew=2,mec=ltcol,color=ltcol)
-            yy=yy-1
-        ##if field!='sia':
-        ##    inax.plot(ss2mean, yy, linestyle='none',marker='s',mec='k',color='k')
-        ##    inax.plot(ss2ci, (yy,yy), linewidth=2,marker='|',markersize=6,mew=2,mec='k',color='k')
-        ##    inax.plot(ss2cif, (yy,yy), linewidth=2,marker='|',markersize=6,mew=2,mec='k',color='k')
-        ##    yy=yy-1
-        ##    inax.plot(ossmean, yy, linestyle='none',marker='s',mec='g',color='g')
-        ##    inax.plot(ossci, (yy,yy), linewidth=2,marker='|',markersize=6,mew=2,mec='g',color='g')
-        ##    inax.plot(osscif, (yy,yy), linewidth=2,marker='|',markersize=6,mew=2,mec='g',color='g')
-
-        inax.axvline(x=0,linestyle='--',color='k')
-        inax.axvline(x=obsreg,color=obscol,linewidth=2,alpha=0.7)
-        inax.set_yticklabels('')
-        inax.set_yticks([])
-        inax.set_ylim(0,top+.5)
-        if field=='tas' and region=='eurasiamori':
-            inax.set_xlim(-1.2,1.8) # taseurasiamori limits
-            xticks=inax.get_xticks()
-            inax.set_xticklabels(('','-1','','0','','1','','2'))
-            #legh=legh+(ss2lg2,nsidclg2)
-            #legstr=legstr+('AGCM var ICE','AGCM NSIDC ICE')
-        elif field=='sia' and region=='nh':
-            inax.set_xlim(-1.4e12,0) 
-            inax.set_xticklabels(('',-1.2,'',-0.8,'',-0.4,'',0))
-        inax.set_xlabel('Mean change')
-        # add 'Obs' annotation
-        if field=='sia':
-            tlabx=0.5;tlabx2=0.49; tlaby=tlaby2=0.7
-            labx=0.41; laby=0.56
-        elif field=='tas':
-            # NOT WORKING?
-            tlabx=0.02; tlaby=0.85 # text position
-            #labx=0.03; laby=0.84; # start of arrow
-            tlabx2=0.25; tlaby2=0.69 # head of arrow
-
-        #txt = inax.annotate('Obs',xy=(tlabx,tlaby), xycoords='axes fraction')
-
-        # xytext location of annotation; xy is the data point to be connected by arrow from annotation
-        # In this case, annotation is empty but it's meant to be 'Obs' above, so just a little offset
-        # The data is the obs line
-        """ann = inax.annotate('',xy=(tlabx2,tlaby2),xycoords='axes fraction', 
-                            xytext=(labx, laby), textcoords='axes fraction',
-                            arrowprops=dict(arrowstyle='-',connectionstyle='arc3',facecolor='k',
-                                            edgecolor='k',patchB=txt,patchA=txt),
-                            verticalalignment='center')"""
-        ann = inax.annotate('Obs',xy=(tlabx2,tlaby2),xycoords='axes fraction',
-                            xytext=(tlabx,tlaby),textcoords='axes fraction',
-                            arrowprops=dict(arrowstyle='-',connectionstyle='arc3',facecolor='k', edgecolor='k'))
-
-        if addsims:
-            legstr=legstr+('120-yr AGCM',)
-            legh=legh+(simlg,)
-        # add AGCM Ice to legend
-        legstr=legstr+('AGCM Ice',)
-        legh=legh+(sslg,)
-
-        #loc can be a 2-tuple giving x, y of the lower-left corner of the legend in axes coordinates 
-        #ax.legend(legh,legstr, loc='upper left',frameon=False)
-        ax.legend(legh,legstr, loc=(0.75,0.43),frameon=False)
-        ax.set_xlabel(xlab,fontsize=fsz)
-
-        # panel labels
-        if field=='sia':
-            ax.annotate('a.',xy=(0.01,1.01),xycoords='axes fraction',fontsize=fsz)
-        elif field=='tas':
-            ax.annotate('b.',xy=(0.01,1.01),xycoords='axes fraction',fontsize=fsz)
+        ax2=axs[0]
+        ax2,prstr=plot_shorttermpdf(fig,ax2,fielda,regiona,**retdicta)
+        ax=axs[1]
+        ax,prstr=plot_shorttermpdf(fig,ax,field,region,**retdict)
 
         if printtofile:
-            now = str(datetime.datetime.now().time())
+            if loadmat:
+                now = when # have filename match the data
+            else:
+                now = str(datetime.datetime.now().time())
             fig.savefig(field + region + substr + '_' + sea + '_LEsims' + simsstr +\
                         'obs_11yrsubsmpavgraw_histinset' + prstr + now + '.pdf')
 
 
-
+        if savemat:
+            
+            matbase = 'pymatfiles/' + field + region + substr + '_' + sea + '_LEsims' + simsstr +\
+                      'obs_11yrsubsmpavgraw_histinset'
+            
+            for key in retdict.keys():
+                matname =  matbase + '_' + key +'_' + now + '.mat'
+                sio.savemat(matname, retdict[key])
+                
+                matname =  matbase + '_' + key +'a_' + now + '.mat'
+                sio.savemat(matname, retdicta[key])
 
 
 
