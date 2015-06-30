@@ -15,7 +15,7 @@ ensnum=10
 
 def load_LEdata(fielddict, ens, seas=None, timesel=None,infodict=None,ftype='fullts',
                 calctype=None, calcdict=None, rettype='dict',conv=1, region=None,local=False,
-                orig=None):
+                orig=None,verb=True):
     """ def loadLEdata(fielddict, seas=('DJF','MAM','JJA','SON'), timesel=None, infodict=None, calctype=None, calcdict=None)
 
             ftype: type of filename to build. Right now just 'fullts' for full timeseries
@@ -35,10 +35,11 @@ def load_LEdata(fielddict, ens, seas=None, timesel=None,infodict=None,ftype='ful
     ncfield=fielddict['ncfield']
     comp = fielddict['comp']
 
-    flist = build_filenames(fielddict, ens,ftype=ftype,timesel=timesel,local=local,orig=orig)
+    flist = build_filenames(fielddict, ens,ftype=ftype,timesel=timesel,local=local,orig=orig,verb=verb)
 
     fname1 = flist[0]
-    print ' @@ fname1 ' + fname1
+    if verb:
+        print ' @@ fname1 ' + fname1
     timedim = cnc.getNCvar(fname1,'time',timesel=timesel)
     #print timedim
 
@@ -126,14 +127,14 @@ def load_LEdata(fielddict, ens, seas=None, timesel=None,infodict=None,ftype='ful
 
 def load_originalfive(fielddict, ens,seas=None, timesel=None,infodict=None,ftype='fullts',
                       calctype=None, calcdict=None, rettype='dict',conv=1, region=None,local=False,
-                      orig='just'):
+                      orig='just',verb=True):
     """ orig='just' means just load the original 5 runs. 
         orig='add' means add the original 5 to the full LE.
     """
 
     return load_LEdata(fielddict, ens, seas=seas, timesel=timesel, infodict=infodict,
                        ftype=ftype, calctype=calctype, calcdict=calcdict, rettype=rettype,
-                       conv=conv, region=region, local=local,orig=orig)
+                       conv=conv, region=region, local=local,orig=orig,verb=verb)
     
 
 
