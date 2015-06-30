@@ -50,7 +50,7 @@ kemmap(fld, lat, lon, title='', units='', cmap='blue2red_w20', type='sq', cmin='
 
 def kemmap(fld, lat, lon,title='',units='',cmap='blue2red_w20',type='sq',
            cmin='',cmax='',axis=None, suppcb=0,lmask=0,flipmask=0,latlim=None,drawgrid=False,
-           round=True,lcol='0.7'):
+           round=True,lcol='0.7',panellab=None):
     """ returns bm,pc (Basemap,Pcolor handle)
     """
 
@@ -63,19 +63,24 @@ def kemmap(fld, lat, lon,title='',units='',cmap='blue2red_w20',type='sq',
     # default Basemap dictionary
     if type == 'sq':
         mapparams = dict(projection='robin',lon_0=180,lat_0=0, resolution='c')
-    elif type == 'nh':
+    elif type == 'nh' or type=='nheur':
+        if type=='nheur':
+            lon0 = 90.
+        else:
+            lon0=0.
         if latlim != None: # try 'round=True' !@@@
-            mapparams = dict(projection='npstere',boundinglat=latlim,lon_0=0,resolution='c')
+            mapparams = dict(projection='npstere',boundinglat=latlim,lon_0=lon0,resolution='c')
             if round==True:
                 mapparams['round'] = True
             
         else:
             # try mill, hammer, merc
-            mapparams = dict(projection='ortho',lon_0=0.,lat_0=90.,\
+            mapparams = dict(projection='ortho',lon_0=lon0,lat_0=90.,\
                              resolution='c') #llcrnrlon='-180',llcrnrlat='45',urcrnrlon='180',urcrnrlat='90'
         # I thought the above corner limits would work to zoom on NH but I'm getting
         # AttributeError: 'Basemap' object has no attribute '_height'
-        # 5/12/14 -- don't know why. same goes for lat_0=0.
+        # 5/12/14 -- don't know why. same goes for lat_0=0.        
+        
     elif type == 'sh':
         if latlim != None: # try 'round=True' !@@@
             mapparams = dict(projection='spstere',boundinglat=latlim,lon_0=0,resolution='c')
@@ -182,11 +187,16 @@ def kemmap(fld, lat, lon,title='',units='',cmap='blue2red_w20',type='sq',
     # I think drawlsmask puts the mask on the bottom
     #bm.drawlsmask(land_color='0.7',lsmask=con.get_t63landmask(),ax=axis)
     
-        
     if axis!=None:
         axis.set_title(title,fontsize=10)
+        if panellab!=None:
+            axis.annotate(panellab,xy=(0.01,1.01),
+                          xycoords='axes fraction',fontsize=16,fontweight='bold')
     else:
         plt.title(title,fontsize=10)
+        if panellab!=None:
+            plt.annotate(panellab,xy=(0.01,1.01),
+                         xycoords='axes fraction',fontsize=16,fontweight='bold')
 
     # add colorbar.
     if suppcb == 0:
@@ -413,6 +423,24 @@ def map_allmonths(fld, lat, lon,title='',units='',cmap='blue2red_w20',type='sq',
     
     return fig
 
+def add_colorbar(fig,phand,orientation='vertical',pos=None):
+
+    try:
+        if pos==None:
+            if orientation=='vertical':
+                pos = [.91,.25, .02,.5]
+            elif orientation=='horizontal':
+                pos = [.25,.05, .5,.03] # untested @@@
+            else:
+                print 'orientation not recognized!'
+                raise Exception
+    except:
+        raise
+
+    cbar_ax = fig.add_axes(pos)
+    fig.colorbar(phand,cax=cbar_ax,orientation=orientation)
+
+    return cbar_ax
 
 def map_allseas(fld, lat, lon,title='',units='',cmap='blue2red_w20',type='sq',
            cmin='',cmax='',axis=None, suppcb=0,lmask=0,climo=0,flipmask=0,
