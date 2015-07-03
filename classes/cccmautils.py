@@ -958,7 +958,7 @@ def ttest_ind(input1,input2,axis=0,effdof=False,equal_var=True):
                                  autocorrelation. See calc_effectiveDOF().
 
          @@@as of 1/12/2015, multiple dimensions is only handled if effdof=False
-
+              returns (tstat, pval)
     """
 
     # http://en.wikipedia.org/wiki/Student%27s_t-test#Independent_two-sample_t-test
