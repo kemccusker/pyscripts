@@ -7,7 +7,7 @@ import constants as con
 import cccmaNC as cnc
 import cccmautils as cutl
 
-def loadmondata(fields,simulations,model='CanAM4',levsel=None,meantype=None):
+def loadmondata(fields,simulations,model='CanAM4',levsel=None,meantype=None,rettype='dict'):
     """ loadmondata(fields, simulations, model='CanAM4',levsel=None, meantype=None)
         Calls loaddate()
             fields: tuple of field names
@@ -26,9 +26,9 @@ def loadmondata(fields,simulations,model='CanAM4',levsel=None,meantype=None):
             Load requested MONTHLY fields from requested CanAM4 simulations
                  into dictionaries (dataframes?)
     """
-    return loaddata(fields,simulations,model,timefreq='monthly',levsel=levsel,meantype=meantype)
+    return loaddata(fields,simulations,model,timefreq='monthly',levsel=levsel,meantype=meantype,rettype=rettype)
 
-def loadseasdata(fields,simulations,model='CanAM4',levsel=None,meantype=None):
+def loadseasdata(fields,simulations,model='CanAM4',levsel=None,meantype=None,rettype='dict'):
     """ loadseasdata(fields, simulations, model='CanAM4',levsel=None, meantype=None)
         Calls loaddata()
             fields: tuple of field names
@@ -47,15 +47,15 @@ def loadseasdata(fields,simulations,model='CanAM4',levsel=None,meantype=None):
             Load requested SEASONAL fields from requested CanAM4 simulations
                  into dictionaries (dataframes?)
     """
-    return loaddata(fields,simulations,model,timefreq='seasonal',levsel=levsel,meantype=meantype)
+    return loaddata(fields,simulations,model,timefreq='seasonal',levsel=levsel,meantype=meantype,rettype=rettype)
 
 
 def loaddata(fields, simulations, ncfields=None,model='CanAM4',timeper='001-121',timefreq=None, 
-             levsel=None,meantype=None,filetype='diff',region=None):
+             levsel=None,meantype=None,filetype='diff',region=None,rettype='dict'):
     """ loaddata(fields, simulations,ncfields=None,model='CanAM4',timeper='001-121',timefreq=None, 
                  levsel=None, meantype=None,filetype='diff',region=None)
     
-            fields: tuple of field names
+            fields: tuple of field names [@@update. only one field now but still need tuple]
             simulations: tuple of simulation names (diff names='E1'...'ENS','NSIDC' etc)
             ncfields: tuple of ncfield names (var name in file itself). Default to upper case of field
             model: for now only 'CanAM4' is implemented
@@ -194,4 +194,16 @@ def loaddata(fields, simulations, ncfields=None,model='CanAM4',timeper='001-121'
         # can I set attributes to a dictionary? @@ like for nfields, nsims, ntimes?
 
     #return datadict
-    return simdict
+
+    if rettype=='ndarray':
+        # convert the dict to an array:
+        # get the last sim data to initialize ndarray
+        initshape=simdict[sim].shape
+        initshape=(len(simulations),) + initshape
+        tmp=np.zeros(initshape)
+        for sii,skey in enumerate(simulations):
+            tmp[sii,:] = simdict[skey]
+
+        return tmp
+    else:
+        return simdict
