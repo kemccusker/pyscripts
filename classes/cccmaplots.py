@@ -430,7 +430,7 @@ def add_colorbar(fig,phand,orientation='vertical',pos=None):
             if orientation=='vertical':
                 pos = [.91,.25, .02,.5]
             elif orientation=='horizontal':
-                pos = [.25,.05, .5,.03] # untested @@@
+                pos = [.25,.05, .5,.03]
             else:
                 print 'orientation not recognized!'
                 raise Exception
