@@ -63,7 +63,7 @@ leconv1= 1
 sea1='DJF'
 
 # y field
-field2='tas'; ncfield2='tas'; comp2='Amon'; region2='eurasiamori'
+field2='tas'; ncfield2='tas'; comp2='Amon'; region2='eurasiathicke'; #@@@region2='eurasiamori'
 #field2='zg50000.00'; ncfield2='zg'; comp2='Amon'; region2='bksmori'
 leconv2=1
 sea2='DJF'
@@ -72,6 +72,11 @@ fieldcnd = 'sic'; ncfieldcnd='sic'; compcnd='OImon'; regioncnd='bksmori'
 leconvcnd=1
 seacnd=sea1
 cmincnd=-12; cmaxcnd=3 # for 5 color colorbar
+
+cisiglevel=0.05
+siglevel=0.1
+simsR=('R1','R2','R3','R4','R5')
+simsE=('E1','E2','E3','E4','E5')
 
 xlab=ylab=None
 if field2=='tas' and region2=='eurasiamori' and performop2==True and op2=='sub':
@@ -211,7 +216,8 @@ def sample120yravg(lesea,numsamp,nummems=11,allowreps=True):
     return ltavg,ltsigma
 
 
-def plot_shorttermpdf(fig,ax,field,region,xxdat,pdfdat,histdat,meandat,cidat,cifdat,pointdat):
+def plot_shorttermpdf(fig,ax,field,region,xxdat,pdfdat,histdat,meandat,cidat,
+                      cifdat,pointdat,addsims=False,addnat=True,addmisc=True):
 
     fsz=18
 
@@ -513,7 +519,8 @@ def plot_shorttermpdf(fig,ax,field,region,xxdat,pdfdat,histdat,meandat,cidat,cif
     return ax,prstr
 # end plot_shorttermpdf() function -------------------------------------
 
-def calc_shorttermpdf(fdict,field,region,sea,timesel,subnh=False,addnat=True,addmisc=True,addsims=False,verb=True):
+def calc_shorttermpdf(fdict,field,region,sea,timesel,leconv=1,subnh=False,
+                      addnat=True,addmisc=True,addsims=False,appendorig=False,verb=True):
     """
          returns retdict, simsstr
             retdict = {'xxdat': xxdat, 'pdfdat': pdfdat, 'meandat': meandat,
@@ -525,7 +532,6 @@ def calc_shorttermpdf(fdict,field,region,sea,timesel,subnh=False,addnat=True,add
     ncfield=fdict['ncfield']
     comp=fdict['comp']
 
-    # ===== put in function =====
     simconv1=1
     if field=='tas': simfield1='st'; simncfield1='ST'
     elif field=='zg50000.00': simfield1='gz50000'; simncfield1='PHI'; simconv1=1/con.get_g()
@@ -782,8 +788,8 @@ def calc_shorttermpdf(fdict,field,region,sea,timesel,subnh=False,addnat=True,add
         # ========= add sims (120-yr averages)
         sims=('E1','E2','E3','E4','E5','R1','R2','R3','R4','R5','NSIDC'); #simsstr=''
         #simsRN=('R1','R2','R3','R4','R5','NSIDC')
-        simsR=('R1','R2','R3','R4','R5')
-        simsE=('E1','E2','E3','E4','E5')
+        #simsR=('R1','R2','R3','R4','R5')
+        #simsE=('E1','E2','E3','E4','E5')
         #sims=simsRN; simsstr='Ronly'
         #simflddf = pd.DataFrame(lmd.loaddata((simfield1,),sims,ncfields=(simncfield1,), timefreq=sea, 
         #                                     meantype='time',region=region),index=sims)*simconv1
@@ -913,13 +919,16 @@ def calc_shorttermpdf(fdict,field,region,sea,timesel,subnh=False,addnat=True,add
 
 # ================================================================
 # ==================== main() ====================================
-def main(dowhat=None):
+def main(dowhat=None,addobs=True,addsims=True):
 
 
     """ dowhat options are: doscatter, dohist, doregress, dolongtermavg
              default is doscatter
     """
     doscatter=dohist=doregress=dolongtermavg=False
+
+    #addobs=True # @@@ why didn't global var work?
+    #addsims=True
 
     if dowhat==None or dowhat=='doscatter':
         doscatter=True
@@ -934,7 +943,7 @@ def main(dowhat=None):
         printtofile=True
         addnat=True
         addmisc=True
-        savedat=True # save data to ascii for John
+        savedat=False # save data to ascii for John
 
         shorttermsims=True
         ymin=-2; ymax=3 # for Eurasia SAT v BKS Z500
@@ -1827,19 +1836,20 @@ def main(dowhat=None):
         prstr=''
 
         sea='DJF'
-        siglevel=0.1
-        cisiglevel=0.05
+        #siglevel=0.1
+        #cisiglevel=0.05
 
         leconv=1
         field='tas'
         ncfield='tas'
         comp='Amon'
-        region='eurasiamori'
+        #@@region='eurasiamori'
+        region='eurasiathicke'
         #region='gt60n'
 
         #field='sia'; ncfield='sianh'; comp='OImon'; region='nh';
 
-        if region=='eurasiamori': ttlstr='Eurasian'
+        if region=='eurasiamori' or region=='eurasiathicke': ttlstr='Eurasian'
         elif region=='gm': ttlstr='Global'
         elif region=='gt60': ttlstr='Polar (>60N)'
         else: ttlstr=''
@@ -2290,20 +2300,23 @@ def main(dowhat=None):
 
         else: # not longtermLE figs ===============================================
 
-            loadmat=True
-            savemat=False
-            vertical=True
+            loadmat=False
+            savemat=True
+            vertical=True # vertical plot 
             keys=('xxdat', 'histdat', 'meandat', 'pdfdat', 'cidat', 'pointdat', 'cifdat')
 
             fielda='sia'; ncfielda='sianh'; compa='OImon'; regiona='nh';
             fdicta = {'field': fielda+regiona, 'ncfield': ncfielda, 'comp': compa}
 
             if loadmat:
+                
                 when='12:11:11.295534' # choose which set of files to load
+                print 'loadmat!! when=' + when # @@
                 retdict = dict.fromkeys(keys)
                 retdicta = dict.fromkeys(keys)
 
-                matbase = 'pymatfiles/' + field + region + substr + '_' + sea + '_LEsims' + simsstr +\
+                #@@@@ simsstr +\ # remove from filename!
+                matbase = 'pymatfiles/' + field + region + substr + '_' + sea + '_LEsims' +\
                           'obs_11yrsubsmpavgraw_histinset'
 
                 for key in keys:
