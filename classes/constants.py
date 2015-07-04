@@ -683,6 +683,7 @@ def get_regiondict():
     regdict['eurasiasth'] = {'latlims': [32,52], 'lonlims': [60,120]} # further south, same lons as mori. ideal for NSIDC DJF?
     regdict['eurasiathinw'] = {'latlims': [35,55], 'lonlims': [40,80]}
     regdict['eurasiathine'] = {'latlims': [35,50], 'lonlims': [80,120]}
+    regdict['eurasiathicke'] = {'latlims': [40,70], 'lonlims': [90,130]}
     regdict['ntham'] = {'latlims': [35,60], 'lonlims': [240,280]}
     regdict['nthamsth'] = {'latlims': [32,55], 'lonlims': [240,280]}
     regdict['nthamthick'] = {'latlims': [32,60], 'lonlims': [238,282]}

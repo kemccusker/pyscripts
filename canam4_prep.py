@@ -27,7 +27,7 @@ plt.ion()
        # coords = {'lat': con.get_t63lat(), 'lon': con.get_t63lon()}
 
 
-printtofile=False
+printtofile=True
 
 field = 'st'
 smclim=True
@@ -46,7 +46,7 @@ plottype='calcregunccascade'
 projtype='nh' #'eastere' # 'nh','sh','sq','eastere','nastere','eabksstere','ealamb','eabkslamb'
 
 # None, nh, polcap60, polcap65, polcap70, eurasia, eurasiamori, eurasiasth,eurasiathin,eurasiathinw,eurasiathine,ntham, nthatl, bks, bksmori, soo
-region='eurasiamori' #'polcap60' #'eurasia' #'eurasiamori'
+region='polcap60' #'eurasiamori' #'polcap60' #'eurasia' #'eurasiamori'
 screen=True # just for seasonalvert
 seacyclatlim=60
 withlat=False
@@ -584,7 +584,7 @@ if plottype=='calcregmeanwithtime' or plottype=='calcregunccascade' or plottype=
                               loctimesel=timesel,info=infodict,calctype='regmeanwithtime',
                               effdof=effdof,siglevel=siglevel)
 
-    infodict['region'] = 'eurasiathine' #'eurasiamori'
+    infodict['region'] = 'eurasiathicke'; #'eurasiathine' #'eurasiamori'
     rg2 = infodict['region']
     dblob2 = sfnc.calc_seasons(fdict,coords,sims,seas=seasons,
                                loctimesel=timesel,info=infodict,calctype='regmeanwithtime',
@@ -654,6 +654,9 @@ if plottype=='calcregmeanwithtime' or plottype=='calcregunccascade' or plottype=
                 if rg2 in ('nthamsth','ntham'):
                     annlab = 'b. Dec-Jan-Feb N. American SAT changes'
                     xlims=(-.6,.5)
+                elif rg2 in ('eurasiathicke',):
+                    annlab='b. Dec-Jan-Feb Eurasian SAT changes'
+                    xlims=(-.4,.75)
                 else:
                     annlab='b. Dec-Jan-Feb Eurasian SAT changes'
             else:                
@@ -671,7 +674,7 @@ if plottype=='calcregmeanwithtime' or plottype=='calcregunccascade' or plottype=
                     fig.savefig(field + '_' + region + '_' + seas[0] + '_unccascade3_effdofobs.pdf')
                 else:
                     fig.savefig(field + '_polcap60' + rg2 + '_' + seas[0] + '_unccascade7ann.pdf')
-                    fig.savefig(field + '_polcap60' + rg2 + '_' + seas[0] + '_unccascade7ann.eps')
+                    #fig.savefig(field + '_polcap60' + rg2 + '_' + seas[0] + '_unccascade7ann.eps')
 
     elif plottype=='calccomposites':
 
