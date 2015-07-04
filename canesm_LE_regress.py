@@ -7,7 +7,6 @@ import loadmodeldata as lmd
 import pandas as pd
 import constants as con
 
-printtofile=False
 
 local=True
 
@@ -21,7 +20,7 @@ ftype='fullts' # 'fullclimo' or 'climo' or 'fullts'
 ensmean=False 
 
 seasp='DJF' # season of spatial field
-sear='SON' #'DJF' # season of regional avgs
+sear='DJF' #'DJF' # season of regional avgs
 
 
 # spatial field1 in color
@@ -38,11 +37,12 @@ cminsp2a=-10; cmaxsp2a=10 # to calc contour interval for AGCM
 
 
 # regional avg field 1
-leconvr=-1 # this way, sea ice loss is linked with positive changes elsewhere
-fieldr='sic'; ncfieldr='sic'; compr='OImon'; regionr='bksmori'
+leconvr=-1; aconvr=-1 # this way, sea ice loss is linked with positive changes elsewhere
+#fieldr='sic'; ncfieldr='sic'; compr='OImon'; regionr='bksmori'; 
+fieldr='zg50000.00'; ncfieldr='zg'; compr='Amon'; regionr='bksmori'; leconvr=1; aconvr=1 # @@@@
 
 # regional avg field 2
-leconvr2=-1 # so cooling=high heights
+leconvr2=-1; aconvr2=-1 # so cooling=high heights
 fieldr2='tas'; ncfieldr2='tas'; compr2='Amon'; regionr2='eurasiamori';
 
 
@@ -211,25 +211,25 @@ aessear2=aessear2 / aessear2.std()
 rshape=(anens,anlat*anlon)
 # calc regression slopes: multiply regional avgs by -1 to get colors/signs right.
 #                         this was accounted for in LE data upon loading.
-asponfldr = slopemap(assear*-1,asseasp.reshape(rshape),(anlat,anlon)) # SAT regress on regSIC
-asp2onfldr = slopemap(assear*-1,asseasp2.reshape(rshape),(anlat,anlon)) # Z500 regress on regSIC
-asponfldr2 = slopemap(assear2*-1,asseasp.reshape(rshape),(anlat,anlon)) # SAT regress on regSAT
-asp2onfldr2 = slopemap(assear2*-1,asseasp2.reshape(rshape),(anlat,anlon)) # Z500 regress on regSAT
+asponfldr = slopemap(assear*aconvr,asseasp.reshape(rshape),(anlat,anlon)) # SAT regress on regSIC
+asp2onfldr = slopemap(assear*aconvr,asseasp2.reshape(rshape),(anlat,anlon)) # Z500 regress on regSIC
+asponfldr2 = slopemap(assear2*aconvr2,asseasp.reshape(rshape),(anlat,anlon)) # SAT regress on regSAT
+asp2onfldr2 = slopemap(assear2*aconvr2,asseasp2.reshape(rshape),(anlat,anlon)) # Z500 regress on regSAT
 
-aesponfldr2 = slopemap(aessear2*-1,aesseasp.reshape(rshape),(anlat,anlon)) # SAT regress on regSAT
-aesp2onfldr2 = slopemap(aessear2*-1,aesseasp2.reshape(rshape),(anlat,anlon)) # Z500 regress on regSAT
+aesponfldr2 = slopemap(aessear2*aconvr2,aesseasp.reshape(rshape),(anlat,anlon)) # SAT regress on regSAT
+aesp2onfldr2 = slopemap(aessear2*aconvr2,aesseasp2.reshape(rshape),(anlat,anlon)) # Z500 regress on regSAT
 
 
 
 # ====================== FIGURES ===============
-printtofile=False
+printtofile=True
 
 lons, lats = np.meshgrid(lon,lat)
 cmlen=15.
 incr = (cmaxsp2-cminsp2) / (cmlen)
 conts = np.arange(cminsp2,cmaxsp2+incr,incr)
 
-ttl1=seasp + ' regress on ' + sear + ' BKS SIC'
+ttl1=seasp + ' regress on ' + sear + ' BKS Z500'
 ttl2=seasp + ' regress on ' + sear + ' Eur SAT' 
 
 #ttl1=ttl2=''
