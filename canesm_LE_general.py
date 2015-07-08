@@ -26,7 +26,7 @@ from scipy.stats import norm
 import random
 import numpy.ma as ma
 import scipy.io as sio
-
+import loadCanESM2data as lcd
 
 # exception handling works below. add to other clauses @@
 
@@ -36,9 +36,10 @@ printtofile=False
 #doscatter=False
 #dolongtermavg=True
 
-addobs=True # to scatter plot
-addnat=False
-addsims=True # add the idealized simulations. only good for DJF polar amp vs eurasia SAT
+#addobs=True # to scatter plot
+#addnat=False
+#addsims=True # add the idealized simulations. only good for DJF polar amp vs eurasia SAT
+#addpi=True
 
 local=True
 
@@ -63,7 +64,7 @@ leconv1= 1
 sea1='DJF'
 
 # y field
-field2='tas'; ncfield2='tas'; comp2='Amon'; region2='eurasiathicke'; #@@@region2='eurasiamori'
+field2='tas'; ncfield2='tas'; comp2='Amon'; region2='eurasiamori' #'eurasiathicke'; #@@@region2='eurasiamori'
 #field2='zg50000.00'; ncfield2='zg'; comp2='Amon'; region2='bksmori'
 leconv2=1
 sea2='DJF'
@@ -173,6 +174,75 @@ def subsamp_sims(simsdf,numyrs=11,styears=None,threed=False):
     return subsampavg,savstyears
 
 
+def subsamp_anom_pi(pidat, numsamp=50, numyrs=11,styear=None,anomyears=None,threed=None,verb=False):
+    """ subsample piControl and produce numsamp anomalies of numyrs-length periods
+
+                 Make sure the data is seasonalized before passing into function.
+
+                 returns subsampanom, styear,anomyears
+    """
+
+    if threed:
+        (ntime,nlat,nlon)=pidat.shape
+        initshape=(nlat,nlon)
+
+    else:
+        ntime = pidat.shape[0]
+        initshape=()
+
+    samp = ntime/numyrs
+    allsii=0 # keep track of all sims and all subsamps
+    anomshape = (numsamp,)+initshape 
+    initshape=(samp,)+initshape
+
+    subsampavg=np.zeros(initshape)
+    subsampanom=np.zeros(anomshape)
+
+    # chunk up non-overlapping time periods
+    # then take anomalies
+    if styear == None:
+        # random index to start looping, since we have a remainder when ntime/numyrs
+        startyr = np.random.randint(np.mod(ntime,numyrs))
+    else:
+        # start years were passed in: use them
+        startyr = styear
+    
+    if verb:
+        print 'start ' + str(startyr)
+
+    for sii in np.arange(startyr,ntime-numyrs,numyrs):
+
+        subsampavg[allsii,...] = pidat[sii:sii+numyrs,...].mean(axis=0)
+        allsii+=1
+
+    # now select 2 random time periods to generate anomalies
+    # make sure they are at least a decade apart
+    anomyrs=[]
+    for ii in np.arange(0,numsamp):
+
+        keepgoing=True
+
+        while keepgoing:
+            if anomyears == None:
+                sel = random.sample(np.arange(0,samp),2) # 2 time periods, no dupes
+            else:
+                sel = anomyears[ii]
+
+            if sel[0] in np.arange(sel[1]-1,sel[1]+2):
+                # should not happen with anomyrs that are passed in.
+                if verb:
+                    print 'Bad anom time period indices. Keepgoing. ' + str(sel)
+            else:
+                if verb:
+                    print 'anom time period indices: ' + str(sel)
+                subsampanom[ii,...] = subsampavg[sel[1],...] - subsampavg[sel[0],...]
+                anomyrs.append(sel)
+                keepgoing=False
+                
+
+    return subsampanom, startyr, anomyrs
+
+
 def sample120yravg(lesea,numsamp,nummems=11,allowreps=True):
     """ choose nummems random ens members, and do it numsamp
         times.
@@ -217,7 +287,7 @@ def sample120yravg(lesea,numsamp,nummems=11,allowreps=True):
 
 
 def plot_shorttermpdf(fig,ax,field,region,xxdat,pdfdat,histdat,meandat,cidat,
-                      cifdat,pointdat,addsims=False,addnat=True,addmisc=True):
+                      cifdat,pointdat,addsims=False,addnat=True,addmisc=True,addpi=False):
 
     fsz=18
 
@@ -231,6 +301,7 @@ def plot_shorttermpdf(fig,ax,field,region,xxdat,pdfdat,histdat,meandat,cidat,
     miscol=ccm.get_linecolor('orange3') #'deepskyblue')
     miscolline=ccm.get_linecolor('orange3') #'deepskyblue')
     obscol='k' #ccm.get_linecolor('midnightblue') #'b'
+    picol='purple'
 
     sslg=mlines.Line2D([],[],color=ltcol,linewidth=2) # subsamp sims
     ss2lg=mlines.Line2D([],[],color='k',linewidth=2) # subsamp sims2 (variable bc)
@@ -242,6 +313,7 @@ def plot_shorttermpdf(fig,ax,field,region,xxdat,pdfdat,histdat,meandat,cidat,
     rawlg=mlines.Line2D([],[],color=hcolline,linewidth=2)
     rawnlg=mlines.Line2D([],[],color=natcolline,linewidth=2)
     rawmlg=mlines.Line2D([],[],color=miscolline,linewidth=2)
+    pilg=mlines.Line2D([],[],color=picol,linewidth=2)
 
     prstr =''
     #legh = (sslg,rawlg)
@@ -268,12 +340,18 @@ def plot_shorttermpdf(fig,ax,field,region,xxdat,pdfdat,histdat,meandat,cidat,
     skey='histle'
     lesea= histdat[skey]; rawxx=xxdat[skey]; rawpdf_fitted=pdfdat[skey]; 
     rawmean=meandat[skey]; rawci=cidat[skey]; rawcif=cifdat[skey]
-    skey='histnat'
-    lensea= histdat[skey]; rawnxx=xxdat[skey]; rawnpdf_fitted=pdfdat[skey]; 
-    rawnmean=meandat[skey]; rawnci=cidat[skey]; rawncif=cifdat[skey]
-    skey='histmisc'
-    lemsea= histdat[skey]; rawmxx=xxdat[skey]; rawmpdf_fitted=pdfdat[skey]; 
-    rawmmean=meandat[skey]; rawmci=cidat[skey]; rawmcif=cifdat[skey]
+    if addnat:
+        skey='histnat'
+        lensea= histdat[skey]; rawnxx=xxdat[skey]; rawnpdf_fitted=pdfdat[skey]; 
+        rawnmean=meandat[skey]; rawnci=cidat[skey]; rawncif=cifdat[skey]
+    if addmisc:
+        skey='histmisc'
+        lemsea= histdat[skey]; rawmxx=xxdat[skey]; rawmpdf_fitted=pdfdat[skey]; 
+        rawmmean=meandat[skey]; rawmci=cidat[skey]; rawmcif=cifdat[skey]
+    if addpi:
+        skey='pi'
+        pisea= histdat[skey]; pixx=xxdat[skey]; pipdf_fitted=pdfdat[skey]; 
+        pimean=meandat[skey]; pici=cidat[skey]; picif=cifdat[skey]
 
     if field!='sia':
         #ax.hist(plotsims2,normed=True,color=ltcol,alpha=0.4,histtype='stepfilled')
@@ -388,6 +466,12 @@ def plot_shorttermpdf(fig,ax,field,region,xxdat,pdfdat,histdat,meandat,cidat,
         legstr = legstr + ('CGCM Aero',)
         prstr = prstr+'misc'
         xlab = xlab + ' Aero=$%.2f$'%(rawmmean) 
+    if addpi:
+        ax.plot(pixx,pipdf_fitted,color=picol,linewidth=2,alpha=al)
+        legh = legh + (pilg,)
+        legstr = legstr + ('PreIndustrial',)
+        prstr = prstr+'PI'
+        xlab = xlab + ' PI=$%.2f$'%(pimean) 
 
     xlab = xlab + ' Obs=$%.2f$'%(obsreg) 
     #legh=legh+(obslg,)
@@ -445,6 +529,11 @@ def plot_shorttermpdf(fig,ax,field,region,xxdat,pdfdat,histdat,meandat,cidat,
     inax.plot(rawmci, (yy,yy), linewidth=2,marker='|',markersize=6,mew=2,mec=miscolline,color=miscolline)   
     inax.plot(rawmcif, (yy,yy), linewidth=2,marker='|',markersize=6,mew=2,mec=miscolline,color=miscolline)   
     yy=yy-1
+    if addpi:
+        inax.plot(pimean, yy, linestyle='none',marker='s',mec=picol,color=picol)
+        inax.plot(pici, (yy,yy), linewidth=2,marker='|',markersize=6,mew=2,mec=picol,color=picol)   
+        inax.plot(picif, (yy,yy), linewidth=2,marker='|',markersize=6,mew=2,mec=picol,color=picol)   
+        yy=yy-1
     if field!='sia':
         inax.plot(ss2mean, yy, linestyle='none',marker='s',mec=ltcol,color=ltcol)
         inax.plot(ss2ci, (yy,yy), linewidth=2,marker='|',markersize=6,mew=2,mec=ltcol,color=ltcol)
@@ -463,7 +552,7 @@ def plot_shorttermpdf(fig,ax,field,region,xxdat,pdfdat,histdat,meandat,cidat,
     inax.axvline(x=obsreg,color=obscol,linewidth=2,alpha=0.7)
     inax.set_yticklabels('')
     inax.set_yticks([])
-    inax.set_ylim(0,top+.5)
+    inax.set_ylim(yy+0.5,top+.5)
     if field=='tas' and region=='eurasiamori':
         inax.set_xlim(-1.4,1.8) # taseurasiamori limits
         xticks=inax.get_xticks()
@@ -520,7 +609,7 @@ def plot_shorttermpdf(fig,ax,field,region,xxdat,pdfdat,histdat,meandat,cidat,
 # end plot_shorttermpdf() function -------------------------------------
 
 def calc_shorttermpdf(fdict,field,region,sea,timesel,leconv=1,subnh=False,
-                      addnat=True,addmisc=True,addsims=False,appendorig=False,verb=True):
+                      addnat=True,addmisc=True,addsims=False,appendorig=False,addpi=False,verb=True):
     """
          returns retdict, simsstr
             retdict = {'xxdat': xxdat, 'pdfdat': pdfdat, 'meandat': meandat,
@@ -647,6 +736,31 @@ def calc_shorttermpdf(fdict,field,region,sea,timesel,leconv=1,subnh=False,
         rawmstder = rawmsd / np.sqrt(rawmdf+1)
         rawmci = sp.stats.t.interval(1-cisiglevel, rawmdf, loc=rawmmean, scale=rawmstder)
         rawmcif = sp.stats.t.interval(1-cisiglevel, rawmdf, loc=rawmmean, scale=rawmsd)
+
+    if addpi:
+        pidat = lcd.load_data(fdict,'piControl',local=local,conv=leconv,verb=verb)
+        piseadat = cutl.seasonalize_monthlyts(pidat,season=sea)
+        # this data needs to be put into anomalies
+        # for now, set years to none
+        styear=None; anomyears=None
+        # the data must be seasonalized before using this func.
+        pisea,styear,anomyears = subsamp_anom_pi(piseadat, numyrs=11,
+                                                 styear=styear,anomyears=anomyears,threed=False)
+
+        if subnh:
+            fdictsub = {'field': field+'nh', 'ncfield': ncfield, 'comp': comp}
+            pidatsub = lcd.load_data(fdictsub,'piControl',local=local,conv=leconv,verb=verb)
+            piseadatsub = cutl.seasonalize_monthlyts(pidatsub,season=sea)
+            piseasub,styear,anomyears = subsamp_anom_pi(piseadatsub, numyrs=11,
+                                                        styear=styear,anomyears=anomyears,threed=False)
+            pisea = pisea - piseasub.mean(axis=0) # ??
+
+        pipdf_fitted,pimean,pisd,pixx = cutl.calc_normfit(pisea)
+        pidf = len(pisea)-1
+        pistder = pisd / np.sqrt(pidf+1)
+        pici = sp.stats.t.interval(1-cisiglevel, pidf, loc=pimean, scale=pistder)
+        picif = sp.stats.t.interval(1-cisiglevel, pidf, loc=pimean, scale=pisd)
+
 
     """if longtermLE:
         # second option: choose 4 random, non-overlapping groups of 11 members x 11-yrs
@@ -897,12 +1011,18 @@ def calc_shorttermpdf(fdict,field,region,sea,timesel,leconv=1,subnh=False,
     skey='histle'
     histdat[skey]=lesea; xxdat[skey]=rawxx; pdfdat[skey]=rawpdf_fitted
     meandat[skey]=rawmean; cidat[skey]=rawci; cifdat[skey]=rawcif
-    skey='histnat'
-    histdat[skey]=lensea; xxdat[skey]=rawnxx; pdfdat[skey]=rawnpdf_fitted
-    meandat[skey]=rawnmean; cidat[skey]=rawnci; cifdat[skey]=rawncif
-    skey='histmisc'
-    histdat[skey]=lemsea; xxdat[skey]=rawmxx; pdfdat[skey]=rawmpdf_fitted
-    meandat[skey]=rawmmean; cidat[skey]=rawmci; cifdat[skey]=rawmcif
+    if addnat:
+        skey='histnat'
+        histdat[skey]=lensea; xxdat[skey]=rawnxx; pdfdat[skey]=rawnpdf_fitted
+        meandat[skey]=rawnmean; cidat[skey]=rawnci; cifdat[skey]=rawncif
+    if addmisc:
+        skey='histmisc'
+        histdat[skey]=lemsea; xxdat[skey]=rawmxx; pdfdat[skey]=rawmpdf_fitted
+        meandat[skey]=rawmmean; cidat[skey]=rawmci; cifdat[skey]=rawmcif
+    if addpi:
+        skey='pi'
+        histdat[skey]=pisea; xxdat[skey]=pixx; pdfdat[skey]=pipdf_fitted
+        meandat[skey]=pimean; cidat[skey]=pici; cifdat[skey]=picif
 
     pointdat['obs']=obsreg
     pointdat['orig']=or5sea
@@ -919,7 +1039,8 @@ def calc_shorttermpdf(fdict,field,region,sea,timesel,leconv=1,subnh=False,
 
 # ================================================================
 # ==================== main() ====================================
-def main(dowhat=None,addobs=True,addsims=True):
+def main(dowhat=None,addobs=True,addsims=False,addnat=False,
+         addmisc=False,addpi=False,verb=False):
 
 
     """ dowhat options are: doscatter, dohist, doregress, dolongtermavg
@@ -1129,6 +1250,65 @@ def main(dowhat=None,addobs=True,addsims=True):
                 lepseamcnd = cutl.seasonalize_monthlyts(lepdatmcnd.T,season=seacnd).T
                 leseamcnd = lepseamcnd - lecseamcnd
                 lefldmcnd=lepseamcnd.mean(axis=1)-lecseamcnd.mean(axis=1)
+
+        if addpi:
+            # piControl
+            pidat1 = lcd.load_data(fdict1,'piControl',conv=leconv1,local=local)
+            ntime1pi = pidat1.shape
+
+            piseadat1 = cutl.seasonalize_monthlyts(pidat1,season=sea1)
+            styear=None; anomyears=None
+            # the data must be seasonalized before using this func.
+            pisea1,styear1,anomyears1 = subsamp_anom_pi(piseadat1, numyrs=11,
+                                                        styear=styear,anomyears=anomyears,threed=False)
+
+            if verb:
+                print 'pidat1.shape, piseadat1.shape ' + str(pidat1.shape) + ',' + str(piseadat1.shape) # @@@
+                print 'pisea1.shape ' + str(pisea1.shape) # @@@
+
+            if performop1:
+                fdict1op = {'field': field1+region1op, 'ncfield': ncfield1, 'comp': comp1}
+                pisub1 = lcd.load_data(fdict1op,'piControl',conv=leconv1,local=local)
+                pisubsea1 = cutl.seasonalize_monthlyts(pisub1,season=sea1)
+
+                pisubsea1,styear1,anomyears1 = subsamp_anom_pi(pisubsea1, numyrs=11,
+                                                               styear=styear1,anomyears=anomyears1,threed=False)
+                
+
+                if op1=='sub': # subtract
+                    pifld1 = pisea1.mean(axis=1) - pisubsea1.mean(axis=1)
+                elif op1=='div': # divide
+                    pifld1 = pisea1.mean(axis=1) / pisubsea1.mean(axis=1)
+            else:
+                pifld1 = pisea1
+
+            pidat2 = lcd.load_data(fdict2,'piControl',conv=leconv2,local=local)
+            ntime2pi = pidat2.shape
+
+            piseadat2 = cutl.seasonalize_monthlyts(pidat2,season=sea1)
+            # the data must be seasonalized before using this func.
+            pisea2,styear1,anomyears1 = subsamp_anom_pi(piseadat2, numyrs=11,
+                                                        styear=styear1,anomyears=anomyears1,threed=False)
+            if performop2:
+                fdict2op = {'field': field2+region2op, 'ncfield': ncfield2, 'comp': comp2}
+                pisub2 = lcd.load_data(fdict2op,'piControl',conv=leconv2,local=local)
+                pisubsea2 = cutl.seasonalize_monthlyts(pisub2,season=sea2)
+
+                pisubsea2,styear1,anomyears1 = subsamp_anom_pi(pisubsea2, numyrs=11,
+                                                               styear=styear1,anomyears=anomyears1,threed=False)
+
+                if op2=='sub': # subtract
+                    pifld2 = pisea2 - pisubsea2
+                elif op1=='div': # divide
+                    pifld2 = pisea2 / pisubsea2
+            else:
+                pifld2 = pisea2
+                
+            if verb:
+                print 'pidat2.shape, piseadat2.shape ' + str(pidat2.shape) + ',' + str(piseadat2.shape) # @@@
+                print 'pisea2.shape ' + str(pisea2.shape) # @@@
+
+            pimm, pibb, pirval, pipval, pistd_err = sp.stats.linregress(pifld1,pifld2)
 
 
         if addobs: # DATA MUST EXIST:hard coded for TAS and Z500 @@
@@ -1447,7 +1627,18 @@ def main(dowhat=None,addobs=True,addsims=True):
             ax.plot(onex,lemmm*onex + lebbm, color=ccm.get_linecolor('orange3'),linewidth=1)
             leghnds=leghnds + (ledatm,)
             legstrs=legstrs + (casename3 + ' LE',)
-            print '-------- LEMisc slope, rval, pval: ' + str(lemmm),str(lervalm),str(lepvalm)    
+            print '-------- LEMisc slope, rval, pval: ' + str(lemmm),str(lervalm),str(lepvalm)   
+
+        if addpi:
+            pidathndl=ax.scatter(pifld1,pifld2,color='purple',marker='*',s=5**2,alpha=0.5)
+            axylims = ax.get_ylim()
+            axxlims = ax.get_xlim()
+            onex=np.linspace(axxlims[0],axxlims[1])
+            ax.plot(onex,pimm*onex + pibb, color='purple',linewidth=1)
+            leghnds=leghnds + (pidathndl,)
+            legstrs=legstrs + ('PreIndustrial',)
+            print '-------- Preindustrial slope, rval, pval: ' + str(pimm),str(pirval),str(pipval)   
+        
         if addobs:
             obs=ax.scatter(obsreg1,obsreg2,color='blue',marker='s',s=60)
             leghnds=leghnds + (obs,)
@@ -1469,9 +1660,9 @@ def main(dowhat=None,addobs=True,addsims=True):
             onex=np.linspace(axxlims[0],axxlims[1])
             ax.plot(onex,simssmm*onex + simssbb, color='0.7',linewidth=1)
             # R sims too
-            ax.scatter(fldssrdf1,fldssrdf2,color='purple',marker='o',s=40,alpha=0.7)
+            ax.scatter(fldssrdf1,fldssrdf2,color='cyan',marker='o',s=40,alpha=0.7)
             onex=np.linspace(axxlims[0],axxlims[1])
-            ax.plot(onex,simssrmm*onex + simssrbb, color='purple',linewidth=1)
+            ax.plot(onex,simssrmm*onex + simssrbb, color='cyan',linewidth=1)
 
             leghnds=leghnds + (simssh,)
             legstrs=legstrs + ('11-yr Modelled SIC forcing',)
@@ -1540,7 +1731,7 @@ def main(dowhat=None,addobs=True,addsims=True):
 
             # plot the sic data:
             plt.figure()
-            plt.plot(fldssrdfcnd,color='purple',linestyle='none',marker='o')
+            plt.plot(fldssrdfcnd,color='cyan',linestyle='none',marker='o')
             plt.plot(fldssdfcnd,color='0.5',linestyle='none',marker='o')
             plt.plot(fldssodfcnd,color='g',linestyle='none',marker='o')
             plt.plot(lefldcnd,color='blue',linestyle='none',marker='o',alpha=0.5)
@@ -1817,11 +2008,12 @@ def main(dowhat=None,addobs=True,addsims=True):
         extra=False # timeseries, testing kernel density estimates
 
         longtermLE=False # else, subsample AGCM sims
-        addsims=False # 120-yr avg AGCM sims
-        addnat=True
-        addmisc=True
+        #addsims=False # 120-yr avg AGCM sims
+        #addnat=True
+        #addmisc=True
         appendorig=False # append original historical runs? (for now 6/22/15)
         addorig=True # just add orig points to distribution curve (not histogram)
+        #addpi=True # add preindustrial control
 
         printtofile=True
 
@@ -1843,8 +2035,8 @@ def main(dowhat=None,addobs=True,addsims=True):
         field='tas'
         ncfield='tas'
         comp='Amon'
-        #@@region='eurasiamori'
-        region='eurasiathicke'
+        region='eurasiamori'
+        #region='eurasiathicke'
         #region='gt60n'
 
         #field='sia'; ncfield='sianh'; comp='OImon'; region='nh';
@@ -2330,11 +2522,13 @@ def main(dowhat=None,addobs=True,addsims=True):
             else:
                 retdicta,simsstra = calc_shorttermpdf(fdicta,fielda,regiona,
                                                       sea,(timeselc,timeselp),
-                                                      verb=False)
+                                                      verb=verb,addpi=addpi,
+                                                      addnat=addnat,addmisc=addmisc)
 
                 retdict,simsstr = calc_shorttermpdf(fdict,field,region,
                                                     sea,(timeselc,timeselp),
-                                                    verb=False)
+                                                    verb=verb,addpi=addpi,
+                                                    addnat=addnat,addmisc=addmisc)
 
             if vertical:
                 fig,axs=plt.subplots(2,1)
@@ -2346,9 +2540,11 @@ def main(dowhat=None,addobs=True,addsims=True):
                 fig.subplots_adjust(wspace=.03)
 
             ax2=axs[0]
-            ax2,prstr=plot_shorttermpdf(fig,ax2,fielda,regiona,**retdicta)
+            ax2,prstr=plot_shorttermpdf(fig,ax2,fielda,regiona,addpi=addpi,
+                                        addnat=addnat,addmisc=addmisc,**retdicta)
             ax=axs[1]
-            ax,prstr=plot_shorttermpdf(fig,ax,field,region,**retdict)
+            ax,prstr=plot_shorttermpdf(fig,ax,field,region,addpi=addpi,
+                                       addnat=addnat,addmisc=addmisc,**retdict)
 
             if printtofile:
                 if loadmat:
@@ -2496,4 +2692,5 @@ def main(dowhat=None,addobs=True,addsims=True):
 # this means, if we are running this module as main script
 #    (not importing from another), register and show
 if __name__ == "__main__":
-    main(dowhat='doscatter') # default call is if dowhat='doscatter'
+    main(dowhat='doscatter',addobs=True,addnat=True,
+         addmisc=True,addsims=True,addpi=True) 
