@@ -53,11 +53,17 @@ dtypes: float64(2), int64(3), object(4)>
 acols=datadf.keys()
 bcols=datbdf.keys()
 
-adat = pd.DataFrame(datadf.values[np.logical_and(datadf['Size'] >= sizerange[0], datadf['Size'] <= sizerange[1])], columns=acols)
-bdat = pd.DataFrame(datbdf.values[np.logical_and(datbdf['Size'] >= sizerange[0], datbdf['Size'] <= sizerange[1])], columns=bcols)
+#adat = pd.DataFrame(datadf.values[np.logical_and(datadf['Size'] >= sizerange[0], datadf['Size'] <= sizerange[1])], columns=acols)
+#bdat = pd.DataFrame(datbdf.values[np.logical_and(datbdf['Size'] >= sizerange[0], datbdf['Size'] <= sizerange[1])], columns=bcols)
+adat = datadf
+bdat = datbdf
+adat['Size']=datadf['Size'].round()
+bdat['Size']=datbdf['Size'].round()
+asel = pd.DataFrame(adat.values[np.logical_and(adat['Size'] >= sizerange[0], adat['Size'] <= sizerange[1])], columns=acols)
+bsel = pd.DataFrame(bdat.values[np.logical_and(bdat['Size'] >= sizerange[0], bdat['Size'] <= sizerange[1])], columns=bcols)
 
 
-plt.figure()
+"""plt.figure()
 plt.plot(bdat.Size,marker='o',color='r')
 plt.plot(adat.Size,marker='.',color='b')
 plt.title('Size')
@@ -72,7 +78,7 @@ plt.figure()
 plt.plot(bdat.Size,bdat.Height,marker='o',color='r')
 plt.plot(adat.Size,adat.Height,marker='.',color='b')
 plt.xlabel('Size')
-plt.ylabel('Height')
+plt.ylabel('Height')"""
 
 # @@@ question: round Size first and then select based on range? Or other way around...
 #               ANS: round first, then select
@@ -99,7 +105,8 @@ def fillarray(size, height,sizerange, verb=True):
     """
 
     sizeidx=np.arange(sizerange[0],sizerange[1]+1) # add extra to get through loop last time
-    rndsize=myround(size)
+    rndsize=size # already rounded: myround(size)
+
     if verb:
         print '@@@@@@ rndsize ' + str(rndsize)
 
@@ -169,20 +176,27 @@ def fillarray(size, height,sizerange, verb=True):
 
 
 print '======= FILL ARRAYS ================'
-bsizernd=myround(bdat.Size.values)
+#bsizernd=myround(bdat.Size.values)
 
-bsizeadj,bheightadj=fillarray(bdat.Size.values, bdat.Height, sizerange)
+#bsizeadj,bheightadj=fillarray(bdat.Size.values, bdat.Height, sizerange)
 
-asizernd=myround(adat.Size.values)
-asizeadj,aheightadj=fillarray(adat.Size.values, adat.Height, sizerange)
+#asizernd=myround(adat.Size.values)
+#asizeadj,aheightadj=fillarray(adat.Size.values, adat.Height, sizerange)
 
 
+asizeadj,aheightadj=fillarray(asel.Size.values, asel.Height, sizerange)
+
+bsizeadj,bheightadj=fillarray(bsel.Size.values, bsel.Height, sizerange)
+
+
+
+# ==================== FIGURES ========================
 
 fig,axs=plt.subplots(3,1)
 fig.set_size_inches(8,10)
 ax=axs[0]
-ax.plot(bsizernd,bdat.Height,marker='o',color='r')
-ax.plot(asizernd,adat.Height,marker='.',color='b')
+ax.plot(bsel.Size,bsel.Height,marker='o',color='r')
+ax.plot(asel.Size,asel.Height,marker='.',color='b')
 #ax.set_xlabel('Size')
 ax.set_ylabel('Height')
 ax.set_title('Size Range (' + str(sizerange[0]) + '-' + str(sizerange[1]) + ')')
