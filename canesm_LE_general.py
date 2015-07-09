@@ -174,7 +174,7 @@ def subsamp_sims(simsdf,numyrs=11,styears=None,threed=False):
     return subsampavg,savstyears
 
 
-def subsamp_anom_pi(pidat, numsamp=50, numyrs=11,styear=None,anomyears=None,threed=None,verb=False):
+def subsamp_anom_pi(pidat, numsamp=50, numyrs=11,styear=None,anomyears=None,verb=False):
     """ subsample piControl and produce numsamp anomalies of numyrs-length periods
 
                  Make sure the data is seasonalized before passing into function.
@@ -182,16 +182,20 @@ def subsamp_anom_pi(pidat, numsamp=50, numyrs=11,styear=None,anomyears=None,thre
                  returns subsampanom, styear,anomyears
     """
 
-    if threed:
-        (ntime,nlat,nlon)=pidat.shape
-        initshape=(nlat,nlon)
-
-    else:
+    ndim=pidat.ndim
+    if ndim==1:
         ntime = pidat.shape[0]
         initshape=()
+    elif ndim==3:
+        (ntime,nlat,nlon)=pidat.shape
+        initshape=(nlat,nlon)
+    else:
+        # what is this mysterious shape?
+        (ntime,nspace)=pidat.shape
+        
 
     samp = ntime/numyrs
-    allsii=0 # keep track of all sims and all subsamps
+    allsii=0 # keep track of all subsamps
     anomshape = (numsamp,)+initshape 
     initshape=(samp,)+initshape
 
