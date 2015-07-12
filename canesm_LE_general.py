@@ -30,7 +30,7 @@ import loadCanESM2data as lcd
 
 # exception handling works below. add to other clauses @@
 
-printtofile=False
+#printtofile=False
 #dohist=False
 #doregress=False
 #doscatter=False
@@ -337,6 +337,7 @@ def plot_shorttermpdf(fig,ax,field,region,xxdat,pdfdat,histdat,meandat,cidat,
     skey='AGCM2'
     ss2xx = np.squeeze(xxdat[skey]); ss2pdf_fitted=np.squeeze(pdfdat[skey]); 
     ss2mean= np.squeeze(meandat[skey]); ss2ci= np.squeeze(cidat[skey]); ss2cif= np.squeeze(cifdat[skey])
+    ss2hist=histdat[skey]
     skey='AGCM'
     ssxx =  np.squeeze(xxdat[skey]); sspdf_fitted= np.squeeze(pdfdat[skey]); 
     ssmean= np.squeeze(meandat[skey]); ssci= np.squeeze(cidat[skey]); sscif= np.squeeze(cifdat[skey])
@@ -358,7 +359,8 @@ def plot_shorttermpdf(fig,ax,field,region,xxdat,pdfdat,histdat,meandat,cidat,
         pimean=meandat[skey]; pici=cidat[skey]; picif=cifdat[skey]
 
     if field!='sia':
-        #ax.hist(plotsims2,normed=True,color=ltcol,alpha=0.4,histtype='stepfilled')
+        
+        ax.hist(ss2hist,normed=True,color=ltcol,alpha=0.4,histtype='stepfilled')#@@ maybe?
         ax.plot(ss2xx,ss2pdf_fitted,color=ltcol,linewidth=3)
 
         #ax.plot(ss2xx,ss2pdf_fitted,color='k',linewidth=2) # variable boundary forcings
@@ -398,7 +400,7 @@ def plot_shorttermpdf(fig,ax,field,region,xxdat,pdfdat,histdat,meandat,cidat,
     # add RAW LE
     #print 'plotting LE histogram.............' + str(lesea) #@@
 
-    ax.hist(lesea,normed=True,color=hcol,alpha=0.3,histtype='stepfilled')
+    #ax.hist(lesea,normed=True,color=hcol,alpha=0.3,histtype='stepfilled') # maybe not ? @@
     ax.plot(rawxx,rawpdf_fitted,color=hcolline,linewidth=3)
     fs='full'
     for eii in range(0,5): # orig five
@@ -749,14 +751,14 @@ def calc_shorttermpdf(fdict,field,region,sea,timesel,leconv=1,subnh=False,
         styear=None; anomyears=None
         # the data must be seasonalized before using this func.
         pisea,styear,anomyears = subsamp_anom_pi(piseadat, numyrs=11,
-                                                 styear=styear,anomyears=anomyears,threed=False)
+                                                 styear=styear,anomyears=anomyears)
 
         if subnh:
             fdictsub = {'field': field+'nh', 'ncfield': ncfield, 'comp': comp}
             pidatsub = lcd.load_data(fdictsub,'piControl',local=local,conv=leconv,verb=verb)
             piseadatsub = cutl.seasonalize_monthlyts(pidatsub,season=sea)
             piseasub,styear,anomyears = subsamp_anom_pi(piseadatsub, numyrs=11,
-                                                        styear=styear,anomyears=anomyears,threed=False)
+                                                        styear=styear,anomyears=anomyears)
             pisea = pisea - piseasub.mean(axis=0) # ??
 
         pipdf_fitted,pimean,pisd,pixx = cutl.calc_normfit(pisea)
@@ -1007,10 +1009,10 @@ def calc_shorttermpdf(fdict,field,region,sea,timesel,leconv=1,subnh=False,
     xxdat={}; pdfdat={}; meandat={}; cidat={}; cifdat={}; histdat={}; pointdat={}
     # save data to call plot function
     skey='AGCM2'
-    xxdat[skey]=ss2xx; pdfdat[skey]=ss2pdf_fitted
+    histdat[skey]=plotsims2; xxdat[skey]=ss2xx; pdfdat[skey]=ss2pdf_fitted
     meandat[skey]=ss2mean; cidat[skey]=ss2ci; cifdat[skey]=ss2cif
     skey='AGCM'
-    xxdat[skey]=ssxx; pdfdat[skey]=sspdf_fitted
+    histdat[skey]=plotsims; xxdat[skey]=ssxx; pdfdat[skey]=sspdf_fitted
     meandat[skey]=ssmean; cidat[skey]=ssci; cifdat[skey]=sscif
     skey='histle'
     histdat[skey]=lesea; xxdat[skey]=rawxx; pdfdat[skey]=rawpdf_fitted
@@ -1044,7 +1046,7 @@ def calc_shorttermpdf(fdict,field,region,sea,timesel,leconv=1,subnh=False,
 # ================================================================
 # ==================== main() ====================================
 def main(dowhat=None,addobs=True,addsims=False,addnat=False,
-         addmisc=False,addpi=False,verb=False):
+         addmisc=False,addpi=False,verb=False,printtofile=False):
 
 
     """ dowhat options are: doscatter, dohist, doregress, dolongtermavg
@@ -1065,7 +1067,7 @@ def main(dowhat=None,addobs=True,addsims=False,addnat=False,
         dolongtermavg=True
 
     if doscatter:
-        printtofile=True
+        #printtofile=True
         addnat=True
         addmisc=True
         savedat=False # save data to ascii for John
@@ -1974,7 +1976,7 @@ def main(dowhat=None,addobs=True,addsims=False,addnat=False,
         # @@ create a figure with regression contours on top of other regression:
         #   e.g. z500 regressed onto BKS SIC contours on SAT regressed onto BKS SIC map
 
-        printtofile=False
+        #printtofile=False
         lons, lats = np.meshgrid(lon,lat)
         cmlen=15.
         incr = (cmaxsp2-cminsp2) / (cmlen)
@@ -2019,7 +2021,7 @@ def main(dowhat=None,addobs=True,addsims=False,addnat=False,
         addorig=True # just add orig points to distribution curve (not histogram)
         #addpi=True # add preindustrial control
 
-        printtofile=True
+        #printtofile=True
 
         numsamp=100 # how many times to sample 11 ens members, for longtermLE=True
         addraw=False # add the decadal diffs?  for longtermLE=True
@@ -2506,14 +2508,14 @@ def main(dowhat=None,addobs=True,addsims=False,addnat=False,
 
             if loadmat:
                 
-                when='12:11:11.295534' # choose which set of files to load
+                when='18:53:41.159247' #'12:11:11.295534' # choose which set of files to load
                 print 'loadmat!! when=' + when # @@
                 retdict = dict.fromkeys(keys)
                 retdicta = dict.fromkeys(keys)
 
                 #@@@@ simsstr +\ # remove from filename!
                 matbase = 'pymatfiles/' + field + region + substr + '_' + sea + '_LEsims' +\
-                          'obs_11yrsubsmpavgraw_histinset'
+                          'sbEonlyobs_11yrsubsmpavgraw_histinset' # hack in filename. 
 
                 for key in keys:
                     matname =  matbase + '_' + key +'_' + when + '.mat'
@@ -2556,13 +2558,13 @@ def main(dowhat=None,addobs=True,addsims=False,addnat=False,
                 else:
                     now = str(datetime.datetime.now().time())
                 fig.savefig(field + region + substr + '_' + sea + '_LEsims' + simsstr +\
-                            'obs_11yrsubsmpavgraw_histinset' + prstr + now + '.pdf')
+                            'obs_11yrsubsmpavgraw_histinset' + prstr + now + '_b.pdf')# _b has AGCM hist and not CGCM All@@
 
 
             if savemat:
 
-                matbase = 'pymatfiles/' + field + region + substr + '_' + sea + '_LEsims' + simsstr +\
-                          'obs_11yrsubsmpavgraw_histinset'
+                matbase = 'pymatfiles/' + field + region + substr + '_' + sea + '_LEsims'+\
+                          'obs_11yrsubsmpavgraw_histinset' # + simsstr +\
 
                 for key in retdict.keys():
                     matname =  matbase + '_' + key +'_' + now + '.mat'
