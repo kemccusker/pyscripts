@@ -662,7 +662,11 @@ def calc_regmean(fld,lat,lon,region,limsdict=None):
             weightsmt = weightsm
 
         tmp = ma.masked_where(regmask,fldm)
-        tmpreg = np.sum(np.sum(tmp*weightsmt,axis=2),axis=1)
+        if tmp.ndim==3:
+            tmpreg = ma.sum(ma.sum(tmp*weightsmt,axis=2),axis=1)
+        elif tmp.ndim==2:
+            tmpreg = ma.sum(tmp*weightsmt)
+
         fldreg = tmpreg # should be ndim1 of regional mean (or just one regional mean)
 
     return fldreg
@@ -711,7 +715,11 @@ def calc_regtotseaicearea(fld,lat,lon,region,limsdict=None,isarea=False):
 
     tmp = ma.masked_where(regmask,fldm) # am I masking out twice? does it matter?
     #tmpreg = np.sum(np.sum(tmp,axis=2),axis=1)
-    tmpreg=ma.sum(ma.sum(tmp,axis=2),axis=1) # @@ was this a bug?
+    if tmp.ndim==3:
+        tmpreg=ma.sum(ma.sum(tmp,axis=2),axis=1) # @@ was this a bug?
+    elif tmp.ndim==2:
+        tmpreg=ma.sum(tmp)
+
     fldreg = tmpreg # should be ndim1 of regional mean (or just one regional mean)
 
     return fldreg
