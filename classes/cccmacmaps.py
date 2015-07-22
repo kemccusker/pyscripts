@@ -425,6 +425,7 @@ def get_linecolor(lckey):
                   'deepskyblue': np.array([0,191,255])/255.,
                   'skyblue': np.array([135, 206, 250])/255.,
                   'turq': np.array([0, 153, 153])/255.
+                  'niceblue': np.array([0,102,204])/255.
 
                    http://web.njit.edu/~kevin/rgb.txt.html
                    http://en.wikipedia.org/wiki/Shades_of_red
@@ -493,7 +494,9 @@ def get_linecolorwheel():
                   'warm3': np.array([240, 119, 1])/255.,
                   'warm4': np.array([255, 163, 1])/255.,
                   'warm5': np.array([255, 200, 1])/255.,
-                  'turq': np.array([0, 153, 153])/255.}
+                  'turq': np.array([0, 153, 153])/255.,
+                  'niceblue': np.array([0,102,204])/255.,
+                  'niceblue2': np.array([0,102,175])/255.}
 
     return linecolors
 
