@@ -296,11 +296,15 @@ def plot_shorttermpdf(fig,ax,field,region,xxdat,pdfdat,histdat,meandat,cidat,
 
     fsz=18
 
-    mew=1.5; ms=7
+    mew=1.5; ms=9
     firebrick=ccm.get_linecolor('firebrick')
     hcol='0.7'#ccm.get_linecolor('darkolivegreen3')
     hcolline='0.7'#ccm.get_linecolor('darkolivegreen3')#'darkseagreen4')
+
+    #hcol=ccm.get_linecolor('niceblue')
+    #hcolline=ccm.get_linecolor('niceblue')
     ltcol='0.5'#ccm.get_linecolor('darkseagreen4')
+    ltcol=ccm.get_linecolor('niceblue2') #'steelblue4')
     natcol=ccm.get_linecolor('steelblue3')
     natcolline=ccm.get_linecolor('steelblue3')#4')
     miscol=ccm.get_linecolor('orange3') #'deepskyblue')
@@ -325,7 +329,7 @@ def plot_shorttermpdf(fig,ax,field,region,xxdat,pdfdat,histdat,meandat,cidat,
     #legstr = ('AGCM Ice','CGCM All')
     # actually add AGCM to end
     legh = (rawlg,)
-    legstr = ('CGCM All',)
+    legstr = ('CGCM',)
 
     skey='obs'
     obsreg= np.squeeze(pointdat[skey])
@@ -484,6 +488,10 @@ def plot_shorttermpdf(fig,ax,field,region,xxdat,pdfdat,histdat,meandat,cidat,
         prstr = prstr+'misc'
         xlab = xlab + ' Aero=$%.2f$'%(rawmmean) 
     if addpi:
+        if combagcm and field=='sia':
+            # for the paper: add PI hist too, to sia
+            ax.hist(pisea,normed=True,color=picol,alpha=0.5,histtype='stepfilled')
+        
         ax.plot(pixx,pipdf_fitted,color=picol,linewidth=2,alpha=al)
         legh = legh + (pilg,)
         legstr = legstr + ('PreIndustrial',)
@@ -498,17 +506,20 @@ def plot_shorttermpdf(fig,ax,field,region,xxdat,pdfdat,histdat,meandat,cidat,
     #    legstr=legstr+('Obs',)
 
     if field=='sia':
-        ax.set_xlim((-2.5e12,1.5e12))
-        xlab = 'Change in sea ice area, $\Delta$SIC (millions of km$^2$)' # for paper.
+        ax.set_xlim((-2.5e12,1.6e12))
+        units='millions of km$^2$'
+        xlab = 'Change in sea ice area, $\Delta$SIC (' + units + ')' # for paper.
         xtlabs = ax.get_xticks()/1e12
         ax.set_xticklabels(xtlabs)
         axesloc=[.71, .69, .18, .2]
     else:
         ax.set_xlim((-2.5,5))
-        xlab = 'Change in Eurasian surface air temperature, $\Delta$SAT ($^\circ$C)' # for paper.
+        units = '$^\circ$C'
+        xlab = 'Change in Eurasian surface air temperature, $\Delta$SAT ('+units +')' # for paper.
         axesloc=[.71, .69, .18, .2]
 
-    axesloc=[.69, .69, .29, .3] # for inset
+    #axesloc=[.69, .69, .29, .3] # for inset
+    axesloc=[.7, .79, .29, .2] # for inset. smaller version
 
     """ http://matplotlib.org/examples/pylab_examples/axes_demo.html
     a = axes([.65, .6, .2, .2], axisbg='y')
@@ -559,9 +570,12 @@ def plot_shorttermpdf(fig,ax,field,region,xxdat,pdfdat,histdat,meandat,cidat,
         inax.plot(rawmcif, (yy,yy), linewidth=2,marker='|',markersize=6,mew=2,mec=miscolline,color=miscolline)   
         yy=yy-1
     if addpi:
-        inax.plot(pimean, yy, linestyle='none',marker='s',mec=picol,color=picol)
-        inax.plot(pici, (yy,yy), linewidth=2,marker='|',markersize=6,mew=2,mec=picol,color=picol)   
-        inax.plot(picif, (yy,yy), linewidth=2,marker='|',markersize=6,mew=2,mec=picol,color=picol)   
+        inax.plot((pimean,pimean),(yy-boxwi,yy+boxwi),linewidth=2,color=picol)
+        inax.add_patch(mpatches.Rectangle((picif[0],yy-boxwi),picif[1]-picif[0],boxwi*2,ec=picol,fc='white',linewidth=2,alpha=0.5))
+        inax.add_patch(mpatches.Rectangle((pici[0],yy-boxwi),pici[1]-pici[0],boxwi*2,ec=picol,fc=picol,linewidth=2,alpha=0.5))
+        #inax.plot(pimean, yy, linestyle='none',marker='s',mec=picol,color=picol)
+        #inax.plot(pici, (yy,yy), linewidth=2,marker='|',markersize=6,mew=2,mec=picol,color=picol)   
+        #inax.plot(picif, (yy,yy), linewidth=2,marker='|',markersize=6,mew=2,mec=picol,color=picol)   
         yy=yy-1
     if field!='sia':
         inax.plot((ss2mean,ss2mean),(yy-boxwi,yy+boxwi),linewidth=2,color=ltcol)
@@ -592,9 +606,9 @@ def plot_shorttermpdf(fig,ax,field,region,xxdat,pdfdat,histdat,meandat,cidat,
         #legh=legh+(ss2lg2,nsidclg2)
         #legstr=legstr+('AGCM var ICE','AGCM NSIDC ICE')
     elif field=='sia' and region=='nh':
-        inax.set_xlim(-1.4e12,0) 
+        inax.set_xlim(-1.4e12,0.1e12) 
         inax.set_xticklabels(('',-1.2,'',-0.8,'',-0.4,'',0))
-    inax.set_xlabel('Mean change',fontsize=fsz-2)
+    inax.set_xlabel('Mean change\n ('+units+')',fontsize=fsz-3)
     # add 'Obs' annotation
     if field=='sia':
         #tlabx=0.5;tlabx2=0.49; tlaby=tlaby2=0.7
@@ -614,6 +628,7 @@ def plot_shorttermpdf(fig,ax,field,region,xxdat,pdfdat,histdat,meandat,cidat,
                       textcoords='offset points',
                       arrowprops=dict(arrowstyle='-',connectionstyle='arc3',
                                       facecolor='k', edgecolor='k'),fontsize=fsz-2) # label vertical obs line
+    inax.xaxis.set_ticks_position('bottom')
 
     if addsims:
         legstr=legstr+('120-yr AGCM',)
@@ -624,13 +639,15 @@ def plot_shorttermpdf(fig,ax,field,region,xxdat,pdfdat,histdat,meandat,cidat,
         
     # add AGCM Ice to legend
     if field=='tas':
-        #legstr=legstr+('AGCM Ice',)
-        #legh=legh+(sslg,)
-        ax.legend((legh,sslg,),('CGCM','AGCM Ice',), loc=(0.71,0.41),frameon=False,prop=fontP)
+        legstr=legstr+('AGCM',)
+        legh=legh+(sslg,)
+        ax.legend(legh,legstr, loc=(0.71,0.47),frameon=False,prop=fontP)
     elif field=='sia':
-        ax.legend(legh,legstr, loc=(0.71,0.5),frameon=False,prop=fontP)
+        ax.legend(legh,legstr, loc=(0.69,0.5),frameon=False,prop=fontP)
 
     ax.set_xlabel(xlab,fontsize=fsz)
+    ax.xaxis.set_ticks_position('bottom')
+    ax.xaxis.set_tick_params(direction='out')
 
     # panel labels
     if plab != None:
@@ -1096,7 +1113,7 @@ def calc_shorttermpdf(fdict,field,region,sea,timesel,leconv=1,subnh=False,combag
 # ==================== main() ====================================
 def main(dowhat=None,addobs=True,addsims=False,addnat=False,
          addmisc=False,addpi=False,verb=False,combagcm=False,
-         printtofile=False):
+         comblenat=False,printtofile=False):
 
 
     """ dowhat options are: doscatter, dohist, doregress, dolongtermavg
@@ -2551,8 +2568,8 @@ def main(dowhat=None,addobs=True,addsims=False,addnat=False,
             loadmat=True
             savemat=False
             vertical=True # vertical plot 
-            combagcm=True
-            comblenat=True
+            #combagcm=True
+            #comblenat=True
             keys=('xxdat', 'histdat', 'meandat', 'pdfdat', 'cidat', 'pointdat', 'cifdat')
             simsstr=''
 
@@ -2561,7 +2578,7 @@ def main(dowhat=None,addobs=True,addsims=False,addnat=False,
 
             if loadmat:
                 
-                when='16:06:52.938245' #'18:53:41.159247' #'12:11:11.295534' # choose which set of files to load
+                when='18:19:46.394326' #'16:06:52.938245' # # choose which set of files to load
                 print 'loadmat!! when=' + when # @@
                 retdict = dict.fromkeys(keys)
                 retdicta = dict.fromkeys(keys)
