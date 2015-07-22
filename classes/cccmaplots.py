@@ -423,7 +423,7 @@ def map_allmonths(fld, lat, lon,title='',units='',cmap='blue2red_w20',type='sq',
     
     return fig
 
-def add_colorbar(fig,phand,orientation='vertical',pos=None):
+def add_colorbar(fig,phand,orientation='vertical',pos=None,label=None):
 
     try:
         if pos==None:
@@ -438,7 +438,7 @@ def add_colorbar(fig,phand,orientation='vertical',pos=None):
         raise
 
     cbar_ax = fig.add_axes(pos)
-    fig.colorbar(phand,cax=cbar_ax,orientation=orientation)
+    fig.colorbar(phand,cax=cbar_ax,orientation=orientation,label=label)
 
     return cbar_ax
 
