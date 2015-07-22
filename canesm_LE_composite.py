@@ -11,15 +11,19 @@ import pandas as pd
 import constants as con
 import loadCanESM2data as lcd
 import matplotlib.lines as mlines
+from matplotlib import gridspec
 
 
-printtofile=True
+printtofile=False
 
-dataloaded=False
+dataloaded=True
 dofigures=False
 local=True
 addsig=True
 compagcm=False # compare R sims and E sims
+
+cisiglevel=0.05
+siglevel=0.05
 
 timeselc='1979-01-01,1989-12-31'
 timeselp='2002-01-01,2012-12-31'
@@ -56,14 +60,14 @@ cminsp2a=-10; cmaxsp2a=10 # to calc contour interval for AGCM
 leconvr=leconvr2=leconvr3=1
 
 # regional avg field 1
-fieldr='sic'; ncfieldr='sic'; compr='OImon'; regionr='bksmori'; r1str='BKS SIC'; #leconvr=-1 # sea ice loss is linked with positive changes elsewhere
+fieldr='sic'; ncfieldr='sic'; compr='OImon'; regionr='bksmori'; r1str='BKS SIC'; r1units='%'#leconvr=-1 # sea ice loss is linked with positive changes elsewhere
 
 # regional avg field 2
 # cooling=high heights
-fieldr2='tas'; ncfieldr2='tas'; compr2='Amon'; regionr2='eurasiamori'; r2str='Eur SAT'; #leconvr2=-1
+fieldr2='tas'; ncfieldr2='tas'; compr2='Amon'; regionr2='eurasiamori'; r2str='Eur SAT'; r2units='$^\circ$C'#leconvr2=-1
 
 # regional avg field 3
-fieldr3='zg50000.00'; ncfieldr3='zg'; compr3='Amon'; regionr3='bksmori'; r3str='BKS Z500'; diffttl3='High-Low'; diffmult3=-1 
+fieldr3='zg50000.00'; ncfieldr3='zg'; compr3='Amon'; regionr3='bksmori'; r3str='BKS Z500'; diffttl3='High-Low'; diffmult3=-1; r3units='m'
 #leconvr=-1; #leconvr2=-1; #both conv -1 to get figs to show low-high equal to high heights and cold continent.
 
 sttl1='Comp on ' + r1str
@@ -237,22 +241,22 @@ def do_composite(rfld,spfld,nn=10,rshape=None,verb=False,addcyc=False):
     lowlesp = spfld[lowidx,...].mean(axis=0).reshape(rshape)
 
     if verb:
-        #print 'highidx: ' + str(highidx)
         print 'highidx vals: ' + str(rfld[highidx])
-        #print 'lowidx vals: ' + str(lowidx)
         print 'lowidx vals: ' + str(rfld[lowidx])
-    
+
     # low vs high
+    splowt=spfld[lowidx,...].reshape(rshapenn) # keep sample dim
+    sphight=spfld[highidx,...].reshape(rshapenn) # keep sample dim
+    (lesptstat, lesppval) = cutl.ttest_ind(splowt, sphight)
 
-
-    (lesptstat, lesppval) = cutl.ttest_ind(spfld[lowidx,...].reshape(rshapenn), 
-                                           spfld[highidx,...].reshape(rshapenn))
     # low vs mean
-    (lelosptstat, lelosppval) = cutl.ttest_ind(spfld[lowidx,...].reshape(rshapenn), 
+    (lelosptstat, lelosppval) = cutl.ttest_ind(splowt, 
                                                spfld.reshape(rshapeens))
     # high vs mean
-    (lehisptstat, lehisppval) = cutl.ttest_ind(spfld[highidx,...].reshape(rshapenn), 
+    (lehisptstat, lehisppval) = cutl.ttest_ind(sphight, 
                                                spfld.reshape(rshapeens))
+
+    
 
     if addcyc:
         st=meanlesp[...,-1]
@@ -267,10 +271,14 @@ def do_composite(rfld,spfld,nn=10,rshape=None,verb=False,addcyc=False):
         lehisppval=np.hstack((lehisppval,st[...,None]))
         st=lelosppval[...,-1]
         lelosppval=np.hstack((lelosppval,st[...,None]))
+        st=sphight[...,-1]
+        sphight=np.dstack((sphight,st[...,None]))
+        st=splowt[...,-1]
+        splowt=np.dstack((splowt,st[...,None]))
 
     compdt = {'highsp': highlesp, 'lowsp': lowlesp, 'meansp': meanlesp,
               'hisppval': lehisppval, 'losppval': lelosppval, 'sppval': lesppval,
-              'highidx': highidx, 'lowidx': lowidx}
+              'highidx': highidx, 'lowidx': lowidx, 'highspt': sphight, 'lowspt': splowt}
 
     return compdt
 
@@ -457,59 +465,80 @@ if not dataloaded:
 
 
 # For each composite (r1, r2, r3), compute the BKS SIC average:
-icedt = {'bkssic': {'PI':piicer1dt,'CGCM':leicer1dt,'AGCM':aicer1dt},
-         'eursat': {'PI':piicer2dt,'CGCM':leicer2dt,'AGCM':aicer2dt},
-         'bksz500': {'PI':piicer3dt,'CGCM':leicer3dt,'AGCM':aicer3dt} }
+icedt = {'bkssic': {'Preindustrial':piicer1dt,'CGCM':leicer1dt,'AGCM':aicer1dt},
+         'eursat': {'Preindustrial':piicer2dt,'CGCM':leicer2dt,'AGCM':aicer2dt},
+         'bksz500': {'Preindustrial':piicer3dt,'CGCM':leicer3dt,'AGCM':aicer3dt} }
 
 # For each composite (r1,r2,r3), compute Eur SAT average:
-spdt = {'bkssic': {'PI':pispr1dt,'CGCM':lespr1dt,'AGCM':aspr1dt},
-        'eursat': {'PI':pispr2dt,'CGCM':lespr2dt,'AGCM':aspr2dt},
-        'bksz500': {'PI':pispr3dt,'CGCM':lespr3dt,'AGCM':aspr3dt} }
+spdt = {'bkssic': {'Preindustrial':pispr1dt,'CGCM':lespr1dt,'AGCM':aspr1dt},
+        'eursat': {'Preindustrial':pispr2dt,'CGCM':lespr2dt,'AGCM':aspr2dt},
+        'bksz500': {'Preindustrial':pispr3dt,'CGCM':lespr3dt,'AGCM':aspr3dt} }
 
 # For each composite (r1,r2,r3), compute BKS Z500 average: (prob don't need)
-sp2dt = {'bkssic': {'PI':pisp2r1dt,'CGCM':lesp2r1dt,'AGCM':asp2r1dt},
-         'eursat': {'PI':pisp2r2dt,'CGCM':lesp2r2dt,'AGCM':asp2r2dt},
-         'bksz500': {'PI':pisp2r3dt,'CGCM':lesp2r3dt,'AGCM':asp2r3dt} }
+sp2dt = {'bkssic': {'Preindustrial':pisp2r1dt,'CGCM':lesp2r1dt,'AGCM':asp2r1dt},
+         'eursat': {'Preindustrial':pisp2r2dt,'CGCM':lesp2r2dt,'AGCM':asp2r2dt},
+         'bksz500': {'Preindustrial':pisp2r3dt,'CGCM':lesp2r3dt,'AGCM':asp2r3dt} }
 
 
 
 #  Here calculate the BKS SIC associated with each composite
-allregimdt={}; allregitdt={}
+allregimdt={}; allregitdt={}; allregimcidt={}; allregitcidt={}
 for iii,ikey in enumerate(icedt.keys()):
-    regmdt={}
-    regtotdt={}
+    regmdt={}; regtotdt={}; regmcidt={}; regtcidt={}
     dts=icedt[ikey]
     for dkey in dts.keys():
         dt=dts[dkey]
-        diff = dt['lowsp']-dt['highsp']
-        regtot = cutl.calc_regtotseaicearea(diff[:,:-1],lat,lon,'bksmori')
-        regm = cutl.calc_regmean(diff[:,:-1],lat,lon,'bksmori')
+        #diff = dt['lowsp']-dt['highsp']
+        diff = dt['lowspt']-dt['highspt'] # with sample dim
+        regt = cutl.calc_regtotseaicearea(diff[...,:-1],lat,lon,'bksmori')
+        regm = cutl.calc_regmean(diff[...,:-1],lat,lon,'bksmori')
 
-        regmdt[dkey]=regm
-        regtotdt[dkey]=regtot # not sure which one i want
+        # Confidence interval: 5=95% interval on the mean
+        regmci = sp.stats.t.interval(1-cisiglevel,len(regm)-1,
+                                     loc=regm.mean(axis=0),
+                                     scale=regm.std(axis=0)/np.sqrt(len(regm)))
+        regtci = sp.stats.t.interval(1-cisiglevel,len(regt)-1,
+                                     loc=regt.mean(axis=0),
+                                     scale=regt.std(axis=0)/np.sqrt(len(regt)))
+
+        regmdt[dkey]=regm.mean(axis=0)
+        regtotdt[dkey]=regt.mean(axis=0) # not sure which one i want
+        regmcidt[dkey]=regmci
+        regtcidt[dkey]=regtci
 
     allregimdt[ikey]=regmdt # i for ice
     allregitdt[ikey]=regtotdt
+    allregimcidt[ikey]=regmcidt
+    allregitcidt[ikey]=regtcidt
 
 allregimdf=pd.DataFrame(allregimdt)
 allregitdf=pd.DataFrame(allregitdt)
+allregimcidf=pd.DataFrame(allregimcidt)
+allregitcidf=pd.DataFrame(allregitcidt)
 
 #  Here calculate the Eur SAT associated with each composite
-allregspmdt={}
+allregspmdt={}; allregspmcidt={};
 for iii,ikey in enumerate(spdt.keys()):# for each composite region
-    regmdt={}
-    regtotdt={}
+    regmdt={}; regtotdt={}; regmcidt={};
     dts=spdt[ikey] 
     for dkey in dts.keys():# for each ensemble
         dt=dts[dkey]
-        diff = dt['lowsp']-dt['highsp']
-        regm = cutl.calc_regmean(diff[:,:-1],lat,lon,'eurasiamori')
+        diff = dt['lowspt']-dt['highspt']
+        regm = cutl.calc_regmean(diff[...,:-1],lat,lon,'eurasiamori')
 
-        regmdt[dkey]=regm
+        # Confidence interval: 5=95% interval on the mean
+        regmci = sp.stats.t.interval(1-cisiglevel,len(regm)-1,
+                                     loc=regm.mean(axis=0),
+                                     scale=regm.std(axis=0)/np.sqrt(len(regm)))
+
+        regmdt[dkey]=regm.mean(axis=0)
+        regmcidt[dkey]=regmci
 
     allregspmdt[ikey]=regmdt # sp for spatial 1 (SAT)
+    allregspmcidt[ikey]=regmcidt
 
 allregspmdf=pd.DataFrame(allregspmdt)
+allregspmcidf=pd.DataFrame(allregspmcidt)
 
 
 lons, lats = np.meshgrid(lon,lat)
@@ -521,26 +550,33 @@ incrbig = (cmaxsp2big-cminsp2big) / (cmlen)
 contsbig = np.arange(cminsp2big,cmaxsp2big+incrbig,incrbig)
 
 stxx=1
-xx=np.arange(stxx,stxx+len(allregimdf.keys()))
+xx=np.arange(stxx,(stxx+len(allregimdf.keys())-1)*1.2,1.2)
 regs=('bkssic','eursat','bksz500')
 multfacs=(1,1,-1) # multiply the comp on z500 by -1 to get high over bks
-enss=('PI','CGCM','AGCM')
-mkrs=('s','o','d')
-clrs=('r','b','0.7')
+enss=('CGCM','Preindustrial','AGCM')
+mkrs=('s','o','^')
+clrs=('r','b','0.4')
+#clrs=('.4','.4','.4')
+
 
 # prepare legend entries
-lgs=(mlines.Line2D([],[],color=clrs[0],linestyle='none',marker=mkrs[0]),
-     mlines.Line2D([],[],color=clrs[1],linestyle='none',marker=mkrs[1]),
-     mlines.Line2D([],[],color=clrs[2],linestyle='none',marker=mkrs[2])) 
+lgs=(mlines.Line2D([],[],color=clrs[0],linewidth=2),
+     mlines.Line2D([],[],color=clrs[1],linewidth=2),
+     mlines.Line2D([],[],color=clrs[2],linewidth=2)) #,linestyle='none',marker=mkrs[0]),
+     #mlines.Line2D([],[],color=clrs[1],linestyle='none',marker=mkrs[1]),
+     #mlines.Line2D([],[],color=clrs[2],linestyle='none',marker=mkrs[2])) 
 lgstrs=('BKS SIC','Eur SAT','BKS Z500')          
 
-#fig,axs=plt.subplots(1,2)
-#fig.set_size_inches((10,6))
-fig,axs=plt.subplots(2,2) # maps on top
-fig.set_size_inches((10,10))
-ax=axs[0,0] # CGCM comp on BKS SIC
+
+
+fig=plt.figure(figsize=(12,9))
+gs1 = gridspec.GridSpec(1, 6)
+gs1.update(top=0.97,bottom=0.55,left=0.08,right=0.92,wspace=0.04)
+ax=plt.subplot(gs1[0,0:2]) 
+
+#ax=axs[0,0] # CGCM comp on BKS SIC
 bm,pc=cplt.kemmap(lespr1dt['lowsp']-lespr1dt['highsp'],alat,alon,type='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
-                  title=sttl1,suppcb=False,
+                  title='',suppcb=True,
                   panellab='a',lcol='0.2')
 if addsig:
     cplt.addtsigm(bm,lespr1dt['sppval'], alat, alon)
@@ -549,9 +585,9 @@ bm.contour(alons,alats,lesp2r1dt['lowsp']-lesp2r1dt['highsp'],levels=conts,
 if addsig:
     cplt.addtsigm(bm,lesp2r1dt['sppval'],alat,alon,type='cont',color='g')
 
-ax=axs[0,1] # CGCM comp on Eur SAT
+ax=plt.subplot(gs1[0,2:4]) # CGCM comp on Eur SAT
 bm,pc=cplt.kemmap(lespr2dt['lowsp']-lespr2dt['highsp'],alat,alon,type='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
-                      title=sttl2,suppcb=False,
+                      title='',suppcb=True,
                       panellab='b',lcol='0.2')
 if addsig:
     cplt.addtsigm(bm,lespr2dt['sppval'], alat, alon)
@@ -560,41 +596,90 @@ bm.contour(alons,alats,lesp2r2dt['lowsp']-lesp2r2dt['highsp'],levels=conts,
 if addsig:
     cplt.addtsigm(bm,lesp2r2dt['sppval'],alat,alon,type='cont',color='g')
 
-ax=axs[1,0]
+ax=plt.subplot(gs1[0,4:])
+bm,pc=cplt.kemmap(-1*(lespr3dt['lowsp']-lespr3dt['highsp']),alat,alon,type='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
+                      title='',suppcb=True,
+                      panellab='c',lcol='0.2')
+if addsig:
+    cplt.addtsigm(bm,lespr3dt['sppval'], alat, alon)
+bm.contour(alons,alats,-1*(lesp2r3dt['lowsp']-lesp2r3dt['highsp']),levels=conts,
+           colors='0.5',linewidths=1,latlon=True)
+if addsig:
+    cplt.addtsigm(bm,lesp2r3dt['sppval'],alat,alon,type='cont',color='g')
+
+gs2 = gridspec.GridSpec(1, 6)
+gs2.update(top=0.44,left=0.2,right=0.8,wspace=0.2)
+ax=plt.subplot(gs2[0,0:3])
+xincr=0.2
+stagger=-xincr
 for rii,reg in enumerate(regs):
+    print reg
+    
     for eii,ens in enumerate(enss):
+        print ens
+        
         mult=multfacs[rii]
-        ax.plot(xx[eii],mult*allregimdf[reg][ens],marker=mkrs[rii],
-                color=clrs[rii],linestyle='none',markersize=10)
-ax.set_ylabel('$\Delta$ ' + r1str)
+        xpos=xx[eii]+stagger
+        ax.plot(xpos,mult*allregimdf[reg][ens],marker=mkrs[rii],
+                color=clrs[rii],mec=clrs[rii],linestyle='none',markersize=10)
+        ci=allregimcidf[reg][ens]
+        print mult, (xpos,xpos), ci
+        ax.plot((xpos,xpos),mult*np.array(ci),marker='_',
+                mew=2,markersize=10,linewidth=2,color=clrs[rii])
+        ax.axvspan(xx[eii]-xincr-0.1,xx[eii]+xincr+0.1,color='0.9',alpha=0.5)
+    
+    stagger+=0.2
+
+ax.set_ylabel('Change in ' + r1str + ' (' + r1units + ')')
 ax.axhline(y=0,color='k',linestyle='--')
-ax.set_xlim((stxx-0.5,len(enss)+1.5))
-ax.legend(lgs,lgstrs,loc='lower right')
+ax.set_xlim((stxx-0.7,xx[-1]+0.7))
+ax.legend(lgs,lgstrs,loc='lower right',fancybox=True,frameon=False)
 ax.set_xticks(xx)
-ax.set_xticklabels(enss)
-ax.annotate('c',xy=(0.01,1.01),
+ax.set_xticklabels(enss,rotation=45)
+ax.annotate('d',xy=(-0.02,1.04),
             xycoords='axes fraction',fontsize=16,fontweight='bold')
 
-ax=axs[1,1]
+ax=plt.subplot(gs2[0,3:])
+stagger=-0.2
 for rii,reg in enumerate(regs):
+    print reg
+    
     for eii,ens in enumerate(enss):
+        print ens
         mult=multfacs[rii]
-        ax.plot(xx[eii],mult*allregspmdf[reg][ens],marker=mkrs[rii],
-                color=clrs[rii],linestyle='none',markersize=10)
-ax.set_ylabel('$\Delta$ ' + r2str)
+        xpos=xx[eii]+stagger
+        ax.plot(xpos,mult*allregspmdf[reg][ens],marker=mkrs[rii],
+                color=clrs[rii],mec=clrs[rii],linestyle='none',markersize=10)
+        ci=allregspmcidf[reg][ens]
+        print mult,(xpos), ci
+        ax.plot((xpos,xpos),mult*np.array(ci),
+                marker='_',mew=2,markersize=10,linewidth=2,color=clrs[rii])
+        ax.axvspan(xx[eii]-xincr-0.1,xx[eii]+xincr+0.1,color='0.9',alpha=0.5)
+
+    stagger+=0.2
+
+ax.set_ylabel('Change in ' + r2str + ' (' + r2units +')')
+ax.yaxis.set_label_position('right')
+ax.yaxis.tick_right()
 ax.axhline(y=0,color='k',linestyle='--')
-ax.set_xlim((stxx-0.5,len(enss)+0.5))
+ax.set_xlim((stxx-0.7,xx[-1]+0.7))
 ax.set_xticks(xx)
-ax.set_xticklabels(enss)
-ax.annotate('d',xy=(0.01,1.01),
+ax.set_xticklabels(enss,rotation=45)
+ax.annotate('e',xy=(-0.02,1.04),
             xycoords='axes fraction',fontsize=16,fontweight='bold')
+
+cplt.add_colorbar(fig,pc,orientation='horizontal',
+                  pos=[.25,.53, .5,.03],label='(Change in SAT ' + r2units +')')
+
 if addsig:
     prstr='sig'
 else:
     prstr=''
 if printtofile:
-    fig.savefig('Figure4_draft_4panel_CGCMmaps_compavgs' + prstr + '.pdf')
-    fig.savefig('Figure4_draft_4panel_CGCMmaps_compavgs' + prstr + '.png',dpi=400)
+    fig.savefig('Figure4_draft_4panel_CGCMmaps_compavgs' + prstr + '2.pdf')
+    fig.savefig('Figure4_draft_4panel_CGCMmaps_compavgs' + prstr + '2.png',dpi=400)
+
+
 
 
 # TEST FIGURE: All 3 comps
@@ -638,6 +723,8 @@ if printtofile:
 
 
 
+
+
 # for plotting the ice maps below
 rplotdts = (piicer1dt,leicer1dt,aicer1dt)
 diffmult=diffmult3; diffttl=diffttl3
@@ -651,7 +738,7 @@ panstr='a'; panttl='BKS SIC'
 #panstr='b'; panttl='Eur SAT'
 
 # plot ice maps:
-ylabs=('PI','CGCM','AGCM')
+ylabs=('Preindustrial','CGCM','AGCM')
 allplabs = (('a','b','c'),
             ('d','e','f'),
             ('g','h','i'))
