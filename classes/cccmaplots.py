@@ -19,7 +19,7 @@ import cccmacmaps as ccm
 import cccmautils as cutl
 
 """
-kemmap(fld, lat, lon, title='', units='', cmap='blue2red_w20', type='sq', cmin='', cmax='',
+kemmap(fld, lat, lon, title='', units='', cmap='blue2red_w20', ptype='sq', cmin='', cmax='',
        axis=None, suppcb=0,lmask=0,flipmask=0,latlim=None)
 
     Inputs: fld: 2D matrix of data [lat x lon]
@@ -28,7 +28,7 @@ kemmap(fld, lat, lon, title='', units='', cmap='blue2red_w20', type='sq', cmin='
             title: plot title
             units: data units (colorbar label)
             cmap: map colormap. default blue to red, continuous
-            type: type of map. default 'sq' for Robinson projection. 
+            ptype: ptype of plot/map. default 'sq' for Robinson projection. 
                   else: 'nh', 'sh' orthographic projections,
                         'eastere' is Eurasia 'stere' projection
             cmin, cmax: color scale limits
@@ -39,7 +39,7 @@ kemmap(fld, lat, lon, title='', units='', cmap='blue2red_w20', type='sq', cmin='
             latlim: if polar projection, it will be the equatorward limit (so far only
                     works if do a stereographic proj, not ortho 5/13/2014
             drawgrid: if True, draw parallels and meridians
-            round: default True. Used if type 'nh' or 'sh' and latlim provided
+            round: default True. Used if ptype 'nh' or 'sh' and latlim provided
                    otherwise the zoomed in figure will be square
             lcol: color of land contours, default 0.7 (lightish gray)
 
@@ -48,7 +48,7 @@ kemmap(fld, lat, lon, title='', units='', cmap='blue2red_w20', type='sq', cmin='
 
 """
 
-def kemmap(fld, lat, lon,title='',units='',cmap='blue2red_w20',type='sq',
+def kemmap(fld, lat, lon,title='',units='',cmap='blue2red_w20',ptype='sq',
            cmin='',cmax='',axis=None, suppcb=0,lmask=0,flipmask=0,latlim=None,drawgrid=False,
            round=True,lcol='0.7',panellab=None):
     """ returns bm,pc (Basemap,Pcolor handle)
@@ -61,10 +61,10 @@ def kemmap(fld, lat, lon,title='',units='',cmap='blue2red_w20',type='sq',
 
     
     # default Basemap dictionary
-    if type == 'sq':
+    if ptype == 'sq':
         mapparams = dict(projection='robin',lon_0=180,lat_0=0, resolution='c')
-    elif type == 'nh' or type=='nheur':
-        if type=='nheur':
+    elif ptype == 'nh' or ptype=='nheur':
+        if ptype=='nheur':
             lon0 = 90.
         else:
             lon0=0.
@@ -81,7 +81,7 @@ def kemmap(fld, lat, lon,title='',units='',cmap='blue2red_w20',type='sq',
         # AttributeError: 'Basemap' object has no attribute '_height'
         # 5/12/14 -- don't know why. same goes for lat_0=0.        
         
-    elif type == 'sh':
+    elif ptype == 'sh':
         if latlim != None: # try 'round=True' !@@@
             mapparams = dict(projection='spstere',boundinglat=latlim,lon_0=0,resolution='c')
             if round==True:
@@ -89,27 +89,27 @@ def kemmap(fld, lat, lon,title='',units='',cmap='blue2red_w20',type='sq',
         else:
             mapparams = dict(projection='ortho',lon_0=0.,lat_0=-90., resolution='c')
             # same error if add: llcrnrlon='-180',llcrnrlat='-90',urcrnrlon='180',urcrnrlat='-45'
-    elif type == 'eastere': # Eurasia stere projection
+    elif ptype == 'eastere': # Eurasia stere projection
         #mapparams = dict(width=2500000,height=2700000,resolution='i',projection='laea',\
         #    lat_ts=62.5,lat_0=62.5,lon_0=77.0)
         mapparams = dict(llcrnrlon=40.,llcrnrlat=10.,urcrnrlon=160.,urcrnrlat=50.,
                          resolution='c',projection='stere',lat_0=45.,lon_0=80.)
         #mapparams = dict(width=3000000,height=3000000,resolution='c',projection='laea',\
         #                 lat_0=55.,lon_0=80.)# can't get width/height big enough -- errors
-    elif type == 'eabksstere': # Eurasia + Barents Kara attempt
+    elif ptype == 'eabksstere': # Eurasia + Barents Kara attempt
         mapparams = dict(llcrnrlon=40.,llcrnrlat=10.,urcrnrlon=175.,urcrnrlat=60.,
                          resolution='c',projection='stere',lat_0=45.,lon_0=80.)
-    elif type == 'ealamb': # Lambert azimuthal equal-area
+    elif ptype == 'ealamb': # Lambert azimuthal equal-area
         mapparams = dict(llcrnrlon=40.,llcrnrlat=10.,urcrnrlon=160.,urcrnrlat=50.,
                          resolution='c',projection='laea',lat_0=45.,lon_0=80.)
-    elif type == 'eabkslamb': # Lambert azimuthal equal-area
+    elif ptype == 'eabkslamb': # Lambert azimuthal equal-area
         mapparams = dict(llcrnrlon=40.,llcrnrlat=10.,urcrnrlon=175.,urcrnrlat=60.,
                          resolution='c',projection='laea',lat_0=45.,lon_0=80.)
-    elif type == 'nastere': # North America stere projection
+    elif ptype == 'nastere': # North America stere projection
         mapparams = dict(llcrnrlon=220.,llcrnrlat=20.,urcrnrlon=320.,urcrnrlat=50.,
                          resolution='c',projection='stere',lat_0=45.,lon_0=230.)
     else:
-        print "Incorrect map type. Choose sq,nh,sh,nastere,eastere,eabksstere,ealamb,eabkslamb"
+        print "Incorrect map ptype. Choose sq,nh,sh,nastere,eastere,eabksstere,ealamb,eabkslamb"
         return -1
         
     # default pcolormesh dictionary
@@ -127,14 +127,14 @@ def kemmap(fld, lat, lon,title='',units='',cmap='blue2red_w20',type='sq',
 
         #pcparams = dict(shading='gouraud',latlon=True,cmap=incmap,vmin=cmin,vmax=cmax)
         pcparams = dict(latlon=True,cmap=incmap,vmin=cmin,vmax=cmax)
-        if type not in ('eastere','eabksstere','nastere','ealamb','eabkslamb'):
+        if ptype not in ('eastere','eabksstere','nastere','ealamb','eabkslamb'):
             pcparams['levels']=conts
             pcparams['extend']='both'
 
     if axis != None: # if an axis is given, add to dict for basemap
         mapparams['ax'] = axis
     
-    if type in ('eastere','eabksstere','nastere','ealamb','eabkslamb'):
+    if ptype in ('eastere','eabksstere','nastere','ealamb','eabkslamb'):
         pcparams['shading']='flat' #'gouraud' # @@ gouraud pdf files fail/crash. flat and interp are same??
 
     """ m = Basemap(projection='ortho',lon_0=lon_0,lat_0=lat_0,resolution='l',\
@@ -160,13 +160,13 @@ def kemmap(fld, lat, lon,title='',units='',cmap='blue2red_w20',type='sq',
 
 #    pc = bm.pcolormesh(lons,lats,fld,**pcparams)
     if cmin=='':
-        if type in ('eastere','eabksstere','nastere','ealamb','eabkslamb'):
+        if ptype in ('eastere','eabksstere','nastere','ealamb','eabkslamb'):
             # for some reason these projections don't plot colors correctly so have to use pcolormesh()@@@
             pc=bm.pcolormesh(lons,lats,fld,**pcparams) 
         else:
             pc = bm.contourf(lons,lats,fld,20,**pcparams) # 20 auto levels
     else:
-        if type in ('eastere','eabksstere','nastere','ealamb','eabkslamb'):
+        if ptype in ('eastere','eabksstere','nastere','ealamb','eabkslamb'):
             pc=bm.pcolormesh(lons,lats,fld,**pcparams)
         else:
             pc = bm.contourf(lons,lats,fld,**pcparams)
@@ -206,12 +206,12 @@ def kemmap(fld, lat, lon,title='',units='',cmap='blue2red_w20',type='sq',
     return bm,pc
 
 
-def addtsigm(basem, pvals, lat, lon, siglevel=0.05,color='k',type='hatch'):
+def addtsigm(basem, pvals, lat, lon, siglevel=0.05,color='k',sigtype='hatch'):
     """ 
-    addtsigm(basem, pvals, lat, lon, siglevel=0.05,color='k',type='hatch')
+    addtsigm(basem, pvals, lat, lon, siglevel=0.05,color='k',sigtype='hatch')
 
     Add significance contour to given basemap(!)
-    If type is anything other than 'hatch', it will be a contour
+    If sigtype is anything other than 'hatch', it will be a contour
     """
     
     if np.mod(lon.shape,2) == 0:
@@ -227,19 +227,19 @@ def addtsigm(basem, pvals, lat, lon, siglevel=0.05,color='k',type='hatch'):
 
     lons, lats = np.meshgrid(lon,lat)
 
-    if type == 'hatch':
+    if sigtype == 'hatch':
         basem.contourf(lons,lats,plotfld,levels=[1,2],colors='none',latlon=True,hatches='o')#hatches='.')
     else:
         basem.contour(lons,lats,plotfld,[0, 1.5],colors=color,linewidths=2,latlon=True)
 
 
 
-def addtsig(ploth, pvals, dim1, dim2, siglevel=0.05,color='k',type='hatch',cmap='YlGnBu_r'):
+def addtsig(ploth, pvals, dim1, dim2, siglevel=0.05,color='k',sigtype='hatch',cmap='YlGnBu_r'):
     """ 
-    addtsig(ploth, pvals, dim1, dim2, siglevel=0.05,color='k',type='hatch')
+    addtsig(ploth, pvals, dim1, dim2, siglevel=0.05,color='k',sigtype='hatch')
 
     Add significance contour to given pyplot handle.
-    type can be 'hatch', 'color', 'cont' (the else case is cont)
+    sigtype can be 'hatch', 'color', 'cont' (the else case is cont)
     """
 
     #print 'be careful, I am not sure this works properly 4/29/14' #@@ might just be when i screwed w/ dims and tried to plot lat x time?
@@ -253,10 +253,10 @@ def addtsig(ploth, pvals, dim1, dim2, siglevel=0.05,color='k',type='hatch',cmap=
     dim1s, dim2s = np.meshgrid(dim1,dim2)
 
 
-    if type == 'hatch':
+    if sigtype == 'hatch':
         pc = ploth.contourf(dim1s,dim2s,plotfld,levels=[1,2],colors='none',hatches='o')#'.')
         # ploth.contourf(dim1s,dim2s,plotfld,levels=[1,2],colors='none',hatches='.')
-    elif type == 'color':
+    elif sigtype == 'color':
         pc = ploth.pcolormesh(dim1s,dim2s,plotfld,\
                               cmap= plt.cm.get_cmap(cmap),shading='flat',\
                               vmin=0,vmax=0.05) # gouraud
@@ -266,7 +266,7 @@ def addtsig(ploth, pvals, dim1, dim2, siglevel=0.05,color='k',type='hatch',cmap=
     return pc
 
 
-def vert_plot(fld, lev, lat, title='',units='',cmap='blue2red_w20',cmin='',cmax='', type=None,
+def vert_plot(fld, lev, lat, title='',units='',cmap='blue2red_w20',cmin='',cmax='', ptype=None,
               axis=None, suppcb=False, latlim=None, levlim=None,addcontlines=False,screen=False,
               suppylab=False,suppxlab=False,hPa=False):
     """ screen=False: this flag tells whether the plot should be after Screen et al. 2013, ClimDyn
@@ -334,14 +334,14 @@ def vert_plot(fld, lev, lat, title='',units='',cmap='blue2red_w20',cmin='',cmax=
     else:
         ax.set_yscale('log')
         ax.set_yticks([1000,800, 500, 300, 100, 10])
-        if type=='nh':
+        if ptype=='nh':
             ax.set_xlim(latlim,90)
             ax.set_xticks([20, 45, 70])
             if suppxlab:
                 ax.set_xticklabels((20, 45, 70))
             else:
                 ax.set_xticklabels('')
-        elif type=='sh':
+        elif ptype=='sh':
             ax.set_xlim(-90,latlim)
             ax.set_xticks([-70,-45,-20])
             if suppxlab==False:
@@ -379,7 +379,7 @@ def vert_plot(fld, lev, lat, title='',units='',cmap='blue2red_w20',cmin='',cmax=
 
     return cf
 
-def map_allmonths(fld, lat, lon,title='',units='',cmap='blue2red_w20',type='sq',
+def map_allmonths(fld, lat, lon,title='',units='',cmap='blue2red_w20',ptype='sq',
            cmin='',cmax='',axis=None, suppcb=0,lmask=0,climo=0,flipmask=0,
                   pvals = None,sigtype='hatch',conts=None,latlim=None):
 
@@ -404,11 +404,11 @@ def map_allmonths(fld, lat, lon,title='',units='',cmap='blue2red_w20',type='sq',
         #sigs[midx,:,:] = ma.masked_where(pval>0.05,pval) 
 
         
-        bm,pc = kemmap(plotfld,lat,lon,cmin=cmin,cmax=cmax,cmap=cmap,type=type,\
+        bm,pc = kemmap(plotfld,lat,lon,cmin=cmin,cmax=cmax,cmap=cmap,ptype=ptype,\
                      axis=ax,suppcb=1,lmask=lmask,flipmask=flipmask,units=units,latlim=latlim)
         ax.set_title(months[midx])
         if pvals != None:
-            addtsigm(bm,pvals[midx,...],lat,lon,type=sigtype)
+            addtsigm(bm,pvals[midx,...],lat,lon,sigtype=sigtype)
         if conts != None:
             # add specified contour(s)
             lons, lats = np.meshgrid(lon,lat)
@@ -438,11 +438,11 @@ def add_colorbar(fig,phand,orientation='vertical',pos=None,label=None):
         raise
 
     cbar_ax = fig.add_axes(pos)
-    fig.colorbar(phand,cax=cbar_ax,orientation=orientation,label=label)
+    cbar = fig.colorbar(phand,cax=cbar_ax,orientation=orientation,label=label)
 
-    return cbar_ax
+    return cbar_ax, cbar
 
-def map_allseas(fld, lat, lon,title='',units='',cmap='blue2red_w20',type='sq',
+def map_allseas(fld, lat, lon,title='',units='',cmap='blue2red_w20',ptype='sq',
            cmin='',cmax='',axis=None, suppcb=0,lmask=0,climo=0,flipmask=0,
                   pvals = None,sigtype='hatch',conts=None,latlim=None):
 
@@ -472,11 +472,11 @@ def map_allseas(fld, lat, lon,title='',units='',cmap='blue2red_w20',type='sq',
 
         #print plotfld.shape
         
-        bm,pc = kemmap(plotfld,lat,lon,cmin=cmin,cmax=cmax,cmap=cmap,type=type,\
+        bm,pc = kemmap(plotfld,lat,lon,cmin=cmin,cmax=cmax,cmap=cmap,ptype=ptype,\
                        axis=ax,suppcb=1,lmask=lmask,flipmask=flipmask,units=units,latlim=latlim)
         ax.set_title(seasons[midx])
         if pvals != None:
-            addtsigm(bm,pvals,lat,lon,type=sigtype)
+            addtsigm(bm,pvals,lat,lon,sigtype=sigtype)
 
         if conts != None:
             # add specified contour(s)
@@ -492,7 +492,7 @@ def map_allseas(fld, lat, lon,title='',units='',cmap='blue2red_w20',type='sq',
     return fig
         
 
-def plotvert_allseas(fld, lev, lat,title='',units='',cmap='blue2red_w20',type=None,
+def plotvert_allseas(fld, lev, lat,title='',units='',cmap='blue2red_w20',ptype=None,
                       cmin='',cmax='',axis=None, suppcb=0,climo=0,
                       pvals = None,sigtype='hatch',latlim=None,levlim=None,
                       addcontlines=True,screen=False):
@@ -524,12 +524,12 @@ def plotvert_allseas(fld, lev, lat,title='',units='',cmap='blue2red_w20',type=No
         #print plotfld.shape
 
         if axii==0:
-            vpparams = dict(cmin=cmin,cmax=cmax,cmap=cmap,type=type,
+            vpparams = dict(cmin=cmin,cmax=cmax,cmap=cmap,ptype=ptype,
                             axis=ax,suppcb=True,units=units,
                             latlim=latlim,levlim=levlim,
                             addcontlines=addcontlines,screen=screen)
         else:
-            vpparams = dict(cmin=cmin,cmax=cmax,cmap=cmap,type=type,
+            vpparams = dict(cmin=cmin,cmax=cmax,cmap=cmap,ptype=ptype,
                             axis=ax,suppcb=True,units=units,
                             latlim=latlim,levlim=levlim,
                             addcontlines=addcontlines,screen=screen,
@@ -539,8 +539,8 @@ def plotvert_allseas(fld, lev, lat,title='',units='',cmap='blue2red_w20',type=No
         
         ax.set_title(seasons[midx])
         if pvals != None:
-            #addtsig(cf,pvals,lat,lon,type=sigtype) # @@@ untested? no lat... 5/10/15
-            addtsig(cf,pvals,lat,lev,type=sigtype) 
+            #addtsig(cf,pvals,lat,lon,sigtype=sigtype) # @@@ untested? no lat... 5/10/15
+            addtsig(cf,pvals,lat,lev,sigtype=sigtype) 
 
         midx = midx+1
 
@@ -551,8 +551,8 @@ def plotvert_allseas(fld, lev, lat,title='',units='',cmap='blue2red_w20',type=No
     return fig
         
 
-def plot_region(regname,type='nh',axis=None,latlim=None,limsdict=None): 
-    """ plot_region(regname,type='nh',axis=None,latlim=None,limsdict=None):
+def plot_region(regname,ptype='nh',axis=None,latlim=None,limsdict=None): 
+    """ plot_region(regname,ptype='nh',axis=None,latlim=None,limsdict=None):
                      Given a region name, plot it for reference.
 
                      latlims is unused right now
@@ -583,13 +583,13 @@ def plot_region(regname,type='nh',axis=None,latlim=None,limsdict=None):
     dummym = ma.masked_where(regmask,dummy)
 
     plt.figure()
-    kemmap(dummym,lat,lon,type=type,axis=axis,latlim=latlim,suppcb=1,
+    kemmap(dummym,lat,lon,ptype=ptype,axis=axis,latlim=latlim,suppcb=1,
            cmin=-11,cmax=2,cmap='blue2blue_w10',drawgrid=True)
 
     
 
-def plot_allregions(type='nh'):
-    """ plot_allregions(type='nh'): plot all defined regions
+def plot_allregions(ptype='nh'):
+    """ plot_allregions(ptype='nh'): plot all defined regions
     """
 
     regdict = con.get_regiondict()
@@ -623,7 +623,7 @@ def plot_allregions(type='nh'):
         # mask the dummy data
         dummym,dmask = cutl.mask_region(dummy,lat,lon,regkey,limsdict=limsdict)
                 
-        kemmap(dummym,lat,lon,type=type,axis=ax,suppcb=1,cmin=-11,cmax=2,cmap='blue2blue_w10')        
+        kemmap(dummym,lat,lon,ptype=ptype,axis=ax,suppcb=1,cmin=-11,cmax=2,cmap='blue2blue_w10')        
         ax.set_title(regkey)
         ax.set_xlabel(str(limsdict['latlims']) + ',' +str(limsdict['lonlims']) )
         
@@ -692,7 +692,7 @@ def kemscatter(fldx,fldy,weights=None,axis=None,xlims=None,ylims=None,suppregres
     return ax
 
 
-def plot_pattcorrs(pcdf, pcdf2=None, rmin=None, axis=None, type='seasonal'):
+def plot_pattcorrs(pcdf, pcdf2=None, rmin=None, axis=None, tftype='seasonal'):
     """ plot_pattcorrs(pcdf, axis):
                           this figure plots range of pattern correlations
                           as bars, with mean patt corr marker, plus % common
@@ -702,11 +702,11 @@ def plot_pattcorrs(pcdf, pcdf2=None, rmin=None, axis=None, type='seasonal'):
              pcdf2: second set of data to plot
              rmin: minimum r value (pattern correlation) that is significant for the data
              axis: plot axis
-             type: 'seasonal' or 'monthly'
+             tftype: time frequency type: 'seasonal' or 'monthly'
     """
     import math as math
     
-    if type=='seasonal':
+    if tftype=='seasonal':
         numt=4
         seasons=('SON','DJF','MAM','JJA')
     else:
