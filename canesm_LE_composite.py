@@ -12,11 +12,16 @@ import constants as con
 import loadCanESM2data as lcd
 import matplotlib.lines as mlines
 from matplotlib import gridspec
+import matplotlib.font_manager as fm
+import scipy.io as sio
+import datetime as datetime
 
 
 printtofile=False
 
-dataloaded=True
+#dataloaded=True
+loadmat=True; when='14:51:28.762886'; #<coldeur for PI>'14:43:36.586252' 
+savemat=False
 dofigures=False
 local=True
 addsig=True
@@ -40,7 +45,7 @@ diffmult1=diffmult2=diffmult3=1 # if High-Low then need to mult by -1
 
 # spatial field1 in color
 leconvsp=1
-fieldsp='tas'; ncfieldsp='tas'; compsp='Amon'; 
+fieldsp='tas'; ncfieldsp='tas'; compsp='Amon'; spkey='sat'
 cminsp=-3; cmaxsp=3 # for colors
 cminspbig=-3; cmaxspbig=3 # for colors
 
@@ -49,7 +54,7 @@ cminice=-10; cmaxice=10 # colors for ice
 
 # spatial field2 in contours
 leconvsp2=1
-fieldsp2='zg50000.00'; ncfieldsp2='zg'; compsp2='Amon'
+fieldsp2='zg50000.00'; ncfieldsp2='zg'; compsp2='Amon'; sp2key='z500'
 cminsp2=-30; cmaxsp2=30 # to calc contour interval
 cminsp2big=-30; cmaxsp2big=30 # to calc contour interval
 
@@ -60,14 +65,20 @@ cminsp2a=-10; cmaxsp2a=10 # to calc contour interval for AGCM
 leconvr=leconvr2=leconvr3=1
 
 # regional avg field 1
-fieldr='sic'; ncfieldr='sic'; compr='OImon'; regionr='bksmori'; r1str='BKS SIC'; r1units='%'#leconvr=-1 # sea ice loss is linked with positive changes elsewhere
+fieldr='sic'; ncfieldr='sic'; compr='OImon'; regionr='bksmori'; 
+r1str='BKS SIC'; r1strlong='Barents/Kara sea ice concentration'; r1units='%'; r1key='bkssic'
+#leconvr=-1 # sea ice loss is linked with positive changes elsewhere
+
 
 # regional avg field 2
 # cooling=high heights
-fieldr2='tas'; ncfieldr2='tas'; compr2='Amon'; regionr2='eurasiamori'; r2str='Eur SAT'; r2units='$^\circ$C'#leconvr2=-1
+fieldr2='tas'; ncfieldr2='tas'; compr2='Amon'; regionr2='eurasiamori'; 
+r2str='Eur SAT'; r2strlong='Eurasian surface air temperature'; r2units='$^\circ$C'; r2key='eursat' #leconvr2=-1
 
 # regional avg field 3
-fieldr3='zg50000.00'; ncfieldr3='zg'; compr3='Amon'; regionr3='bksmori'; r3str='BKS Z500'; diffttl3='High-Low'; diffmult3=-1; r3units='m'
+fieldr3='zg50000.00'; ncfieldr3='zg'; compr3='Amon'; 
+regionr3='bksmori'; r3str='BKS Z500'; r3key='bksz500'
+diffttl3='High-Low'; diffmult3=-1; r3units='m'
 #leconvr=-1; #leconvr2=-1; #both conv -1 to get figs to show low-high equal to high heights and cold continent.
 
 sttl1='Comp on ' + r1str
@@ -81,10 +92,16 @@ fdictr = {'field': fieldr+regionr, 'ncfield': ncfieldr, 'comp': compr}
 fdictr2 = {'field': fieldr2+regionr2, 'ncfield': ncfieldr2, 'comp': compr2}
 fdictr3 = {'field': fieldr3+regionr3,'ncfield': ncfieldr3, 'comp': compr3}
 
+# used for file loading
+regions=('bkssic','eursat','bksz500')
+fields=('sat','z500','ice')
+
 
 lat=le.get_lat(local=local)
 lon=le.get_lon(local=local)
 nlat=len(lat); nlon=len(lon)
+alat=con.get_t63lat(); alon=con.get_t63lon()
+alons, alats = np.meshgrid(alon,alat)
 
 if addsig:
     prstr='sig'
@@ -285,8 +302,41 @@ def do_composite(rfld,spfld,nn=10,rshape=None,verb=False,addcyc=False):
 # end do_composite()
 
 
+if loadmat:
 
-if not dataloaded:
+    leallrdt={'bkssic':dict.fromkeys(fields),
+              'eursat':dict.fromkeys(fields),
+              'bksz500':dict.fromkeys(fields)}    
+
+    matbase='pymatfiles/LE_composites_'
+    for rkey in regions:
+        for fkey in fields:
+            matname = matbase + rkey + '_' + fkey + '_' + when + '.mat'
+            leallrdt[rkey][fkey]=sio.loadmat(matname,squeeze_me=True)
+
+    piallrdt={'bkssic':dict.fromkeys(fields),
+              'eursat':dict.fromkeys(fields),
+              'bksz500':dict.fromkeys(fields)}    
+
+    matbase='pymatfiles/PI_composites_'
+    for rkey in regions:
+        for fkey in fields:
+            matname = matbase + rkey + '_' + fkey + '_' + when + '.mat'
+            piallrdt[rkey][fkey]=sio.loadmat(matname,squeeze_me=True)
+
+    aallrdt={'bkssic':dict.fromkeys(fields),
+              'eursat':dict.fromkeys(fields),
+              'bksz500':dict.fromkeys(fields)}    
+
+    matbase='pymatfiles/AGCMRsims_composites_'
+    for rkey in regions:
+        for fkey in fields:
+            matname = matbase + rkey + '_' + fkey + '_' + when + '.mat'
+            aallrdt[rkey][fkey]=sio.loadmat(matname,squeeze_me=True)
+
+
+#if not dataloaded:
+else:
     nn=10 #@@
     #casenames=('historical','historicalNat','historicalMisc')
     casenames=('historical',)
@@ -359,6 +409,24 @@ if not dataloaded:
                                   loaddictice, loaddictr3,
                                   verb=True,local=local)
 
+    now = str(datetime.datetime.now().time())
+
+    ler1flds={'sat':lespr1dt,'z500':lesp2r1dt,'ice':leicer1dt}
+    ler2flds={'sat':lespr2dt,'z500':lesp2r2dt,'ice':leicer2dt}
+    ler3flds={'sat':lespr3dt,'z500':lesp2r3dt,'ice':leicer3dt}
+
+    leallrdt={'bkssic':ler1flds,'eursat':ler2flds,'bksz500':ler3flds}    
+
+    if savemat:
+        matbase='pymatfiles/LE_composites_'
+        for rkey in regions:
+            for fkey in fields:
+                savedt=leallrdt[rkey][fkey]
+
+                matname = matbase + rkey + '_' + fkey + '_' + now + '.mat'
+                sio.savemat(matname,savedt)
+
+ 
 
     # ========== PRE-IND ==============
 
@@ -396,9 +464,26 @@ if not dataloaded:
     pisp2r3dt = do_composite(pisear3,piseasp2,verb=True)
     piicer3dt = do_composite(pisear3,piseaspice,verb=True)
 
+
+    pir1flds={'sat':pispr1dt,'z500':pisp2r1dt,'ice':piicer1dt}
+    pir2flds={'sat':pispr2dt,'z500':pisp2r2dt,'ice':piicer2dt}
+    pir3flds={'sat':pispr3dt,'z500':pisp2r3dt,'ice':piicer3dt}
+
+    piallrdt={'bkssic':pir1flds,'eursat':pir2flds,'bksz500':pir3flds}    
+
+    if savemat:
+        matbase='pymatfiles/PI_composites_'
+        for rkey in regions:
+            for fkey in fields:
+                savedt=piallrdt[rkey][fkey]
+
+                matname = matbase + rkey + '_' + fkey + '_' + now + '.mat'
+                sio.savemat(matname,savedt)
+        sio.savemat(matbase+'anomyears_'+now+'.mat',{'anomyears':anomyears})
+        sio.savemat(matbase+'styear_'+now+'.mat',{'styear':styear})
+
+
     # === AGCM ==========
-    alat=con.get_t63lat(); alon=con.get_t63lon()
-    alons, alats = np.meshgrid(alon,alat)
 
     simsE=('E1','E2','E3','E4','E5'); 
     sims=('R1','R2','R3','R4','R5');
@@ -442,6 +527,23 @@ if not dataloaded:
     asp2r3dt = do_composite(assear3,asseasp2,verb=True)
     aicer3dt = do_composite(assear3,asseaice,verb=True)
 
+    ar1flds={'sat':aspr1dt,'z500':asp2r1dt,'ice':aicer1dt}
+    ar2flds={'sat':aspr2dt,'z500':asp2r2dt,'ice':aicer2dt}
+    ar3flds={'sat':aspr3dt,'z500':asp2r3dt,'ice':aicer3dt}
+
+    aallrdt={'bkssic':ar1flds,'eursat':ar2flds,'bksz500':ar3flds}    
+
+    if savemat:
+        matbase='pymatfiles/AGCMRsims_composites_'
+        for rkey in regions:
+            for fkey in fields:
+                savedt=aallrdt[rkey][fkey]
+
+                matname = matbase + rkey + '_' + fkey + '_' + now + '.mat'
+                sio.savemat(matname,savedt)
+        sio.savemat(matbase+'styears_'+now+'.mat',{'styears':styears})
+
+
     if compagcm: # if compare AGCM ensembles
 
         # ===  E sims:
@@ -464,31 +566,26 @@ if not dataloaded:
 
 
 
+
+
 # For each composite (r1, r2, r3), compute the BKS SIC average:
-icedt = {'bkssic': {'Preindustrial':piicer1dt,'CGCM':leicer1dt,'AGCM':aicer1dt},
-         'eursat': {'Preindustrial':piicer2dt,'CGCM':leicer2dt,'AGCM':aicer2dt},
-         'bksz500': {'Preindustrial':piicer3dt,'CGCM':leicer3dt,'AGCM':aicer3dt} }
-
-# For each composite (r1,r2,r3), compute Eur SAT average:
-spdt = {'bkssic': {'Preindustrial':pispr1dt,'CGCM':lespr1dt,'AGCM':aspr1dt},
-        'eursat': {'Preindustrial':pispr2dt,'CGCM':lespr2dt,'AGCM':aspr2dt},
-        'bksz500': {'Preindustrial':pispr3dt,'CGCM':lespr3dt,'AGCM':aspr3dt} }
-
-# For each composite (r1,r2,r3), compute BKS Z500 average: (prob don't need)
-sp2dt = {'bkssic': {'Preindustrial':pisp2r1dt,'CGCM':lesp2r1dt,'AGCM':asp2r1dt},
-         'eursat': {'Preindustrial':pisp2r2dt,'CGCM':lesp2r2dt,'AGCM':asp2r2dt},
-         'bksz500': {'Preindustrial':pisp2r3dt,'CGCM':lesp2r3dt,'AGCM':asp2r3dt} }
-
-
+allcasedt = {'Preindustrial':piallrdt, 'CGCM': leallrdt, 'AGCM':aallrdt}
 
 #  Here calculate the BKS SIC associated with each composite
 allregimdt={}; allregitdt={}; allregimcidt={}; allregitcidt={}
-for iii,ikey in enumerate(icedt.keys()):
+
+fkey='ice'
+for ckey in allcasedt.keys():
+    print ckey
     regmdt={}; regtotdt={}; regmcidt={}; regtcidt={}
-    dts=icedt[ikey]
-    for dkey in dts.keys():
-        dt=dts[dkey]
-        #diff = dt['lowsp']-dt['highsp']
+    allrdt=allcasedt[ckey]
+    for rkey in regions:
+
+        print '  ' + rkey
+
+        
+        dt=allrdt[rkey][fkey]
+
         diff = dt['lowspt']-dt['highspt'] # with sample dim
         regt = cutl.calc_regtotseaicearea(diff[...,:-1],lat,lon,'bksmori')
         regm = cutl.calc_regmean(diff[...,:-1],lat,lon,'bksmori')
@@ -501,15 +598,16 @@ for iii,ikey in enumerate(icedt.keys()):
                                      loc=regt.mean(axis=0),
                                      scale=regt.std(axis=0)/np.sqrt(len(regt)))
 
-        regmdt[dkey]=regm.mean(axis=0)
-        regtotdt[dkey]=regt.mean(axis=0) # not sure which one i want
-        regmcidt[dkey]=regmci
-        regtcidt[dkey]=regtci
+        print '  regm mean ' + str(regm.mean(axis=0))
+        regmdt[rkey]=regm.mean(axis=0)
+        regtotdt[rkey]=regt.mean(axis=0) # not sure which one i want
+        regmcidt[rkey]=regmci
+        regtcidt[rkey]=regtci
 
-    allregimdt[ikey]=regmdt # i for ice
-    allregitdt[ikey]=regtotdt
-    allregimcidt[ikey]=regmcidt
-    allregitcidt[ikey]=regtcidt
+    allregimdt[ckey]=regmdt # i for ice
+    allregitdt[ckey]=regtotdt
+    allregimcidt[ckey]=regmcidt
+    allregitcidt[ckey]=regtcidt
 
 allregimdf=pd.DataFrame(allregimdt)
 allregitdf=pd.DataFrame(allregitdt)
@@ -518,11 +616,15 @@ allregitcidf=pd.DataFrame(allregitcidt)
 
 #  Here calculate the Eur SAT associated with each composite
 allregspmdt={}; allregspmcidt={};
-for iii,ikey in enumerate(spdt.keys()):# for each composite region
-    regmdt={}; regtotdt={}; regmcidt={};
-    dts=spdt[ikey] 
-    for dkey in dts.keys():# for each ensemble
-        dt=dts[dkey]
+
+fkey='sat'
+for ckey in allcasedt.keys():
+    regmdt={}; regtotdt={}; regmcidt={}; regtcidt={}
+    allrdt=allcasedt[ckey]
+    for rkey in regions:
+        
+        dt=allrdt[rkey][fkey]
+
         diff = dt['lowspt']-dt['highspt']
         regm = cutl.calc_regmean(diff[...,:-1],lat,lon,'eurasiamori')
 
@@ -531,15 +633,48 @@ for iii,ikey in enumerate(spdt.keys()):# for each composite region
                                      loc=regm.mean(axis=0),
                                      scale=regm.std(axis=0)/np.sqrt(len(regm)))
 
-        regmdt[dkey]=regm.mean(axis=0)
-        regmcidt[dkey]=regmci
+        regmdt[rkey]=regm.mean(axis=0)
+        regmcidt[rkey]=regmci
 
-    allregspmdt[ikey]=regmdt # sp for spatial 1 (SAT)
-    allregspmcidt[ikey]=regmcidt
+    allregspmdt[ckey]=regmdt # sp for spatial 1 (SAT)
+    allregspmcidt[ckey]=regmcidt
 
 allregspmdf=pd.DataFrame(allregspmdt)
 allregspmcidf=pd.DataFrame(allregspmcidt)
 
+
+#  Here calculate the BKS Z500 associated with each composite
+allregsp2mdt={}; allregsp2mcidt={};
+
+fkey='z500'
+for ckey in allcasedt.keys():
+    regmdt={}; regtotdt={}; regmcidt={}; regtcidt={}
+    allrdt=allcasedt[ckey]
+    for rkey in regions:
+        
+        dt=allrdt[rkey][fkey]
+
+        diff = dt['lowspt']-dt['highspt']
+        regm = cutl.calc_regmean(diff[...,:-1],lat,lon,'eurasiamori')
+
+        # Confidence interval: 5=95% interval on the mean
+        regmci = sp.stats.t.interval(1-cisiglevel,len(regm)-1,
+                                     loc=regm.mean(axis=0),
+                                     scale=regm.std(axis=0)/np.sqrt(len(regm)))
+
+        regmdt[rkey]=regm.mean(axis=0)
+        regmcidt[rkey]=regmci
+
+    allregsp2mdt[ckey]=regmdt # sp for spatial 1 (SAT)
+    allregsp2mcidt[ckey]=regmcidt
+
+allregsp2mdf=pd.DataFrame(allregsp2mdt)
+allregsp2mcidf=pd.DataFrame(allregsp2mcidt)
+
+
+
+fontP = fm.FontProperties()
+fontP.set_size('small')
 
 lons, lats = np.meshgrid(lon,lat)
 cmlen=15.
@@ -567,6 +702,12 @@ lgs=(mlines.Line2D([],[],color=clrs[0],linewidth=2),
      #mlines.Line2D([],[],color=clrs[2],linestyle='none',marker=mkrs[2])) 
 lgstrs=('BKS SIC','Eur SAT','BKS Z500')          
 
+lespr1dt=leallrdt[r1key][spkey]
+lesp2r1dt=leallrdt[r1key][sp2key]
+lespr2dt=leallrdt[r2key][spkey]
+lesp2r2dt=leallrdt[r2key][sp2key]
+lespr3dt=leallrdt[r3key][spkey]
+lesp2r3dt=leallrdt[r3key][sp2key]
 
 
 fig=plt.figure(figsize=(12,9))
@@ -574,8 +715,8 @@ gs1 = gridspec.GridSpec(1, 6)
 gs1.update(top=0.97,bottom=0.55,left=0.08,right=0.92,wspace=0.04)
 ax=plt.subplot(gs1[0,0:2]) 
 
-#ax=axs[0,0] # CGCM comp on BKS SIC
-bm,pc=cplt.kemmap(lespr1dt['lowsp']-lespr1dt['highsp'],alat,alon,type='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
+# CGCM comp on BKS SIC
+bm,pc=cplt.kemmap(lespr1dt['lowsp']-lespr1dt['highsp'],alat,alon,ptype='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
                   title='',suppcb=True,
                   panellab='a',lcol='0.2')
 if addsig:
@@ -583,10 +724,10 @@ if addsig:
 bm.contour(alons,alats,lesp2r1dt['lowsp']-lesp2r1dt['highsp'],levels=conts,
            colors='0.5',linewidths=1,latlon=True)
 if addsig:
-    cplt.addtsigm(bm,lesp2r1dt['sppval'],alat,alon,type='cont',color='g')
+    cplt.addtsigm(bm,lesp2r1dt['sppval'],alat,alon,sigtype='cont',color='g')
 
 ax=plt.subplot(gs1[0,2:4]) # CGCM comp on Eur SAT
-bm,pc=cplt.kemmap(lespr2dt['lowsp']-lespr2dt['highsp'],alat,alon,type='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
+bm,pc=cplt.kemmap(lespr2dt['lowsp']-lespr2dt['highsp'],alat,alon,ptype='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
                       title='',suppcb=True,
                       panellab='b',lcol='0.2')
 if addsig:
@@ -594,10 +735,10 @@ if addsig:
 bm.contour(alons,alats,lesp2r2dt['lowsp']-lesp2r2dt['highsp'],levels=conts,
            colors='0.5',linewidths=1,latlon=True)
 if addsig:
-    cplt.addtsigm(bm,lesp2r2dt['sppval'],alat,alon,type='cont',color='g')
+    cplt.addtsigm(bm,lesp2r2dt['sppval'],alat,alon,sigtype='cont',color='g')
 
 ax=plt.subplot(gs1[0,4:])
-bm,pc=cplt.kemmap(-1*(lespr3dt['lowsp']-lespr3dt['highsp']),alat,alon,type='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
+bm,pc=cplt.kemmap(-1*(lespr3dt['lowsp']-lespr3dt['highsp']),alat,alon,ptype='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
                       title='',suppcb=True,
                       panellab='c',lcol='0.2')
 if addsig:
@@ -605,7 +746,7 @@ if addsig:
 bm.contour(alons,alats,-1*(lesp2r3dt['lowsp']-lesp2r3dt['highsp']),levels=conts,
            colors='0.5',linewidths=1,latlon=True)
 if addsig:
-    cplt.addtsigm(bm,lesp2r3dt['sppval'],alat,alon,type='cont',color='g')
+    cplt.addtsigm(bm,lesp2r3dt['sppval'],alat,alon,sigtype='cont',color='g')
 
 gs2 = gridspec.GridSpec(1, 6)
 gs2.update(top=0.44,left=0.2,right=0.8,wspace=0.2)
@@ -616,26 +757,26 @@ for rii,reg in enumerate(regs):
     print reg
     
     for eii,ens in enumerate(enss):
-        print ens
+        print '  ' + ens
         
         mult=multfacs[rii]
         xpos=xx[eii]+stagger
-        ax.plot(xpos,mult*allregimdf[reg][ens],marker=mkrs[rii],
+        ax.plot(xpos,mult*allregimdf[ens][reg],marker=mkrs[rii],
                 color=clrs[rii],mec=clrs[rii],linestyle='none',markersize=10)
-        ci=allregimcidf[reg][ens]
-        print mult, (xpos,xpos), ci
+        ci=allregimcidf[ens][reg]
+        #print mult, (xpos,xpos), ci
         ax.plot((xpos,xpos),mult*np.array(ci),marker='_',
                 mew=2,markersize=10,linewidth=2,color=clrs[rii])
-        ax.axvspan(xx[eii]-xincr-0.1,xx[eii]+xincr+0.1,color='0.9',alpha=0.5)
+        ax.axvspan(xx[eii]-xincr-0.1,xx[eii]+xincr+0.1,color='0.8',alpha=0.5)
     
     stagger+=0.2
 
 ax.set_ylabel('Change in ' + r1str + ' (' + r1units + ')')
 ax.axhline(y=0,color='k',linestyle='--')
 ax.set_xlim((stxx-0.7,xx[-1]+0.7))
-ax.legend(lgs,lgstrs,loc='lower right',fancybox=True,frameon=False)
+ax.legend(lgs,lgstrs,loc='lower right',fancybox=True,frameon=False,prop=fontP)
 ax.set_xticks(xx)
-ax.set_xticklabels(enss,rotation=45)
+ax.set_xticklabels(enss,rotation=25)
 ax.annotate('d',xy=(-0.02,1.04),
             xycoords='axes fraction',fontsize=16,fontweight='bold')
 
@@ -645,16 +786,16 @@ for rii,reg in enumerate(regs):
     print reg
     
     for eii,ens in enumerate(enss):
-        print ens
+        print '  ' + ens
         mult=multfacs[rii]
         xpos=xx[eii]+stagger
-        ax.plot(xpos,mult*allregspmdf[reg][ens],marker=mkrs[rii],
+        ax.plot(xpos,mult*allregspmdf[ens][reg],marker=mkrs[rii],
                 color=clrs[rii],mec=clrs[rii],linestyle='none',markersize=10)
-        ci=allregspmcidf[reg][ens]
-        print mult,(xpos), ci
+        ci=allregspmcidf[ens][reg]
+        #print mult,(xpos), ci
         ax.plot((xpos,xpos),mult*np.array(ci),
                 marker='_',mew=2,markersize=10,linewidth=2,color=clrs[rii])
-        ax.axvspan(xx[eii]-xincr-0.1,xx[eii]+xincr+0.1,color='0.9',alpha=0.5)
+        ax.axvspan(xx[eii]-xincr-0.1,xx[eii]+xincr+0.1,color='0.8',alpha=0.5)
 
     stagger+=0.2
 
@@ -664,13 +805,14 @@ ax.yaxis.tick_right()
 ax.axhline(y=0,color='k',linestyle='--')
 ax.set_xlim((stxx-0.7,xx[-1]+0.7))
 ax.set_xticks(xx)
-ax.set_xticklabels(enss,rotation=45)
+ax.set_xticklabels(enss,rotation=25)
 ax.annotate('e',xy=(-0.02,1.04),
             xycoords='axes fraction',fontsize=16,fontweight='bold')
 
-cplt.add_colorbar(fig,pc,orientation='horizontal',
-                  pos=[.25,.53, .5,.03],label='(Change in SAT ' + r2units +')')
-
+cbar_ax,cbar = cplt.add_colorbar(fig,pc,orientation='horizontal',
+                                 pos=[.25,.53, .5,.03],
+                                 label='Change in surface air temperature, $\Delta$SAT (' + r2units +')')
+#cbar.add_lines(pc)
 if addsig:
     prstr='sig'
 else:
@@ -681,45 +823,112 @@ if printtofile:
 
 
 
+# VERSION 2: SWAP THINGS AROUND:
+# allflddt is organized by spatial field
+allflddt={'ice':allregimdf, 'sat':allregspmdf, 'z500':allregsp2mdf}
+allcidt={'ice':allregimcidf, 'sat':allregspmcidf, 'z500':allregsp2mcidf}
+fylims=((-12,4),(-3,2),(-30,15))
+mkrs2=('o','^','s')
 
-# TEST FIGURE: All 3 comps
-fig,axs=plt.subplots(1,3)
-fig.set_size_inches(10,4)
-ax=axs[0] # CGCM comp on BKS SIC
-bm,pc=cplt.kemmap(lespr1dt['lowsp']-lespr1dt['highsp'],alat,alon,type='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
-                  title=sttl1,suppcb=True,
-                  panellab='a',lcol='0.2')
-if addsig:
-    cplt.addtsigm(bm,lespr1dt['sppval'], alat, alon)
-bm.contour(alons,alats,lesp2r1dt['lowsp']-lesp2r1dt['highsp'],levels=conts,
-           colors='0.5',linewidths=1,latlon=True)
-if addsig:
-    cplt.addtsigm(bm,lesp2r1dt['sppval'],alat,alon,type='cont',color='g')
+#gs2 = gridspec.GridSpec(1, 9)
+#gs2.update(top=0.44,left=0.02,right=0.98,wspace=0.2)
 
-ax=axs[1] # CGCM comp on Eur SAT
-bm,pc=cplt.kemmap(lespr2dt['lowsp']-lespr2dt['highsp'],alat,alon,type='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
-                      title=sttl2,suppcb=True,
-                      panellab='b',lcol='0.2')
-if addsig:
-    cplt.addtsigm(bm,lespr2dt['sppval'], alat, alon)
-bm.contour(alons,alats,lesp2r2dt['lowsp']-lesp2r2dt['highsp'],levels=conts,
-           colors='0.5',linewidths=1,latlon=True)
-if addsig:
-    cplt.addtsigm(bm,lesp2r2dt['sppval'],alat,alon,type='cont',color='g')
 
-ax=axs[2]
-bm,pc=cplt.kemmap(-1*(lespr3dt['lowsp']-lespr3dt['highsp']),alat,alon,type='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
-                      title=sttl3,suppcb=True,
-                      panellab='c',lcol='0.2')
-if addsig:
-    cplt.addtsigm(bm,lespr3dt['sppval'], alat, alon)
-bm.contour(alons,alats,-1*(lesp2r3dt['lowsp']-lesp2r3dt['highsp']),levels=conts,
-           colors='0.5',linewidths=1,latlon=True)
-if addsig:
-    cplt.addtsigm(bm,lesp2r3dt['sppval'],alat,alon,type='cont',color='g')
-if printtofile:
-    fig.savefig('CGCM_all3comps_maps' + prstr + '.pdf')
-    fig.savefig('CGCM_all3comps_maps' + prstr + '.png',dpi=400)
+# loop "region" composited on
+#     loop spatial field (ice,sat,z500)
+#          loop ensemble
+# skip first loop for the moment:
+xx=np.arange(0,3); stxx=0
+xincr=0.2
+
+
+#rii=0; reg='bkssic'; mult=1
+left=0.02
+wid=0.26
+
+fig = plt.figure(figsize=(14,9))
+outer_grid = gridspec.GridSpec(1, 3, wspace=0.2)
+outer_grid.update(top=0.44)
+
+for rii,rkey in enumerate(regions):
+
+    print rkey
+    #gs1 = gridspec.GridSpec(1, 3)
+    #gs1.update(top=0.44,left=left,right=left+wid,wspace=0.2)
+
+    inner_grid = gridspec.GridSpecFromSubplotSpec(1, 3,
+                                                  subplot_spec=outer_grid[rii], 
+                                                  wspace=0.1)
+    
+    mult=multfacs[rii]
+    for fii,fkey in enumerate(fields):
+        print '  ' + fkey
+
+        flddf=allflddt[fkey]
+        cidf=allcidt[fkey]
+
+        stagger=-xincr
+
+        ax = plt.Subplot(fig, inner_grid[fii])
+        if fii==1: ax.set_title('Comp on ' + rkey)
+
+        #ax=plt.subplot(gs2[0,rii+fii])
+        for eii,ens in enumerate(enss):
+
+            print '    ' + str(flddf[ens][rkey])
+
+            xpos=xx[eii]+stagger
+            ax.plot(xpos,mult*flddf[ens][rkey],marker=mkrs2[eii],
+                    color=clrs[eii],mec=clrs[eii],linestyle='none',markersize=10)
+            ci=cidf[ens][rkey]
+            ax.plot((xpos,xpos),mult*np.array(ci),marker='_',
+                    mew=2,markersize=10,linewidth=2,color=clrs[eii])
+            ax.set_xlim((stxx-0.7,xx[-1]+0.7))
+            stagger+=0.2
+
+        ax.set_xticks(xx)
+        ax.set_xticklabels(('',))
+        ax.set_ylim(fylims[fii])
+        ax.set_xlabel('$\Delta$' +fkey)
+        if fii!=2:
+            ax.spines['right'].set_visible(False)
+        
+        fig.add_subplot(ax)
+        
+
+
+
+
+xincr=0.2
+stagger=-xincr
+for rii,reg in enumerate(regs):
+    print reg
+    
+    for eii,ens in enumerate(enss):
+        print '  ' + ens
+        
+        mult=multfacs[rii]
+        xpos=xx[eii]+stagger
+        ax.plot(xpos,mult*allregimdf[ens][reg],marker=mkrs[rii],
+                color=clrs[rii],mec=clrs[rii],linestyle='none',markersize=10)
+        ci=allregimcidf[ens][reg]
+        #print mult, (xpos,xpos), ci
+        ax.plot((xpos,xpos),mult*np.array(ci),marker='_',
+                mew=2,markersize=10,linewidth=2,color=clrs[rii])
+        ax.axvspan(xx[eii]-xincr-0.1,xx[eii]+xincr+0.1,color='0.8',alpha=0.5)
+    
+    stagger+=0.2
+
+ax.set_ylabel('Change in ' + r1str + ' (' + r1units + ')')
+ax.axhline(y=0,color='k',linestyle='--')
+ax.set_xlim((stxx-0.7,xx[-1]+0.7))
+ax.legend(lgs,lgstrs,loc='lower right',fancybox=True,frameon=False,prop=fontP)
+ax.set_xticks(xx)
+ax.set_xticklabels(enss,rotation=25)
+ax.annotate('d',xy=(-0.02,1.04),
+            xycoords='axes fraction',fontsize=16,fontweight='bold')
+
+
 
 
 
@@ -755,7 +964,7 @@ for aii in np.arange(0,3):
     plabs=allplabs[axidx]
 
     ax = axs[axidx,0]
-    bm,pc=cplt.kemmap(dt['highsp']-dt['meansp'],alat,alon,type='nheur',axis=ax,cmin=cminice,cmax=cmaxice,
+    bm,pc=cplt.kemmap(dt['highsp']-dt['meansp'],alat,alon,ptype='nheur',axis=ax,cmin=cminice,cmax=cmaxice,
                       title='High anom',suppcb=True,cmap=cmapice,
                       panellab=plabs[0],lcol='0.2')
     if addsig:
@@ -763,14 +972,14 @@ for aii in np.arange(0,3):
     ax.set_ylabel(ylabs[axidx])
 
     ax = axs[axidx,1]
-    bm,pc=cplt.kemmap(dt['lowsp']-dt['meansp'],alat,alon,type='nheur',axis=ax,cmin=cminice,cmax=cmaxice,
+    bm,pc=cplt.kemmap(dt['lowsp']-dt['meansp'],alat,alon,ptype='nheur',axis=ax,cmin=cminice,cmax=cmaxice,
                       title='Low anom',suppcb=True,cmap=cmapice,
                       panellab=plabs[1],lcol='0.2')
     if addsig:
         cplt.addtsigm(bm,dt['losppval'],alat,alon)
 
     ax = axs[axidx,2]
-    bm,pc=cplt.kemmap(diffmult*(dt['lowsp']-dt['highsp']),alat,alon,type='nheur',axis=ax,cmin=cminice,cmax=cmaxice,
+    bm,pc=cplt.kemmap(diffmult*(dt['lowsp']-dt['highsp']),alat,alon,ptype='nheur',axis=ax,cmin=cminice,cmax=cmaxice,
                       title=diffttl,suppcb=True,cmap=cmapice,
                       panellab=plabs[2],lcol='0.2')
     if addsig:
@@ -797,58 +1006,58 @@ if dofigures:
     fig.subplots_adjust(wspace=0.05,hspace=0.03)
 
     ax=axs[0,0]
-    bm,pc=cplt.kemmap(pihighice-pimeanice,lat,lon,type='nheur',axis=ax,cmin=cminice,cmax=cmaxice,
+    bm,pc=cplt.kemmap(pihighice-pimeanice,lat,lon,ptype='nheur',axis=ax,cmin=cminice,cmax=cmaxice,
                       title='High anom',suppcb=True,cmap=cmapice,
                       panellab='a',lcol='0.2')
     if addsig:
         cplt.addtsigm(bm,pihiicepval,lat,lon)
     ax.set_ylabel('PI')
     ax=axs[0,1]
-    bm,pc=cplt.kemmap(pilowice-pimeanice,lat,lon,type='nheur',axis=ax,cmin=cminice,cmax=cmaxice,
+    bm,pc=cplt.kemmap(pilowice-pimeanice,lat,lon,ptype='nheur',axis=ax,cmin=cminice,cmax=cmaxice,
                       title='Low anom',suppcb=True,cmap=cmapice,
                       panellab='b',lcol='0.2')
     if addsig:
         cplt.addtsigm(bm,piloicepval,lat,lon)
     ax=axs[0,2]
-    bm,pc=cplt.kemmap(diffmult*(pilowice-pihighice),lat,lon,type='nheur',axis=ax,cmin=cminice,cmax=cmaxice,
+    bm,pc=cplt.kemmap(diffmult*(pilowice-pihighice),lat,lon,ptype='nheur',axis=ax,cmin=cminice,cmax=cmaxice,
                       title=diffttl,suppcb=True,cmap=cmapice,
                       panellab='c',lcol='0.2')
     if addsig:
         cplt.addtsigm(bm,piicepval,lat,lon)
     ax=axs[1,0]
-    bm,pc=cplt.kemmap(highleice-meanleice,lat,lon,type='nheur',axis=ax,cmin=cminice,cmax=cmaxice,
+    bm,pc=cplt.kemmap(highleice-meanleice,lat,lon,ptype='nheur',axis=ax,cmin=cminice,cmax=cmaxice,
                       title='High anom',suppcb=True,cmap=cmapice,
                       panellab='d',lcol='0.2')
     if addsig:
         cplt.addtsigm(bm,lehiicepval,lat,lon)
     ax.set_ylabel('CGCM')
     ax=axs[1,1]
-    bm,pc=cplt.kemmap(lowleice-meanleice,lat,lon,type='nheur',axis=ax,cmin=cminice,cmax=cmaxice,
+    bm,pc=cplt.kemmap(lowleice-meanleice,lat,lon,ptype='nheur',axis=ax,cmin=cminice,cmax=cmaxice,
                       title='Low anom',suppcb=True,cmap=cmapice,
                       panellab='e',lcol='0.2')
     if addsig:
         cplt.addtsigm(bm,leloicepval,lat,lon)
     ax=axs[1,2]
-    bm,pc=cplt.kemmap(diffmult*(lowleice-highleice),lat,lon,type='nheur',axis=ax,cmin=cminice,cmax=cmaxice,
+    bm,pc=cplt.kemmap(diffmult*(lowleice-highleice),lat,lon,ptype='nheur',axis=ax,cmin=cminice,cmax=cmaxice,
                       title=diffttl,suppcb=True,cmap=cmapice,
                       panellab='f',lcol='0.2')
     if addsig:
         cplt.addtsigm(bm, leicepval,lat,lon)
     ax=axs[2,0]
-    bm,pc=cplt.kemmap(ahighice-ameanice,alat,alon,type='nheur',axis=ax,cmin=cminice,cmax=cmaxice,
+    bm,pc=cplt.kemmap(ahighice-ameanice,alat,alon,ptype='nheur',axis=ax,cmin=cminice,cmax=cmaxice,
                       title='High anom',suppcb=True,cmap=cmapice,
                       panellab='g',lcol='0.2')
     if addsig:
         cplt.addtsigm(bm,ahiicepval,alat,alon)
     ax.set_ylabel('AGCM')
     ax=axs[2,1]
-    bm,pc=cplt.kemmap(alowice-ameanice,alat,alon,type='nheur',axis=ax,cmin=cminice,cmax=cmaxice,
+    bm,pc=cplt.kemmap(alowice-ameanice,alat,alon,ptype='nheur',axis=ax,cmin=cminice,cmax=cmaxice,
                       title='Low anom',suppcb=True,cmap=cmapice,
                       panellab='h',lcol='0.2')
     if addsig:
         cplt.addtsigm(bm,aloicepval,alat,alon)
     ax=axs[2,2]
-    bm,pc=cplt.kemmap(diffmult*(alowice-ahighice),alat,alon,type='nheur',axis=ax,cmin=cminice,cmax=cmaxice,
+    bm,pc=cplt.kemmap(diffmult*(alowice-ahighice),alat,alon,ptype='nheur',axis=ax,cmin=cminice,cmax=cmaxice,
                       title=diffttl,suppcb=True,cmap=cmapice,
                       panellab='i',lcol='0.2')
     if addsig:
@@ -867,58 +1076,58 @@ if dofigures:
     fig.subplots_adjust(wspace=0.05,hspace=0.03)
 
     ax=axs[0,0]
-    bm,pc=cplt.kemmap(pihighicer2-pimeanice,lat,lon,type='nheur',axis=ax,cmin=cminice,cmax=cmaxice,
+    bm,pc=cplt.kemmap(pihighicer2-pimeanice,lat,lon,ptype='nheur',axis=ax,cmin=cminice,cmax=cmaxice,
                       title='High anom',suppcb=True,cmap=cmapice,
                       panellab='a',lcol='0.2')
     if addsig:
         cplt.addtsigm(bm,pihiicer2pval,lat,lon)
     ax.set_ylabel('PI')
     ax=axs[0,1]
-    bm,pc=cplt.kemmap(pilowicer2-pimeanice,lat,lon,type='nheur',axis=ax,cmin=cminice,cmax=cmaxice,
+    bm,pc=cplt.kemmap(pilowicer2-pimeanice,lat,lon,ptype='nheur',axis=ax,cmin=cminice,cmax=cmaxice,
                       title='Low anom',suppcb=True,cmap=cmapice,
                       panellab='b',lcol='0.2')
     if addsig:
         cplt.addtsigm(bm,piloicer2pval,lat,lon)
     ax=axs[0,2]
-    bm,pc=cplt.kemmap(diffmult*(pilowicer2-pihighicer2),lat,lon,type='nheur',axis=ax,cmin=cminice,cmax=cmaxice,
+    bm,pc=cplt.kemmap(diffmult*(pilowicer2-pihighicer2),lat,lon,ptype='nheur',axis=ax,cmin=cminice,cmax=cmaxice,
                       title=diffttl,suppcb=True,cmap=cmapice,
                       panellab='c',lcol='0.2')
     if addsig:
         cplt.addtsigm(bm,piicer2pval,lat,lon)
     ax=axs[1,0]
-    bm,pc=cplt.kemmap(highleicer2-meanleice,lat,lon,type='nheur',axis=ax,cmin=cminice,cmax=cmaxice,
+    bm,pc=cplt.kemmap(highleicer2-meanleice,lat,lon,ptype='nheur',axis=ax,cmin=cminice,cmax=cmaxice,
                       title='High anom',suppcb=True,cmap=cmapice,
                       panellab='d',lcol='0.2')
     if addsig:
         cplt.addtsigm(bm,lehiicer2pval,lat,lon)
     ax.set_ylabel('CGCM')
     ax=axs[1,1]
-    bm,pc=cplt.kemmap(lowleicer2-meanleice,lat,lon,type='nheur',axis=ax,cmin=cminice,cmax=cmaxice,
+    bm,pc=cplt.kemmap(lowleicer2-meanleice,lat,lon,ptype='nheur',axis=ax,cmin=cminice,cmax=cmaxice,
                       title='Low anom',suppcb=True,cmap=cmapice,
                       panellab='e',lcol='0.2')
     if addsig:
         cplt.addtsigm(bm,leloicer2pval,lat,lon)
     ax=axs[1,2]
-    bm,pc=cplt.kemmap(diffmult*(lowleicer2-highleicer2),lat,lon,type='nheur',axis=ax,cmin=cminice,cmax=cmaxice,
+    bm,pc=cplt.kemmap(diffmult*(lowleicer2-highleicer2),lat,lon,ptype='nheur',axis=ax,cmin=cminice,cmax=cmaxice,
                       title=diffttl,suppcb=True,cmap=cmapice,
                       panellab='f',lcol='0.2')
     if addsig:
         cplt.addtsigm(bm,leicer2pval,lat,lon)
     ax=axs[2,0]
-    bm,pc=cplt.kemmap(ahighicer2-ameanice,alat,alon,type='nheur',axis=ax,cmin=cminice,cmax=cmaxice,
+    bm,pc=cplt.kemmap(ahighicer2-ameanice,alat,alon,ptype='nheur',axis=ax,cmin=cminice,cmax=cmaxice,
                       title='High anom',suppcb=True,cmap=cmapice,
                       panellab='g',lcol='0.2')
     if addsig:
         cplt.addtsigm(bm,ahiicer2pval,alat,alon)
     ax.set_ylabel('AGCM')
     ax=axs[2,1]
-    bm,pc=cplt.kemmap(alowicer2-ameanice,alat,alon,type='nheur',axis=ax,cmin=cminice,cmax=cmaxice,
+    bm,pc=cplt.kemmap(alowicer2-ameanice,alat,alon,ptype='nheur',axis=ax,cmin=cminice,cmax=cmaxice,
                       title='Low anom',suppcb=True,cmap=cmapice,
                       panellab='h',lcol='0.2')
     if addsig:
         cplt.addtsigm(bm,aloicer2pval,alat,alon)
     ax=axs[2,2]
-    bm,pc=cplt.kemmap(diffmult*(alowicer2-ahighicer2),alat,alon,type='nheur',axis=ax,cmin=cminice,cmax=cmaxice,
+    bm,pc=cplt.kemmap(diffmult*(alowicer2-ahighicer2),alat,alon,ptype='nheur',axis=ax,cmin=cminice,cmax=cmaxice,
                       title=diffttl,suppcb=True,cmap=cmapice,
                       panellab='i',lcol='0.2')
     if addsig:
@@ -951,7 +1160,7 @@ if dofigures:
     fig.subplots_adjust(wspace=0.05,hspace=0.03)
 
     ax=axs[0,0]
-    bm,pc=cplt.kemmap(highlesp,lat,lon,type='nheur',axis=ax,cmin=cminspbig,cmax=cmaxspbig,
+    bm,pc=cplt.kemmap(highlesp,lat,lon,ptype='nheur',axis=ax,cmin=cminspbig,cmax=cmaxspbig,
                       title=ttl1,suppcb=True,
                       panellab='a',lcol='0.2')
     bm.contour(lons,lats,highlesp2,levels=contsbig,
@@ -959,14 +1168,14 @@ if dofigures:
     ax.set_ylabel('CGCM')
 
     ax=axs[0,1]
-    bm,pc=cplt.kemmap(lowlesp,lat,lon,type='nheur',axis=ax,cmin=cminspbig,cmax=cmaxspbig,
+    bm,pc=cplt.kemmap(lowlesp,lat,lon,ptype='nheur',axis=ax,cmin=cminspbig,cmax=cmaxspbig,
                       title=ttl2,suppcb=True,
                       panellab='b',lcol='0.2')
     bm.contour(lons,lats,lowlesp2,levels=contsbig,
                colors='0.5',linewidths=1,latlon=True)
 
     ax=axs[0,2]
-    bm,pc=cplt.kemmap(meanlesp,lat,lon,type='nheur',axis=ax,cmin=cminspbig,cmax=cmaxspbig,
+    bm,pc=cplt.kemmap(meanlesp,lat,lon,ptype='nheur',axis=ax,cmin=cminspbig,cmax=cmaxspbig,
                       title='Mean Anom',suppcb=True,
                       panellab='c',lcol='0.2')
     bm.contour(lons,lats,meanlesp2,levels=contsbig,
@@ -974,7 +1183,7 @@ if dofigures:
     #cplt.add_colorbar(fig,pc,orientation='horizontal',pos=[.25,.5, .5,.03])
 
     ax=axs[1,0]
-    bm,pc=cplt.kemmap(highlesp-meanlesp,lat,lon,type='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
+    bm,pc=cplt.kemmap(highlesp-meanlesp,lat,lon,ptype='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
                       title='High Anom',suppcb=True,
                       panellab='d',lcol='0.2')
     if addsig:
@@ -982,11 +1191,11 @@ if dofigures:
     bm.contour(lons,lats,highlesp2-meanlesp2,levels=conts,
                colors='0.5',linewidths=1,latlon=True)
     if addsig:
-        cplt.addtsigm(bm,lehisp2pval,lat,lon,type='cont',color='g')
+        cplt.addtsigm(bm,lehisp2pval,lat,lon,sigtype='cont',color='g')
     ax.set_ylabel('CGCM Diff')
 
     ax=axs[1,1]
-    bm,pc=cplt.kemmap(lowlesp-meanlesp,lat,lon,type='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
+    bm,pc=cplt.kemmap(lowlesp-meanlesp,lat,lon,ptype='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
                       title='Low Anom',suppcb=True,
                       panellab='e',lcol='0.2')
     if addsig:
@@ -994,10 +1203,10 @@ if dofigures:
     bm.contour(lons,lats,lowlesp2-meanlesp2,levels=conts,
                colors='0.5',linewidths=1,latlon=True)
     if addsig:
-        cplt.addtsigm(bm,lelosp2pval,lat,lon,type='cont',color='g')
+        cplt.addtsigm(bm,lelosp2pval,lat,lon,sigtype='cont',color='g')
 
     ax=axs[1,2]
-    bm,pc=cplt.kemmap(diffmult*(lowlesp-highlesp),lat,lon,type='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
+    bm,pc=cplt.kemmap(diffmult*(lowlesp-highlesp),lat,lon,ptype='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
                       title=diffttl,suppcb=True,
                       panellab='f',lcol='0.2')
     if addsig:
@@ -1005,7 +1214,7 @@ if dofigures:
     bm.contour(lons,lats,diffmult*(lowlesp2-highlesp2),levels=conts,
                colors='0.5',linewidths=1,latlon=True)
     if addsig:
-        cplt.addtsigm(bm,lesp2pval,lat,lon,type='cont',color='g')
+        cplt.addtsigm(bm,lesp2pval,lat,lon,sigtype='cont',color='g')
 
     cplt.add_colorbar(fig,pc,orientation='horizontal')
     if printtofile:
@@ -1023,7 +1232,7 @@ if dofigures:
     fig.subplots_adjust(wspace=0.05,hspace=0.03)
 
     ax=axs[0,0]
-    bm,pc=cplt.kemmap(pihighsp,lat,lon,type='nheur',axis=ax,cmin=cminspbig,cmax=cmaxspbig,
+    bm,pc=cplt.kemmap(pihighsp,lat,lon,ptype='nheur',axis=ax,cmin=cminspbig,cmax=cmaxspbig,
                       title=ttl1,suppcb=True,
                       panellab='a',lcol='0.2')
     bm.contour(lons,lats,pihighsp2,levels=contsbig,
@@ -1031,14 +1240,14 @@ if dofigures:
     ax.set_ylabel('PreIndustrial')
 
     ax=axs[0,1]
-    bm,pc=cplt.kemmap(pilowsp,lat,lon,type='nheur',axis=ax,cmin=cminspbig,cmax=cmaxspbig,
+    bm,pc=cplt.kemmap(pilowsp,lat,lon,ptype='nheur',axis=ax,cmin=cminspbig,cmax=cmaxspbig,
                       title=ttl2,suppcb=True,
                       panellab='b',lcol='0.2')
     bm.contour(lons,lats,pilowsp2,levels=contsbig,
                colors='0.5',linewidths=1,latlon=True)
 
     ax=axs[0,2]
-    bm,pc=cplt.kemmap(pimeansp,lat,lon,type='nheur',axis=ax,cmin=cminspbig,cmax=cmaxspbig,
+    bm,pc=cplt.kemmap(pimeansp,lat,lon,ptype='nheur',axis=ax,cmin=cminspbig,cmax=cmaxspbig,
                       title='Mean Anom',suppcb=True,
                       panellab='c',lcol='0.2')
     bm.contour(lons,lats,pimeansp2,levels=contsbig,
@@ -1046,7 +1255,7 @@ if dofigures:
     #cplt.add_colorbar(fig,pc,orientation='horizontal',pos=[.25,.5, .5,.03])
 
     ax=axs[1,0]
-    bm,pc=cplt.kemmap(pihighsp-pimeansp,lat,lon,type='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
+    bm,pc=cplt.kemmap(pihighsp-pimeansp,lat,lon,ptype='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
                       title='High Anom',suppcb=True,
                       panellab='d',lcol='0.2')
     if addsig:
@@ -1054,11 +1263,11 @@ if dofigures:
     bm.contour(lons,lats,pihighsp2-pimeansp2,levels=conts,
                colors='0.5',linewidths=1,latlon=True)
     if addsig:
-        cplt.addtsigm(bm,pihisp2pval,lat,lon,type='cont',color='g')
+        cplt.addtsigm(bm,pihisp2pval,lat,lon,sigtype='cont',color='g')
     ax.set_ylabel('PreI Diff')
 
     ax=axs[1,1]
-    bm,pc=cplt.kemmap(pilowsp-pimeansp,lat,lon,type='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
+    bm,pc=cplt.kemmap(pilowsp-pimeansp,lat,lon,ptype='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
                       title='Low Anom',suppcb=True,
                       panellab='e',lcol='0.2')
     if addsig:
@@ -1066,10 +1275,10 @@ if dofigures:
     bm.contour(lons,lats,pilowsp2-pimeansp2,levels=conts,
                colors='0.5',linewidths=1,latlon=True)
     if addsig:
-        cplt.addtsigm(bm,pilosp2pval,lat,lon,type='cont',color='g')
+        cplt.addtsigm(bm,pilosp2pval,lat,lon,sigtype='cont',color='g')
 
     ax=axs[1,2]
-    bm,pc=cplt.kemmap(diffmult*(pilowsp-pihighsp),lat,lon,type='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
+    bm,pc=cplt.kemmap(diffmult*(pilowsp-pihighsp),lat,lon,ptype='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
                       title=diffttl,suppcb=True,
                       panellab='f',lcol='0.2')
     if addsig:
@@ -1077,7 +1286,7 @@ if dofigures:
     bm.contour(lons,lats,diffmult*(pilowsp2-pihighsp2),levels=conts,
                colors='0.5',linewidths=1,latlon=True)
     if addsig:
-        cplt.addtsigm(bm,pisp2pval,lat,lon,type='cont',color='g')
+        cplt.addtsigm(bm,pisp2pval,lat,lon,sigtype='cont',color='g')
 
     cplt.add_colorbar(fig,pc,orientation='horizontal')
     if printtofile:
@@ -1097,7 +1306,7 @@ if dofigures:
     fig.subplots_adjust(wspace=0.05,hspace=0.03)
 
     ax=axs[0,0]
-    bm,pc=cplt.kemmap(ahighsp,alat,alon,type='nheur',axis=ax,cmin=cminspbig,cmax=cmaxspbig,
+    bm,pc=cplt.kemmap(ahighsp,alat,alon,ptype='nheur',axis=ax,cmin=cminspbig,cmax=cmaxspbig,
                       title=ttl1,suppcb=True,
                       panellab='a',lcol='0.2')
     bm.contour(alons,alats,ahighsp2,levels=contsbig,
@@ -1105,14 +1314,14 @@ if dofigures:
     ax.set_ylabel('AGCM')
 
     ax=axs[0,1]
-    bm,pc=cplt.kemmap(alowsp,alat,alon,type='nheur',axis=ax,cmin=cminspbig,cmax=cmaxspbig,
+    bm,pc=cplt.kemmap(alowsp,alat,alon,ptype='nheur',axis=ax,cmin=cminspbig,cmax=cmaxspbig,
                       title=ttl2,suppcb=True,
                       panellab='b',lcol='0.2')
     bm.contour(alons,alats,alowsp2,levels=contsbig,
                colors='0.5',linewidths=1,latlon=True)
 
     ax=axs[0,2]
-    bm,pc=cplt.kemmap(ameansp,alat,alon,type='nheur',axis=ax,cmin=cminspbig,cmax=cmaxspbig,
+    bm,pc=cplt.kemmap(ameansp,alat,alon,ptype='nheur',axis=ax,cmin=cminspbig,cmax=cmaxspbig,
                       title='Mean Anom',suppcb=True,
                       panellab='c',lcol='0.2')
     bm.contour(alons,alats,ameansp2,levels=contsbig,
@@ -1121,7 +1330,7 @@ if dofigures:
     #cplt.add_colorbar(fig,pc,orientation='horizontal',pos=[.25,.5, .5,.03])
 
     ax=axs[1,0]
-    bm,pc=cplt.kemmap(ahighsp-ameansp,alat,alon,type='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
+    bm,pc=cplt.kemmap(ahighsp-ameansp,alat,alon,ptype='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
                       title='High Anom',suppcb=True,
                       panellab='d',lcol='0.2')
     if addsig:
@@ -1129,12 +1338,12 @@ if dofigures:
     bm.contour(alons,alats,ahighsp2-ameansp2,levels=conts,
                colors='0.5',linewidths=1,latlon=True)
     if addsig:
-        cplt.addtsigm(bm,ahisp2pval,alat,alon,type='cont',color='g')
+        cplt.addtsigm(bm,ahisp2pval,alat,alon,sigtype='cont',color='g')
 
     ax.set_ylabel('AGCM Diff')
 
     ax=axs[1,1]
-    bm,pc=cplt.kemmap(alowsp-ameansp,alat,alon,type='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
+    bm,pc=cplt.kemmap(alowsp-ameansp,alat,alon,ptype='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
                       title='Low Anom',suppcb=True,
                       panellab='e',lcol='0.2')
     if addsig:
@@ -1142,10 +1351,10 @@ if dofigures:
     bm.contour(alons,alats,alowsp2-ameansp2,levels=conts,
                colors='0.5',linewidths=1,latlon=True)
     if addsig:
-        cplt.addtsigm(bm,alosp2pval,alat,alon,type='cont',color='g')
+        cplt.addtsigm(bm,alosp2pval,alat,alon,sigtype='cont',color='g')
 
     ax=axs[1,2]
-    bm,pc=cplt.kemmap(diffmult*(alowsp-ahighsp),alat,alon,type='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
+    bm,pc=cplt.kemmap(diffmult*(alowsp-ahighsp),alat,alon,ptype='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
                       title=diffttl,suppcb=True,
                       panellab='f',lcol='0.2')
     if addsig:
@@ -1153,7 +1362,7 @@ if dofigures:
     bm.contour(alons,alats,diffmult*(alowsp2-ahighsp2),levels=conts,
                colors='0.5',linewidths=1,latlon=True)
     if addsig:
-        cplt.addtsigm(bm,asp2pval,alat,alon,type='cont',color='g')
+        cplt.addtsigm(bm,asp2pval,alat,alon,sigtype='cont',color='g')
 
     cplt.add_colorbar(fig,pc,orientation='horizontal')
     if printtofile:
@@ -1174,7 +1383,7 @@ if dofigures:
     fig.subplots_adjust(wspace=0.05,hspace=0.03)
 
     ax=axs[0,0]
-    bm,pc=cplt.kemmap(highlesp-meanlesp,lat,lon,type='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
+    bm,pc=cplt.kemmap(highlesp-meanlesp,lat,lon,ptype='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
                       title='High Anom',suppcb=True,
                       panellab='a',lcol='0.2')
     if addsig:
@@ -1182,11 +1391,11 @@ if dofigures:
     bm.contour(lons,lats,highlesp2-meanlesp2,levels=conts,
                colors='0.5',linewidths=1,latlon=True)
     if addsig:
-        cplt.addtsigm(bm,lehisp2pval,lat,lon,type='cont',color='g')
+        cplt.addtsigm(bm,lehisp2pval,lat,lon,sigtype='cont',color='g')
     ax.set_ylabel('CGCM Diff')
 
     ax=axs[0,1]
-    bm,pc=cplt.kemmap(lowlesp-meanlesp,lat,lon,type='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
+    bm,pc=cplt.kemmap(lowlesp-meanlesp,lat,lon,ptype='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
                       title='Low Anom',suppcb=True,
                       panellab='b',lcol='0.2')
     if addsig:
@@ -1194,10 +1403,10 @@ if dofigures:
     bm.contour(lons,lats,lowlesp2-meanlesp2,levels=conts,
                colors='0.5',linewidths=1,latlon=True)
     if addsig:
-        cplt.addtsigm(bm,lelosp2pval,lat,lon,type='cont',color='g')
+        cplt.addtsigm(bm,lelosp2pval,lat,lon,sigtype='cont',color='g')
 
     ax=axs[0,2]
-    bm,pc=cplt.kemmap(diffmult*(lowlesp-highlesp),lat,lon,type='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
+    bm,pc=cplt.kemmap(diffmult*(lowlesp-highlesp),lat,lon,ptype='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
                       title=diffttl,suppcb=True,
                       panellab='c',lcol='0.2')
     if addsig:
@@ -1205,10 +1414,10 @@ if dofigures:
     bm.contour(lons,lats,lowlesp2-highlesp2,levels=conts,
                colors='0.5',linewidths=1,latlon=True)
     if addsig:
-        cplt.addtsigm(bm,lesp2pval,lat,lon,type='cont',color='g')
+        cplt.addtsigm(bm,lesp2pval,lat,lon,sigtype='cont',color='g')
 
     ax=axs[1,0]
-    bm,pc=cplt.kemmap(ahighsp-ameansp,alat,alon,type='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
+    bm,pc=cplt.kemmap(ahighsp-ameansp,alat,alon,ptype='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
                       title='High Anom',suppcb=True,
                       panellab='d',lcol='0.2')
     if addsig:
@@ -1216,11 +1425,11 @@ if dofigures:
     bm.contour(alons,alats,ahighsp2-ameansp2,levels=conts,
                colors='0.5',linewidths=1,latlon=True)
     if addsig:
-        cplt.addtsigm(bm,ahisp2pval,alat,alon,type='cont',color='g')
+        cplt.addtsigm(bm,ahisp2pval,alat,alon,sigtype='cont',color='g')
     ax.set_ylabel('AGCM Diff')
 
     ax=axs[1,1]
-    bm,pc=cplt.kemmap(alowsp-ameansp,alat,alon,type='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
+    bm,pc=cplt.kemmap(alowsp-ameansp,alat,alon,ptype='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
                       title='Low Anom',suppcb=True,
                       panellab='e',lcol='0.2')
     if addsig:
@@ -1228,10 +1437,10 @@ if dofigures:
     bm.contour(alons,alats,alowsp2-ameansp2,levels=conts,
                colors='0.5',linewidths=1,latlon=True)
     if addsig:
-        cplt.addtsigm(bm,alosp2pval,alat,alon,type='cont',color='g')
+        cplt.addtsigm(bm,alosp2pval,alat,alon,sigtype='cont',color='g')
 
     ax=axs[1,2]
-    bm,pc=cplt.kemmap(diffmult*(alowsp-ahighsp),alat,alon,type='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
+    bm,pc=cplt.kemmap(diffmult*(alowsp-ahighsp),alat,alon,ptype='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
                       title=diffttl,suppcb=True,
                       panellab='f',lcol='0.2')
     if addsig:
@@ -1239,7 +1448,7 @@ if dofigures:
     bm.contour(alons,alats,diffmult*(alowsp2-ahighsp2),levels=conts,
                colors='0.5',linewidths=1,latlon=True)
     if addsig:
-        cplt.addtsigm(bm,asp2pval,alat,alon,type='cont',color='g')
+        cplt.addtsigm(bm,asp2pval,alat,alon,sigtype='cont',color='g')
 
     cplt.add_colorbar(fig,pc,orientation='horizontal')
 
@@ -1270,7 +1479,7 @@ if dofigures:
     fig.subplots_adjust(wspace=0.05,hspace=0.03)
 
     ax=axs[0,0]
-    bm,pc=cplt.kemmap(highlespr2,lat,lon,type='nheur',axis=ax,cmin=cminspbig,cmax=cmaxspbig,
+    bm,pc=cplt.kemmap(highlespr2,lat,lon,ptype='nheur',axis=ax,cmin=cminspbig,cmax=cmaxspbig,
                       title=ttl12,suppcb=True,
                       panellab='a',lcol='0.2')
     bm.contour(lons,lats,highlesp2r2,levels=contsbig,
@@ -1278,21 +1487,21 @@ if dofigures:
     ax.set_ylabel('CGCM')
 
     ax=axs[0,1]
-    bm,pc=cplt.kemmap(lowlespr2,lat,lon,type='nheur',axis=ax,cmin=cminspbig,cmax=cmaxspbig,
+    bm,pc=cplt.kemmap(lowlespr2,lat,lon,ptype='nheur',axis=ax,cmin=cminspbig,cmax=cmaxspbig,
                       title=ttl22,suppcb=True,
                       panellab='b',lcol='0.2')
     bm.contour(lons,lats,lowlesp2r2,levels=contsbig,
                colors='0.5',linewidths=1,latlon=True)
 
     ax=axs[0,2]
-    bm,pc=cplt.kemmap(meanlesp,lat,lon,type='nheur',axis=ax,cmin=cminspbig,cmax=cmaxspbig,
+    bm,pc=cplt.kemmap(meanlesp,lat,lon,ptype='nheur',axis=ax,cmin=cminspbig,cmax=cmaxspbig,
                       title='Mean Anom',suppcb=True,
                       panellab='c',lcol='0.2')
     bm.contour(lons,lats,meanlesp2,levels=contsbig,
                colors='0.5',linewidths=1,latlon=True)
 
     ax=axs[1,0]
-    bm,pc=cplt.kemmap(highlespr2-meanlesp,lat,lon,type='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
+    bm,pc=cplt.kemmap(highlespr2-meanlesp,lat,lon,ptype='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
                       title='High Anom',suppcb=True,
                       panellab='d',lcol='0.2')
     if addsig:
@@ -1300,11 +1509,11 @@ if dofigures:
     bm.contour(lons,lats,highlesp2r2-meanlesp2,levels=conts,
                colors='0.5',linewidths=1,latlon=True)
     if addsig:
-        cplt.addtsigm(bm,lehisp2r2pval,lat,lon,type='cont',color='g')
+        cplt.addtsigm(bm,lehisp2r2pval,lat,lon,sigtype='cont',color='g')
     ax.set_ylabel('CGCM Diff')
 
     ax=axs[1,1]
-    bm,pc=cplt.kemmap(lowlespr2-meanlesp,lat,lon,type='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
+    bm,pc=cplt.kemmap(lowlespr2-meanlesp,lat,lon,ptype='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
                       title='Low Anom',suppcb=True,
                       panellab='e',lcol='0.2')
     if addsig:
@@ -1312,10 +1521,10 @@ if dofigures:
     bm.contour(lons,lats,lowlesp2r2-meanlesp2,levels=conts,
                colors='0.5',linewidths=1,latlon=True)
     if addsig:
-        cplt.addtsigm(bm,lelosp2r2pval,lat,lon,type='cont',color='g')
+        cplt.addtsigm(bm,lelosp2r2pval,lat,lon,sigtype='cont',color='g')
 
     ax=axs[1,2]
-    bm,pc=cplt.kemmap(diffmult*(lowlespr2-highlespr2),lat,lon,type='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
+    bm,pc=cplt.kemmap(diffmult*(lowlespr2-highlespr2),lat,lon,ptype='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
                       title=diffttl,suppcb=True,
                       panellab='f',lcol='0.2')
     if addsig:
@@ -1323,7 +1532,7 @@ if dofigures:
     bm.contour(lons,lats,diffmult*(lowlesp2r2-highlesp2r2),levels=conts,
                colors='0.5',linewidths=1,latlon=True)
     if addsig:
-        cplt.addtsigm(bm,lesp2r2pval,lat,lon,type='cont',color='g')
+        cplt.addtsigm(bm,lesp2r2pval,lat,lon,sigtype='cont',color='g')
 
     cplt.add_colorbar(fig,pc,orientation='horizontal')
     if printtofile:
@@ -1341,7 +1550,7 @@ if dofigures:
     fig.subplots_adjust(wspace=0.05,hspace=0.03)
 
     ax=axs[0,0]
-    bm,pc=cplt.kemmap(pihighspr2,lat,lon,type='nheur',axis=ax,cmin=cminspbig,cmax=cmaxspbig,
+    bm,pc=cplt.kemmap(pihighspr2,lat,lon,ptype='nheur',axis=ax,cmin=cminspbig,cmax=cmaxspbig,
                       title=ttl12,suppcb=True,
                       panellab='a',lcol='0.2')
     bm.contour(lons,lats,pihighsp2r2,levels=contsbig,
@@ -1349,14 +1558,14 @@ if dofigures:
     ax.set_ylabel('PreIndustrial')
 
     ax=axs[0,1]
-    bm,pc=cplt.kemmap(pilowspr2,lat,lon,type='nheur',axis=ax,cmin=cminspbig,cmax=cmaxspbig,
+    bm,pc=cplt.kemmap(pilowspr2,lat,lon,ptype='nheur',axis=ax,cmin=cminspbig,cmax=cmaxspbig,
                       title=ttl22,suppcb=True,
                       panellab='b',lcol='0.2')
     bm.contour(lons,lats,pilowsp2r2,levels=contsbig,
                colors='0.5',linewidths=1,latlon=True)
 
     ax=axs[0,2]
-    bm,pc=cplt.kemmap(pimeansp,lat,lon,type='nheur',axis=ax,cmin=cminspbig,cmax=cmaxspbig,
+    bm,pc=cplt.kemmap(pimeansp,lat,lon,ptype='nheur',axis=ax,cmin=cminspbig,cmax=cmaxspbig,
                       title='Mean Anom',suppcb=True,
                       panellab='c',lcol='0.2')
     bm.contour(lons,lats,pimeansp2,levels=contsbig,
@@ -1364,7 +1573,7 @@ if dofigures:
     #cplt.add_colorbar(fig,pc,orientation='horizontal',pos=[.25,.5, .5,.03])
 
     ax=axs[1,0]
-    bm,pc=cplt.kemmap(pihighspr2-pimeansp,lat,lon,type='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
+    bm,pc=cplt.kemmap(pihighspr2-pimeansp,lat,lon,ptype='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
                       title='High Anom',suppcb=True,
                       panellab='d',lcol='0.2')
     if addsig:
@@ -1372,11 +1581,11 @@ if dofigures:
     bm.contour(lons,lats,pihighsp2r2-pimeansp2,levels=conts,
                colors='0.5',linewidths=1,latlon=True)
     if addsig:
-        cplt.addtsigm(bm,pihisp2r2pval,lat,lon,type='cont',color='g')
+        cplt.addtsigm(bm,pihisp2r2pval,lat,lon,sigtype='cont',color='g')
     ax.set_ylabel('PreI Diff')
 
     ax=axs[1,1]
-    bm,pc=cplt.kemmap(pilowspr2-pimeansp,lat,lon,type='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
+    bm,pc=cplt.kemmap(pilowspr2-pimeansp,lat,lon,ptype='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
                       title='Low Anom',suppcb=True,
                       panellab='e',lcol='0.2')
     if addsig:
@@ -1384,10 +1593,10 @@ if dofigures:
     bm.contour(lons,lats,pilowsp2r2-pimeansp2,levels=conts,
                colors='0.5',linewidths=1,latlon=True)
     if addsig:
-        cplt.addtsigm(bm,pilosp2r2pval,lat,lon,type='cont',color='g')
+        cplt.addtsigm(bm,pilosp2r2pval,lat,lon,sigtype='cont',color='g')
 
     ax=axs[1,2]
-    bm,pc=cplt.kemmap(diffmult*(pilowspr2-pihighspr2),lat,lon,type='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
+    bm,pc=cplt.kemmap(diffmult*(pilowspr2-pihighspr2),lat,lon,ptype='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
                       title=diffttl,suppcb=True,
                       panellab='f',lcol='0.2')
     if addsig:
@@ -1395,7 +1604,7 @@ if dofigures:
     bm.contour(lons,lats,diffmult*(pilowsp2r2-pihighsp2r2),levels=conts,
                colors='0.5',linewidths=1,latlon=True)
     if addsig:
-        cplt.addtsigm(bm,pisp2r2pval,lat,lon,type='cont',color='g')
+        cplt.addtsigm(bm,pisp2r2pval,lat,lon,sigtype='cont',color='g')
 
     cplt.add_colorbar(fig,pc,orientation='horizontal')
     if printtofile:
@@ -1415,7 +1624,7 @@ if dofigures:
     fig.subplots_adjust(wspace=0.05,hspace=0.03)
 
     ax=axs[0,0]
-    bm,pc=cplt.kemmap(ahighspr2,alat,alon,type='nheur',axis=ax,cmin=cminspbig,cmax=cmaxspbig,
+    bm,pc=cplt.kemmap(ahighspr2,alat,alon,ptype='nheur',axis=ax,cmin=cminspbig,cmax=cmaxspbig,
                       title=ttl12,suppcb=True,
                       panellab='a',lcol='0.2')
     bm.contour(alons,alats,ahighsp2r2,levels=contsbig,
@@ -1423,21 +1632,21 @@ if dofigures:
     ax.set_ylabel('AGCM')
 
     ax=axs[0,1]
-    bm,pc=cplt.kemmap(alowspr2,alat,alon,type='nheur',axis=ax,cmin=cminspbig,cmax=cmaxspbig,
+    bm,pc=cplt.kemmap(alowspr2,alat,alon,ptype='nheur',axis=ax,cmin=cminspbig,cmax=cmaxspbig,
                       title=ttl22,suppcb=True,
                       panellab='b',lcol='0.2')
     bm.contour(alons,alats,alowsp2r2,levels=contsbig,
                colors='0.5',linewidths=1,latlon=True)
 
     ax=axs[0,2]
-    bm,pc=cplt.kemmap(ameansp,alat,alon,type='nheur',axis=ax,cmin=cminspbig,cmax=cmaxspbig,
+    bm,pc=cplt.kemmap(ameansp,alat,alon,ptype='nheur',axis=ax,cmin=cminspbig,cmax=cmaxspbig,
                       title='Mean Anom',suppcb=True,
                       panellab='c',lcol='0.2')
     bm.contour(alons,alats,ameansp2,levels=contsbig,
                colors='0.5',linewidths=1,latlon=True)
 
     ax=axs[1,0]
-    bm,pc=cplt.kemmap(ahighspr2-ameansp,alat,alon,type='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
+    bm,pc=cplt.kemmap(ahighspr2-ameansp,alat,alon,ptype='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
                       title='High Anom',suppcb=True,
                       panellab='d',lcol='0.2')
     if addsig:
@@ -1445,11 +1654,11 @@ if dofigures:
     bm.contour(alons,alats,ahighsp2r2-ameansp2,levels=conts,
                colors='0.5',linewidths=1,latlon=True)
     if addsig:
-        cplt.addtsigm(bm,ahisp2r2pval,alat,alon,type='cont',color='g')
+        cplt.addtsigm(bm,ahisp2r2pval,alat,alon,sigtype='cont',color='g')
     ax.set_ylabel('AGCM Diff')
 
     ax=axs[1,1]
-    bm,pc=cplt.kemmap(alowspr2-ameansp,alat,alon,type='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
+    bm,pc=cplt.kemmap(alowspr2-ameansp,alat,alon,ptype='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
                       title='Low Anom',suppcb=True,
                       panellab='e',lcol='0.2')
     if addsig:
@@ -1457,10 +1666,10 @@ if dofigures:
     bm.contour(alons,alats,alowsp2r2-ameansp2,levels=conts,
                colors='0.5',linewidths=1,latlon=True)
     if addsig:
-        cplt.addtsigm(bm,alosp2r2pval,alat,alon,type='cont',color='g')
+        cplt.addtsigm(bm,alosp2r2pval,alat,alon,sigtype='cont',color='g')
 
     ax=axs[1,2]
-    bm,pc=cplt.kemmap(diffmult*(alowspr2-ahighspr2),alat,alon,type='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
+    bm,pc=cplt.kemmap(diffmult*(alowspr2-ahighspr2),alat,alon,ptype='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
                       title=diffttl,suppcb=True,
                       panellab='f',lcol='0.2')
     if addsig:
@@ -1468,7 +1677,7 @@ if dofigures:
     bm.contour(alons,alats,diffmult*(alowsp2r2-ahighsp2r2),levels=conts,
                colors='0.5',linewidths=1,latlon=True)
     if addsig:
-        cplt.addtsigm(bm,asp2r2pval,alat,alon,type='cont',color='g')
+        cplt.addtsigm(bm,asp2r2pval,alat,alon,sigtype='cont',color='g')
 
     cplt.add_colorbar(fig,pc,orientation='horizontal')
     if printtofile:
@@ -1487,7 +1696,7 @@ if dofigures:
         fig.subplots_adjust(wspace=0.05,hspace=0.03)
 
         ax=axs[0,0]
-        bm,pc=cplt.kemmap(aehighspr2,alat,alon,type='nheur',axis=ax,cmin=cminspbig,cmax=cmaxspbig,
+        bm,pc=cplt.kemmap(aehighspr2,alat,alon,ptype='nheur',axis=ax,cmin=cminspbig,cmax=cmaxspbig,
                           title=ttl12,suppcb=True,
                           panellab='a',lcol='0.2')
         bm.contour(alons,alats,aehighsp2r2,levels=contsbig,
@@ -1495,21 +1704,21 @@ if dofigures:
         ax.set_ylabel('AGCM')
 
         ax=axs[0,1]
-        bm,pc=cplt.kemmap(aelowspr2,alat,alon,type='nheur',axis=ax,cmin=cminspbig,cmax=cmaxspbig,
+        bm,pc=cplt.kemmap(aelowspr2,alat,alon,ptype='nheur',axis=ax,cmin=cminspbig,cmax=cmaxspbig,
                           title=ttl22,suppcb=True,
                           panellab='b',lcol='0.2')
         bm.contour(alons,alats,aelowsp2r2,levels=contsbig,
                    colors='0.5',linewidths=1,latlon=True)
 
         ax=axs[0,2]
-        bm,pc=cplt.kemmap(aemeansp,alat,alon,type='nheur',axis=ax,cmin=cminspbig,cmax=cmaxspbig,
+        bm,pc=cplt.kemmap(aemeansp,alat,alon,ptype='nheur',axis=ax,cmin=cminspbig,cmax=cmaxspbig,
                           title='Mean Anom',suppcb=True,
                           panellab='c',lcol='0.2')
         bm.contour(alons,alats,aemeansp2,levels=contsbig,
                    colors='0.5',linewidths=1,latlon=True)
 
         ax=axs[1,0]
-        bm,pc=cplt.kemmap(aehighspr2-aemeansp,alat,alon,type='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
+        bm,pc=cplt.kemmap(aehighspr2-aemeansp,alat,alon,ptype='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
                           title='High Anom',suppcb=True,
                           panellab='d',lcol='0.2')
         if addsig:
@@ -1517,11 +1726,11 @@ if dofigures:
         bm.contour(alons,alats,aehighsp2r2-aemeansp2,levels=conts,
                    colors='0.5',linewidths=1,latlon=True)
         if addsig:
-            cplt.addtsigm(bm,aehisp2r2pval,alat,alon,type='cont',color='g')
+            cplt.addtsigm(bm,aehisp2r2pval,alat,alon,sigtype='cont',color='g')
         ax.set_ylabel('AGCM Diff')
 
         ax=axs[1,1]
-        bm,pc=cplt.kemmap(aelowspr2-aemeansp,alat,alon,type='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
+        bm,pc=cplt.kemmap(aelowspr2-aemeansp,alat,alon,ptype='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
                           title='Low Anom',suppcb=True,
                           panellab='e',lcol='0.2')
         if addsig:
@@ -1529,10 +1738,10 @@ if dofigures:
         bm.contour(alons,alats,aelowsp2r2-aemeansp2,levels=conts,
                    colors='0.5',linewidths=1,latlon=True)
         if addsig:
-            cplt.addtsigm(bm,aelosp2r2pval,alat,alon,type='cont',color='g')
+            cplt.addtsigm(bm,aelosp2r2pval,alat,alon,sigtype='cont',color='g')
 
         ax=axs[1,2]
-        bm,pc=cplt.kemmap(diffmult*(aelowspr2-aehighspr2),alat,alon,type='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
+        bm,pc=cplt.kemmap(diffmult*(aelowspr2-aehighspr2),alat,alon,ptype='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
                           title=diffttl,suppcb=True,
                           panellab='f',lcol='0.2')
         if addsig:
@@ -1540,7 +1749,7 @@ if dofigures:
         bm.contour(alons,alats,diffmult*(aelowsp2r2-aehighsp2r2),levels=conts,
                    colors='0.5',linewidths=1,latlon=True)
         if addsig:
-            cplt.addtsigm(bm,aesp2r2pval,alat,alon,type='cont',color='g')
+            cplt.addtsigm(bm,aesp2r2pval,alat,alon,sigtype='cont',color='g')
 
         cplt.add_colorbar(fig,pc,orientation='horizontal')
         if printtofile:
@@ -1558,7 +1767,7 @@ if dofigures:
         fig.subplots_adjust(wspace=0.05,hspace=0.03)
 
         ax=axs[0]
-        bm,pc=cplt.kemmap(diffmult*(alowspr2-ahighspr2),alat,alon,type='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
+        bm,pc=cplt.kemmap(diffmult*(alowspr2-ahighspr2),alat,alon,ptype='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
                           title='Var (' + diffttl + ')',suppcb=True,
                           panellab='a',lcol='0.2')
         if addsig:
@@ -1566,10 +1775,10 @@ if dofigures:
         bm.contour(alons,alats,diffmult*(alowsp2r2-ahighsp2r2),levels=conts,
                    colors='0.5',linewidths=1,latlon=True)
         if addsig:
-            cplt.addtsigm(bm,asp2r2pval,alat,alon,type='cont',color='g')
+            cplt.addtsigm(bm,asp2r2pval,alat,alon,sigtype='cont',color='g')
 
         ax=axs[1]
-        bm,pc=cplt.kemmap(diffmult*(aelowspr2-aehighspr2),alat,alon,type='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
+        bm,pc=cplt.kemmap(diffmult*(aelowspr2-aehighspr2),alat,alon,ptype='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
                           title='Const (' + diffttl + ')',suppcb=True,
                           panellab='b',lcol='0.2')
         if addsig:
@@ -1577,10 +1786,10 @@ if dofigures:
         bm.contour(alons,alats,diffmult*(aelowsp2r2-aehighsp2r2),levels=conts,
                    colors='0.5',linewidths=1,latlon=True)
         if addsig:
-            cplt.addtsigm(bm,aesp2r2pval,alat,alon,type='cont',color='g')
+            cplt.addtsigm(bm,aesp2r2pval,alat,alon,sigtype='cont',color='g')
 
         ax=axs[2] 
-        bm,pc=cplt.kemmap((alowspr2-ahighspr2)-(aelowspr2-aehighspr2),alat,alon,type='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
+        bm,pc=cplt.kemmap((alowspr2-ahighspr2)-(aelowspr2-aehighspr2),alat,alon,ptype='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
                           title='Var-Const (' + diffttl + ')',suppcb=True,
                           panellab='c',lcol='0.2')
         if addsig:
@@ -1588,7 +1797,7 @@ if dofigures:
         bm.contour(alons,alats,(alowsp2r2-ahighsp2r2)-(aelowsp2r2-aehighsp2r2),levels=conts,
                    colors='0.5',linewidths=1,latlon=True)
         if addsig:
-            cplt.addtsigm(bm,aressp2pval,alat,alon,type='cont',color='g')
+            cplt.addtsigm(bm,aressp2pval,alat,alon,sigtype='cont',color='g')
 
         cplt.add_colorbar(fig,pc,orientation='horizontal')
         if printtofile:
@@ -1618,7 +1827,7 @@ if dofigures:
     bm.contour(lons,lats,lowpisp2-highpisp2,levels=conts,
                colors='0.5',linewidths=1,latlon=True)
     if addsig:
-        cplt.addtsigm(bm,pisp2pval,lat,lon,type='cont',color='g')
+        cplt.addtsigm(bm,pisp2pval,lat,lon,sigtype='cont',color='g')
     ax.set_ylabel(sttl1)
     #-- CGCM comp on SIC:
     ax=axs[0,1]
@@ -1630,7 +1839,7 @@ if dofigures:
     bm.contour(lons,lats,lowlesp2-highlesp2,levels=conts,
                colors='0.5',linewidths=1,latlon=True)
     if addsig:
-        cplt.addtsigm(bm,lesp2pval,lat,lon,type='cont',color='g')
+        cplt.addtsigm(bm,lesp2pval,lat,lon,sigtype='cont',color='g')
     #-- CGCM-PI comp on SIC:
     ax=axs[0,2]
     junk,cgpipval = cutl.ttest_ind(meanlesp[lowidx,...].reshape((nn,nlat,nlon))-\
@@ -1709,7 +1918,7 @@ if dofigures:
     fig.subplots_adjust(wspace=0.05,hspace=0.03)
 
     ax=axs[0,0]
-    bm,pc=cplt.kemmap(highlespr2-meanlesp,lat,lon,type='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
+    bm,pc=cplt.kemmap(highlespr2-meanlesp,lat,lon,ptype='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
                       title='High Anom',suppcb=True,
                       panellab='a',lcol='0.2')
     if addsig:
@@ -1717,11 +1926,11 @@ if dofigures:
     bm.contour(lons,lats,highlesp2r2-meanlesp2,levels=conts,
                colors='0.5',linewidths=1,latlon=True)
     if addsig:
-        cplt.addtsigm(bm,lehisp2r2pval,lat,lon,type='cont',color='g')
+        cplt.addtsigm(bm,lehisp2r2pval,lat,lon,sigtype='cont',color='g')
 
     ax.set_ylabel('CGCM Diff')
     ax=axs[0,1]
-    bm,pc=cplt.kemmap(lowlespr2-meanlesp,lat,lon,type='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
+    bm,pc=cplt.kemmap(lowlespr2-meanlesp,lat,lon,ptype='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
                       title='Low Anom',suppcb=True,
                       panellab='b',lcol='0.2')
     if addsig:
@@ -1729,10 +1938,10 @@ if dofigures:
     bm.contour(lons,lats,lowlesp2r2-meanlesp2,levels=conts,
                colors='0.5',linewidths=1,latlon=True)
     if addsig:
-        cplt.addtsigm(bm,lelosp2r2pval,lat,lon,type='cont',color='g')
+        cplt.addtsigm(bm,lelosp2r2pval,lat,lon,sigtype='cont',color='g')
 
     ax=axs[0,2]
-    bm,pc=cplt.kemmap(diffmult*(lowlespr2-highlespr2),lat,lon,type='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
+    bm,pc=cplt.kemmap(diffmult*(lowlespr2-highlespr2),lat,lon,ptype='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
                       title=diffttl,suppcb=True,
                       panellab='c',lcol='0.2')
     if addsig:
@@ -1740,10 +1949,10 @@ if dofigures:
     bm.contour(lons,lats,diffmult*(lowlesp2r2-highlesp2r2),levels=conts,
                colors='0.5',linewidths=1,latlon=True)
     if addsig:
-        cplt.addtsigm(bm,lesp2r2pval,lat,lon,type='cont',color='g')
+        cplt.addtsigm(bm,lesp2r2pval,lat,lon,sigtype='cont',color='g')
 
     ax=axs[1,0]
-    bm,pc=cplt.kemmap(ahighspr2-ameansp,alat,alon,type='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
+    bm,pc=cplt.kemmap(ahighspr2-ameansp,alat,alon,ptype='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
                       title='High Anom',suppcb=True,
                       panellab='d',lcol='0.2')
     if addsig:
@@ -1751,11 +1960,11 @@ if dofigures:
     bm.contour(alons,alats,ahighsp2r2-ameansp2,levels=conts,
                colors='0.5',linewidths=1,latlon=True)
     if addsig:
-        cplt.addtsigm(bm,ahisp2r2pval,alat,alon,type='cont',color='g')
+        cplt.addtsigm(bm,ahisp2r2pval,alat,alon,sigtype='cont',color='g')
     ax.set_ylabel('AGCM Diff')
 
     ax=axs[1,1]
-    bm,pc=cplt.kemmap(alowspr2-ameansp,alat,alon,type='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
+    bm,pc=cplt.kemmap(alowspr2-ameansp,alat,alon,ptype='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
                       title='Low Anom',suppcb=True,
                       panellab='e',lcol='0.2')
     if addsig:
@@ -1763,10 +1972,10 @@ if dofigures:
     bm.contour(alons,alats,alowsp2r2-ameansp2,levels=conts,
                colors='0.5',linewidths=1,latlon=True)
     if addsig:
-        cplt.addtsigm(bm,alosp2r2pval,alat,alon,type='cont',color='g')
+        cplt.addtsigm(bm,alosp2r2pval,alat,alon,sigtype='cont',color='g')
 
     ax=axs[1,2]
-    bm,pc=cplt.kemmap(diffmult*(alowspr2-ahighspr2),alat,alon,type='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
+    bm,pc=cplt.kemmap(diffmult*(alowspr2-ahighspr2),alat,alon,ptype='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
                       title=diffttl,suppcb=True,
                       panellab='f',lcol='0.2')
     if addsig:
@@ -1774,7 +1983,7 @@ if dofigures:
     bm.contour(alons,alats,diffmult*(alowsp2r2-ahighsp2r2),levels=conts,
                colors='0.5',linewidths=1,latlon=True)
     if addsig:
-        cplt.addtsigm(bm,asp2r2pval,alat,alon,type='cont',color='g')
+        cplt.addtsigm(bm,asp2r2pval,alat,alon,sigtype='cont',color='g')
 
     cplt.add_colorbar(fig,pc,orientation='horizontal')
 
