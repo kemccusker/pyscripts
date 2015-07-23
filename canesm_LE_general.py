@@ -309,7 +309,7 @@ def plot_shorttermpdf(fig,ax,field,region,xxdat,pdfdat,histdat,meandat,cidat,
     natcolline=ccm.get_linecolor('steelblue3')#4')
     miscol=ccm.get_linecolor('orange3') #'deepskyblue')
     miscolline=ccm.get_linecolor('orange3') #'deepskyblue')
-    obscol='k' #ccm.get_linecolor('midnightblue') #'b'
+    obscol='r' #'k' #ccm.get_linecolor('midnightblue') #'b'
     picol='purple'
 
     sslg=mlines.Line2D([],[],color=ltcol,linewidth=2) # subsamp sims
@@ -318,7 +318,8 @@ def plot_shorttermpdf(fig,ax,field,region,xxdat,pdfdat,histdat,meandat,cidat,
     simlg=mlines.Line2D([],[],color='0.3',linestyle='none',marker='o')
     nsidclg=mlines.Line2D([],[],color='g',linestyle='none',marker='o')
     nsidclg2=mlines.Line2D([],[],color='g',linewidth=2,mew=2,marker='|')
-    obslg=mlines.Line2D([],[],color=obscol,linestyle='none',marker='s')
+    #obslg=mlines.Line2D([],[],color=obscol,linestyle='none',marker='s')
+    obslg=mlines.Line2D([],[],color=obscol,linewidth=2)
     rawlg=mlines.Line2D([],[],color=hcolline,linewidth=2)
     rawnlg=mlines.Line2D([],[],color=natcolline,linewidth=2)
     rawmlg=mlines.Line2D([],[],color=miscolline,linewidth=2)
@@ -427,7 +428,7 @@ def plot_shorttermpdf(fig,ax,field,region,xxdat,pdfdat,histdat,meandat,cidat,
         nsx= simflddf['NSIDC']
         idx=cutl.find_nearest(ss2xx,nsx)
         nsy=ss2pdf_fitted[idx]
-        ax.plot(nsx,nsy,marker='o',color='g',mec='g',fillstyle=fs,mew=mew,markersize=ms)
+        #ax.plot(nsx,nsy,marker='o',color='g',mec='g',fillstyle=fs,mew=mew,markersize=ms)
         if addanno:
             ax.annotate('Obs AGCM',xy=(nsx,nsy),xytext=(10,20),
                         textcoords='offset points',fontsize=fsz,
@@ -554,8 +555,10 @@ def plot_shorttermpdf(fig,ax,field,region,xxdat,pdfdat,histdat,meandat,cidat,
     # someX, someY = 2, 3
     # currentAxis = plt.gca()
     # currentAxis.add_patch(Rectangle((someX - .5, someY - .5), 1, 1, facecolor="grey"))
-    inax.add_patch(mpatches.Rectangle((rawcif[0],yy-boxwi),rawcif[1]-rawcif[0],boxwi*2,ec=hcolline,fc='white',linewidth=2,alpha=0.5))
-    inax.add_patch(mpatches.Rectangle((rawci[0],yy-boxwi),rawci[1]-rawci[0],boxwi*2,ec=hcolline,fc=hcolline,linewidth=2,alpha=0.5))
+    inax.add_patch(mpatches.Rectangle((rawcif[0],yy-boxwi),
+                                      rawcif[1]-rawcif[0],boxwi*2,ec=hcolline,fc='white',linewidth=2))
+    inax.add_patch(mpatches.Rectangle((rawci[0],yy-boxwi),
+                                      rawci[1]-rawci[0],boxwi*2,ec=hcolline,fc=hcolline,linewidth=2,alpha=0.5))
     #inax.plot(rawci, (yy,yy), linewidth=2,marker='|',markersize=6,mew=2,mec=hcolline,color=hcolline)
     #inax.plot(rawcif, (yy,yy), linewidth=2,marker='|',markersize=6,mew=2,mec=hcolline,color=hcolline)
     yy=yy-1
@@ -571,16 +574,20 @@ def plot_shorttermpdf(fig,ax,field,region,xxdat,pdfdat,histdat,meandat,cidat,
         yy=yy-1
     if addpi:
         inax.plot((pimean,pimean),(yy-boxwi,yy+boxwi),linewidth=2,color=picol)
-        inax.add_patch(mpatches.Rectangle((picif[0],yy-boxwi),picif[1]-picif[0],boxwi*2,ec=picol,fc='white',linewidth=2,alpha=0.5))
-        inax.add_patch(mpatches.Rectangle((pici[0],yy-boxwi),pici[1]-pici[0],boxwi*2,ec=picol,fc=picol,linewidth=2,alpha=0.5))
+        inax.add_patch(mpatches.Rectangle((picif[0],yy-boxwi),
+                                          picif[1]-picif[0],boxwi*2,ec=picol,fc='white',linewidth=2))
+        inax.add_patch(mpatches.Rectangle((pici[0],yy-boxwi),
+                                          pici[1]-pici[0],boxwi*2,ec=picol,fc=picol,linewidth=2,alpha=0.5))
         #inax.plot(pimean, yy, linestyle='none',marker='s',mec=picol,color=picol)
         #inax.plot(pici, (yy,yy), linewidth=2,marker='|',markersize=6,mew=2,mec=picol,color=picol)   
         #inax.plot(picif, (yy,yy), linewidth=2,marker='|',markersize=6,mew=2,mec=picol,color=picol)   
         yy=yy-1
     if field!='sia':
         inax.plot((ss2mean,ss2mean),(yy-boxwi,yy+boxwi),linewidth=2,color=ltcol)
-        inax.add_patch(mpatches.Rectangle((ss2cif[0],yy-boxwi),ss2cif[1]-ss2cif[0],boxwi*2,ec=ltcol,fc='white',linewidth=2,alpha=0.5))
-        inax.add_patch(mpatches.Rectangle((ss2ci[0],yy-boxwi),ss2ci[1]-ss2ci[0],boxwi*2,ec=ltcol,fc=ltcol,linewidth=2,alpha=0.5))
+        inax.add_patch(mpatches.Rectangle((ss2cif[0],yy-boxwi),
+                                          ss2cif[1]-ss2cif[0],boxwi*2,ec=ltcol,fc='white',linewidth=2))
+        inax.add_patch(mpatches.Rectangle((ss2ci[0],yy-boxwi),
+                                          ss2ci[1]-ss2ci[0],boxwi*2,ec=ltcol,fc=ltcol,linewidth=2,alpha=0.5))
         #inax.plot(ss2mean, yy, linestyle='none',marker='s',mec=ltcol,color=ltcol)
         #inax.plot(ss2ci, (yy,yy), linewidth=2,marker='|',markersize=6,mew=2,mec=ltcol,color=ltcol)
         #inax.plot(ss2cif, (yy,yy), linewidth=2,marker='|',markersize=6,mew=2,mec=ltcol,color=ltcol)
@@ -641,8 +648,12 @@ def plot_shorttermpdf(fig,ax,field,region,xxdat,pdfdat,histdat,meandat,cidat,
     if field=='tas':
         legstr=legstr+('AGCM',)
         legh=legh+(sslg,)
+        legstr=legstr+('GIStemp',)
+        legh=legh+(obslg,)
         ax.legend(legh,legstr, loc=(0.71,0.47),frameon=False,prop=fontP)
     elif field=='sia':
+        legstr=legstr+('NSIDC',)
+        legh=legh+(obslg,)
         ax.legend(legh,legstr, loc=(0.69,0.5),frameon=False,prop=fontP)
 
     ax.set_xlabel(xlab,fontsize=fsz)
