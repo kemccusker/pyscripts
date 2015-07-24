@@ -15,7 +15,7 @@ from matplotlib import gridspec
 import matplotlib.font_manager as fm
 import scipy.io as sio
 import datetime as datetime
-
+import string as string
 
 printtofile=False
 
@@ -94,7 +94,7 @@ fdictr3 = {'field': fieldr3+regionr3,'ncfield': ncfieldr3, 'comp': compr3}
 
 # used for file loading
 regions=('bkssic','eursat','bksz500')
-fields=('sat','z500','ice')
+fields=('ice','sat','z500')
 
 
 lat=le.get_lat(local=local)
@@ -655,7 +655,7 @@ for ckey in allcasedt.keys():
         dt=allrdt[rkey][fkey]
 
         diff = dt['lowspt']-dt['highspt']
-        regm = cutl.calc_regmean(diff[...,:-1],lat,lon,'eurasiamori')
+        regm = cutl.calc_regmean(diff[...,:-1],lat,lon,'bksmori')
 
         # Confidence interval: 5=95% interval on the mean
         regmci = sp.stats.t.interval(1-cisiglevel,len(regm)-1,
@@ -823,11 +823,15 @@ if printtofile:
 
 
 
-# VERSION 2: SWAP THINGS AROUND:
+# VERSION 2: SWAP THINGS AROUND: ==================
 # allflddt is organized by spatial field
 allflddt={'ice':allregimdf, 'sat':allregspmdf, 'z500':allregsp2mdf}
 allcidt={'ice':allregimcidf, 'sat':allregspmcidf, 'z500':allregsp2mcidf}
-fylims=((-12,4),(-3,2),(-30,15))
+
+fylims=((-12,4),(-2.5,1),(-15,75))
+fyticklabs=(('-12','','-8','','-4','','0','','4'),
+           ('','-2','','-1','','0','','1'),
+           ('','0','20','40','60'))
 mkrs2=('o','^','s')
 
 #gs2 = gridspec.GridSpec(1, 9)
@@ -837,29 +841,48 @@ mkrs2=('o','^','s')
 # loop "region" composited on
 #     loop spatial field (ice,sat,z500)
 #          loop ensemble
-# skip first loop for the moment:
+
 xx=np.arange(0,3); stxx=0
 xincr=0.2
 
 
-#rii=0; reg='bkssic'; mult=1
-left=0.02
-wid=0.26
+print '---- plotting v2 of summary ----'
+pii=0
+fig = plt.figure(figsize=(14,9.5))
+gs1 = gridspec.GridSpec(1, 3)
+gs1.update(top=0.97,bottom=0.58,left=0.06,right=0.95,wspace=0.07)
 
-fig = plt.figure(figsize=(14,9))
-outer_grid = gridspec.GridSpec(1, 3, wspace=0.2)
-outer_grid.update(top=0.44)
+cii=0; ckey='CGCM'; pii=0
+for rii,rkey in enumerate(regions):
+    mult=multfacs[rii]
+    print '  ' + rkey + ' (mult=' + str(mult) + ')'
+    ax=plt.subplot(gs1[cii,rii])
+    dt=allcasedt[ckey][rkey]
+
+    bm,pc=cplt.kemmap(mult*(dt[spkey]['lowsp']-dt[spkey]['highsp']),alat,alon,
+                      ptype='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
+                      title='',suppcb=True,
+                      panellab=plabs[pii],lcol='0.2')
+    if addsig:
+        cplt.addtsigm(bm,dt[spkey]['sppval'], alat, alon)
+    bm.contour(alons,alats,mult*(dt[sp2key]['lowsp']-dt[sp2key]['highsp']),levels=conts,
+               colors='0.5',linewidths=1,latlon=True)
+    if addsig:
+        cplt.addtsigm(bm,dt[sp2key]['sppval'],alat,alon,sigtype='cont',color='g')
+
+    if ax.is_first_row(): ax.set_title(reglabs[rii])
+    pii+=1
+
+outer_grid = gridspec.GridSpec(1, 3, wspace=0.25)
+outer_grid.update(top=0.44,bottom=0.08,left=0.06,right=0.95)
 
 for rii,rkey in enumerate(regions):
 
     print rkey
-    #gs1 = gridspec.GridSpec(1, 3)
-    #gs1.update(top=0.44,left=left,right=left+wid,wspace=0.2)
 
     inner_grid = gridspec.GridSpecFromSubplotSpec(1, 3,
                                                   subplot_spec=outer_grid[rii], 
-                                                  wspace=0.1)
-    
+                                                  wspace=0.46)    
     mult=multfacs[rii]
     for fii,fkey in enumerate(fields):
         print '  ' + fkey
@@ -870,68 +893,188 @@ for rii,rkey in enumerate(regions):
         stagger=-xincr
 
         ax = plt.Subplot(fig, inner_grid[fii])
-        if fii==1: ax.set_title('Comp on ' + rkey)
+        #if fii==1: ax.set_title(reglabs[rii])#'Comp on ' + rkey)
 
         #ax=plt.subplot(gs2[0,rii+fii])
         for eii,ens in enumerate(enss):
 
-            print '    ' + str(flddf[ens][rkey])
-
+            print '    ' + str(flddf[ens][rkey]) + ' (mult=' + str(mult) + ')'
             xpos=xx[eii]+stagger
             ax.plot(xpos,mult*flddf[ens][rkey],marker=mkrs2[eii],
                     color=clrs[eii],mec=clrs[eii],linestyle='none',markersize=10)
             ci=cidf[ens][rkey]
             ax.plot((xpos,xpos),mult*np.array(ci),marker='_',
                     mew=2,markersize=10,linewidth=2,color=clrs[eii])
-            ax.set_xlim((stxx-0.7,xx[-1]+0.7))
+            ax.set_xlim((stxx-2,xx[-1]+2))
+            ax.axvspan(stxx-1,xx[-1]+1,color='0.8',alpha=0.5)
+            ax.axhline(y=0,linestyle='--',color='k')
             stagger+=0.2
 
         ax.set_xticks(xx)
         ax.set_xticklabels(('',))
         ax.set_ylim(fylims[fii])
-        ax.set_xlabel('$\Delta$' +fkey)
-        if fii!=2:
-            ax.spines['right'].set_visible(False)
+        ax.set_yticklabels(fyticklabs[fii])
+        ax.set_xlabel('$\Delta$' +reglabs[fii],rotation=25)# fkey)
+        ax.set_ylabel('('+reglabunits[fii]+')')
+        ax.tick_params(bottom='off',top='off')
+        ax.spines['top'].set_visible(False)
+        ax.spines['bottom'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+        ax.tick_params(right='off')
         
         fig.add_subplot(ax)
-        
+        if ax.is_first_col():
+            ax.annotate(plabs[pii],xy=(-0.02,1.04),
+                        xycoords='axes fraction',fontsize=16,fontweight='bold')
+            pii+=1
 
-
-
-
-xincr=0.2
-stagger=-xincr
-for rii,reg in enumerate(regs):
-    print reg
+cbar_ax,cbar = cplt.add_colorbar(fig,pc,orientation='horizontal',
+                                 pos=[.25,.53, .5,.03],
+                                 label='Change in surface air temperature, $\Delta$SAT (' + r2units +')')
+if addsig:
+    prstr='sig'
+else:
+    prstr=''
+if printtofile:
+    fig.savefig('test_fig4_scramble' + prstr +'.pdf')
+    fig.savefig('test_fig4_scramble' + prstr +'.png',dpi=400)
     
+
+
+# VERSION 3 of SUMMARY ====================
+reglabs=('BKS SIC','Eur SAT','BKS Z500')
+reglabunits=('%','$^\circ$C','m')
+lgstrs=(enss)          
+mkrs=('o','^','s')
+
+plabs = list(string.ascii_lowercase)
+
+print '---- plotting v3 of summary ----'
+
+fig=plt.figure(figsize=(12,9))
+gs1 = gridspec.GridSpec(1, 3)
+gs1.update(top=0.97,bottom=0.55,left=0.06,right=0.94,wspace=0.07)
+
+cii=0; ckey='CGCM'; pii=0
+for rii,rkey in enumerate(regions):
+    mult=multfacs[rii]
+    print '  ' + rkey + ' (mult=' + str(mult) + ')'
+    ax=plt.subplot(gs1[cii,rii])
+    dt=allcasedt[ckey][rkey]
+
+    bm,pc=cplt.kemmap(mult*(dt[spkey]['lowsp']-dt[spkey]['highsp']),alat,alon,
+                      ptype='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
+                      title='',suppcb=True,
+                      panellab=plabs[pii],lcol='0.2')
+    if addsig:
+        cplt.addtsigm(bm,dt[spkey]['sppval'], alat, alon)
+    bm.contour(alons,alats,mult*(dt[sp2key]['lowsp']-dt[sp2key]['highsp']),levels=conts,
+               colors='0.5',linewidths=1,latlon=True)
+    if addsig:
+        cplt.addtsigm(bm,dt[sp2key]['sppval'],alat,alon,sigtype='cont',color='g')
+
+    if ax.is_first_row(): ax.set_title(reglabs[rii])
+    pii+=1
+
+gs2 = gridspec.GridSpec(1, 3)
+gs2.update(top=0.44,left=0.08,right=0.92,wspace=0.28)
+for fii,fkey in enumerate(fields):
+
+    ax=plt.subplot(gs2[0,fii])
+    allregmdf=allflddt[fkey]
+    allregmcidf=allcidt[fkey]
+    xincr=0.2
+    stagger=-xincr
+
     for eii,ens in enumerate(enss):
-        print '  ' + ens
-        
+        print ens
+
+        for rii,reg in enumerate(regs):
+            print '  ' + reg
+
+            mult=multfacs[rii]
+            xpos=xx[rii]+stagger
+            ax.plot(xpos,mult*allregmdf[ens][reg],marker=mkrs[eii],
+                    color=clrs[eii],mec=clrs[eii],linestyle='none',markersize=10)
+            ci=allregmcidf[ens][reg]
+            #print mult, (xpos,xpos), ci
+            ax.plot((xpos,xpos),mult*np.array(ci),marker='_',
+                    mew=2,markersize=10,linewidth=2,color=clrs[eii])
+            ax.axvspan(xx[rii]-xincr-0.1,xx[rii]+xincr+0.1,color='0.8',alpha=0.5)
+
+        stagger+=0.2
+
+    ax.set_ylabel('Change in ' + reglabs[fii] + ' (' + reglabunits[fii] + ')')
+    ax.axhline(y=0,color='k',linestyle='--')
+    ax.set_xlim((stxx-0.7,xx[-1]+0.7))
+    if fii==0:
+        ax.legend(lgs,lgstrs,loc='lower right',fancybox=True,frameon=False)#,prop=fontP)
+    ax.set_xticks(xx)
+    ax.set_xticklabels(reglabs,rotation=25)
+    ax.annotate(plabs[pii],xy=(-0.02,1.04),
+                xycoords='axes fraction',fontsize=16,fontweight='bold')
+    pii+=1
+
+cbar_ax,cbar = cplt.add_colorbar(fig,pc,orientation='horizontal',
+                                 pos=[.25,.53, .5,.03],
+                                 label='Change in surface air temperature, $\Delta$SAT (' + r2units +')')
+#cbar.add_lines(pc)
+if addsig:
+    prstr='sig'
+else:
+    prstr=''
+if printtofile:
+    fig.savefig('Figure4_draft_6panel_CGCMmaps_compavgs' + prstr + 'swap.pdf')
+    fig.savefig('Figure4_draft_6panel_CGCMmaps_compavgs' + prstr + 'swap.png',dpi=400)
+
+
+
+
+
+
+
+# ======== plot all composite maps:
+#allcasedt = {'Preindustrial':piallrdt, 'CGCM': leallrdt, 'AGCM':aallrdt}
+
+# loop case
+#    loop regions
+
+pii=0
+
+fig=plt.figure(figsize=(12,9))
+gs1 = gridspec.GridSpec(3,3)
+gs1.update(left=0.08,right=0.92,wspace=0.02,hspace=0.05)
+
+for cii,ckey in enumerate(allcasedt.keys()):
+    print ckey
+    for rii,rkey in enumerate(regions):
         mult=multfacs[rii]
-        xpos=xx[eii]+stagger
-        ax.plot(xpos,mult*allregimdf[ens][reg],marker=mkrs[rii],
-                color=clrs[rii],mec=clrs[rii],linestyle='none',markersize=10)
-        ci=allregimcidf[ens][reg]
-        #print mult, (xpos,xpos), ci
-        ax.plot((xpos,xpos),mult*np.array(ci),marker='_',
-                mew=2,markersize=10,linewidth=2,color=clrs[rii])
-        ax.axvspan(xx[eii]-xincr-0.1,xx[eii]+xincr+0.1,color='0.8',alpha=0.5)
-    
-    stagger+=0.2
+        print '  ' + rkey + ' (mult=' + str(mult) + ')'
+        ax=plt.subplot(gs1[cii,rii])
+        dt=allcasedt[ckey][rkey]
 
-ax.set_ylabel('Change in ' + r1str + ' (' + r1units + ')')
-ax.axhline(y=0,color='k',linestyle='--')
-ax.set_xlim((stxx-0.7,xx[-1]+0.7))
-ax.legend(lgs,lgstrs,loc='lower right',fancybox=True,frameon=False,prop=fontP)
-ax.set_xticks(xx)
-ax.set_xticklabels(enss,rotation=25)
-ax.annotate('d',xy=(-0.02,1.04),
-            xycoords='axes fraction',fontsize=16,fontweight='bold')
+        bm,pc=cplt.kemmap(mult*(dt[spkey]['lowsp']-dt[spkey]['highsp']),alat,alon,
+                          ptype='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
+                          title='',suppcb=True,
+                          panellab=plabs[pii],lcol='0.2')
+        if addsig:
+            cplt.addtsigm(bm,dt[spkey]['sppval'], alat, alon)
+        bm.contour(alons,alats,mult*(dt[sp2key]['lowsp']-dt[sp2key]['highsp']),levels=conts,
+                   colors='0.5',linewidths=1,latlon=True)
+        if addsig:
+            cplt.addtsigm(bm,dt[sp2key]['sppval'],alat,alon,sigtype='cont',color='g')
 
+        if ax.is_first_row(): ax.set_title(reglabs[rii])
+        if ax.is_first_col(): ax.set_ylabel(ckey)
+        pii+=1
 
-
-
-
+if addsig:
+    prstr='sig'
+else:
+    prstr=''
+if printtofile:
+    fig.savefig('componall_allens_maps' + prstr +'.pdf')
+    fig.savefig('componall_allens_maps' + prstr +'.png',dpi=400)
 
 
 # for plotting the ice maps below
