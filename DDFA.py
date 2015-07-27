@@ -8,6 +8,7 @@ fnamea = basepath + 'A_peak_height.txt'
 
 
 sizerange=[100,200]
+sizeidx=np.arange(sizerange[0],sizerange[1]+1) # @@@@ NEW question: range inclusive of endpoints?
 
 datadf = pd.read_csv(fnamea,delimiter="\t")
 datbdf = pd.read_csv(fnameb,delimiter="\t")
@@ -43,24 +44,72 @@ dtypes: float64(2), int64(3), object(4)>
 # @@ question: what are the two spreadsheets? the 'A' output and the 'diff' output?  ANS: new A, new B, and difference
 
 
+def fillarray2(size, height,sizerange, verb=True):
+
+    """ take size and height arrays, round Size. 
+        If an index in sizerange is missing in size, enter 0 for height
+    """
+    pass
+    
 
 
 
 #Aret = datdf.values[datdf['Sample File Name'].values == 'A_A03.fsa']
 #Bret = datdf.values[datdf['Sample File Name'].values == 'B_B03.fsa']
 
-
+# A DATASET: ==================
 acols=datadf.keys()
-bcols=datbdf.keys()
 
-#adat = pd.DataFrame(datadf.values[np.logical_and(datadf['Size'] >= sizerange[0], datadf['Size'] <= sizerange[1])], columns=acols)
-#bdat = pd.DataFrame(datbdf.values[np.logical_and(datbdf['Size'] >= sizerange[0], datbdf['Size'] <= sizerange[1])], columns=bcols)
+#adat = pd.DataFrame(datadf.values[np.logical_and(datadf['Size'] >= sizerange[0], 
+#                    datadf['Size'] <= sizerange[1])], columns=acols)
 adat = datadf
-bdat = datbdf
+# Round size data
 adat['Size']=datadf['Size'].round()
+# Select data based on user Size range:
+asel = pd.DataFrame(adat.values[np.logical_and(adat['Size'] >= sizerange[0], 
+                                               adat['Size'] <= sizerange[1])], 
+                    columns=acols)
+
+# Convert Size to integer vals and use as an index
+aidx=asel['Size'].values.astype(int) 
+numvals=len(aidx)
+# remove duplicate sizes (indices) to check the number of dupes
+aidxnodup,reconidx = np.unique(aidx,return_inverse=True) # reconidx reconstructs original
+numdups=len(aidx)-len(aidxnodup)
+
+# Get Heights that corresponds to Sizes
+heights=asel['Height'].values
+# Initialize final height array and final size array, 
+#     including room for duplicate size indices
+heightary=np.zeros(len(sizeidx)+numdups) #.astype(type(heights[0]))
+sizeary=np.arange(sizerange[0],sizerange[1]+1+numdups)
+
+# subtract the first size index to make indices start at zero
+#ahidxno=aidxnodup-aidxnodup[0]
+ahidx=aidx-aidx[0]
+
+# @@@@@ I don't think this works yet
+#   
+# Set height data into final height array: 
+#     There will be zeros where there are no Size indices
+#     Duplicate size indices will have the associated height at that index
+heightary[ahidx] =heights.astype(type(heights[0])) # hack to get rid of TypeError
+
+# Set size data into final size array:
+#     There should be duplicate size indices in place... @@
+sizeary[ahidx] = aidx
+
+
+
+# B DATASET: =================
+bcols=datbdf.keys()
+#bdat = pd.DataFrame(datbdf.values[np.logical_and(datbdf['Size'] >= sizerange[0], datbdf['Size'] <= sizerange[1])], columns=bcols)
+
+bdat = datbdf
 bdat['Size']=datbdf['Size'].round()
-asel = pd.DataFrame(adat.values[np.logical_and(adat['Size'] >= sizerange[0], adat['Size'] <= sizerange[1])], columns=acols)
 bsel = pd.DataFrame(bdat.values[np.logical_and(bdat['Size'] >= sizerange[0], bdat['Size'] <= sizerange[1])], columns=bcols)
+
+
 
 
 """plt.figure()
