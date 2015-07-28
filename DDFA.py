@@ -1,57 +1,55 @@
-# DDFA.py
+""" DDFA.py
+
+
+    Data example:
+
+    Int64Index: 807 entries, 0 to 806
+    Data columns (total 9 columns):
+    Dye/Sample Peak     807  non-null values
+    Sample File Name    807  non-null values
+    Marker              305  non-null values
+    Allele              305  non-null values
+    Size                787  non-null values
+    Height              807  non-null values
+    Area                807  non-null values
+    Data Point          807  non-null values
+    Unnamed: 8          0  non-null values
+    dtypes: float64(2), int64(3), object(4)>
+
+
+ D/SP          SFN             Marker                          Allele  Size    Height  Area    DataPoint
+ "B,65"	       A_A03.fsa	_Internal_Marker_Dye_Blue_	91	91.09	2397	13601	1878	
+
+    ALGORITHM:
+    # 1. extract all peak height values within a user-provided range (e.g. size values 100-200):
+    # @@ question, do you mean use the 'Size' Column to extract the 'Height'?  ANS: YES, have it as user-input
+    # @@ question, what does it mean when Size has parentheses? ANS: those are alleles. Not Size
+    # "B,87"	A_A03.fsa	_Internal_Marker_Dye_Blue_	123(1)	122.66	125	452	2058	
+
+    # 2. Round size values (floats) up or down to nearest integer value
+    # 3. For every integer within the user-provided range, check to see if there is a "size" and "height" (if either is missing, both will be). If missing, insert appropriate "size" integer and assign a "height" value of 0.
+    # @@ question, what do you mean by "appropriate size" here? ANS: within the user specified range, each integer should be accounted for (the Size), so if a size/height is missing, insert the missing index.
+
+    # 4. Compare "height" values at each "size" between both samples. If either sample has a 0 "height" at a given "size", set that "height" to 0 in both samples. If easier, can save the values for both samples in one spreadsheet, indicated by different sample file names
+    # @@ question, isn't that already what you sent me? would prefer A and B samples in separate files actually but only have A right now. ANS: yes already have it
+    # 5. output both new spreadsheets
+    # @@ question: what are the two spreadsheets? the 'A' output and the 'diff' output?  ANS: new A, new B, and difference
+
+"""
 import numpy as np
 import pandas as pd
+import cccmautils as cutl
 
 basepath='/Users/kelly/Dropbox/projects/Ryan/'
 fnameb = basepath + 'B_peak_height.txt'
 fnamea = basepath + 'A_peak_height.txt'
 
 
-sizerange=[100,200]
-sizeidx=np.arange(sizerange[0],sizerange[1]+1) # @@@@ NEW question: range inclusive of endpoints?
+sizelims=[100,200]
+sizerange=np.arange(sizelims[0],sizelims[1]+1) # @@@@ NEW question: range inclusive of endpoints?
 
 datadf = pd.read_csv(fnamea,delimiter="\t")
 datbdf = pd.read_csv(fnameb,delimiter="\t")
-"""Int64Index: 807 entries, 0 to 806
-Data columns (total 9 columns):
-Dye/Sample Peak     807  non-null values
-Sample File Name    807  non-null values
-Marker              305  non-null values
-Allele              305  non-null values
-Size                787  non-null values
-Height              807  non-null values
-Area                807  non-null values
-Data Point          807  non-null values
-Unnamed: 8          0  non-null values
-dtypes: float64(2), int64(3), object(4)>
-"""
-# D/SP          SFN             Marker                          Allele  Size    Height  Area    DataPoint
-# "B,65"	A_A03.fsa	_Internal_Marker_Dye_Blue_	91	91.09	2397	13601	1878	
-
-
-# 1. extract all peak height values within a user-provided range (e.g. size values 100-200):
-# @@ question, do you mean use the 'Size' Column to extract the 'Height'?  ANS: YES, have it as user-input
-# @@ question, what does it mean when Size has parentheses? ANS: those are alleles. Not Size
-# "B,87"	A_A03.fsa	_Internal_Marker_Dye_Blue_	123(1)	122.66	125	452	2058	
-
-# 2. Round size values (floats) up or down to nearest integer value
-# 3. For every integer within the user-provided range, check to see if there is a "size" and "height" (if either is missing, both will be). If missing, insert appropriate "size" integer and assign a "height" value of 0.
-# @@ question, what do you mean by "appropriate size" here? ANS: within the user specified range, each integer should be accounted for (the Size), so if a size/height is missing, insert the missing index.
-
-# 4. Compare "height" values at each "size" between both samples. If either sample has a 0 "height" at a given "size", set that "height" to 0 in both samples. If easier, can save the values for both samples in one spreadsheet, indicated by different sample file names
-# @@ question, isn't that already what you sent me? would prefer A and B samples in separate files actually but only have A right now. ANS: yes already have it
-# 5. output both new spreadsheets
-# @@ question: what are the two spreadsheets? the 'A' output and the 'diff' output?  ANS: new A, new B, and difference
-
-
-def fillarray2(size, height,sizerange, verb=True):
-
-    """ take size and height arrays, round Size. 
-        If an index in sizerange is missing in size, enter 0 for height
-    """
-    pass
-    
-
 
 
 #Aret = datdf.values[datdf['Sample File Name'].values == 'A_A03.fsa']
@@ -60,45 +58,109 @@ def fillarray2(size, height,sizerange, verb=True):
 # A DATASET: ==================
 acols=datadf.keys()
 
-#adat = pd.DataFrame(datadf.values[np.logical_and(datadf['Size'] >= sizerange[0], 
-#                    datadf['Size'] <= sizerange[1])], columns=acols)
+#adat = pd.DataFrame(datadf.values[np.logical_and(datadf['Size'] >= sizelims[0], 
+#                    datadf['Size'] <= sizelims[1])], columns=acols)
 adat = datadf
+asizerawall = datadf['Size'] # save original size
+# save raw selection
+asizeraw = asizerawall[np.logical_and(asizerawall.round()>=sizelims[0],
+                                      asizerawall.round()<=sizelims[1])] 
 # Round size data
 adat['Size']=datadf['Size'].round()
 # Select data based on user Size range:
-asel = pd.DataFrame(adat.values[np.logical_and(adat['Size'] >= sizerange[0], 
-                                               adat['Size'] <= sizerange[1])], 
+asel = pd.DataFrame(adat.values[np.logical_and(adat['Size'] >= sizelims[0], 
+                                               adat['Size'] <= sizelims[1])], 
                     columns=acols)
 
 # Convert Size to integer vals and use as an index
-aidx=asel['Size'].values.astype(int) 
-numvals=len(aidx)
-# remove duplicate sizes (indices) to check the number of dupes
-aidxnodup,reconidx = np.unique(aidx,return_inverse=True) # reconidx reconstructs original
-numdups=len(aidx)-len(aidxnodup)
+arawidx=asel['Size'].values.astype(int) 
+anumsize=len(arawidx)
+
+# Find duplicates:
+# Use dupe indices to insert data later (this only works b/c arawidx is sorted)
+dupes=arawidx[arawidx[1:] == arawidx[:-1]]
+
+# remove duplicate sizes (indices)
+# # reconidx reconstructs original, retidx are the indices that result in unique array
+aidxunq, aretidx, areconidx = np.unique(arawidx,return_index=True,return_inverse=True) 
+# use retidx to set height data associatd w/ unique size indices
+
+dupesinsert=np.zeros((len(dupes)))
+for dii,dup in enumerate(dupes):
+    dupesinsert[dii] = np.int(cutl.find_nearest(arawidx,dup))
+#dupesinsert=areconidx[areconidx[1:] == areconidx[:-1]] #@@ no this doesn't work for my purposes!
+
 
 # Get Heights that corresponds to Sizes
-heights=asel['Height'].values
-# Initialize final height array and final size array, 
-#     including room for duplicate size indices
-heightary=np.zeros(len(sizeidx)+numdups) #.astype(type(heights[0]))
-sizeary=np.arange(sizerange[0],sizerange[1]+1+numdups)
+aheightraw=asel['Height'].values
 
+
+# Initialize final height array and final size array 
+aheightary=np.zeros(len(sizerange)) 
+asizeary=np.arange(sizelims[0],sizelims[1]+1)
+
+aheightraw = aheightraw.astype(type(aheightraw[0]))
+aheightary[aidxunq-sizelims[0]] = aheightraw[aretidx]
+
+
+plt.figure() 
+plt.plot(asizeary,aheightary,marker='o')
+plt.plot(asizeraw.values,asel['Height'],marker='s',color='r')
+plt.legend(('Processed: No duplicates','Raw'))
 # subtract the first size index to make indices start at zero
-#ahidxno=aidxnodup-aidxnodup[0]
-ahidx=aidx-aidx[0]
+#aidx=aidxunq-aidxunq[0]
 
-# @@@@@ I don't think this works yet
-#   
-# Set height data into final height array: 
-#     There will be zeros where there are no Size indices
-#     Duplicate size indices will have the associated height at that index
-heightary[ahidx] =heights.astype(type(heights[0])) # hack to get rid of TypeError
 
 # Set size data into final size array:
-#     There should be duplicate size indices in place... @@
-sizeary[ahidx] = aidx
+#asizeary[aretidx] = aidxunq
 
+# ADD DUPLICATES BACK IN:
+aheightl = list(aheightary)
+asizel = list(asizeary)
+dii=0
+for dupii in dupes: # dupe size values (also indices into full size array)
+
+    # insert the value before the index
+    # list.insert(index,value)
+    print 'sizel: inserting ' + str(dupii) + ' before index ' + str(dupii+2-aidxunq[0])
+    asizel.insert(dupii+2-aidxunq[0],dupii)
+
+    # dupesinsert are indices into raw array
+    print 'heightl: inserting ' + str(aheightraw[dupesinsert[dii]+1]) + \
+        ' before index ' + str(dupii+2-aidxunq[0]) + ' (dupesinsert= ' + str(dupesinsert[dii]+1) + ')'
+    aheightl.insert(dupii+2-aidxunq[0], aheightraw[dupesinsert[dii]+1])
+
+    dii+=1 # index into dupesinsert
+
+asizearydup=np.array(asizel)
+aheightarydup=np.array(aheightl)
+
+plt.figure() 
+plt.plot(asizeary,aheightary,marker='o')
+plt.plot(asizeraw.values,asel['Height'],marker='s',color='r')
+plt.plot(asizearydup,aheightarydup,marker='*',color='g',linestyle='none')
+plt.xlim((sizelims[0]-2,sizelims[1]+2))
+for dup in dupes:
+    plt.axvline(x=dup,color='k',linestyle='--')
+plt.legend(('Processed: No duplicates','Raw','Processed: with dupes','Dupes'))
+
+
+
+
+
+
+# Set height data into final height array: 
+#     There will be zeros where there are no Size indices
+#     Duplicates are included:
+#aheightary[arawidx-arawidx[0]] = aheightraw.astype(type(aheightraw[0])) # hack to get rid of TypeError
+
+
+plt.figure()
+plt.plot(asizeary,aheightary,marker='o')#,linestyle='none')
+plt.plot(dupes,aheightary[dupes+1-100],linestyle='none',marker='o',color='orange',markersize=8)
+plt.xlim((sizelims[0]-1,sizelims[1]+1))
+plt.ylim((-100,max(aheightary)+100))
+plt.axhline(y=0,color='k',linestyle='--')
 
 
 # B DATASET: =================
