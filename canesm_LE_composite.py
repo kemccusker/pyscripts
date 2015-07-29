@@ -17,14 +17,20 @@ import scipy.io as sio
 import datetime as datetime
 import string as string
 
-printtofile=False
+printtofile=True
 
 #dataloaded=True
-loadmat=True; when='14:51:28.762886'; #<coldeur for PI>'14:43:36.586252' 
+loadmat=True; 
+when='14:51:28.762886'; styearsr = [ 8.,  7.,  2.,  8.,  8.] # variable SIC styears
+styearse=[ 4.,  1.,  7.,  3.,  1.]; styearso=[1.] #when for these: 17:01:16.908687
+
+#<coldeur for PI> when='14:43:36.586252' 
+
+saveascii=False
 savemat=False
 dofigures=False
 local=True
-addsig=True
+addsig=False
 compagcm=False # compare R sims and E sims
 
 cisiglevel=0.05
@@ -92,9 +98,11 @@ fdictr = {'field': fieldr+regionr, 'ncfield': ncfieldr, 'comp': compr}
 fdictr2 = {'field': fieldr2+regionr2, 'ncfield': ncfieldr2, 'comp': compr2}
 fdictr3 = {'field': fieldr3+regionr3,'ncfield': ncfieldr3, 'comp': compr3}
 
-# used for file loading
-regions=('bkssic','eursat','bksz500')
-fields=('ice','sat','z500')
+# used for file loading & figures
+#regions=('bkssic','eursat','bksz500')
+regions=('eursat','bkssic','bksz500') # SWAP order
+#fields=('ice','sat','z500')
+fields=('sat','ice','z500') # SWAP order
 
 
 lat=le.get_lat(local=local)
@@ -425,7 +433,6 @@ else:
 
                 matname = matbase + rkey + '_' + fkey + '_' + now + '.mat'
                 sio.savemat(matname,savedt)
-
  
 
     # ========== PRE-IND ==============
@@ -487,14 +494,15 @@ else:
 
     simsE=('E1','E2','E3','E4','E5'); 
     sims=('R1','R2','R3','R4','R5');
+    simsO=('NSIDC',)
 
-    asseasp,styears = load_agcmfield(fieldsp,sims,seasp) # already anomalies
-    asseasp2,styears = load_agcmfield(fieldsp2,sims,seasp,styears=styears) # already anomalies
-    asseaice,styears = load_agcmfield('sic',sims,seasp,styears=styears,conv=100) # want the SICN pattern
+    asseasp,styearsr = load_agcmfield(fieldsp,sims,seasp,styears=styearsr) # already anomalies
+    asseasp2,styearsr = load_agcmfield(fieldsp2,sims,seasp,styears=styearsr) # already anomalies
+    asseaice,styearsr = load_agcmfield('sic',sims,seasp,styears=styearsr,conv=100) # want the SICN pattern
 
-    assear,styears = load_agcmfield(fieldr,sims,sear,styears=styears,region=regionr,conv=leconvr) # already anomalies
-    assear2,styears = load_agcmfield(fieldr2,sims,sear,styears=styears,region=regionr2,conv=leconvr2) # already anomalies
-    assear3,styears = load_agcmfield(fieldr3,sims,sear,styears=styears,region=regionr3,conv=leconvr3) # already anomalies
+    assear,styearsr = load_agcmfield(fieldr,sims,sear,styears=styearsr,region=regionr,conv=leconvr) # already anomalies
+    assear2,styearsr = load_agcmfield(fieldr2,sims,sear,styears=styearsr,region=regionr2,conv=leconvr2) # already anomalies
+    assear3,styearsr = load_agcmfield(fieldr3,sims,sear,styears=styearsr,region=regionr3,conv=leconvr3) # already anomalies
     assear=assear # / assear.std()
     assear2=assear2 #/ assear2.std()
     assear3=assear3
@@ -503,26 +511,17 @@ else:
     rshape=(anens,anlat*anlon)
 
 
-    # =========== composite on BKS SIC (AGCM) ===============
-    # calc composites: choose top and bottom BKS SIC (10 subsamps each)
-
-    print 'AGCM comp on BKS SIC'
-    # ahighsp,alowsp,ameansp,ahisppval,alosppval,asppval,ahighidx,alowidx
+    print 'AGCMR comp on BKS SIC'
     aspr1dt= do_composite(assear,asseasp,verb=True)
-    # ahighsp2,alowsp2,ameansp2,ahisp2pval,alosp2pval,asp2pval,ahighidx,alowidx
     asp2r1dt = do_composite(assear,asseasp2,verb=True)
-    # ahighice,alowice,ameanice,ahiicepval,aloicepval,aicepval,ahighidx,alowidx
     aicer1dt = do_composite(assear,asseaice,verb=True)
 
-    print 'AGCM comp on Eur SAT'
-    # ahighspr2,alowspr2,ameanspr2,ahispr2pval,alospr2pval,aspr2pval,ahighidxr2,alowidxr2
+    print 'AGCMR comp on Eur SAT'
     aspr2dt = do_composite(assear2,asseasp,verb=True)
-    # ahighsp2r2,alowsp2r2,ameansp2r2,ahisp2r2pval,alosp2r2pval,asp2r2pval,ahighidxr2,alowidxr2
     asp2r2dt = do_composite(assear2,asseasp2,verb=True)
-    # ahighicer2,alowicer2,ameanicer2,ahiicer2pval,aloicer2pval,aicer2pval,ahighidxr2,alowidxr2
     aicer2dt = do_composite(assear2,asseaice,verb=True)
 
-    print 'AGCM comp on BKS Z500'
+    print 'AGCMR comp on BKS Z500'
     aspr3dt = do_composite(assear3,asseasp,verb=True)
     asp2r3dt = do_composite(assear3,asseasp2,verb=True)
     aicer3dt = do_composite(assear3,asseaice,verb=True)
@@ -541,29 +540,94 @@ else:
 
                 matname = matbase + rkey + '_' + fkey + '_' + now + '.mat'
                 sio.savemat(matname,savedt)
-        sio.savemat(matbase+'styears_'+now+'.mat',{'styears':styears})
+        sio.savemat(matbase+'styears_'+now+'.mat',{'styears':styearsr})
 
 
     if compagcm: # if compare AGCM ensembles
 
         # ===  E sims:
-        aesseasp,styearse = load_agcmfield(fieldsp,simsE,seasp) 
-        aesseasp2,styearse = load_agcmfield(fieldsp2,simsE,seasp,styears=styearse) 
-        aessear2,styearse = load_agcmfield(fieldr2,simsE,sear,styears=styearse,region=regionr2) 
-        aessear2=aessear2 #/ aessear2.std()
+        aesseasp,styearse = load_agcmfield(fieldsp,simsE,seasp,styears=styearse) # already anomalies
+        aesseasp2,styearse = load_agcmfield(fieldsp2,simsE,seasp,styears=styearse) # already anomalies
+        aesseaice,styearse = load_agcmfield('sic',simsE,seasp,styears=styearse,conv=100) # want the SICN pattern
 
-        # E sims ----
-        aehighspr2,aelowspr2,aemeanspr2,aehispr2pval,aelospr2pval,aespr2pval,aehighidxr2,aelowidxr2= do_composite(aessear2,aesseasp,verb=True)
-        aehighsp2r2,aelowsp2r2,aemeansp2r2,aehisp2r2pval,aelosp2r2pval,aesp2r2pval,aehighidxr2,aelowidxr2= do_composite(aessear2,aesseasp2,verb=True)
+        aessear,styearse = load_agcmfield(fieldr,simsE,sear,styears=styearse,region=regionr,conv=leconvr) # already anomalies
+        aessear2,styearse = load_agcmfield(fieldr2,simsE,sear,styears=styearse,region=regionr2,conv=leconvr2) # already anomalies
+        aessear3,styearse = load_agcmfield(fieldr3,simsE,sear,styears=styearse,region=regionr3,conv=leconvr3) # already anomalies
+        aessear=aessear # / assear.std()
+        aessear2=aessear2 #/ assear2.std()
+        aessear3=aessear3
+
+
+        print 'AGCME comp on BKS SIC'
+        aespr1dt= do_composite(aessear,aesseasp,verb=True)
+        aesp2r1dt = do_composite(aessear,aesseasp2,verb=True)
+        aeicer1dt = do_composite(aessear,aesseaice,verb=True)
+
+        print 'AGCME comp on Eur SAT'
+        aespr2dt = do_composite(aessear2,aesseasp,verb=True)
+        aesp2r2dt = do_composite(aessear2,aesseasp2,verb=True)
+        aeicer2dt = do_composite(aessear2,aesseaice,verb=True)
+
+        print 'AGCME comp on BKS Z500'
+        aespr3dt = do_composite(aessear3,aesseasp,verb=True)
+        aesp2r3dt = do_composite(aessear3,aesseasp2,verb=True)
+        aeicer3dt = do_composite(aessear3,aesseaice,verb=True)
+
+        aer1flds={'sat':aespr1dt,'z500':aesp2r1dt,'ice':aeicer1dt}
+        aer2flds={'sat':aespr2dt,'z500':aesp2r2dt,'ice':aeicer2dt}
+        aer3flds={'sat':aespr3dt,'z500':aesp2r3dt,'ice':aeicer3dt}
+
+        aeallrdt={'bkssic':aer1flds,'eursat':aer2flds,'bksz500':aer3flds}    
+
+        if savemat:
+            matbase='pymatfiles/AGCMEsims_composites_'
+            for rkey in regions:
+                for fkey in fields:
+                    savedt=aeallrdt[rkey][fkey]
+
+                    matname = matbase + rkey + '_' + fkey + '_' + now + '.mat'
+                    sio.savemat(matname,savedt)
+            sio.savemat(matbase+'styears_'+now+'.mat',{'styears':styearse})
+        
 
         # AGCM RESIDUAL pvals (var vs const)
-        (aressptstat,aressppval) = cutl.ttest_ind(asseasp[alow2idx,...]- asseasp[ahigh2idx,...],
-                                                  aesseasp[aelow2idx,...]- aesseasp[aehigh2idx,...])
-        (aressp2tstat,aressp2pval) = cutl.ttest_ind(asseasp2[alow2idx,...]- asseasp2[ahigh2idx,...],
-                                                  aesseasp2[aelow2idx,...]- aesseasp2[aehigh2idx,...])
+        #(aressptstat,aressppval) = cutl.ttest_ind(asseasp[alow2idx,...]- asseasp[ahigh2idx,...],
+        #                                          aesseasp[aelow2idx,...]- aesseasp[aehigh2idx,...])
+        #(aressp2tstat,aressp2pval) = cutl.ttest_ind(asseasp2[alow2idx,...]- asseasp2[ahigh2idx,...],
+        #                                          aesseasp2[aelow2idx,...]- aesseasp2[aehigh2idx,...])
 
 
+        
+        # ===  Obs sims (NSIDC):
+        aosseasp,styearso = load_agcmfield(fieldsp,simsO,seasp,styears=styearso) # already anomalies
+        aosseasp2,styearso = load_agcmfield(fieldsp2,simsO,seasp,styears=styearso) # already anomalies
+        aosseaice,styearso = load_agcmfield('sic',simsO,seasp,styears=styearso,conv=100) # want the SICN pattern
 
+        aossear,styearso = load_agcmfield(fieldr,simsO,sear,styears=styearso,region=regionr,conv=leconvr) # already anomalies
+        aossear2,styearso = load_agcmfield(fieldr2,simsO,sear,styears=styearso,region=regionr2,conv=leconvr2) # already anomalies
+        aossear3,styearso = load_agcmfield(fieldr3,simsO,sear,styears=styearso,region=regionr3,conv=leconvr3) # already anomalies
+        aossear=aossear # / assear.std()
+        aossear2=aossear2 #/ assear2.std()
+        aossear3=aossear3
+
+        if savemat:
+            matbase='pymatfiles/AGCMOsims_composites_' # @@ not really a composite. just save startyr
+            sio.savemat(matbase+'styears_'+now+'.mat',{'styears':styearso})
+
+    if saveascii:
+        # write ascii file for john:
+        agcmout1=np.hstack((assear, aossear, aessear))*100 # column 1 (BKS SIC: variable SIC, NSIDC SIC, mean SIC)
+        agcmout2=np.hstack((assear2, aossear2, aessear2)) # column 2 (Eur SAT)
+        agcmout3=np.hstack((assear3, aossear3, aessear3)) # column 3 (BKS Z500)
+        agcmout = np.vstack((agcmout1,agcmout2,agcmout3)).T
+        np.savetxt('agcmout3.ascii',agcmout,delimiter='\t')
+
+        # 
+        #cgcmout1=np.hstack((lefldcnd,lefldncnd,lefldmcnd)) # (ALL forcing, NAT, AERO/MISC)
+        #cgcmout2=np.hstack((lefld2,lefld2n,lefld2m))
+        #cgcmout3=np.hstack((lefld1,lefld1n,lefld1m))
+        #cgcmout = np.vstack((cgcmout1,cgcmout2,cgcmout3)).T
+        #np.savetxt('cgcmout.ascii',cgcmout,delimiter='\t')        
 
 
 
@@ -686,7 +750,9 @@ contsbig = np.arange(cminsp2big,cmaxsp2big+incrbig,incrbig)
 
 stxx=1
 xx=np.arange(stxx,(stxx+len(allregimdf.keys())-1)*1.2,1.2)
-regs=('bkssic','eursat','bksz500')
+#regs=('bkssic','eursat','bksz500')
+#regs=('eursat','bkssic','bksz500') # SWAP order. @@ Actually, use regions instead
+
 multfacs=(1,1,-1) # multiply the comp on z500 by -1 to get high over bks
 enss=('CGCM','Preindustrial','AGCM')
 mkrs=('s','o','^')
@@ -700,7 +766,9 @@ lgs=(mlines.Line2D([],[],color=clrs[0],linewidth=2),
      mlines.Line2D([],[],color=clrs[2],linewidth=2)) #,linestyle='none',marker=mkrs[0]),
      #mlines.Line2D([],[],color=clrs[1],linestyle='none',marker=mkrs[1]),
      #mlines.Line2D([],[],color=clrs[2],linestyle='none',marker=mkrs[2])) 
-lgstrs=('BKS SIC','Eur SAT','BKS Z500')          
+#lgstrs=('BKS SIC','Eur SAT','BKS Z500')  
+lgstrs=('Eur SAT','BKS SIC','BKS Z500')  # SWAP order
+        
 
 lespr1dt=leallrdt[r1key][spkey]
 lesp2r1dt=leallrdt[r1key][sp2key]
@@ -753,7 +821,7 @@ gs2.update(top=0.44,left=0.2,right=0.8,wspace=0.2)
 ax=plt.subplot(gs2[0,0:3])
 xincr=0.2
 stagger=-xincr
-for rii,reg in enumerate(regs):
+for rii,reg in enumerate(regions):
     print reg
     
     for eii,ens in enumerate(enss):
@@ -782,7 +850,7 @@ ax.annotate('d',xy=(-0.02,1.04),
 
 ax=plt.subplot(gs2[0,3:])
 stagger=-0.2
-for rii,reg in enumerate(regs):
+for rii,reg in enumerate(regions):
     print reg
     
     for eii,ens in enumerate(enss):
@@ -828,10 +896,11 @@ if printtofile:
 allflddt={'ice':allregimdf, 'sat':allregspmdf, 'z500':allregsp2mdf}
 allcidt={'ice':allregimcidf, 'sat':allregspmcidf, 'z500':allregsp2mcidf}
 
-fylims=((-12,4),(-2.5,1),(-15,75))
-fyticklabs=(('-12','','-8','','-4','','0','','4'),
-           ('','-2','','-1','','0','','1'),
-           ('','0','20','40','60'))
+#fylims=((-12,4),(-2.5,1),(-15,75))
+fylims=((-3,1),(-12,4),(-15,75)) # SWAP
+fyticklabs=(('','-2','','-1','','0','','1'),
+            ('-12','','-8','','-4','','0','','4'),
+           ('','0','20','40','60')) # SWAP
 mkrs2=('o','^','s')
 
 #gs2 = gridspec.GridSpec(1, 9)
@@ -844,6 +913,13 @@ mkrs2=('o','^','s')
 
 xx=np.arange(0,3); stxx=0
 xincr=0.2
+
+plabs = list(string.ascii_lowercase)
+#reglabs=('BKS SIC','Eur SAT','BKS Z500')
+#reglabunits=('%','$^\circ$C','m')
+reglabs=('Eur SAT','BKS SIC','BKS Z500') # SWAP
+reglabunits=('$^\circ$C','%','m') # SWAP
+
 
 
 print '---- plotting v2 of summary ----'
@@ -942,14 +1018,96 @@ if printtofile:
 
 
 # VERSION 3 of SUMMARY ====================
-reglabs=('BKS SIC','Eur SAT','BKS Z500')
-reglabunits=('%','$^\circ$C','m')
+
 lgstrs=(enss)          
 mkrs=('o','^','s')
 
-plabs = list(string.ascii_lowercase)
 
 print '---- plotting v3 of summary ----'
+
+fig=plt.figure(figsize=(12,9))
+gs1 = gridspec.GridSpec(1, 3)
+gs1.update(top=0.97,bottom=0.55,left=0.06,right=0.94,wspace=0.07)
+
+cii=0; ckey='CGCM'; pii=0
+for rii,rkey in enumerate(regions):
+    mult=multfacs[rii]
+    #print '  ' + rkey + ' (mult=' + str(mult) + ')'
+    ax=plt.subplot(gs1[cii,rii])
+    dt=allcasedt[ckey][rkey]
+
+    bm,pc=cplt.kemmap(mult*(dt[spkey]['lowsp']-dt[spkey]['highsp']),alat,alon,
+                      ptype='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
+                      title='',suppcb=True,
+                      panellab=plabs[pii],lcol='0.2')
+    if addsig:
+        cplt.addtsigm(bm,dt[spkey]['sppval'], alat, alon)
+    bm.contour(alons,alats,mult*(dt[sp2key]['lowsp']-dt[sp2key]['highsp']),levels=conts,
+               colors='0.5',linewidths=1,latlon=True)
+    if addsig:
+        cplt.addtsigm(bm,dt[sp2key]['sppval'],alat,alon,sigtype='cont',color='g')
+
+    if ax.is_first_row(): ax.set_title(reglabs[rii])
+    pii+=1
+
+gs2 = gridspec.GridSpec(1, 3)
+gs2.update(top=0.44,left=0.08,right=0.92,wspace=0.28)
+for fii,fkey in enumerate(fields):
+
+    print 'fkey: ' + fkey
+    ax=plt.subplot(gs2[0,fii])
+    allregmdf=allflddt[fkey]
+    allregmcidf=allcidt[fkey]
+    xincr=0.2
+    stagger=-xincr
+
+    for eii,ens in enumerate(enss):
+        print '  ens: ' + ens
+
+        for rii,reg in enumerate(regions):
+            print '    reg: ' + reg
+
+            mult=multfacs[rii]
+            xpos=xx[rii]+stagger
+            ax.plot(xpos,mult*allregmdf[ens][reg],marker=mkrs[eii],
+                    color=clrs[eii],mec=clrs[eii],linestyle='none',markersize=10)
+            ci=allregmcidf[ens][reg]
+            #print mult, (xpos,xpos), ci
+            ax.plot((xpos,xpos),mult*np.array(ci),marker='_',
+                    mew=2,markersize=10,linewidth=2,color=clrs[eii])
+            ax.axvspan(xx[rii]-xincr-0.1,xx[rii]+xincr+0.1,color='0.8',alpha=0.5)
+
+        stagger+=0.2
+
+    ax.set_ylabel('Change in ' + reglabs[fii] + ' (' + reglabunits[fii] + ')')
+    ax.axhline(y=0,color='k',linestyle='--')
+    ax.set_xlim((stxx-0.7,xx[-1]+0.7))
+    ax.set_ylim(fylims[fii])
+    #if fii==0:
+    if ax.is_first_col():
+        ax.legend(lgs,lgstrs,loc='lower right',fancybox=True,frameon=False)#,prop=fontP)
+    ax.set_xticks(xx)
+    ax.set_xticklabels(reglabs,rotation=25)
+    ax.annotate(plabs[pii],xy=(-0.02,1.04),
+                xycoords='axes fraction',fontsize=16,fontweight='bold')
+    pii+=1
+
+cbar_ax,cbar = cplt.add_colorbar(fig,pc,orientation='horizontal',
+                                 pos=[.25,.53, .5,.03],
+                                 label='Change in surface air temperature, $\Delta$SAT (' + r2units +')')
+#cbar.add_lines(pc)
+if addsig:
+    prstr='sig'
+else:
+    prstr=''
+if printtofile:
+    fig.savefig('Figure4_draft_6panel_CGCMmaps_compavgs' + prstr + 'swap2.pdf')
+    fig.savefig('Figure4_draft_6panel_CGCMmaps_compavgs' + prstr + 'swap2.png',dpi=400)
+
+
+
+print '---- plotting v4 of summary ----'
+xx=xx[:-1]
 
 fig=plt.figure(figsize=(12,9))
 gs1 = gridspec.GridSpec(1, 3)
@@ -980,6 +1138,10 @@ gs2 = gridspec.GridSpec(1, 3)
 gs2.update(top=0.44,left=0.08,right=0.92,wspace=0.28)
 for fii,fkey in enumerate(fields):
 
+    print 'fkey: ' + fkey
+    rlabbools = np.ones(len(reglabs),np.bool)
+    rlabbools[fii]=0
+                
     ax=plt.subplot(gs2[0,fii])
     allregmdf=allflddt[fkey]
     allregmcidf=allcidt[fkey]
@@ -987,30 +1149,33 @@ for fii,fkey in enumerate(fields):
     stagger=-xincr
 
     for eii,ens in enumerate(enss):
-        print ens
-
-        for rii,reg in enumerate(regs):
-            print '  ' + reg
-
-            mult=multfacs[rii]
-            xpos=xx[rii]+stagger
-            ax.plot(xpos,mult*allregmdf[ens][reg],marker=mkrs[eii],
-                    color=clrs[eii],mec=clrs[eii],linestyle='none',markersize=10)
-            ci=allregmcidf[ens][reg]
-            #print mult, (xpos,xpos), ci
-            ax.plot((xpos,xpos),mult*np.array(ci),marker='_',
-                    mew=2,markersize=10,linewidth=2,color=clrs[eii])
-            ax.axvspan(xx[rii]-xincr-0.1,xx[rii]+xincr+0.1,color='0.8',alpha=0.5)
-
+        print '  ens: ' + ens
+        xii=0
+        for rii,reg in enumerate(regions):
+            print '    reg: ' + reg
+            if (fkey in reg) or (fkey=='ice' and reg=='bkssic'):
+                print '    --SKIP'
+            else:
+                mult=multfacs[rii]
+                xpos=xx[xii]+stagger
+                ax.plot(xpos,mult*allregmdf[ens][reg],marker=mkrs[eii],
+                        color=clrs[eii],mec=clrs[eii],linestyle='none',markersize=10)
+                ci=allregmcidf[ens][reg]
+                #print mult, (xpos,xpos), ci
+                ax.plot((xpos,xpos),mult*np.array(ci),marker='_',
+                        mew=2,markersize=10,linewidth=2,color=clrs[eii])
+                ax.axvspan(xx[xii]-xincr-0.1,xx[xii]+xincr+0.1,color='0.8',alpha=0.5)
+                xii+=1
+                
         stagger+=0.2
 
     ax.set_ylabel('Change in ' + reglabs[fii] + ' (' + reglabunits[fii] + ')')
     ax.axhline(y=0,color='k',linestyle='--')
     ax.set_xlim((stxx-0.7,xx[-1]+0.7))
     if fii==0:
-        ax.legend(lgs,lgstrs,loc='lower right',fancybox=True,frameon=False)#,prop=fontP)
+        ax.legend(lgs,lgstrs,loc='lower left',fancybox=True,frameon=False)#,prop=fontP)
     ax.set_xticks(xx)
-    ax.set_xticklabels(reglabs,rotation=25)
+    ax.set_xticklabels(np.array(reglabs)[rlabbools],rotation=25)
     ax.annotate(plabs[pii],xy=(-0.02,1.04),
                 xycoords='axes fraction',fontsize=16,fontweight='bold')
     pii+=1
@@ -1024,9 +1189,8 @@ if addsig:
 else:
     prstr=''
 if printtofile:
-    fig.savefig('Figure4_draft_6panel_CGCMmaps_compavgs' + prstr + 'swap.pdf')
-    fig.savefig('Figure4_draft_6panel_CGCMmaps_compavgs' + prstr + 'swap.png',dpi=400)
-
+    fig.savefig('Figure4_draft_6panel_CGCMmaps_compavgs' + prstr + 'swapv4.pdf')
+    fig.savefig('Figure4_draft_6panel_CGCMmaps_compavgs' + prstr + 'swapv4.png',dpi=400)
 
 
 
@@ -1077,6 +1241,8 @@ if printtofile:
     fig.savefig('componall_allens_maps' + prstr +'.png',dpi=400)
 
 
+
+
 # for plotting the ice maps below
 rplotdts = (piicer1dt,leicer1dt,aicer1dt)
 diffmult=diffmult3; diffttl=diffttl3
@@ -1104,12 +1270,12 @@ for aii in np.arange(0,3):
 
     axidx=aii # loop rows
     dt=rplotdts[axidx]
-    plabs=allplabs[axidx]
+    iplabs=allplabs[axidx]
 
     ax = axs[axidx,0]
     bm,pc=cplt.kemmap(dt['highsp']-dt['meansp'],alat,alon,ptype='nheur',axis=ax,cmin=cminice,cmax=cmaxice,
                       title='High anom',suppcb=True,cmap=cmapice,
-                      panellab=plabs[0],lcol='0.2')
+                      panellab=iplabs[0],lcol='0.2')
     if addsig:
         cplt.addtsigm(bm,dt['hisppval'],alat,alon)
     ax.set_ylabel(ylabs[axidx])
@@ -1117,14 +1283,14 @@ for aii in np.arange(0,3):
     ax = axs[axidx,1]
     bm,pc=cplt.kemmap(dt['lowsp']-dt['meansp'],alat,alon,ptype='nheur',axis=ax,cmin=cminice,cmax=cmaxice,
                       title='Low anom',suppcb=True,cmap=cmapice,
-                      panellab=plabs[1],lcol='0.2')
+                      panellab=iplabs[1],lcol='0.2')
     if addsig:
         cplt.addtsigm(bm,dt['losppval'],alat,alon)
 
     ax = axs[axidx,2]
     bm,pc=cplt.kemmap(diffmult*(dt['lowsp']-dt['highsp']),alat,alon,ptype='nheur',axis=ax,cmin=cminice,cmax=cmaxice,
                       title=diffttl,suppcb=True,cmap=cmapice,
-                      panellab=plabs[2],lcol='0.2')
+                      panellab=iplabs[2],lcol='0.2')
     if addsig:
         cplt.addtsigm(bm,dt['sppval'],alat,alon)
 
