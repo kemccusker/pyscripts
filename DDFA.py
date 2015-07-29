@@ -39,13 +39,151 @@
 import numpy as np
 import pandas as pd
 import cccmautils as cutl
+import copy as copy
 
-basepath='/Users/kelly/Dropbox/projects/Ryan/'
+
+def process_sample(fname, sizelims, selcol='Size', heightcol='Height',delimiter="\t", plotfig=True, verb=True):
+    """ do one file
+    
+                sizelims: range of sizes to process. Endpoints inclusive
+
+                returns:  sizeary, heightary
+    """
+
+    sizerange=np.arange(sizelims[0],sizelims[1]+1) 
+
+    datdf = pd.read_csv(fname,delimiter=delimiter)
+
+    cols = datdf.keys()
+    # save original size
+    sizerawall = datdf[selcol] 
+    # save raw selection
+    sizeraw = sizerawall[np.logical_and(sizerawall.round() >= sizelims[0],
+                                        sizerawall.round() <= sizelims[1])] 
+
+    # Round size data
+    datdf['Size'] = datdf['Size'].round()
+
+    # Select data based on user Size (selcol) range:
+    selbool=np.array(np.logical_and(datdf[selcol] >= sizelims[0],datdf[selcol] <= sizelims[1]))
+    seldf = pd.DataFrame(datdf.values[selbool], columns=cols)
+
+    # Convert Size (selcol) to integer vals and use as an index
+    rawidx=seldf[selcol].values.astype(int) 
+    numsize=len(rawidx)
+
+
+    # Find duplicates:
+    # Use dupe indices to insert dupe data later - these are relative to size data
+    # (this next line works b/c rawidx is sorted, otherwise, sort first)
+    # Find elements that are the same as the previous element
+    dupes=rawidx[rawidx[1:] == rawidx[:-1]]
+    if verb:
+        print 'Duplicates found: ' + str(dupes)
+
+    # remove duplicate sizes (indices) so just have unique sizes/indices
+    # reconidx reconstructs original, retidx are the indices that result in unique array
+    # Will use retidx to set height data associatd w/ unique size indices
+    unqidx, retidx, reconidx = np.unique(rawidx,return_index=True,return_inverse=True) 
+
+    # dupeinsert indices are relative to original raw array inex. 
+    # Use to access raw height
+    dupesinsert=np.zeros((len(dupes)))
+    for dii,dup in enumerate(dupes):
+        # get index of duplicate size
+        dupesinsert[dii] = np.int(cutl.find_nearest(rawidx,dup))
+
+    # Get Heights that corresponds to Sizes
+    heightraw=seldf[heightcol].values
+
+
+    # Initialize final height array and final size array 
+    heightary=np.zeros(len(sizerange)) # height should be zero unless there is a size
+    sizeary=np.arange(sizelims[0],sizelims[1]+1) # sizes are indices w/in user range
+
+    # Put raw height data into final height array where unique sizes exist
+    heightraw = heightraw.astype(type(heightraw[0])) # make sure types match to avoid TypeError
+    heightary[unqidx-sizelims[0]] = heightraw[retidx]
+
+    # Save arrays WITHOUT DUPLICATES:
+    sizearyunq = copy.copy(sizeary)
+    heightaryunq = copy.copy(heightary)
+
+
+    # ADD DUPLICATES BACK IN: @@@@ still not correct:
+    #  convert to list to do insertion
+    heightl = list(heightary)
+    sizel = list(sizeary)
+    dii=0
+    incr=0 # keep track of how many elements we add.
+    for dupii in dupes: # dupe size values (also indices into full size array)
+
+        # list.insert(index,value)
+        # inserts the value before the index (so it becomes that index). 
+        #   dupii is index of first duplicate,
+        #   add one to get to next spot
+        if verb:
+            print 'sizel: inserting ' + str(dupii) + ' before index ' + str(dupii+1+incr-unqidx[0])
+        sizel.insert(dupii+1+incr-unqidx[0],dupii)
+
+        # dupesinsert are indices into raw array
+        if verb:
+            print 'heightl: inserting ' + str(heightraw[dupesinsert[dii]+1]) + \
+                ' before index ' + str(dupii+1+incr-unqidx[0]) +\
+                ' (dupesinsert= ' + str(dupesinsert[dii]+1) + ')'
+        heightl.insert(dupii+1+incr-unqidx[0], heightraw[dupesinsert[dii]+1])
+
+        incr+=1 # now we have one additional element in array. increase insertion index
+        dii+=1 # index into dupesinsert
+
+    # convert back to numpy arrays
+    sizeary=np.array(sizel)
+    heightary=np.array(heightl)
+
+
+    if plotfig:
+
+        plt.figure(figsize=(8,5)) 
+        plt.plot(sizeraw.values,seldf[heightcol],marker='s',color='r',linestyle='none')
+        plt.plot(sizearyunq,heightaryunq,marker='o',markersize=6,fillstyle='none')        
+        plt.plot(sizeary,heightary,marker='^',color='g',linestyle='none')
+        plt.xlim((sizelims[0]-2,sizelims[1]+2))
+        plt.title(fname)
+        plt.xlabel(selcol)
+        plt.ylabel(heightcol)
+        for dup in dupes:
+            plt.axvline(x=dup,color='k',linestyle='--')
+            if verb:
+                print 'duplicate point ' + str(dup) +\
+                    ', ' + str(heightary[dup-sizelims[0]])
+
+        plt.legend(('Raw','Processed: No duplicates',
+                    'Processed: w/ Duplicates','Duplicates'), fancybox=True,
+                   framealpha=0.5, frameon=False)
+
+
+    return sizeary,heightary
+
+
+
+#basepath='/Users/kelly/Dropbox/projects/Ryan/'
+basepath='./Ryan/'
 fnameb = basepath + 'B_peak_height.txt'
 fnamea = basepath + 'A_peak_height.txt'
 
 
 sizelims=[100,200]
+
+
+
+finsizes,finheights = process_sample(fnamea,sizelims)
+
+
+
+
+
+
+"""
 sizerange=np.arange(sizelims[0],sizelims[1]+1) # @@@@ NEW question: range inclusive of endpoints?
 
 datadf = pd.read_csv(fnamea,delimiter="\t")
@@ -68,9 +206,8 @@ asizeraw = asizerawall[np.logical_and(asizerawall.round()>=sizelims[0],
 # Round size data
 adat['Size']=datadf['Size'].round()
 # Select data based on user Size range:
-asel = pd.DataFrame(adat.values[np.logical_and(adat['Size'] >= sizelims[0], 
-                                               adat['Size'] <= sizelims[1])], 
-                    columns=acols)
+selbool=np.array(np.logical_and(adat['Size'] >= sizelims[0],adat['Size'] <= sizelims[1]))
+asel = pd.DataFrame(adat.values[selbool], columns=acols)
 
 # Convert Size to integer vals and use as an index
 arawidx=asel['Size'].values.astype(int) 
@@ -107,12 +244,6 @@ plt.figure()
 plt.plot(asizeary,aheightary,marker='o')
 plt.plot(asizeraw.values,asel['Height'],marker='s',color='r')
 plt.legend(('Processed: No duplicates','Raw'))
-# subtract the first size index to make indices start at zero
-#aidx=aidxunq-aidxunq[0]
-
-
-# Set size data into final size array:
-#asizeary[aretidx] = aidxunq
 
 # ADD DUPLICATES BACK IN:
 aheightl = list(aheightary)
@@ -136,7 +267,7 @@ asizearydup=np.array(asizel)
 aheightarydup=np.array(aheightl)
 
 plt.figure() 
-plt.plot(asizeary,aheightary,marker='o')
+plt.plot(asizeary,aheightary,marker='o',fillstyle='none')
 plt.plot(asizeraw.values,asel['Height'],marker='s',color='r')
 plt.plot(asizearydup,aheightarydup,marker='*',color='g',linestyle='none')
 plt.xlim((sizelims[0]-2,sizelims[1]+2))
@@ -149,18 +280,6 @@ plt.legend(('Processed: No duplicates','Raw','Processed: with dupes','Dupes'))
 
 
 
-# Set height data into final height array: 
-#     There will be zeros where there are no Size indices
-#     Duplicates are included:
-#aheightary[arawidx-arawidx[0]] = aheightraw.astype(type(aheightraw[0])) # hack to get rid of TypeError
-
-
-plt.figure()
-plt.plot(asizeary,aheightary,marker='o')#,linestyle='none')
-plt.plot(dupes,aheightary[dupes+1-100],linestyle='none',marker='o',color='orange',markersize=8)
-plt.xlim((sizelims[0]-1,sizelims[1]+1))
-plt.ylim((-100,max(aheightary)+100))
-plt.axhline(y=0,color='k',linestyle='--')
 
 
 # B DATASET: =================
@@ -171,7 +290,7 @@ bdat = datbdf
 bdat['Size']=datbdf['Size'].round()
 bsel = pd.DataFrame(bdat.values[np.logical_and(bdat['Size'] >= sizerange[0], bdat['Size'] <= sizerange[1])], columns=bcols)
 
-
+"""
 
 
 """plt.figure()
@@ -197,7 +316,7 @@ plt.ylabel('Height')"""
 # @@ the round() call on mac is giving an error (appears to be a bug)
 
 
-
+"""
 def myround(vals):
 
     rndvals=np.zeros(len(vals))
@@ -211,9 +330,9 @@ def myround(vals):
 
 def fillarray(size, height,sizerange, verb=True):
 
-    """ take size and height arrays, round Size. 
-        If an index in sizerange is missing in size, enter 0 for height
-    """
+    # take size and height arrays, round Size. 
+    #    If an index in sizerange is missing in size, enter 0 for height
+    
 
     sizeidx=np.arange(sizerange[0],sizerange[1]+1) # add extra to get through loop last time
     rndsize=size # already rounded: myround(size)
@@ -333,3 +452,4 @@ ax.set_title('Difference (A-B)')
 ax.set_xlim(sizerange)
 fig.savefig('peakal.pdf')
 
+"""
