@@ -42,12 +42,13 @@ import cccmautils as cutl
 import copy as copy
 
 
-def process_sample(fname, sizelims, selcol='Size', heightcol='Height',delimiter="\t", plotfig=True, verb=True):
+def process_sample(fname, sizelims, selcol='Size', heightcol='Height',
+                   delimiter="\t", plotfig=True, verb=True, printtofile=False):
     """ do one file
     
                 sizelims: range of sizes to process. Endpoints inclusive
 
-                returns:  sizeary, heightary
+                returns:  ((sizeary, heightary), (sizearyunq, heightaryunq))
     """
 
     sizerange=np.arange(sizelims[0],sizelims[1]+1) 
@@ -121,7 +122,7 @@ def process_sample(fname, sizelims, selcol='Size', heightcol='Height',delimiter=
         # list.insert(index,value)
         # inserts the value before the index (so it becomes that index). 
         #   dupii is index of first duplicate,
-        #   add one to get to next spot
+        #   add one to get to next spot, plus increment to keep track of insertions
         if verb:
             print 'sizel: inserting ' + str(dupii) + ' before index ' + str(dupii+1+incr-unqidx[0])
         sizel.insert(dupii+1+incr-unqidx[0],dupii)
@@ -143,7 +144,7 @@ def process_sample(fname, sizelims, selcol='Size', heightcol='Height',delimiter=
 
     if plotfig:
 
-        plt.figure(figsize=(8,5)) 
+        fig = plt.figure(figsize=(8,5)) 
         plt.plot(sizeraw.values,seldf[heightcol],marker='s',color='r',linestyle='none')
         plt.plot(sizearyunq,heightaryunq,marker='o',markersize=6,fillstyle='none')        
         plt.plot(sizeary,heightary,marker='^',color='g',linestyle='none')
@@ -151,20 +152,26 @@ def process_sample(fname, sizelims, selcol='Size', heightcol='Height',delimiter=
         plt.title(fname)
         plt.xlabel(selcol)
         plt.ylabel(heightcol)
-        for dup in dupes:
+        for dii,dup in enumerate(dupes):
             plt.axvline(x=dup,color='k',linestyle='--')
             if verb:
-                print 'duplicate point ' + str(dup) +\
-                    ', ' + str(heightary[dup-sizelims[0]])
+                print 'duplicate ' + selcol + ', ' + heightcol + ': (' + str(dup) + ',' +\
+                    str(heightary[dup+dii-sizelims[0]]) +\
+                    '), (' + str(dup) + ',' + str(heightary[dup+1+dii-sizelims[0]]) + ')'
 
         plt.legend(('Raw','Processed: No duplicates',
                     'Processed: w/ Duplicates','Duplicates'), fancybox=True,
                    framealpha=0.5, frameon=False)
+        if printtofile:
+            splits=fname.split('/')[-1].split('.')
+            if verb:
+                print 'Printing figure: peakal_' + splits[0] + '.pdf'
+            fig.savefig('peakal_' + splits[0] + '.pdf')
+
+    return ((sizeary,heightary),(sizearyunq,heightaryunq))
 
 
-    return sizeary,heightary
-
-
+printtofile=True
 
 #basepath='/Users/kelly/Dropbox/projects/Ryan/'
 basepath='./Ryan/'
@@ -176,11 +183,26 @@ sizelims=[100,200]
 
 
 
-finsizes,finheights = process_sample(fnamea,sizelims)
+((sizesa,heightsa),(sizesuna,heightsuna)) = process_sample(fnamea,sizelims,printtofile=printtofile)
+((sizesb,heightsb),(sizesunb,heightsunb)) = process_sample(fnameb,sizelims,printtofile=printtofile)
 
 
-
-
+fig,axs=plt.subplots(2,1)
+ax=axs[0]
+ax.plot(sizesa,heightsa,color='r',marker='s')
+ax.plot(sizesb,heightsb,color='b',marker='.')
+ax.set_ylabel('Height')
+ax.legend(('A','B'),frameon=False,loc='best')
+ax.grid(True)
+ax=axs[1]
+ax.plot(sizesuna,heightsuna-heightsunb,color='k',marker='.')
+ax.set_ylabel('Height')
+ax.legend(('A-B',),frameon=False,loc='best')
+ax.axhline(y=0,color='k',linestyle='--')
+ax.grid(True)
+#ax.set_title('A-B')
+if printtofile:
+    fig.savefig('peakal_AB_A-B.pdf')
 
 
 """
