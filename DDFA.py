@@ -42,9 +42,9 @@ import cccmautils as cutl
 import copy as copy
 
 
-def process_sample(fname, sizelims, selcol='Size', heightcol='Height',
+def process_sample(datdf, sizelims, selcol='Size', heightcol='Height',
                    delimiter="\t", plotfig=True, verb=True, printtofile=False):
-    """ do one file
+    """ do one sample
     
                 sizelims: range of sizes to process. Endpoints inclusive
 
@@ -53,17 +53,18 @@ def process_sample(fname, sizelims, selcol='Size', heightcol='Height',
 
     sizerange=np.arange(sizelims[0],sizelims[1]+1) 
 
-    datdf = pd.read_csv(fname,delimiter=delimiter)
+    #datdf = pd.read_csv(fname,delimiter=delimiter)
+    fname = datdf['Sample File Name'].values[0] # should only be one sample file name
 
     cols = datdf.keys()
     # save original size
-    sizerawall = datdf[selcol] 
+    sizerawall = datdf[selcol].astype(np.float) 
     # save raw selection
     sizeraw = sizerawall[np.logical_and(sizerawall.round() >= sizelims[0],
                                         sizerawall.round() <= sizelims[1])] 
 
     # Round size data
-    datdf['Size'] = datdf['Size'].round()
+    datdf['Size'] = datdf['Size'].astype(np.float).round()
 
     # Select data based on user Size (selcol) range:
     selbool=np.array(np.logical_and(datdf[selcol] >= sizelims[0],datdf[selcol] <= sizelims[1]))
@@ -171,20 +172,45 @@ def process_sample(fname, sizelims, selcol='Size', heightcol='Height',
     return ((sizeary,heightary),(sizearyunq,heightaryunq))
 
 
-printtofile=True
+def read_samples(fname, sampcol='Sample File Name', delimiter='\t'):
+    """ returns a list of sample dataframes
+           
+    """
+    datdf=pd.read_csv(fname,delimiter=delimiter)
+    cols = datdf.keys()
+    sampkeys = np.unique(datdf[sampcol].values)
+    
+    samples = []
+    for sampkey in sampkeys:
+        sampdf=pd.DataFrame(datdf.values[np.array(datdf[sampcol]==sampkey)],
+                       columns=cols)
+        samples.append(sampdf)
+
+    return samples
+
+
+
+printtofile=False
 
 #basepath='/Users/kelly/Dropbox/projects/Ryan/'
 basepath='./Ryan/'
 fnameb = basepath + 'B_peak_height.txt'
 fnamea = basepath + 'A_peak_height.txt'
-
+fname1 = basepath + 'set1.txt'
 
 sizelims=[100,200]
 
+samples1 = read_samples(fname1)
+for samp in samples1:
+    ret = process_sample(samp,sizelims,printtofile=printtofile)
 
 
-((sizesa,heightsa),(sizesuna,heightsuna)) = process_sample(fnamea,sizelims,printtofile=printtofile)
-((sizesb,heightsb),(sizesunb,heightsunb)) = process_sample(fnameb,sizelims,printtofile=printtofile)
+
+samplesa = read_samples(fnamea)
+samplesb = read_samples(fnameb)
+
+((sizesa,heightsa),(sizesuna,heightsuna)) = process_sample(samplesa[0],sizelims,printtofile=printtofile)
+((sizesb,heightsb),(sizesunb,heightsunb)) = process_sample(samplesb[0],sizelims,printtofile=printtofile)
 
 
 fig,axs=plt.subplots(2,1)
