@@ -48,7 +48,9 @@ def process_sample(datdf, sizelims, selcol='Size', heightcol='Height',
     
                 sizelims: range of sizes to process. Endpoints inclusive
 
-                returns:  ((sizeary, heightary), (sizearyunq, heightaryunq))
+                returns:  ((sizeary, heightary), 
+                           (sizearyunq, heightaryunq),
+                           (sizeraw, heightraw))
     """
 
     sizerange=np.arange(sizelims[0],sizelims[1]+1) 
@@ -61,7 +63,8 @@ def process_sample(datdf, sizelims, selcol='Size', heightcol='Height',
     sizerawall = datdf[selcol].astype(np.float) 
     # save raw selection
     sizeraw = sizerawall[np.logical_and(sizerawall.round() >= sizelims[0],
-                                        sizerawall.round() <= sizelims[1])] 
+                                        sizerawall.round() <= sizelims[1])].values
+    print '@@@ type(sizeraw) ' + str(type(sizeraw))
 
     # Round size data
     datdf['Size'] = datdf['Size'].astype(np.float).round()
@@ -105,6 +108,7 @@ def process_sample(datdf, sizelims, selcol='Size', heightcol='Height',
 
     # Put raw height data into final height array where unique sizes exist
     heightraw = heightraw.astype(type(heightraw[0])) # make sure types match to avoid TypeError
+    print '@@@ type(heightraw) ' + str(type(heightraw))
     heightary[unqidx-sizelims[0]] = heightraw[retidx]
 
     # Save arrays WITHOUT DUPLICATES:
@@ -145,8 +149,8 @@ def process_sample(datdf, sizelims, selcol='Size', heightcol='Height',
 
     if plotfig:
 
-        fig = plt.figure(figsize=(8,5)) 
-        plt.plot(sizeraw.values,seldf[heightcol],marker='s',color='r',linestyle='none')
+        fig = plt.figure(figsize=(9,5)) 
+        plt.plot(sizeraw,seldf[heightcol],marker='s',color='r',linestyle='none')
         plt.plot(sizearyunq,heightaryunq,marker='o',markersize=6,fillstyle='none')        
         plt.plot(sizeary,heightary,marker='^',color='g',linestyle='none')
         plt.xlim((sizelims[0]-2,sizelims[1]+2))
@@ -169,7 +173,30 @@ def process_sample(datdf, sizelims, selcol='Size', heightcol='Height',
                 print 'Printing figure: peakal_' + splits[0] + '.pdf'
             fig.savefig('peakal_' + splits[0] + '.pdf')
 
-    return ((sizeary,heightary),(sizearyunq,heightaryunq))
+    return ((sizeary,heightary),(sizearyunq,heightaryunq),(sizeraw,heightraw))
+
+
+def plot_sample_diff(samp1, samp2, samp1unq, samp2unq, sampnames=None):
+
+    if sampnames == None:
+        sampnames=('1','2')
+
+    fig,axs=plt.subplots(2,1)
+    fig.set_size_inches((9,5))
+    ax=axs[0]
+    ax.plot(samp1[0],samp1[1],color='r',marker='s')
+    ax.plot(samp2[0],samp2[1],color='b',marker='.')
+    ax.set_ylabel('Height')
+    ax.legend((sampnames[0],sampnames[1]),frameon=False,loc='best')
+    ax.grid(True)
+    ax=axs[1]
+    ax.plot(samp1unq[0],samp1unq[1]-samp2unq[1],color='k',marker='.')
+    ax.set_ylabel('Height')
+    ax.legend((sampnames[0] + ' - ' + sampnames[1],),frameon=False,loc='best')
+    ax.axhline(y=0,color='k',linestyle='--')
+    ax.grid(True)
+
+    return fig,axs
 
 
 def read_samples(fname, sampcol='Sample File Name', delimiter='\t'):
@@ -188,6 +215,9 @@ def read_samples(fname, sampcol='Sample File Name', delimiter='\t'):
 
     return samples
 
+def get_sample_name(sample, selcol='Sample File Name'):
+    
+    return sample[selcol].values[0]
 
 
 printtofile=False
@@ -197,31 +227,67 @@ basepath='./Ryan/'
 fnameb = basepath + 'B_peak_height.txt'
 fnamea = basepath + 'A_peak_height.txt'
 fname1 = basepath + 'set1.txt'
+fname2 = basepath + 'set2.txt'
+fname3 = basepath + 'set3.txt'
 
 sizelims=[100,200]
 
 samples1 = read_samples(fname1)
-for samp in samples1:
-    ret = process_sample(samp,sizelims,printtofile=printtofile)
+
+proc={}; procun={}; procraw={}; sampnames={}
+for sii,samp in enumerate(samples1):
+    sampnames[sii]=get_sample_name(samp)
+    proc[sii],procun[sii],procraw[sii] = process_sample(samp,sizelims,printtofile=printtofile)
+fig,axs = plot_sample_diff(proc[0], proc[1], procun[0], procun[1], sampnames=sampnames)
+
+
+def fill_raw_sample(proc,procunq,procraw):
+    """ fill the raw arrays to have NaNs where missing indices
+    """
+    pass
+
+
+
+
+
+
+
+samples2 = read_samples(fname2)
+proc2={}; procun2={}; procraw2={}; sampnames2={}
+for sii,samp in enumerate(samples2):
+    sampnames2[sii]=get_sample_name(samp)
+    proc2[sii],procun2[sii],procraw2[sii]  = process_sample(samp,sizelims,printtofile=printtofile)
+plot_sample_diff(proc2[0], proc2[1], procun2[0], procun2[1], sampnames=sampnames2)    
+
+samples3 = read_samples(fname3)
+proc3={}; procun3={}; procraw3={}; sampnames3={}
+for sii,samp in enumerate(samples3):
+    sampnames3[sii]=get_sample_name(samp)
+    proc3[sii],procun3[sii],procraw3[sii] = process_sample(samp,sizelims,printtofile=printtofile)
+plot_sample_diff(proc3[0], proc3[1], procun3[0], procun3[1], sampnames=sampnames3)    
 
 
 
 samplesa = read_samples(fnamea)
 samplesb = read_samples(fnameb)
 
-((sizesa,heightsa),(sizesuna,heightsuna)) = process_sample(samplesa[0],sizelims,printtofile=printtofile)
-((sizesb,heightsb),(sizesunb,heightsunb)) = process_sample(samplesb[0],sizelims,printtofile=printtofile)
+(proca, procuna, procrawa) = process_sample(samplesa[0],sizelims,printtofile=printtofile)
+(procb, procunb, procrawb) = process_sample(samplesb[0],sizelims,printtofile=printtofile)
+
+
+
 
 
 fig,axs=plt.subplots(2,1)
+fig.set_size_inches((9,5))
 ax=axs[0]
-ax.plot(sizesa,heightsa,color='r',marker='s')
-ax.plot(sizesb,heightsb,color='b',marker='.')
+ax.plot(proca[0],proca[1],color='r',marker='s')
+ax.plot(procb[0],procb[1],color='b',marker='.')
 ax.set_ylabel('Height')
 ax.legend(('A','B'),frameon=False,loc='best')
 ax.grid(True)
 ax=axs[1]
-ax.plot(sizesuna,heightsuna-heightsunb,color='k',marker='.')
+ax.plot(procuna[0],procuna[1]-procunb[1],color='k',marker='.')
 ax.set_ylabel('Height')
 ax.legend(('A-B',),frameon=False,loc='best')
 ax.axhline(y=0,color='k',linestyle='--')
