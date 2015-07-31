@@ -17,7 +17,7 @@ import scipy.io as sio
 import datetime as datetime
 import string as string
 
-printtofile=True
+printtofile=False
 
 #dataloaded=True
 loadmat=True; 
@@ -636,16 +636,18 @@ else:
 allcasedt = {'Preindustrial':piallrdt, 'CGCM': leallrdt, 'AGCM':aallrdt}
 
 #  Here calculate the BKS SIC associated with each composite
-allregimdt={}; allregitdt={}; allregimcidt={}; allregitcidt={}
-
+allregimdt={};allregimlodt={};allregimhidt={}; allregitdt={}; allregimcidt={}; allregitcidt={}
+allregimlocidt={};allregimhicidt={};
 fkey='ice'
+print '@@@@@@@@@@@@@ calculating CI for ICE, all composites'
 for ckey in allcasedt.keys():
-    print ckey
-    regmdt={}; regtotdt={}; regmcidt={}; regtcidt={}
+    print ' ENS ' + ckey
+    regmdt={}; regmlodt={}; regmhidt={}; regtotdt={}; regmcidt={}; regtcidt={}
+    regmlocidt={}; regmhicidt={}
     allrdt=allcasedt[ckey]
     for rkey in regions:
 
-        print '  ' + rkey
+        print '  REGION' + rkey
 
         
         dt=allrdt[rkey][fkey]
@@ -661,16 +663,39 @@ for ckey in allcasedt.keys():
         regtci = sp.stats.t.interval(1-cisiglevel,len(regt)-1,
                                      loc=regt.mean(axis=0),
                                      scale=regt.std(axis=0)/np.sqrt(len(regt)))
+        print '   DIFF: ' + str(regm.mean(axis=0)) + ', CI: ' + str(regmci) # @@
 
-        print '  regm mean ' + str(regm.mean(axis=0))
+        # @@ CONFIDENCE interval on the low! (for John to compare)
+        regmlo = cutl.calc_regmean(dt['lowspt'][...,:-1],lat,lon,'bksmori')
+        regmhi = cutl.calc_regmean(dt['highspt'][...,:-1],lat,lon,'bksmori')
+        regmloci = sp.stats.t.interval(1-cisiglevel,len(regmlo)-1,
+                                       loc=regmlo.mean(axis=0),
+                                       scale=regmlo.std(axis=0)/np.sqrt(len(regmlo)))
+        regmhici = sp.stats.t.interval(1-cisiglevel,len(regmhi)-1,
+                                       loc=regmhi.mean(axis=0),
+                                       scale=regmhi.std(axis=0)/np.sqrt(len(regmhi)))
+
+        print '   LO: ' + str(regmlo.mean(axis=0)) + ', CI: ' + str(regmloci) # @@
+        print '   LO vals: ' + str(regmlo)
+        print '   HI: ' + str(regmhi.mean(axis=0)) + ', CI: ' + str(regmhici) # @@
+
+
         regmdt[rkey]=regm.mean(axis=0)
+        regmlodt[rkey]=regmlo.mean(axis=0)
+        regmhidt[rkey]=regmhi.mean(axis=0)
         regtotdt[rkey]=regt.mean(axis=0) # not sure which one i want
         regmcidt[rkey]=regmci
+        regmlocidt[rkey]=regmloci
+        regmhicidt[rkey]=regmhici
         regtcidt[rkey]=regtci
 
     allregimdt[ckey]=regmdt # i for ice
+    allregimlodt[ckey]=regmlodt # i for ice
+    allregimhidt[ckey]=regmhidt # i for ice
     allregitdt[ckey]=regtotdt
     allregimcidt[ckey]=regmcidt
+    allregimlocidt[ckey]=regmlocidt
+    allregimhicidt[ckey]=regmhicidt
     allregitcidt[ckey]=regtcidt
 
 allregimdf=pd.DataFrame(allregimdt)
@@ -708,29 +733,56 @@ allregspmcidf=pd.DataFrame(allregspmcidt)
 
 
 #  Here calculate the BKS Z500 associated with each composite
-allregsp2mdt={}; allregsp2mcidt={};
-
+allregsp2mdt={}; allregsp2mcidt={};allregsp2mlodt={}; allregsp2mlocidt={};
+allregsp2mhidt={}; allregsp2mhicidt={};
 fkey='z500'
+print '@@@@@@@@@@@@@ calculating CI for Z500, all composites'
 for ckey in allcasedt.keys():
-    regmdt={}; regtotdt={}; regmcidt={}; regtcidt={}
+    print ' ENS ' + ckey # @@
+
+    regmdt={};regmlodt={};regmhidt={}; regtotdt={}; regmcidt={}; regmlocidt={};regmhicidt={}
     allrdt=allcasedt[ckey]
     for rkey in regions:
         
+        print '  REGION ' + rkey # @@
+
         dt=allrdt[rkey][fkey]
 
         diff = dt['lowspt']-dt['highspt']
         regm = cutl.calc_regmean(diff[...,:-1],lat,lon,'bksmori')
-
+        
         # Confidence interval: 5=95% interval on the mean
         regmci = sp.stats.t.interval(1-cisiglevel,len(regm)-1,
                                      loc=regm.mean(axis=0),
                                      scale=regm.std(axis=0)/np.sqrt(len(regm)))
+        print '   DIFF: ' + str(regm.mean(axis=0)) + ', CI: ' + str(regmci) # @@
+
+        # @@ CONFIDENCE interval on the low! (for John to compare)
+        regmlo = cutl.calc_regmean(dt['lowspt'][...,:-1],lat,lon,'bksmori')
+        regmhi = cutl.calc_regmean(dt['highspt'][...,:-1],lat,lon,'bksmori')
+        regmloci = sp.stats.t.interval(1-cisiglevel,len(regmlo)-1,
+                                       loc=regmlo.mean(axis=0),
+                                       scale=regmlo.std(axis=0)/np.sqrt(len(regmlo)))
+        regmhici = sp.stats.t.interval(1-cisiglevel,len(regmhi)-1,
+                                       loc=regmhi.mean(axis=0),
+                                       scale=regmhi.std(axis=0)/np.sqrt(len(regmhi)))
+        print '   LO: ' + str(regmlo.mean(axis=0)) + ', CI: ' + str(regmloci) # @@
+        print '   LO vals: ' + str(regmlo)
+        print '   HI: ' + str(regmhi.mean(axis=0)) + ', CI: ' + str(regmhici) # @@
 
         regmdt[rkey]=regm.mean(axis=0)
         regmcidt[rkey]=regmci
+        regmlodt[rkey]=regmlo.mean(axis=0)
+        regmlocidt[rkey]=regmloci
+        regmhidt[rkey]=regmhi.mean(axis=0)
+        regmhicidt[rkey]=regmhici
 
     allregsp2mdt[ckey]=regmdt # sp for spatial 1 (SAT)
     allregsp2mcidt[ckey]=regmcidt
+    allregsp2mlodt[ckey]=regmlodt # sp for spatial 1 (SAT)
+    allregsp2mlocidt[ckey]=regmlocidt
+    allregsp2mhidt[ckey]=regmhidt # sp for spatial 1 (SAT)
+    allregsp2mhicidt[ckey]=regmhicidt
 
 allregsp2mdf=pd.DataFrame(allregsp2mdt)
 allregsp2mcidf=pd.DataFrame(allregsp2mcidt)
