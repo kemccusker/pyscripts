@@ -45,6 +45,12 @@ local=True
 
 conditional=True # plot scatter conditional on 3rd var
 
+styearsR = [ 8.,  7.,  2.,  8.,  8.] # variable SIC styears
+styearsE=[ 4.,  1.,  7.,  3.,  1.]; # mean SIC styears
+styearsN=[1.] # NSIDC sim
+# composite when for 2: '14:51:28.762886'
+# composite when for ss and ns: 17:01:16.908687
+
 performop1 = False
 #op1='div'; region1op='gm' # polar amp: gt60n / gm
 op1='sub'; region1op='deeptrop' # pole-eq temp gradient: gt60n - deeptrop (or trop)
@@ -489,7 +495,7 @@ def plot_shorttermpdf(fig,ax,field,region,xxdat,pdfdat,histdat,meandat,cidat,
         prstr = prstr+'misc'
         xlab = xlab + ' Aero=$%.2f$'%(rawmmean) 
     if addpi:
-        if combagcm and field=='sia':
+        if field=='sia':
             # for the paper: add PI hist too, to sia
             ax.hist(pisea,normed=True,color=picol,alpha=0.5,histtype='stepfilled')
         
@@ -891,7 +897,7 @@ def calc_shorttermpdf(fdict,field,region,sea,timesel,leconv=1,subnh=False,combag
         # want to subtract the mean hemispheric avg anomaly
         osimflddf = osimflddf - osimsubdf.mean(axis=1).mean() # average over sims and then time (should be a scalar)
 
-    subsamp,styearsss = subsamp_sims(simflddf,numyrs=11)
+    subsamp,styearsss = subsamp_sims(simflddf,numyrs=11,styears=styearsE)
     plotsims = subsamp
     print '==== AGCM '
     sspdf_fitted,ssmean,sssd,ssxx = cutl.calc_normfit(plotsims)
@@ -904,7 +910,7 @@ def calc_shorttermpdf(fdict,field,region,sea,timesel,leconv=1,subnh=False,combag
     ssci = sp.stats.t.interval(1-cisiglevel, ssdf, loc=ssmean, scale=ssstder) # this is mean value's 5-95%
     sscif = sp.stats.t.interval(1-cisiglevel, ssdf, loc=ssmean, scale=sssd) # full range. don't divide by n. this is pdf 5-95%
 
-    osubsamp,styearsns = subsamp_sims(osimflddf,numyrs=11)
+    osubsamp,styearsns = subsamp_sims(osimflddf,numyrs=11,styears=styearsN)
     print '==== NSIDC AGCM '
     osspdf_fitted,ossmean,osssd,ossxx = cutl.calc_normfit(osubsamp)
     ossdf = len(osubsamp)-1
@@ -925,7 +931,7 @@ def calc_shorttermpdf(fdict,field,region,sea,timesel,leconv=1,subnh=False,combag
             sim2flddf = sim2flddf - sim2subdf.mean(axis=1).mean() # average over sims and then time (should be a scalar)
 
 
-        subsamp2,styears2 = subsamp_sims(sim2flddf,numyrs=11)
+        subsamp2,styears2 = subsamp_sims(sim2flddf,numyrs=11,styears=styearsR)
         plotsims2 = subsamp2
         print '==== AGCM2 '
         ss2pdf_fitted,ss2mean,ss2sd,ss2xx = cutl.calc_normfit(plotsims2)
@@ -1512,7 +1518,7 @@ def main(dowhat=None,addobs=True,addsims=False,addnat=False,
                 elif op1=='div': # divide
                     fldssdf1 = fldssdf1 / fldssdf1op
 
-            fldssdf1,styrs = subsamp_sims(fldssdf1,numyrs=11)
+            fldssdf1,styrs = subsamp_sims(fldssdf1,numyrs=11,styears=styearsE)
 
             fldssdf2 = pd.DataFrame(lmd.loaddata((simfield2,),simsss,ncfields=(simncfield2,), timefreq=sea2, 
                                             region=region2))*simconv2
@@ -1559,7 +1565,7 @@ def main(dowhat=None,addobs=True,addsims=False,addnat=False,
                 elif op1=='div': # divide
                     fldssrdf1 = fldssrdf1 / fldssrdf1op
 
-            fldssrdf1,styrsr = subsamp_sims(fldssrdf1,numyrs=11)
+            fldssrdf1,styrsr = subsamp_sims(fldssrdf1,numyrs=11,styears=styearsR)
 
             fldssrdf2 = pd.DataFrame(lmd.loaddata((simfield2,),simsssr,ncfields=(simncfield2,), timefreq=sea2, 
                                             region=region2))*simconv2
@@ -1621,7 +1627,7 @@ def main(dowhat=None,addobs=True,addsims=False,addnat=False,
                 elif op2=='div': # divide
                     fldssodf2 = fldssodf2 / fldssodf2op
 
-            fldssodf2,styrso = subsamp_sims(fldssodf2,numyrs=11,styears=styrso)
+            fldssodf2,styrso = subsamp_sims(fldssodf2,numyrs=11,styears=styrsN)
 
             simssomm, simssobb, simssorval, simssopval, simssostd_err = sp.stats.linregress(fldssodf1,
                                                                                        fldssodf2)
@@ -2588,8 +2594,10 @@ def main(dowhat=None,addobs=True,addsims=False,addnat=False,
             fdicta = {'field': fielda+regiona, 'ncfield': ncfielda, 'comp': compa}
 
             if loadmat:
-                
-                when='18:19:46.394326' #'16:06:52.938245' # # choose which set of files to load
+                when='14:51:28.762886'; 
+
+
+                #when='18:19:46.394326' #'16:06:52.938245' # # choose which set of files to load
                 print 'loadmat!! when=' + when # @@
                 retdict = dict.fromkeys(keys)
                 retdicta = dict.fromkeys(keys)
@@ -2641,7 +2649,7 @@ def main(dowhat=None,addobs=True,addsims=False,addnat=False,
             if loadmat:
                 now = when # have filename match the data
             else:
-                now = str(datetime.datetime.now().time())
+                now = when='14:51:28.762886';#@@@@@str(datetime.datetime.now().time())
 
             if printtofile:
                 fig.savefig(field + region + substr + '_' + sea + '_LEsims' + simsstr +\
@@ -2656,7 +2664,7 @@ def main(dowhat=None,addobs=True,addsims=False,addnat=False,
                                        combagcm=combagcm,**retdicta)
             if printtofile:
                 fig.savefig(fielda + regiona + substr + '_' + sea + '_' +\
-                            'obs_11yrsubsmpavgraw_histinset' + prstr + now + '_lenatcomb.pdf')
+                            'obs_11yrsubsmpavgraw_histinset' + prstr + now + '.pdf')
 
 
             fig,ax=plt.subplots(1,1)
@@ -2666,7 +2674,7 @@ def main(dowhat=None,addobs=True,addsims=False,addnat=False,
                                        combagcm=combagcm,**retdict)
             if printtofile:
                 fig.savefig(field + region + substr + '_' + sea + '_' +\
-                            'obs_11yrsubsmpavgraw_histinset' + prstr + now + '_agcmcomb_lenatcomb.pdf')
+                            'obs_11yrsubsmpavgraw_histinset' + prstr + now + '.pdf')
 
 
             if savemat:
