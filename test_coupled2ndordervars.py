@@ -26,6 +26,7 @@ timeper = '2021-3041'
 ncfield='MLT'
 
 if zonal:
+    # can't really do zonal mean if want zonal integration in PHT
     timesel='2031-01-01,3041-12-31' # skip first decade
     fldsuff='ZM'
 else:
@@ -134,9 +135,10 @@ plt.xlim((-80,80))
 flddf.plot(x=lat)
 plt.plot(lat,fldtot,color='k')
 plt.axhline(y=0,color='0.5')
-plt.ylim((-1e16,1e16))
+plt.ylim((-10e15,10e15))
 plt.xlim((-15,75))
-
+plt.xlabel('latitude')
+plt.ylabel('poleward transport (W)')
 
 (flddf*W2calperday/1e19).plot(x=lat)
 plt.plot(lat,fldtot*W2calperday/1e19,color='k')
