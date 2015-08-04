@@ -50,7 +50,9 @@ def process_sample(datdf, sizelims, selcol='Size', heightcol='Height',
 
                 returns:  ((sizeary, heightary), 
                            (sizearyunq, heightaryunq),
-                           (sizeraw, heightraw))
+                           (sizeraw, heightraw),
+                           sizerawary)
+                     where sizerawary are the raw sizes with NaNs as filler
     """
 
     sizerange=np.arange(sizelims[0],sizelims[1]+1) 
@@ -105,21 +107,31 @@ def process_sample(datdf, sizelims, selcol='Size', heightcol='Height',
     # Initialize final height array and final size array 
     heightary=np.zeros(len(sizerange)) # height should be zero unless there is a size
     sizeary=np.arange(sizelims[0],sizelims[1]+1) # sizes are indices w/in user range
+    # Initialize final raw size array (with NaNs as filler)
+    sizerawary = np.ones(len(sizerange))*np.nan
+    # Initialize 'notes/comments' array
+    notesary = ('',)*len(sizerange)
 
     # Put raw height data into final height array where unique sizes exist
     heightraw = heightraw.astype(type(heightraw[0])) # make sure types match to avoid TypeError
     print '@@@ type(heightraw) ' + str(type(heightraw))
     heightary[unqidx-sizelims[0]] = heightraw[retidx]
 
+    # Put raw size data into final raw size array for unique (rounded) sizes
+    sizerawary[unqidx-sizelims[0]] = sizeraw[retidx]
+
     # Save arrays WITHOUT DUPLICATES:
     sizearyunq = copy.copy(sizeary)
     heightaryunq = copy.copy(heightary)
+    sizerawaryunq = copy.copy(sizerawary)
 
 
-    # ADD DUPLICATES BACK IN: @@@@ still not correct:
+    # ADD DUPLICATES BACK IN: 
     #  convert to list to do insertion
     heightl = list(heightary)
     sizel = list(sizeary)
+    sizerawl = list(sizerawary)
+    notesl = list(notesary)
     dii=0
     incr=0 # keep track of how many elements we add.
     for dupii in dupes: # dupe size values (also indices into full size array)
@@ -138,14 +150,18 @@ def process_sample(datdf, sizelims, selcol='Size', heightcol='Height',
                 ' before index ' + str(dupii+1+incr-unqidx[0]) +\
                 ' (dupesinsert= ' + str(dupesinsert[dii]+1) + ')'
         heightl.insert(dupii+1+incr-unqidx[0], heightraw[dupesinsert[dii]+1])
+        sizerawl.insert(dupii+1+incr-unqidx[0], sizeraw[dupesinsert[dii]+1]) 
+        notesl[dupii+incr-unqidx[0]] = 'DUPLICATE SIZE'
+        notesl.insert(dupii+1+incr-unqidx[0], 'DUPLICATE SIZE')
 
         incr+=1 # now we have one additional element in array. increase insertion index
         dii+=1 # index into dupesinsert
 
     # convert back to numpy arrays
-    sizeary=np.array(sizel)
-    heightary=np.array(heightl)
-
+    sizeary = np.array(sizel)
+    heightary = np.array(heightl)
+    sizerawary = np.array(sizerawl)                   
+    notesary = np.array(notesl)
 
     if plotfig:
 
@@ -173,7 +189,7 @@ def process_sample(datdf, sizelims, selcol='Size', heightcol='Height',
                 print 'Printing figure: peakal_' + splits[0] + '.pdf'
             fig.savefig('peakal_' + splits[0] + '.pdf')
 
-    return ((sizeary,heightary),(sizearyunq,heightaryunq),(sizeraw,heightraw))
+    return ((sizeary,heightary),(sizearyunq,heightaryunq),(sizeraw,heightraw), sizerawary, notesary)
 
 
 def plot_sample_diff(samp1, samp2, samp1unq, samp2unq, sampnames=None):
@@ -220,6 +236,8 @@ def get_sample_name(sample, selcol='Sample File Name'):
     return sample[selcol].values[0]
 
 
+
+
 printtofile=False
 
 #basepath='/Users/kelly/Dropbox/projects/Ryan/'
@@ -234,45 +252,45 @@ sizelims=[100,200]
 
 samples1 = read_samples(fname1)
 
-proc={}; procun={}; procraw={}; sampnames={}
+# multiple samples within in each file:
+# proc is [#samples][size/height]
+# FILE1
+proc={}; procun={}; procraw={}; sampnames={}; sizerawdt={}; notesdt={}
 for sii,samp in enumerate(samples1):
     sampnames[sii]=get_sample_name(samp)
-    proc[sii],procun[sii],procraw[sii] = process_sample(samp,sizelims,printtofile=printtofile)
+    proc[sii],procun[sii],procraw[sii], sizerawdt[sii], notesdt[sii] = process_sample(samp,sizelims,printtofile=printtofile)
 fig,axs = plot_sample_diff(proc[0], proc[1], procun[0], procun[1], sampnames=sampnames)
 
-
-def fill_raw_sample(proc,procunq,procraw):
-    """ fill the raw arrays to have NaNs where missing indices
-    """
-    pass
-
-
+out1s1 = np.vstack(((sampnames[0],)*len(proc[0][0]),proc[0][0],sizerawdt[0],notesdt[0],proc[0][1]))
+out1s2 = np.vstack(((sampnames[1],)*len(proc[1][0]),proc[1][0],sizerawdt[1],notesdt[1],proc[1][1]))
+out1 = np.hstack((out1s1,out1s2))
+out1df = pd.DataFrame(out1.T,columns=('Sample File Name','Size','Size (raw)','Notes', 'Height'))
+# @@@@ WRITE out1df AS CSV FILE
 
 
 
-
-
+# FILE2
 samples2 = read_samples(fname2)
-proc2={}; procun2={}; procraw2={}; sampnames2={}
+proc2={}; procun2={}; procraw2={}; sampnames2={}; sizerawdt2={}; notesdt2={}
 for sii,samp in enumerate(samples2):
     sampnames2[sii]=get_sample_name(samp)
-    proc2[sii],procun2[sii],procraw2[sii]  = process_sample(samp,sizelims,printtofile=printtofile)
+    proc2[sii],procun2[sii],procraw2[sii], sizerawdt2[sii], notesdt2[sii]  = process_sample(samp,sizelims,printtofile=printtofile)
 plot_sample_diff(proc2[0], proc2[1], procun2[0], procun2[1], sampnames=sampnames2)    
 
+# FILE3
 samples3 = read_samples(fname3)
-proc3={}; procun3={}; procraw3={}; sampnames3={}
+proc3={}; procun3={}; procraw3={}; sampnames3={}; sizerawdt3={}; notesdt3={}
 for sii,samp in enumerate(samples3):
     sampnames3[sii]=get_sample_name(samp)
-    proc3[sii],procun3[sii],procraw3[sii] = process_sample(samp,sizelims,printtofile=printtofile)
+    proc3[sii],procun3[sii],procraw3[sii], sizerawdt3[sii], notesdt3[sii] = process_sample(samp,sizelims,printtofile=printtofile)
 plot_sample_diff(proc3[0], proc3[1], procun3[0], procun3[1], sampnames=sampnames3)    
-
 
 
 samplesa = read_samples(fnamea)
 samplesb = read_samples(fnameb)
 
-(proca, procuna, procrawa) = process_sample(samplesa[0],sizelims,printtofile=printtofile)
-(procb, procunb, procrawb) = process_sample(samplesb[0],sizelims,printtofile=printtofile)
+(proca, procuna, procrawa, sizerawdta, notesdta) = process_sample(samplesa[0],sizelims,printtofile=printtofile)
+(procb, procunb, procrawb, sizerawdtb, notesdtb) = process_sample(samplesb[0],sizelims,printtofile=printtofile)
 
 
 
