@@ -66,7 +66,6 @@ def process_sample(datdf, sizelims, selcol='Size', heightcol='Height',
     # save raw selection
     sizeraw = sizerawall[np.logical_and(sizerawall.round() >= sizelims[0],
                                         sizerawall.round() <= sizelims[1])].values
-    print '@@@ type(sizeraw) ' + str(type(sizeraw))
 
     # Round size data
     datdf['Size'] = datdf['Size'].astype(np.float).round()
@@ -87,6 +86,7 @@ def process_sample(datdf, sizelims, selcol='Size', heightcol='Height',
     dupes=rawidx[rawidx[1:] == rawidx[:-1]]
     if verb:
         print 'Duplicates found: ' + str(dupes)
+        print 'rawidx[1:] == rawidx[:-1] ' + str(rawidx[1:] == rawidx[:-1])
 
     # remove duplicate sizes (indices) so just have unique sizes/indices
     # reconidx reconstructs original, retidx are the indices that result in unique array
@@ -237,20 +237,81 @@ def get_sample_name(sample, selcol='Sample File Name'):
 
 
 
+def test_main(fname, sizerange, sampcol='Sample File Name', sizecol='Size', 
+              heightcol='Height', delimiter='\t', plotfig=False, printtofile=False, 
+              verb=False):
+    """
+        read samples from fname, within the given sizerange (integers, inclusive of endpoints)
+
+            Expecting 1-2 samples within file
+    """
+
+    if verb:
+        print 'Reading samples'
+    samples = read_samples(fname, sampcol=sampcol, delimiter=delimiter)
+    
+    if type(sizerange) == str:
+        splits=sizerange.split(',')
+        sizelims=np.array([np.int(splits[0]), np.int(splits[1])])
+    else:
+        sizelims=sizerange
+
+    # multiple samples within in each file:
+    # proc is [#samples][size/height]
+    proc={}; procun={}; procraw={}; sampnames={}; sizerawdt={}; notesdt={}
+    colstack = []
+    for sii,samp in enumerate(samples):
+        sampnames[sii]=get_sample_name(samp)
+        if verb:
+            print '== PROCESSING SAMPLE: ' + sampnames[sii]
+        proc[sii],procun[sii],procraw[sii], sizerawdt[sii], notesdt[sii] = process_sample(samp, sizelims, selcol=sizecol,
+                                                                                          heightcol=heightcol,
+                                                                                          delimiter=delimiter,
+                                                                                          plotfig=plotfig,
+                                                                                          verb=verb,
+                                                                                          printtofile=printtofile)
+
+        # stack up the output columns
+        colstack.append(np.vstack(((sampnames[sii],)*len(proc[sii][0]),
+                                   proc[sii][0], sizerawdt[sii], 
+                                   proc[sii][1], notesdt[sii])))
+
+    outstack = np.hstack(colstack)
+    outdf = pd.DataFrame(outstack.T,columns=(sampcol,sizecol,sizecol + ' (raw)', heightcol, 'Notes'))
+    outdf.to_csv(fname+'_out'+ext,sep=delimiter)
+
+    if plotfig and len(samples)==2:
+        # @@@ plots just the first 2 samples
+        fig,axs = plot_sample_diff(proc[0], proc[1], procun[0], procun[1], sampnames=sampnames)
+
+
 
 printtofile=False
 
-#basepath='/Users/kelly/Dropbox/projects/Ryan/'
 basepath='./Ryan/'
-fnameb = basepath + 'B_peak_height.txt'
-fnamea = basepath + 'A_peak_height.txt'
-fname1 = basepath + 'set1.txt'
-fname2 = basepath + 'set2.txt'
-fname3 = basepath + 'set3.txt'
+ext = '.txt'
+fnameb = basepath + 'B_peak_height'
+fnamea = basepath + 'A_peak_height'
+fname1 = basepath + 'set1'
+fname2 = basepath + 'set2'
+fname3 = basepath + 'set3'
+fnameh = basepath + 'hnsdata'
+fnamebug = basepath + 'hns_c_03_test'
+delimiter='\t'
 
-sizelims=[100,200]
+fin = fnamebug+ext
+#sizelims=[100,200]
+sizelims='100,200'
+test_main(fin, sizelims, plotfig=True, verb=True)
 
-samples1 = read_samples(fname1)
+# in HNS file:
+# check C_C03.fsa
+# sizes ~ 150-156
+# for some reason, duplicates found is incorrect:
+#   Duplicates found: [122 156 200 150 197 200]
+
+"""
+samples1 = read_samples(fname1+ext)
 
 # multiple samples within in each file:
 # proc is [#samples][size/height]
@@ -261,16 +322,15 @@ for sii,samp in enumerate(samples1):
     proc[sii],procun[sii],procraw[sii], sizerawdt[sii], notesdt[sii] = process_sample(samp,sizelims,printtofile=printtofile)
 fig,axs = plot_sample_diff(proc[0], proc[1], procun[0], procun[1], sampnames=sampnames)
 
-out1s1 = np.vstack(((sampnames[0],)*len(proc[0][0]),proc[0][0],sizerawdt[0],notesdt[0],proc[0][1]))
-out1s2 = np.vstack(((sampnames[1],)*len(proc[1][0]),proc[1][0],sizerawdt[1],notesdt[1],proc[1][1]))
+out1s1 = np.vstack(((sampnames[0],)*len(proc[0][0]),proc[0][0],sizerawdt[0],proc[0][1],notesdt[0]))
+out1s2 = np.vstack(((sampnames[1],)*len(proc[1][0]),proc[1][0],sizerawdt[1],proc[1][1],notesdt[1]))
 out1 = np.hstack((out1s1,out1s2))
-out1df = pd.DataFrame(out1.T,columns=('Sample File Name','Size','Size (raw)','Notes', 'Height'))
-# @@@@ WRITE out1df AS CSV FILE
-
+out1df = pd.DataFrame(out1.T,columns=('Sample File Name','Size','Size (raw)', 'Height', 'Notes'))
+out1df.to_csv(fname1+'_out'+ext,sep=delimiter)
 
 
 # FILE2
-samples2 = read_samples(fname2)
+samples2 = read_samples(fname2+ext)
 proc2={}; procun2={}; procraw2={}; sampnames2={}; sizerawdt2={}; notesdt2={}
 for sii,samp in enumerate(samples2):
     sampnames2[sii]=get_sample_name(samp)
@@ -278,7 +338,7 @@ for sii,samp in enumerate(samples2):
 plot_sample_diff(proc2[0], proc2[1], procun2[0], procun2[1], sampnames=sampnames2)    
 
 # FILE3
-samples3 = read_samples(fname3)
+samples3 = read_samples(fname3+ext)
 proc3={}; procun3={}; procraw3={}; sampnames3={}; sizerawdt3={}; notesdt3={}
 for sii,samp in enumerate(samples3):
     sampnames3[sii]=get_sample_name(samp)
@@ -286,8 +346,8 @@ for sii,samp in enumerate(samples3):
 plot_sample_diff(proc3[0], proc3[1], procun3[0], procun3[1], sampnames=sampnames3)    
 
 
-samplesa = read_samples(fnamea)
-samplesb = read_samples(fnameb)
+samplesa = read_samples(fnamea+ext)
+samplesb = read_samples(fnameb+ext)
 
 (proca, procuna, procrawa, sizerawdta, notesdta) = process_sample(samplesa[0],sizelims,printtofile=printtofile)
 (procb, procunb, procrawb, sizerawdtb, notesdtb) = process_sample(samplesb[0],sizelims,printtofile=printtofile)
@@ -314,6 +374,7 @@ ax.grid(True)
 if printtofile:
     fig.savefig('peakal_AB_A-B.pdf')
 
+"""
 
 """
 sizerange=np.arange(sizelims[0],sizelims[1]+1) # @@@@ NEW question: range inclusive of endpoints?
