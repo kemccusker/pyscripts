@@ -36,11 +36,17 @@
     # @@ question: what are the two spreadsheets? the 'A' output and the 'diff' output?  ANS: new A, new B, and difference
 
 """
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import cccmautils as cutl
 import copy as copy
 
+
+def find_nearest(array,value):
+    """ find_nearest(array,value): returns index of array
+        element with nearest value to value
+    """
+    return (np.abs(array-value)).argmin()
 
 def process_sample(datdf, sizelims, selcol='Size', heightcol='Height',
                    delimiter="\t", plotfig=True, verb=True, printtofile=False):
@@ -86,7 +92,7 @@ def process_sample(datdf, sizelims, selcol='Size', heightcol='Height',
     dupes=rawidx[rawidx[1:] == rawidx[:-1]]
     if verb:
         print 'Duplicates found: ' + str(dupes)
-        print 'rawidx[1:] == rawidx[:-1] ' + str(rawidx[1:] == rawidx[:-1])
+        #print 'rawidx[1:] == rawidx[:-1] ' + str(rawidx[1:] == rawidx[:-1])
 
     # remove duplicate sizes (indices) so just have unique sizes/indices
     # reconidx reconstructs original, retidx are the indices that result in unique array
@@ -98,7 +104,7 @@ def process_sample(datdf, sizelims, selcol='Size', heightcol='Height',
     dupesinsert=np.zeros((len(dupes)))
     for dii,dup in enumerate(dupes):
         # get index of duplicate size
-        dupesinsert[dii] = np.int(cutl.find_nearest(rawidx,dup))
+        dupesinsert[dii] = np.int(find_nearest(rawidx,dup))
 
     # Get Heights that corresponds to Sizes
     heightraw=seldf[heightcol].values
@@ -114,7 +120,6 @@ def process_sample(datdf, sizelims, selcol='Size', heightcol='Height',
 
     # Put raw height data into final height array where unique sizes exist
     heightraw = heightraw.astype(type(heightraw[0])) # make sure types match to avoid TypeError
-    print '@@@ type(heightraw) ' + str(type(heightraw))
     heightary[unqidx-sizelims[0]] = heightraw[retidx]
 
     # Put raw size data into final raw size array for unique (rounded) sizes
@@ -184,7 +189,7 @@ def process_sample(datdf, sizelims, selcol='Size', heightcol='Height',
                     'Processed: w/ Duplicates','Duplicates'), fancybox=True,
                    framealpha=0.5, frameon=False)
         if printtofile:
-            splits=fname.split('/')[-1].split('.')
+            splits=fname.split('/')[-1].split('.') # figure filename assumes fname has a particular structure (ie no . in filename)@@
             if verb:
                 print 'Printing figure: peakal_' + splits[0] + '.pdf'
             fig.savefig('peakal_' + splits[0] + '.pdf')
@@ -215,7 +220,7 @@ def plot_sample_diff(samp1, samp2, samp1unq, samp2unq, sampnames=None):
     return fig,axs
 
 
-def read_samples(fname, sampcol='Sample File Name', delimiter='\t'):
+def read_samples(fname, sampcol='Sample File Name', delimiter='\t', verb=False):
     """ returns a list of sample dataframes
            
     """
@@ -225,6 +230,8 @@ def read_samples(fname, sampcol='Sample File Name', delimiter='\t'):
     
     samples = []
     for sampkey in sampkeys:
+        if verb:
+            print sampkey
         sampdf=pd.DataFrame(datdf.values[np.array(datdf[sampcol]==sampkey)],
                        columns=cols)
         samples.append(sampdf)
@@ -239,7 +246,7 @@ def get_sample_name(sample, selcol='Sample File Name'):
 
 def test_main(fname, sizerange, sampcol='Sample File Name', sizecol='Size', 
               heightcol='Height', delimiter='\t', plotfig=False, printtofile=False, 
-              verb=False):
+              verb=False, outfile=None):
     """
         read samples from fname, within the given sizerange (integers, inclusive of endpoints)
 
@@ -247,8 +254,8 @@ def test_main(fname, sizerange, sampcol='Sample File Name', sizecol='Size',
     """
 
     if verb:
-        print 'Reading samples'
-    samples = read_samples(fname, sampcol=sampcol, delimiter=delimiter)
+        print fname + ': Reading samples'
+    samplesin = read_samples(fname, sampcol=sampcol, delimiter=delimiter, verb=verb)
     
     if type(sizerange) == str:
         splits=sizerange.split(',')
@@ -257,58 +264,55 @@ def test_main(fname, sizerange, sampcol='Sample File Name', sizecol='Size',
         sizelims=sizerange
 
     # multiple samples within in each file:
-    # proc is [#samples][size/height]
-    proc={}; procun={}; procraw={}; sampnames={}; sizerawdt={}; notesdt={}
+    samples = {}; samplesun = {}; sampnames = {}
     colstack = []
-    for sii,samp in enumerate(samples):
-        sampnames[sii]=get_sample_name(samp)
+    for sii,samp in enumerate(samplesin):
+
+        sampnames[sii] = get_sample_name(samp)
         if verb:
             print '== PROCESSING SAMPLE: ' + sampnames[sii]
-        proc[sii],procun[sii],procraw[sii], sizerawdt[sii], notesdt[sii] = process_sample(samp, sizelims, selcol=sizecol,
-                                                                                          heightcol=heightcol,
-                                                                                          delimiter=delimiter,
-                                                                                          plotfig=plotfig,
-                                                                                          verb=verb,
-                                                                                          printtofile=printtofile)
 
-        # stack up the output columns
-        colstack.append(np.vstack(((sampnames[sii],)*len(proc[sii][0]),
-                                   proc[sii][0], sizerawdt[sii], 
-                                   proc[sii][1], notesdt[sii])))
+        # first 3 returns are (size, height) tuples
+        proc, procun, procraw, sizeraw, notes = process_sample(samp, sizelims, selcol=sizecol,
+                                                               heightcol=heightcol,
+                                                               delimiter=delimiter,
+                                                               plotfig=plotfig,
+                                                               verb=verb,
+                                                               printtofile=printtofile)
 
+        # stack up the output columns for one samples
+        colstack.append(np.vstack(((sampnames[sii],)*len(proc[0]),
+                                   proc[0], sizeraw, 
+                                   proc[1], notes)))
+        
+        # save samples for possible plotting
+        samples[sii] = proc
+        samplesun[sii] = procun
+
+    # stack up the samples by row
     outstack = np.hstack(colstack)
     outdf = pd.DataFrame(outstack.T,columns=(sampcol,sizecol,sizecol + ' (raw)', heightcol, 'Notes'))
-    outdf.to_csv(fname+'_out'+ext,sep=delimiter)
+    if outfile == None:
+        outfile=''
+        splits=fname.split('/')[-1].split('.')
+        outfile = splits[-2] + '_peakal.' + splits[-1]
+        #splits = fname.split('/')
+        #splits.insert(-1,'_peakal')
+        #for sp in splits: 
+        #    outfile+='.'+sp
+    
+    if verb:
+        print 'Writing output to file: ./' + outfile
+        
+    outdf.to_csv(outfile,sep=delimiter)
 
     if plotfig and len(samples)==2:
         # @@@ plots just the first 2 samples
-        fig,axs = plot_sample_diff(proc[0], proc[1], procun[0], procun[1], sampnames=sampnames)
+        fig,axs = plot_sample_diff(samples[0], samples[1], samplesun[0], samplesun[1], sampnames=sampnames)
 
 
 
-printtofile=False
 
-basepath='./Ryan/'
-ext = '.txt'
-fnameb = basepath + 'B_peak_height'
-fnamea = basepath + 'A_peak_height'
-fname1 = basepath + 'set1'
-fname2 = basepath + 'set2'
-fname3 = basepath + 'set3'
-fnameh = basepath + 'hnsdata'
-fnamebug = basepath + 'hns_c_03_test'
-delimiter='\t'
-
-fin = fnamebug+ext
-#sizelims=[100,200]
-sizelims='100,200'
-test_main(fin, sizelims, plotfig=True, verb=True)
-
-# in HNS file:
-# check C_C03.fsa
-# sizes ~ 150-156
-# for some reason, duplicates found is incorrect:
-#   Duplicates found: [122 156 200 150 197 200]
 
 """
 samples1 = read_samples(fname1+ext)
@@ -376,132 +380,8 @@ if printtofile:
 
 """
 
-"""
-sizerange=np.arange(sizelims[0],sizelims[1]+1) # @@@@ NEW question: range inclusive of endpoints?
-
-datadf = pd.read_csv(fnamea,delimiter="\t")
-datbdf = pd.read_csv(fnameb,delimiter="\t")
 
 
-#Aret = datdf.values[datdf['Sample File Name'].values == 'A_A03.fsa']
-#Bret = datdf.values[datdf['Sample File Name'].values == 'B_B03.fsa']
-
-# A DATASET: ==================
-acols=datadf.keys()
-
-#adat = pd.DataFrame(datadf.values[np.logical_and(datadf['Size'] >= sizelims[0], 
-#                    datadf['Size'] <= sizelims[1])], columns=acols)
-adat = datadf
-asizerawall = datadf['Size'] # save original size
-# save raw selection
-asizeraw = asizerawall[np.logical_and(asizerawall.round()>=sizelims[0],
-                                      asizerawall.round()<=sizelims[1])] 
-# Round size data
-adat['Size']=datadf['Size'].round()
-# Select data based on user Size range:
-selbool=np.array(np.logical_and(adat['Size'] >= sizelims[0],adat['Size'] <= sizelims[1]))
-asel = pd.DataFrame(adat.values[selbool], columns=acols)
-
-# Convert Size to integer vals and use as an index
-arawidx=asel['Size'].values.astype(int) 
-anumsize=len(arawidx)
-
-# Find duplicates:
-# Use dupe indices to insert data later (this only works b/c arawidx is sorted)
-dupes=arawidx[arawidx[1:] == arawidx[:-1]]
-
-# remove duplicate sizes (indices)
-# # reconidx reconstructs original, retidx are the indices that result in unique array
-aidxunq, aretidx, areconidx = np.unique(arawidx,return_index=True,return_inverse=True) 
-# use retidx to set height data associatd w/ unique size indices
-
-dupesinsert=np.zeros((len(dupes)))
-for dii,dup in enumerate(dupes):
-    dupesinsert[dii] = np.int(cutl.find_nearest(arawidx,dup))
-#dupesinsert=areconidx[areconidx[1:] == areconidx[:-1]] #@@ no this doesn't work for my purposes!
-
-
-# Get Heights that corresponds to Sizes
-aheightraw=asel['Height'].values
-
-
-# Initialize final height array and final size array 
-aheightary=np.zeros(len(sizerange)) 
-asizeary=np.arange(sizelims[0],sizelims[1]+1)
-
-aheightraw = aheightraw.astype(type(aheightraw[0]))
-aheightary[aidxunq-sizelims[0]] = aheightraw[aretidx]
-
-
-plt.figure() 
-plt.plot(asizeary,aheightary,marker='o')
-plt.plot(asizeraw.values,asel['Height'],marker='s',color='r')
-plt.legend(('Processed: No duplicates','Raw'))
-
-# ADD DUPLICATES BACK IN:
-aheightl = list(aheightary)
-asizel = list(asizeary)
-dii=0
-for dupii in dupes: # dupe size values (also indices into full size array)
-
-    # insert the value before the index
-    # list.insert(index,value)
-    print 'sizel: inserting ' + str(dupii) + ' before index ' + str(dupii+2-aidxunq[0])
-    asizel.insert(dupii+2-aidxunq[0],dupii)
-
-    # dupesinsert are indices into raw array
-    print 'heightl: inserting ' + str(aheightraw[dupesinsert[dii]+1]) + \
-        ' before index ' + str(dupii+2-aidxunq[0]) + ' (dupesinsert= ' + str(dupesinsert[dii]+1) + ')'
-    aheightl.insert(dupii+2-aidxunq[0], aheightraw[dupesinsert[dii]+1])
-
-    dii+=1 # index into dupesinsert
-
-asizearydup=np.array(asizel)
-aheightarydup=np.array(aheightl)
-
-plt.figure() 
-plt.plot(asizeary,aheightary,marker='o',fillstyle='none')
-plt.plot(asizeraw.values,asel['Height'],marker='s',color='r')
-plt.plot(asizearydup,aheightarydup,marker='*',color='g',linestyle='none')
-plt.xlim((sizelims[0]-2,sizelims[1]+2))
-for dup in dupes:
-    plt.axvline(x=dup,color='k',linestyle='--')
-plt.legend(('Processed: No duplicates','Raw','Processed: with dupes','Dupes'))
-
-
-
-
-
-
-
-
-# B DATASET: =================
-bcols=datbdf.keys()
-#bdat = pd.DataFrame(datbdf.values[np.logical_and(datbdf['Size'] >= sizerange[0], datbdf['Size'] <= sizerange[1])], columns=bcols)
-
-bdat = datbdf
-bdat['Size']=datbdf['Size'].round()
-bsel = pd.DataFrame(bdat.values[np.logical_and(bdat['Size'] >= sizerange[0], bdat['Size'] <= sizerange[1])], columns=bcols)
-
-"""
-
-
-"""plt.figure()
-plt.plot(bdat.Size,marker='o',color='r')
-plt.plot(adat.Size,marker='.',color='b')
-plt.title('Size')
-
-
-plt.figure() 
-plt.plot(bdat.Height,marker='o',color='r')
-plt.plot(adat.Height,marker='.',color='b')
-plt.title('Height')
-
-plt.figure()
-plt.plot(bdat.Size,bdat.Height,marker='o',color='r')
-plt.plot(adat.Size,adat.Height,marker='.',color='b')
-plt.xlabel('Size')
-plt.ylabel('Height')"""
 
 # @@@ question: round Size first and then select based on range? Or other way around...
 #               ANS: round first, then select
