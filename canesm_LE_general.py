@@ -50,6 +50,60 @@ styearsE=[ 4.,  1.,  7.,  3.,  1.]; # mean SIC styears
 styearsN=[1.] # NSIDC sim
 # composite when for 2: '14:51:28.762886'
 # composite when for ss and ns: 17:01:16.908687
+styearPI = 0 # PI styear
+# PI anomyrs  when: '14:51:28.762886'
+anomyearsPI = [[79, 26],
+        [58, 17],
+        [79, 41],
+        [28, 24],
+        [37, 80],
+        [25, 48],
+        [30, 49],
+        [33, 85],
+        [51, 43],
+        [82,  6],
+        [62, 34],
+        [ 3, 17],
+        [56, 63],
+        [67,  4],
+        [29, 73],
+        [74,  0],
+        [28,  8],
+        [46, 56],
+        [14, 76],
+        [72, 37],
+        [88,  4],
+        [31, 56],
+        [31,  4],
+        [40,  0],
+        [20, 49],
+        [21, 81],
+        [68, 56],
+        [77, 37],
+        [18,  1],
+        [82, 26],
+        [78, 55],
+        [22, 47],
+        [78, 16],
+        [54, 76],
+        [ 5, 47],
+        [58, 25],
+        [49, 20],
+        [64, 36],
+        [34,  2],
+        [62, 18],
+        [89,  3],
+        [25, 10],
+        [10, 30],
+        [84, 55],
+        [88, 18],
+        [87, 50],
+        [68, 26],
+        [ 5, 67],
+        [77, 13],
+        [74, 61]]
+
+
 
 performop1 = False
 #op1='div'; region1op='gm' # polar amp: gt60n / gm
@@ -62,7 +116,8 @@ timeselp='2002-01-01,2012-12-31'
 timeselall = '1979-01-01,2012-12-31'
 
 # x field
-field1='zg50000.00'; ncfield1='zg'; comp1='Amon'; region1='bksmori'
+field1='turb'; ncfield1='turb'; comp1='Amon'; region1='bksmori'
+#field1='zg50000.00'; ncfield1='zg'; comp1='Amon'; region1='bksmori'
 #field1='sia'; ncfield1='sianh'; comp1='OImon'; region1='nh'
 #field1='sic'; ncfield1='sic'; comp1='OImon'; region1='bksmori' # @@ a hack. prefer SIA
 #field1='tas'; ncfield1='tas'; comp1='Amon'; region1='eurasiamori' #region1='bksmori'
@@ -72,6 +127,7 @@ sea1='DJF'
 # y field
 field2='tas'; ncfield2='tas'; comp2='Amon'; region2='eurasiamori' #'eurasiathicke'; #@@@region2='eurasiamori'
 #field2='zg50000.00'; ncfield2='zg'; comp2='Amon'; region2='bksmori'
+#field2='turb'; ncfield2='turb'; comp2='Amon'; region2='bksmori'
 leconv2=1
 sea2='DJF'
 
@@ -98,11 +154,15 @@ simconv1=simconv2=1
 if field1=='tas': simfield1='st'; simncfield1='ST'
 elif field1=='zg50000.00': simfield1='gz50000'; simncfield1='PHI'; simconv1=1/con.get_g()
 elif field1=='sia': simfield1='sicn'; simncfield1='SICN'; print '@@ danger, sia actually sicn average'
+elif field1=='sic': simfield1='sicn'; simncfield1='SICN'; simconv1=100
+elif field1=='turb': simfield1='turb'; simncfield1='turb'; # the sim var names are placeholders
 else: print 'cannot addsims for ' + field1; addsims=False
 
 if field2=='tas': simfield2='st'; simncfield2='ST'
 elif field2=='zg50000.00': simfield2='gz50000'; simncfield2='PHI'; simconv2=1/con.get_g()
 elif field2=='sia': simfield2='sicn'; simncfield2='SICN'; print '@@ danger, sia actually sicn average'
+elif field2=='sic': simfield2='sicn'; simncfield2='SICN'; simconv1=100
+elif field2=='turb': simfield2='turb'; simncfield2='turb'; # the sim var names are placeholders
 else: print 'cannot addsims for ' + field2; addsims=False
 
 if fieldcnd=='sic': simfieldcnd='sicn'; simncfieldcnd='SICN'; simconvcnd=100
@@ -375,7 +435,7 @@ def plot_shorttermpdf(fig,ax,field,region,xxdat,pdfdat,histdat,meandat,cidat,
         pisea= histdat[skey]; pixx=xxdat[skey]; pipdf_fitted=pdfdat[skey]; 
         pimean=meandat[skey]; pici=cidat[skey]; picif=cifdat[skey]
 
-    if field!='sia':
+    if field not in ('sia','sic'):
         
         ax.hist(ss2hist,normed=True,color=ltcol,alpha=0.4,histtype='stepfilled')#@@ maybe?
         ax.plot(ss2xx,ss2pdf_fitted,color=ltcol,linewidth=3)
@@ -451,6 +511,10 @@ def plot_shorttermpdf(fig,ax,field,region,xxdat,pdfdat,histdat,meandat,cidat,
         #ax.set_ylim(-0.05,ylims[1])
         obsanny=0.8
         offsetpts=(-50,0)
+    elif field == 'sic':
+        obsanny=0.9
+        offsetpts=(15,0)
+
     ax.set_ylabel('Density',fontsize=fsz)
     ax.set_yticklabels('')
     ax.axhline(y=0,color='k')
@@ -519,10 +583,14 @@ def plot_shorttermpdf(fig,ax,field,region,xxdat,pdfdat,histdat,meandat,cidat,
         xtlabs = ax.get_xticks()/1e12
         ax.set_xticklabels(xtlabs)
         axesloc=[.71, .69, .18, .2]
-    else:
+    elif field=='tas':
         ax.set_xlim((-2.5,5))
         units = '$^\circ$C'
         xlab = 'Change in Eurasian surface air temperature, $\Delta$SAT ('+units +')' # for paper.
+        axesloc=[.71, .69, .18, .2]
+    elif field=='sic':
+        units='%'
+        xlab = 'Change in Barents/Kara sea ice concentration, $\Delta$SIC (' + units + ')'
         axesloc=[.71, .69, .18, .2]
 
     #axesloc=[.69, .69, .29, .3] # for inset
@@ -588,7 +656,7 @@ def plot_shorttermpdf(fig,ax,field,region,xxdat,pdfdat,histdat,meandat,cidat,
         #inax.plot(pici, (yy,yy), linewidth=2,marker='|',markersize=6,mew=2,mec=picol,color=picol)   
         #inax.plot(picif, (yy,yy), linewidth=2,marker='|',markersize=6,mew=2,mec=picol,color=picol)   
         yy=yy-1
-    if field!='sia':
+    if field not in ('sia','sic'):
         inax.plot((ss2mean,ss2mean),(yy-boxwi,yy+boxwi),linewidth=2,color=ltcol)
         inax.add_patch(mpatches.Rectangle((ss2cif[0],yy-boxwi),
                                           ss2cif[1]-ss2cif[0],boxwi*2,ec=ltcol,fc='white',linewidth=2))
@@ -621,6 +689,9 @@ def plot_shorttermpdf(fig,ax,field,region,xxdat,pdfdat,histdat,meandat,cidat,
     elif field=='sia' and region=='nh':
         inax.set_xlim(-1.4e12,0.1e12) 
         inax.set_xticklabels(('',-1.2,'',-0.8,'',-0.4,'',0))
+    elif field=='sic' and region=='bksmori':
+        inax.set_xlim(-12,4)
+        inax.set_xticklabels((-12,'',-8,'',-4,'',0,'',4))
     inax.set_xlabel('Mean change\n ('+units+')',fontsize=fsz-3)
     # add 'Obs' annotation
     if field=='sia':
@@ -635,6 +706,9 @@ def plot_shorttermpdf(fig,ax,field,region,xxdat,pdfdat,histdat,meandat,cidat,
         #tlabx2=0.25; tlaby2=0.69 # head of arrow
         laby=2.65 # data coord
         offsetpts=(-40,20)
+    elif field=='sic':
+        laby=1.8
+        offsetpts=(20,15)
     
     if addanno:
         inax.annotate('Obs',xy=(obsreg,laby),xytext=offsetpts,
@@ -657,7 +731,7 @@ def plot_shorttermpdf(fig,ax,field,region,xxdat,pdfdat,histdat,meandat,cidat,
         legstr=legstr+('GIStemp',)
         legh=legh+(obslg,)
         ax.legend(legh,legstr, loc=(0.71,0.47),frameon=False,prop=fontP)
-    elif field=='sia':
+    elif field in ('sia','sic'):
         legstr=legstr+('NSIDC',)
         legh=legh+(obslg,)
         ax.legend(legh,legstr, loc=(0.69,0.5),frameon=False,prop=fontP)
@@ -690,6 +764,7 @@ def calc_shorttermpdf(fdict,field,region,sea,timesel,leconv=1,subnh=False,combag
     if field=='tas': simfield1='st'; simncfield1='ST'
     elif field=='zg50000.00': simfield1='gz50000'; simncfield1='PHI'; simconv1=1/con.get_g()
     elif field=='sia': simfield1='sicn'; simncfield1='SICN'; print '@@ danger, sia actually sicn average'
+    elif field=='sic': simfield1='sicn'; simncfield1='SICN';
     else: print 'cannot addsims for ' + field;
 
     casename = 'historical'
@@ -823,7 +898,7 @@ def calc_shorttermpdf(fdict,field,region,sea,timesel,leconv=1,subnh=False,combag
         piseadat = cutl.seasonalize_monthlyts(pidat,season=sea)
         # this data needs to be put into anomalies
         # for now, set years to none
-        styear=None; anomyears=None
+        styear=styearPI; anomyears=anomyearsPI
         # the data must be seasonalized before using this func.
         pisea,styear,anomyears = subsamp_anom_pi(piseadat, numyrs=11,
                                                  styear=styear,anomyears=anomyears)
@@ -1073,7 +1148,7 @@ def calc_shorttermpdf(fdict,field,region,sea,timesel,leconv=1,subnh=False,combag
 
             substr='_subnh'
             ttlstr=ttlstr+'-NH '
-    elif field == 'sia':
+    elif field in ('sia','sic'):
         nsidcfile = '/HOME/rkm/work/BCs/NSIDC/td_bootstrap_197811_latest_128_64_sicn_1978111600-2013121612.nc'
         latns=cnc.getNCvar(nsidcfile,'lat')
         lonns=cnc.getNCvar(nsidcfile,'lon')
@@ -1083,8 +1158,13 @@ def calc_shorttermpdf(fdict,field,region,sea,timesel,leconv=1,subnh=False,combag
             nsidcyrs=nsidcyrs[:-1]
         nsidcfldc=cnc.getNCvar(nsidcfile,'SICN',timesel=timeselc,seas=sea)
         nsidcfldp=cnc.getNCvar(nsidcfile,'SICN',timesel=timeselp,seas=sea)
-        obsreg=cutl.calc_regtotseaicearea(nsidcfldp,latns,lonns,region='nh',isarea=False).mean() -\
-                  cutl.calc_regtotseaicearea(nsidcfldc,latns,lonns,region='nh',isarea=False).mean()
+        if field == 'sia':
+            obsreg=cutl.calc_regtotseaicearea(nsidcfldp,latns,lonns,region=region,isarea=False).mean() -\
+                    cutl.calc_regtotseaicearea(nsidcfldc,latns,lonns,region=region,isarea=False).mean()
+        else:
+            obsreg=cutl.calc_regmean(nsidcfldp,latns,lonns,region=region).mean() -\
+                    cutl.calc_regmean(nsidcfldc,latns,lonns,region=region).mean()
+            obsreg = obsreg*100 # convert to %
 
     xxdat={}; pdfdat={}; meandat={}; cidat={}; cifdat={}; histdat={}; pointdat={}
     # save data to call plot function
@@ -1152,12 +1232,17 @@ def main(dowhat=None,addobs=True,addsims=False,addnat=False,
 
     if doscatter:
         #printtofile=True
-        addnat=True
-        addmisc=True
+        #addnat=True
+        #addmisc=True
         savedat=False # save data to ascii for John
 
         shorttermsims=True
-        ymin=-2; ymax=3 # for Eurasia SAT v BKS Z500
+        if field2=='tas':
+            ymin=-2; ymax=3 # for Eurasia SAT v BKS Z500
+        elif field2=='turb':
+            ymin=-15; ymax=25
+        elif field2=='zg50000.00':
+            ymin=-60; ymax=80
 
         # historical
         casename='historical'
@@ -1347,7 +1432,7 @@ def main(dowhat=None,addobs=True,addsims=False,addnat=False,
             ntime1pi = pidat1.shape
 
             piseadat1 = cutl.seasonalize_monthlyts(pidat1,season=sea1)
-            styear=None; anomyears=None
+            styear=styearPI; anomyears=anomyearsPI
             # the data must be seasonalized before using this func.
             pisea1,styear1,anomyears1 = subsamp_anom_pi(piseadat1, numyrs=11,
                                                         styear=styear,anomyears=anomyears,threed=False)
@@ -1627,7 +1712,7 @@ def main(dowhat=None,addobs=True,addsims=False,addnat=False,
                 elif op2=='div': # divide
                     fldssodf2 = fldssodf2 / fldssodf2op
 
-            fldssodf2,styrso = subsamp_sims(fldssodf2,numyrs=11,styears=styrsN)
+            fldssodf2,styrso = subsamp_sims(fldssodf2,numyrs=11,styears=styearsN)
 
             simssomm, simssobb, simssorval, simssopval, simssostd_err = sp.stats.linregress(fldssodf1,
                                                                                        fldssodf2)
@@ -1771,7 +1856,9 @@ def main(dowhat=None,addobs=True,addsims=False,addnat=False,
         fontP.set_size('small')
         ax.legend(leghnds,legstrs,
                    loc='best',fancybox=True,framealpha=0.5,prop=fontP,frameon=False) 
-        ax.set_ylim((ymin,ymax))
+        if field2 in ('tas','turb','zg50000.00'):
+            ax.set_ylim((ymin,ymax))
+            
         """ax.annotate(casename + ' R= ' + '$%.2f$'%(lerval) + ', p='+ '$%.2f$'%(lepval),
                     xy=(axxlims[0]+.05*axxlims[1], axylims[1]-.1*axylims[1]),
                     xycoords='data')
@@ -2590,11 +2677,15 @@ def main(dowhat=None,addobs=True,addsims=False,addnat=False,
             keys=('xxdat', 'histdat', 'meandat', 'pdfdat', 'cidat', 'pointdat', 'cifdat')
             simsstr=''
 
-            fielda='sia'; ncfielda='sianh'; compa='OImon'; regiona='nh';
+            #fielda='sia'; ncfielda='sianh'; compa='OImon'; regiona='nh';
+            fielda='sic'; ncfielda='sic'; compa='OImon'; regiona='bksmori';
             fdicta = {'field': fielda+regiona, 'ncfield': ncfielda, 'comp': compa}
 
             if loadmat:
-                when='14:51:28.762886'; 
+                if fielda=='sic':
+                    when='14:51:28.762886sic'; 
+                else:
+                    when='14:51:28.762886'; 
 
 
                 #when='18:19:46.394326' #'16:06:52.938245' # # choose which set of files to load
@@ -2649,7 +2740,7 @@ def main(dowhat=None,addobs=True,addsims=False,addnat=False,
             if loadmat:
                 now = when # have filename match the data
             else:
-                now = when='14:51:28.762886';#@@@@@str(datetime.datetime.now().time())
+                now = when='14:51:28.762886sic';#@@@@@str(datetime.datetime.now().time())
 
             if printtofile:
                 fig.savefig(field + region + substr + '_' + sea + '_LEsims' + simsstr +\
