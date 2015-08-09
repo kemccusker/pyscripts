@@ -20,7 +20,7 @@ import string as string
 printtofile=False
 
 #dataloaded=True
-loadmat=True; 
+loadmat=False; 
 when='14:51:28.762886'; styearsr = [ 8.,  7.,  2.,  8.,  8.] # variable SIC styears
 styearse=[ 4.,  1.,  7.,  3.,  1.]; styearso=[1.] #when for these: 17:01:16.908687
 
@@ -74,6 +74,9 @@ leconvr=leconvr2=leconvr3=1
 fieldr='sic'; ncfieldr='sic'; compr='OImon'; regionr='bksmori'; 
 r1str='BKS SIC'; r1strlong='Barents/Kara sea ice concentration'; r1units='%'; r1key='bkssic'
 #leconvr=-1 # sea ice loss is linked with positive changes elsewhere
+#fieldr='turb'; ncfieldr='turb'; compr='Amon'; regionr='bksmori'; 
+#r1str='BKS Turb'; r1strlong='Barents/Kara turbulent heat flux'; r1units='W/m2'; r1key='bksturb'
+
 
 
 # regional avg field 2
