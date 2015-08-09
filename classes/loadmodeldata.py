@@ -153,13 +153,48 @@ def loaddata(fields, simulations, ncfields=None,model='CanAM4',timeper='001-121'
                 ncparams['calc'] = 'zm'
 
             if filetype=='diff' or filetype=='pval':
-                pert = cnc.getNCvar(fnamep,ncfield,timesel=timesel,**ncparams)
-                ctl =  cnc.getNCvar(fnamec,ncfield,timesel=timesel,**ncparams)
+                if field in ('turb','net'):
+                    fnamec,fnamep = con.build_filepathpair(sim,'hfl')
+                    fnamecb,fnamepb = con.build_filepathpair(sim,'hfs')
+                    ctl = cnc.getNCvar(fnamec,'HFL',timesel=timesel,**ncparams) +\
+                          cnc.getNCvar(fnamecb,'HFS',timesel=timesel, **ncparams)
+                    pert = cnc.getNCvar(fnamep,'HFL',timesel=timesel,**ncparams) +\
+                           cnc.getNCvar(fnamepb,'HFS',timesel=timesel,**ncparams)
+
+                    if field=='net':
+                        fnamecc,fnamepc = con.build_filepathpair(sim,'flg')
+                        ctl = ctl - cnc.getNCvar(fnamecc,'FLG',timesel=timesel,**ncparams)
+                        pert = pert - cnc.getNCvar(fnamepc,'FLG',timesel=timesel,**ncparams)
+                else:
+                    pert = cnc.getNCvar(fnamep,ncfield,timesel=timesel,**ncparams)
+                    ctl =  cnc.getNCvar(fnamec,ncfield,timesel=timesel,**ncparams)
                 fld = pert - ctl
             elif filetype=='ctl':
-                fld = cnc.getNCvar(fnamec,ncfield,timesel=timesel,**ncparams)
+                if field in ('turb','net'):
+                    fnamec,fnamep = con.build_filepathpair(sim,'hfl')
+                    fnamecb,fnamepb = con.build_filepathpair(sim,'hfs')
+                    fld = cnc.getNCvar(fnamec,'HFL',timesel=timesel,**ncparams) +\
+                          cnc.getNCvar(fnamecb,'HFS',timesel=timesel, **ncparams)
+
+                    if field=='net':
+                        fnamecc,fnamepc = con.build_filepathpair(sim,'flg')
+                        fld = fld - cnc.getNCvar(fnamecc,'FLG',timesel=timesel,**ncparams)
+                else:
+                    fld =  cnc.getNCvar(fnamec,ncfield,timesel=timesel,**ncparams)
+                    
             elif filetype=='pert':
-                fld = cnc.getNCvar(fnamep,ncfield,timesel=timesel,**ncparams)
+                if field in ('turb','net'):
+                    fnamec,fnamep = con.build_filepathpair(sim,'hfl')
+                    fnamecb,fnamepb = con.build_filepathpair(sim,'hfs')
+                    fld = cnc.getNCvar(fnamep,'HFL',timesel=timesel,**ncparams) +\
+                           cnc.getNCvar(fnamepb,'HFS',timesel=timesel,**ncparams)
+
+                    if field=='net':
+                        fnamecc,fnamepc = con.build_filepathpair(sim,'flg')
+                        fld = fld - cnc.getNCvar(fnamepc,'FLG',timesel=timesel,**ncparams)
+                else:
+                    fld = cnc.getNCvar(fnamep,ncfield,timesel=timesel,**ncparams)
+
             else:
                 print "filetype not supported! ['diff'|'ctl'|'pert'|'pval']"
                 return -1
