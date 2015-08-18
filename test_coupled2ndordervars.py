@@ -8,7 +8,7 @@ import pandas as pd
 
 
 zonal=False 
-calctype='total'
+calctype='vertint'
 
 domonth=False # otherwise do season
 sea='ANN'
@@ -20,11 +20,13 @@ else:
     seasonalizedt={'season':sea}
 
 basedir='/HOME/rkm/work/DATA/CanESM2/'
+fldsuff=''
+
+"""
 casename='prei2xco2icenh' 
 basepath=basedir+casename+'/ts/'
 timeper = '2021-3041'
 ncfield='MLT'
-
 if zonal:
     # can't really do zonal mean if want zonal integration in PHT
     timesel='2031-01-01,3041-12-31' # skip first decade
@@ -32,6 +34,14 @@ if zonal:
 else:
     timesel='3002-01-01,3041-12-31'
     fldsuff=''
+"""
+
+casename='preitest' 
+basepath=basedir+casename+'/ts/'
+timeper = '2922-2931'
+ncfield='MLT'
+timesel='2922-01-01,2931-12-31'
+
 
 
 Cp=1004 # specific heat at const pressure (J/K/kg)
@@ -54,7 +64,7 @@ dp = np.diff(lev)
 nlon = len(lon)
 
 
-def calc_PHT(fld, onelat, nlon, dp, calc='total'):
+def calc_PHT(fld, onelat, nlon, dp, calc='vertint'):
     """
          calculates zonal integration and vertical integration/average
 
@@ -62,6 +72,8 @@ def calc_PHT(fld, onelat, nlon, dp, calc='total'):
             calc='average' calculates zonal integral and vertical average
 
     """
+    #print 'calc_PHT()'
+
     latrad = np.deg2rad(onelat)
     totlam=2*np.pi 
     dlam=totlam/np.float(nlon) # div by number of lons
@@ -70,10 +82,48 @@ def calc_PHT(fld, onelat, nlon, dp, calc='total'):
 
     fldzint= (tmpfld[0:-1] + tmpfld[1:]) / 2 # interp in b/w levels
 
-    if calc=='total':
+    if calc=='vertint':
         fldpint = np.sum(fldzint*dp) # vertically integrate
-    elif calc=='average':
+    elif calc=='vertavg':
         fldpint = np.average(fldzint, weights=dp)
+    else:
+        print 'calc type not supported' # @@@
+        return -1
+
+    fldpint = fldpint/grav
+
+    return fldpint
+
+
+def calc_PHT2(fld, onelat, nlon, dp=None, calc='vertint'):
+    """
+         calculates zonal integration and vertical integration/average
+
+            calc='total' calculates zonal and vertical integral
+            calc='average' calculates zonal integral and vertical average
+
+    """
+    #print 'calc_PHT2()'
+
+    latrad = np.deg2rad(onelat)
+    totlam=2*np.pi 
+    dlam=totlam/np.float(nlon) # div by number of lons
+
+    
+
+    if calc != 'none':
+        tmpfld = np.sum(fldtm,axis=1)*erad*np.cos(latrad)*dlam # zonal integration
+        fldzint= (tmpfld[0:-1] + tmpfld[1:]) / 2 # interp in b/w levels
+    else:
+        tmpfld = np.sum(fldtm,axis=0)*erad*np.cos(latrad)*dlam # zonal integration
+        fldzint = tmpfld
+
+    if calc=='vertint':
+        fldpint = np.sum(fldzint*dp) # vertically integrate
+    elif calc=='vertavg':
+        fldpint = np.average(fldzint, weights=dp)
+    elif calc=='none':
+        fldpint = fldzint
     else:
         print 'calc type not supported' # @@@
         return -1
@@ -146,3 +196,77 @@ plt.axhline(y=0,color='0.5')
 plt.ylim((-25,25))
 plt.xlim((-15,75))
 plt.title(str(seasonalizedt) + ' 1e19 cal/day')
+
+
+# =================
+# Now test vertical int / avg outputs
+
+fldpre = '_vert_int'
+fldpre = '_vert_avg'; 
+if fldpre == '_vert_int':
+    flddt2 = flddt
+else:
+    flddt2={'MPEF': 'DIV',
+            'MSHF': 'DIV',
+            'MLHF': 'DIV',
+            'MFZM': 'DIV'}
+
+fdict2={'MPEF': basepath + casename + fldpre + '_meridional_potential_energy_flux' + fldsuff +'_' + timeper + '_ts.nc',
+       'MSHF': basepath + casename + fldpre + '_meridional_sens_heat_flux' + fldsuff + '_' + timeper + '_ts.nc',
+       'MLHF': basepath + casename + fldpre + '_meridional_latent_heat_flux' + fldsuff + '_' + timeper + '_ts.nc',
+       'MFZM': basepath + casename + fldpre + '_meridional_flux_zonal_mom' + fldsuff + '_' + timeper + '_ts.nc'}
+
+fldintdt2={}
+for fkey in fdict2:
+    
+    ncfield=flddt2[fkey]
+    
+    fname=fdict2[fkey]
+    conv=condt[fkey] 
+
+    fld=cnc.getNCvar(fname,ncfield,timesel=timesel)*conv
+
+    fldint=np.zeros(len(lat))
+    latidx=0
+    for ll in lat: # do all lats
+        latrad = np.deg2rad(ll)
+
+        fldsub = np.squeeze(fld[:,latidx,:-1]) # get just one lat and remove extra lon
+        fldtm = np.mean(cutl.seasonalize_monthlyts(fldsub,**seasonalizedt),axis=0) # time mean
+    
+        fldint[latidx] = calc_PHT2(fldtm, latidx, nlon, calc='none')
+        
+        latidx += 1
+    
+    fldintdt2[fkey] = fldint
+
+
+flddf2 = pd.DataFrame(fldintdt2)
+fldtot2 = flddf2.sum(axis=1)
+
+flddf2.plot(x=lat)
+plt.plot(lat,fldtot2,color='k')
+plt.axhline(y=0,color='0.5')
+plt.xlim((-80,80))
+plt.title(fldpre+ ' ' + str(seasonalizedt) + ' W')
+
+flddf2.plot(x=lat)
+plt.plot(lat,fldtot2,color='k')
+plt.axhline(y=0,color='0.5')
+plt.ylim((-1e15,1e15))
+plt.xlim((-15,75))
+plt.xlabel('latitude')
+plt.ylabel('poleward transport (W)')
+plt.title(fldpre + ' ' + str(seasonalizedt) + ' W')
+
+(flddf2*W2calperday/1e19).plot(x=lat)
+plt.plot(lat,fldtot2*W2calperday/1e19,color='k')
+plt.axhline(y=0,color='0.5')
+plt.ylim((-2.5,2.5))
+plt.xlim((-15,75))
+plt.title(fldpre + ' ' + str(seasonalizedt) + ' 1e19 cal/day')
+
+# vert_int is smoother, looks much better. But magnitude is possible
+#   x10 off?
+# vert_avg looks like it still might have some elevation effects: bit
+#   jaggety in similar spots to previous problem areas.
