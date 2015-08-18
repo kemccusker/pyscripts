@@ -105,9 +105,11 @@ anomyearsPI = [[79, 26],
 
 
 
-performop1 = False
+performop1 = True
 #op1='div'; region1op='gm' # polar amp: gt60n / gm
-op1='sub'; region1op='deeptrop' # pole-eq temp gradient: gt60n - deeptrop (or trop)
+#op1='sub'; region1op='deeptrop' # pole-eq temp gradient: gt60n - deeptrop (or trop)
+op1='sub'; region1op='less' # bks sea ice minus less (laptev/east siberian)
+#op1='sub'; region1op='eurasiamori'
 performop2 = False
 op2='sub'; region2op='nh'
 
@@ -116,10 +118,10 @@ timeselp='2002-01-01,2012-12-31'
 timeselall = '1979-01-01,2012-12-31'
 
 # x field
-field1='turb'; ncfield1='turb'; comp1='Amon'; region1='bksmori'
-#field1='zg50000.00'; ncfield1='zg'; comp1='Amon'; region1='bksmori'
+#field1='turb'; ncfield1='turb'; comp1='Amon'; region1='bksmori'
+field1='zg50000.00'; ncfield1='zg'; comp1='Amon'; region1='bksmori'
 #field1='sia'; ncfield1='sianh'; comp1='OImon'; region1='nh'
-#field1='sic'; ncfield1='sic'; comp1='OImon'; region1='bksmori' # @@ a hack. prefer SIA
+field1='sic'; ncfield1='sic'; comp1='OImon'; region1='bksmori' # @@ a hack. prefer SIA
 #field1='tas'; ncfield1='tas'; comp1='Amon'; region1='eurasiamori' #region1='bksmori'
 leconv1= 1 
 sea1='DJF'
@@ -146,7 +148,7 @@ if field2=='tas' and region2=='eurasiamori' and performop2==True and op2=='sub':
     ylab = '$\Delta$ DJF SAT(Eurasia) - SAT(NH) ($^\circ$C)'
 elif field2=='tas' and region2=='eurasiamori' and performop2==False:
     ylab = '$\Delta$ DJF Eurasian SAT ($^\circ$C)'
-if field1=='zg50000.00' and region1=='bksmori':
+if field1=='zg50000.00' and region1=='bksmori' and performop1==False:
     xlab = '$\Delta$ DJF Barents-Kara Seas Z500 (m)'
 
 
@@ -358,7 +360,7 @@ def sample120yravg(lesea,numsamp,nummems=11,allowreps=True):
 
 def plot_shorttermpdf(fig,ax,field,region,xxdat,pdfdat,histdat,meandat,cidat,
                       cifdat,pointdat,addsims=False,addnat=True,addmisc=True,addpi=False,
-                      combagcm=False,addanno=True,plab=None):
+                      combagcm=False,addanno=True,plab=None,pversion=''):
 
     fsz=18
 
@@ -435,7 +437,7 @@ def plot_shorttermpdf(fig,ax,field,region,xxdat,pdfdat,histdat,meandat,cidat,
         pisea= histdat[skey]; pixx=xxdat[skey]; pipdf_fitted=pdfdat[skey]; 
         pimean=meandat[skey]; pici=cidat[skey]; picif=cifdat[skey]
 
-    if field not in ('sia','sic'):
+    if field not in ('sia','sic') and pversion != 'c':
         
         ax.hist(ss2hist,normed=True,color=ltcol,alpha=0.4,histtype='stepfilled')#@@ maybe?
         ax.plot(ss2xx,ss2pdf_fitted,color=ltcol,linewidth=3)
@@ -477,8 +479,10 @@ def plot_shorttermpdf(fig,ax,field,region,xxdat,pdfdat,histdat,meandat,cidat,
     # add RAW LE
     #print 'plotting LE histogram.............' + str(lesea) #@@
 
-    ax.hist(lesea,normed=True,color=hcol,alpha=0.3,histtype='stepfilled') 
+    if pversion not in ('d',):
+        ax.hist(lesea,normed=True,color=hcol,alpha=0.3,histtype='stepfilled') 
     ax.plot(rawxx,rawpdf_fitted,color=hcolline,linewidth=3)
+
     fs='full'
     for eii in range(0,5): # orig five
         # search for difforig[eii] nearest to axx, 
@@ -495,32 +499,59 @@ def plot_shorttermpdf(fig,ax,field,region,xxdat,pdfdat,histdat,meandat,cidat,
         idx=cutl.find_nearest(ss2xx,nsx)
         nsy=ss2pdf_fitted[idx]
         #ax.plot(nsx,nsy,marker='o',color='g',mec='g',fillstyle=fs,mew=mew,markersize=ms)
-        if addanno:
-            ax.annotate('Obs AGCM',xy=(nsx,nsy),xytext=(10,20),
-                        textcoords='offset points',fontsize=fsz,
-                        arrowprops=dict(arrowstyle='-',connectionstyle='arc3',
-                                        facecolor='k', edgecolor='k')) # label the marker on the pdf curve
+        #if addanno:
+        #    ax.annotate('Obs AGCM',xy=(nsx,nsy),xytext=(10,20),
+        #                textcoords='offset points',fontsize=fsz,
+        #                arrowprops=dict(arrowstyle='-',connectionstyle='arc3',
+        #                                facecolor='k', edgecolor='k')) # label the marker on the pdf curve
 
     ylims=ax.get_ylim()
     print '@@@ YLIMS: ' + str(ylims) # @@@@
     if field=='sia':
+        yytop = 1.9e-12
+        boxywi= 0.002
+        yincr=boxywi+0.001
         ax.set_ylim(0,2e-12)
         obsanny=1.8e-12
         offsetpts=(15,0)
     elif field=='tas':
+        yytop = 0.95
+        boxywi = 0.01
+        yincr=boxywi+0.02
         #ax.set_ylim(-0.05,ylims[1])
         obsanny=0.8
         offsetpts=(-50,0)
     elif field == 'sic':
-        obsanny=0.9
+        yytop = 0.19
+        boxywi = 0.002
+        yincr=boxywi+0.001
+        obsanny=0.14
         offsetpts=(15,0)
 
-    ax.set_ylabel('Density',fontsize=fsz)
+    if pversion=='c' and field=='tas':
+        pass
+    else:
+        ax.set_ylabel('Density',fontsize=fsz)
     ax.set_yticklabels('')
     ax.axhline(y=0,color='k')
     #ax.axvline(x=0,color='k',linestyle='--')
     
+    if pversion in ('c','d'):
+        # add uncertainty boxes
+        ax.plot((rawmean,rawmean),(yytop-boxywi,yytop+boxywi),linewidth=2,color=hcolline)
+        ax.add_patch(mpatches.Rectangle((rawcif[0],yytop-boxywi),
+                                        rawcif[1]-rawcif[0],boxywi*2,ec=hcol,fc='white',linewidth=2))
+        ax.add_patch(mpatches.Rectangle((rawci[0],yytop-boxywi),
+                                        rawci[1]-rawci[0],boxywi*2,ec=hcol,fc=hcol,linewidth=2,alpha=0.5))
+        yytop-=yincr
+        if pversion in ('d',) and field in ('tas',):
+            ax.plot((ss2mean,ss2mean),(yytop-boxywi,yytop+boxywi),linewidth=2,color=ltcol)
+            ax.add_patch(mpatches.Rectangle((ss2cif[0],yytop-boxywi),
+                                            ss2cif[1]-ss2cif[0],boxywi*2,ec=ltcol,fc='white',linewidth=2))
+            ax.add_patch(mpatches.Rectangle((ss2ci[0],yytop-boxywi),
+                                            ss2ci[1]-ss2ci[0],boxywi*2,ec=ltcol,fc=ltcol,linewidth=2,alpha=0.5))
 
+        
     if not combagcm:
         xlab = '$\Delta$ SAT ($^\circ$C); AGCM= $%.2f$'%(ssmean)+ ' CGCM= $%.2f$'%(rawmean)
     else:
@@ -528,7 +559,9 @@ def plot_shorttermpdf(fig,ax,field,region,xxdat,pdfdat,histdat,meandat,cidat,
 
     #obslg=ax.axvline(obsreg,color=obscol,linewidth=2) # vert line for obs
     #if field=='sia' and region=='nh':
-    if 1: # do no matter if sia or tas
+    if pversion in ('d',) and field=='tas': 
+        pass
+    else:
         #plotx=obsreg
         #idx=cutl.find_nearest(rawxx,plotx)
         #ploty=rawpdf_fitted[idx]
@@ -584,7 +617,10 @@ def plot_shorttermpdf(fig,ax,field,region,xxdat,pdfdat,histdat,meandat,cidat,
         ax.set_xticklabels(xtlabs)
         axesloc=[.71, .69, .18, .2]
     elif field=='tas':
-        ax.set_xlim((-2.5,5))
+        if pversion in ('d',):
+            ax.set_xlim((-2.5,4))
+        else:
+            ax.set_xlim((-2.5,5))
         units = '$^\circ$C'
         xlab = 'Change in Eurasian surface air temperature, $\Delta$SAT ('+units +')' # for paper.
         axesloc=[.71, .69, .18, .2]
@@ -600,122 +636,123 @@ def plot_shorttermpdf(fig,ax,field,region,xxdat,pdfdat,histdat,meandat,cidat,
     a = axes([.65, .6, .2, .2], axisbg='y')
 
     """
-    # #  INSET!
-    # http://stackoverflow.com/questions/17458580/embedding-small-plots-inside-subplots-in-matplotlib
-    pos=ax.get_position()
-    wid=pos.width
-    height=pos.height
-    inax_pos = ax.transAxes.transform(axesloc[0:2])
-    transFigure = fig.transFigure.inverted()
-    infig_pos = transFigure.transform(inax_pos)
-    xpos=infig_pos[0]
-    ypos=infig_pos[1]
-    wid*=axesloc[2] # not sure about this?
-    height*=axesloc[3] # and this?
-    print 'add_axes: ' + str([xpos,ypos,wid,height])
-    inax = fig.add_axes([xpos,ypos,wid,height])
+    if pversion not in ('c','d'):
+        # #  INSET!
+        # http://stackoverflow.com/questions/17458580/embedding-small-plots-inside-subplots-in-matplotlib
+        pos=ax.get_position()
+        wid=pos.width
+        height=pos.height
+        inax_pos = ax.transAxes.transform(axesloc[0:2])
+        transFigure = fig.transFigure.inverted()
+        infig_pos = transFigure.transform(inax_pos)
+        xpos=infig_pos[0]
+        ypos=infig_pos[1]
+        wid*=axesloc[2] # not sure about this?
+        height*=axesloc[3] # and this?
+        print 'add_axes: ' + str([xpos,ypos,wid,height])
+        inax = fig.add_axes([xpos,ypos,wid,height])
 
-    #inax = fig.add_axes(axesloc)
-    top=2.5
-    yy=top
-    if field!='sia':
-        yy=top=3.5
-        boxwi=0.25
-    else:
-        boxwi=0.1
-    #inax.plot(rawmean, yy, linestyle='none',marker='s',mec=hcolline,color=hcolline)
-    inax.plot((rawmean,rawmean),(yy-boxwi,yy+boxwi),linewidth=2,color=hcolline)
-    # from matplotlib.patches import Rectangle
-    # someX, someY = 2, 3
-    # currentAxis = plt.gca()
-    # currentAxis.add_patch(Rectangle((someX - .5, someY - .5), 1, 1, facecolor="grey"))
-    inax.add_patch(mpatches.Rectangle((rawcif[0],yy-boxwi),
-                                      rawcif[1]-rawcif[0],boxwi*2,ec=hcolline,fc='white',linewidth=2))
-    inax.add_patch(mpatches.Rectangle((rawci[0],yy-boxwi),
-                                      rawci[1]-rawci[0],boxwi*2,ec=hcolline,fc=hcolline,linewidth=2,alpha=0.5))
-    #inax.plot(rawci, (yy,yy), linewidth=2,marker='|',markersize=6,mew=2,mec=hcolline,color=hcolline)
-    #inax.plot(rawcif, (yy,yy), linewidth=2,marker='|',markersize=6,mew=2,mec=hcolline,color=hcolline)
-    yy=yy-1
-    if addnat:
-        inax.plot(rawnmean, yy, linestyle='none',marker='s',mec=natcolline,color=natcolline)
-        inax.plot(rawnci, (yy,yy), linewidth=2,marker='|',markersize=6,mew=2,mec=natcolline,color=natcolline)
-        inax.plot(rawncif, (yy,yy), linewidth=2,marker='|',markersize=6,mew=2,mec=natcolline,color=natcolline)
+        #inax = fig.add_axes(axesloc)
+        top=2.5
+        yy=top
+        if field!='sia':
+            yy=top=3.5
+            boxwi=0.25
+        else:
+            boxwi=0.1
+        #inax.plot(rawmean, yy, linestyle='none',marker='s',mec=hcolline,color=hcolline)
+        inax.plot((rawmean,rawmean),(yy-boxwi,yy+boxwi),linewidth=2,color=hcolline)
+        # from matplotlib.patches import Rectangle
+        # someX, someY = 2, 3
+        # currentAxis = plt.gca()
+        # currentAxis.add_patch(Rectangle((someX - .5, someY - .5), 1, 1, facecolor="grey"))
+        inax.add_patch(mpatches.Rectangle((rawcif[0],yy-boxwi),
+                                          rawcif[1]-rawcif[0],boxwi*2,ec=hcolline,fc='white',linewidth=2))
+        inax.add_patch(mpatches.Rectangle((rawci[0],yy-boxwi),
+                                          rawci[1]-rawci[0],boxwi*2,ec=hcolline,fc=hcolline,linewidth=2,alpha=0.5))
+        #inax.plot(rawci, (yy,yy), linewidth=2,marker='|',markersize=6,mew=2,mec=hcolline,color=hcolline)
+        #inax.plot(rawcif, (yy,yy), linewidth=2,marker='|',markersize=6,mew=2,mec=hcolline,color=hcolline)
         yy=yy-1
-    if addmisc:
-        inax.plot(rawmmean, yy, linestyle='none',marker='s',mec=miscolline,color=miscolline)
-        inax.plot(rawmci, (yy,yy), linewidth=2,marker='|',markersize=6,mew=2,mec=miscolline,color=miscolline)   
-        inax.plot(rawmcif, (yy,yy), linewidth=2,marker='|',markersize=6,mew=2,mec=miscolline,color=miscolline)   
-        yy=yy-1
-    if addpi:
-        inax.plot((pimean,pimean),(yy-boxwi,yy+boxwi),linewidth=2,color=picol)
-        inax.add_patch(mpatches.Rectangle((picif[0],yy-boxwi),
-                                          picif[1]-picif[0],boxwi*2,ec=picol,fc='white',linewidth=2))
-        inax.add_patch(mpatches.Rectangle((pici[0],yy-boxwi),
-                                          pici[1]-pici[0],boxwi*2,ec=picol,fc=picol,linewidth=2,alpha=0.5))
-        #inax.plot(pimean, yy, linestyle='none',marker='s',mec=picol,color=picol)
-        #inax.plot(pici, (yy,yy), linewidth=2,marker='|',markersize=6,mew=2,mec=picol,color=picol)   
-        #inax.plot(picif, (yy,yy), linewidth=2,marker='|',markersize=6,mew=2,mec=picol,color=picol)   
-        yy=yy-1
-    if field not in ('sia','sic'):
-        inax.plot((ss2mean,ss2mean),(yy-boxwi,yy+boxwi),linewidth=2,color=ltcol)
-        inax.add_patch(mpatches.Rectangle((ss2cif[0],yy-boxwi),
-                                          ss2cif[1]-ss2cif[0],boxwi*2,ec=ltcol,fc='white',linewidth=2))
-        inax.add_patch(mpatches.Rectangle((ss2ci[0],yy-boxwi),
-                                          ss2ci[1]-ss2ci[0],boxwi*2,ec=ltcol,fc=ltcol,linewidth=2,alpha=0.5))
-        #inax.plot(ss2mean, yy, linestyle='none',marker='s',mec=ltcol,color=ltcol)
-        #inax.plot(ss2ci, (yy,yy), linewidth=2,marker='|',markersize=6,mew=2,mec=ltcol,color=ltcol)
-        #inax.plot(ss2cif, (yy,yy), linewidth=2,marker='|',markersize=6,mew=2,mec=ltcol,color=ltcol)
-        yy=yy-1
-    ##if field!='sia':
-    ##    inax.plot(ss2mean, yy, linestyle='none',marker='s',mec='k',color='k')
-    ##    inax.plot(ss2ci, (yy,yy), linewidth=2,marker='|',markersize=6,mew=2,mec='k',color='k')
-    ##    inax.plot(ss2cif, (yy,yy), linewidth=2,marker='|',markersize=6,mew=2,mec='k',color='k')
-    ##    yy=yy-1
-    ##    inax.plot(ossmean, yy, linestyle='none',marker='s',mec='g',color='g')
-    ##    inax.plot(ossci, (yy,yy), linewidth=2,marker='|',markersize=6,mew=2,mec='g',color='g')
-    ##    inax.plot(osscif, (yy,yy), linewidth=2,marker='|',markersize=6,mew=2,mec='g',color='g')
+        if addnat:
+            inax.plot(rawnmean, yy, linestyle='none',marker='s',mec=natcolline,color=natcolline)
+            inax.plot(rawnci, (yy,yy), linewidth=2,marker='|',markersize=6,mew=2,mec=natcolline,color=natcolline)
+            inax.plot(rawncif, (yy,yy), linewidth=2,marker='|',markersize=6,mew=2,mec=natcolline,color=natcolline)
+            yy=yy-1
+        if addmisc:
+            inax.plot(rawmmean, yy, linestyle='none',marker='s',mec=miscolline,color=miscolline)
+            inax.plot(rawmci, (yy,yy), linewidth=2,marker='|',markersize=6,mew=2,mec=miscolline,color=miscolline)   
+            inax.plot(rawmcif, (yy,yy), linewidth=2,marker='|',markersize=6,mew=2,mec=miscolline,color=miscolline)   
+            yy=yy-1
+        if addpi:
+            inax.plot((pimean,pimean),(yy-boxwi,yy+boxwi),linewidth=2,color=picol)
+            inax.add_patch(mpatches.Rectangle((picif[0],yy-boxwi),
+                                              picif[1]-picif[0],boxwi*2,ec=picol,fc='white',linewidth=2))
+            inax.add_patch(mpatches.Rectangle((pici[0],yy-boxwi),
+                                              pici[1]-pici[0],boxwi*2,ec=picol,fc=picol,linewidth=2,alpha=0.5))
+            #inax.plot(pimean, yy, linestyle='none',marker='s',mec=picol,color=picol)
+            #inax.plot(pici, (yy,yy), linewidth=2,marker='|',markersize=6,mew=2,mec=picol,color=picol)   
+            #inax.plot(picif, (yy,yy), linewidth=2,marker='|',markersize=6,mew=2,mec=picol,color=picol)   
+            yy=yy-1
+        if field not in ('sia','sic'):
+            inax.plot((ss2mean,ss2mean),(yy-boxwi,yy+boxwi),linewidth=2,color=ltcol)
+            inax.add_patch(mpatches.Rectangle((ss2cif[0],yy-boxwi),
+                                              ss2cif[1]-ss2cif[0],boxwi*2,ec=ltcol,fc='white',linewidth=2))
+            inax.add_patch(mpatches.Rectangle((ss2ci[0],yy-boxwi),
+                                              ss2ci[1]-ss2ci[0],boxwi*2,ec=ltcol,fc=ltcol,linewidth=2,alpha=0.5))
+            #inax.plot(ss2mean, yy, linestyle='none',marker='s',mec=ltcol,color=ltcol)
+            #inax.plot(ss2ci, (yy,yy), linewidth=2,marker='|',markersize=6,mew=2,mec=ltcol,color=ltcol)
+            #inax.plot(ss2cif, (yy,yy), linewidth=2,marker='|',markersize=6,mew=2,mec=ltcol,color=ltcol)
+            yy=yy-1
+        ##if field!='sia':
+        ##    inax.plot(ss2mean, yy, linestyle='none',marker='s',mec='k',color='k')
+        ##    inax.plot(ss2ci, (yy,yy), linewidth=2,marker='|',markersize=6,mew=2,mec='k',color='k')
+        ##    inax.plot(ss2cif, (yy,yy), linewidth=2,marker='|',markersize=6,mew=2,mec='k',color='k')
+        ##    yy=yy-1
+        ##    inax.plot(ossmean, yy, linestyle='none',marker='s',mec='g',color='g')
+        ##    inax.plot(ossci, (yy,yy), linewidth=2,marker='|',markersize=6,mew=2,mec='g',color='g')
+        ##    inax.plot(osscif, (yy,yy), linewidth=2,marker='|',markersize=6,mew=2,mec='g',color='g')
 
-    #inax.axvline(x=0,linestyle='--',color='k')
-    inax.axvline(x=obsreg,color=obscol,linewidth=2,alpha=0.7)
-    inax.set_yticklabels('')
-    inax.set_yticks([])
-    inax.set_ylim(yy+0.5,top+.5)
-    if field=='tas' and region=='eurasiamori':
-        inax.set_xlim(-1.4,1.8) # taseurasiamori limits
-        xticks=inax.get_xticks()
-        inax.set_xticklabels(('','-1','','0','','1','','2'))
-        #legh=legh+(ss2lg2,nsidclg2)
-        #legstr=legstr+('AGCM var ICE','AGCM NSIDC ICE')
-    elif field=='sia' and region=='nh':
-        inax.set_xlim(-1.4e12,0.1e12) 
-        inax.set_xticklabels(('',-1.2,'',-0.8,'',-0.4,'',0))
-    elif field=='sic' and region=='bksmori':
-        inax.set_xlim(-12,4)
-        inax.set_xticklabels((-12,'',-8,'',-4,'',0,'',4))
-    inax.set_xlabel('Mean change\n ('+units+')',fontsize=fsz-3)
-    # add 'Obs' annotation
-    if field=='sia':
-        #tlabx=0.5;tlabx2=0.49; tlaby=tlaby2=0.7
-        #labx=0.41; laby=0.56
-        laby=1.8 # data coord
-        offsetpts=(20,15)
-    elif field=='tas':
-        # NOT WORKING?
-        #tlabx=0.02; tlaby=0.85 # text position
-        #labx=0.03; laby=0.84; # start of arrow
-        #tlabx2=0.25; tlaby2=0.69 # head of arrow
-        laby=2.65 # data coord
-        offsetpts=(-40,20)
-    elif field=='sic':
-        laby=1.8
-        offsetpts=(20,15)
-    
-    if addanno:
-        inax.annotate('Obs',xy=(obsreg,laby),xytext=offsetpts,
-                      textcoords='offset points',
-                      arrowprops=dict(arrowstyle='-',connectionstyle='arc3',
-                                      facecolor='k', edgecolor='k'),fontsize=fsz-2) # label vertical obs line
-    inax.xaxis.set_ticks_position('bottom')
+        #inax.axvline(x=0,linestyle='--',color='k')
+        inax.axvline(x=obsreg,color=obscol,linewidth=2,alpha=0.7)
+        inax.set_yticklabels('')
+        inax.set_yticks([])
+        inax.set_ylim(yy+0.5,top+.5)
+        if field=='tas' and region=='eurasiamori':
+            inax.set_xlim(-1.4,1.8) # taseurasiamori limits
+            xticks=inax.get_xticks()
+            inax.set_xticklabels(('','-1','','0','','1','','2'))
+            #legh=legh+(ss2lg2,nsidclg2)
+            #legstr=legstr+('AGCM var ICE','AGCM NSIDC ICE')
+        elif field=='sia' and region=='nh':
+            inax.set_xlim(-1.4e12,0.1e12) 
+            inax.set_xticklabels(('',-1.2,'',-0.8,'',-0.4,'',0))
+        elif field=='sic' and region=='bksmori':
+            inax.set_xlim(-12,4)
+            inax.set_xticklabels((-12,'',-8,'',-4,'',0,'',4))
+        inax.set_xlabel('Mean change\n ('+units+')',fontsize=fsz-3)
+        # add 'Obs' annotation
+        if field=='sia':
+            #tlabx=0.5;tlabx2=0.49; tlaby=tlaby2=0.7
+            #labx=0.41; laby=0.56
+            laby=1.8 # data coord
+            offsetpts=(20,15)
+        elif field=='tas':
+            # NOT WORKING?
+            #tlabx=0.02; tlaby=0.85 # text position
+            #labx=0.03; laby=0.84; # start of arrow
+            #tlabx2=0.25; tlaby2=0.69 # head of arrow
+            laby=2.65 # data coord
+            offsetpts=(-40,20)
+        elif field=='sic':
+            laby=1.8
+            offsetpts=(20,15)
+
+        if addanno:
+            inax.annotate('Obs',xy=(obsreg,laby),xytext=offsetpts,
+                          textcoords='offset points',
+                          arrowprops=dict(arrowstyle='-',connectionstyle='arc3',
+                                          facecolor='k', edgecolor='k'),fontsize=fsz-2) # label vertical obs line
+        inax.xaxis.set_ticks_position('bottom')
 
     if addsims:
         legstr=legstr+('120-yr AGCM',)
@@ -726,15 +763,23 @@ def plot_shorttermpdf(fig,ax,field,region,xxdat,pdfdat,histdat,meandat,cidat,
         
     # add AGCM Ice to legend
     if field=='tas':
-        legstr=legstr+('AGCM',)
-        legh=legh+(sslg,)
-        legstr=legstr+('GIStemp',)
-        legh=legh+(obslg,)
-        ax.legend(legh,legstr, loc=(0.71,0.47),frameon=False,prop=fontP)
+        legloc=(0.71,0.47)
+        if pversion in ('c','d'): # no inset
+            legloc=(0.71,0.8)
+        if pversion not in ('c',):
+            legstr=legstr+('AGCM',)
+            legh=legh+(sslg,)
+        if pversion not in ('d',):
+            legstr=legstr+('GIStemp',)
+            legh=legh+(obslg,)
+        ax.legend(legh,legstr, loc=legloc,frameon=False,prop=fontP)
     elif field in ('sia','sic'):
         legstr=legstr+('NSIDC',)
         legh=legh+(obslg,)
-        ax.legend(legh,legstr, loc=(0.69,0.5),frameon=False,prop=fontP)
+        legloc=(0.69,0.5)
+        if pversion=='c':
+            legloc=(0.69,0.8)
+        ax.legend(legh,legstr, loc=legloc,frameon=False,prop=fontP)
 
     ax.set_xlabel(xlab,fontsize=fsz)
     ax.xaxis.set_ticks_position('bottom')
@@ -1210,7 +1255,7 @@ def calc_shorttermpdf(fdict,field,region,sea,timesel,leconv=1,subnh=False,combag
 # ==================== main() ====================================
 def main(dowhat=None,addobs=True,addsims=False,addnat=False,
          addmisc=False,addpi=False,verb=False,combagcm=False,
-         comblenat=False,printtofile=False):
+         comblenat=False,pversion='',printtofile=False):
 
 
     """ dowhat options are: doscatter, dohist, doregress, dolongtermavg
@@ -2671,7 +2716,7 @@ def main(dowhat=None,addobs=True,addsims=False,addnat=False,
 
             loadmat=True
             savemat=False
-            vertical=True # vertical plot 
+            vertical=False # vertical plot 
             #combagcm=True
             #comblenat=True
             keys=('xxdat', 'histdat', 'meandat', 'pdfdat', 'cidat', 'pointdat', 'cifdat')
@@ -2726,16 +2771,16 @@ def main(dowhat=None,addobs=True,addsims=False,addnat=False,
             else:
                 fig,axs=plt.subplots(1,2)
                 fig.set_size_inches(18,8)
-                fig.subplots_adjust(wspace=.03)
+                fig.subplots_adjust(wspace=.07)
 
             ax2=axs[0]
             ax2,prstr=plot_shorttermpdf(fig,ax2,fielda,regiona,addpi=addpi,
                                         addnat=addnat,addmisc=addmisc,
-                                        combagcm=combagcm,plab='a',**retdicta)
+                                        combagcm=combagcm,plab='a',pversion=pversion[0],**retdicta)
             ax=axs[1]
             ax,prstr=plot_shorttermpdf(fig,ax,field,region,addpi=addpi,
                                        addnat=addnat,addmisc=addmisc,
-                                       combagcm=combagcm,plab='b',**retdict)
+                                       combagcm=combagcm,plab='b',pversion=pversion[0],**retdict)
 
             if loadmat:
                 now = when # have filename match the data
@@ -2744,7 +2789,7 @@ def main(dowhat=None,addobs=True,addsims=False,addnat=False,
 
             if printtofile:
                 fig.savefig(field + region + substr + '_' + sea + '_LEsims' + simsstr +\
-                            'obs_11yrsubsmpavgraw_histinset' + prstr + now + '_b.pdf')# _b has AGCM hist and not CGCM All@@
+                            'obs_11yrsubsmpavgraw_histinset' + prstr + now + '_' + pversion[0] +'.pdf')# _b has AGCM hist and not CGCM All@@
 
 
             # plot them separately!
@@ -2755,17 +2800,17 @@ def main(dowhat=None,addobs=True,addsims=False,addnat=False,
                                        combagcm=combagcm,**retdicta)
             if printtofile:
                 fig.savefig(fielda + regiona + substr + '_' + sea + '_' +\
-                            'obs_11yrsubsmpavgraw_histinset' + prstr + now + '.pdf')
+                            'obs_11yrsubsmpavgraw_histinset' + prstr + now + '_' + pversion[0] +'.pdf')
 
 
             fig,ax=plt.subplots(1,1)
             fig.set_size_inches(9,8)
             ax,prstr=plot_shorttermpdf(fig,ax,field,region,addpi=addpi,
                                        addnat=addnat,addmisc=addmisc,addanno=False,
-                                       combagcm=combagcm,**retdict)
+                                       combagcm=combagcm,pversion=pversion[1],**retdict)
             if printtofile:
                 fig.savefig(field + region + substr + '_' + sea + '_' +\
-                            'obs_11yrsubsmpavgraw_histinset' + prstr + now + '.pdf')
+                            'obs_11yrsubsmpavgraw_histinset' + prstr + now + '_' + pversion[1] + '.pdf')
 
 
             if savemat:
