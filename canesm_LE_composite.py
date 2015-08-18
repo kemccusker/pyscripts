@@ -17,14 +17,67 @@ import scipy.io as sio
 import datetime as datetime
 import string as string
 
-printtofile=False
+printtofile=True
 
 #dataloaded=True
-loadmat=False; 
-when='14:51:28.762886'; styearsr = [ 8.,  7.,  2.,  8.,  8.] # variable SIC styears
-styearse=[ 4.,  1.,  7.,  3.,  1.]; styearso=[1.] #when for these: 17:01:16.908687
-
+loadmat=True; 
+when='14:51:28.762886'; styearsR = [ 8.,  7.,  2.,  8.,  8.] # variable SIC styears
+styearsE=[ 4.,  1.,  7.,  3.,  1.]; styearsN=[1.] #when for these: 17:01:16.908687
+styearPI = 0 # PI styear
 #<coldeur for PI> when='14:43:36.586252' 
+anomyearsPI = [[79, 26],
+        [58, 17],
+        [79, 41],
+        [28, 24],
+        [37, 80],
+        [25, 48],
+        [30, 49],
+        [33, 85],
+        [51, 43],
+        [82,  6],
+        [62, 34],
+        [ 3, 17],
+        [56, 63],
+        [67,  4],
+        [29, 73],
+        [74,  0],
+        [28,  8],
+        [46, 56],
+        [14, 76],
+        [72, 37],
+        [88,  4],
+        [31, 56],
+        [31,  4],
+        [40,  0],
+        [20, 49],
+        [21, 81],
+        [68, 56],
+        [77, 37],
+        [18,  1],
+        [82, 26],
+        [78, 55],
+        [22, 47],
+        [78, 16],
+        [54, 76],
+        [ 5, 47],
+        [58, 25],
+        [49, 20],
+        [64, 36],
+        [34,  2],
+        [62, 18],
+        [89,  3],
+        [25, 10],
+        [10, 30],
+        [84, 55],
+        [88, 18],
+        [87, 50],
+        [68, 26],
+        [ 5, 67],
+        [77, 13],
+        [74, 61]]
+
+
+
 
 saveascii=False
 savemat=False
@@ -74,7 +127,8 @@ leconvr=leconvr2=leconvr3=1
 fieldr='sic'; ncfieldr='sic'; compr='OImon'; regionr='bksmori'; 
 r1str='BKS SIC'; r1strlong='Barents/Kara sea ice concentration'; r1units='%'; r1key='bkssic'
 #leconvr=-1 # sea ice loss is linked with positive changes elsewhere
-#fieldr='turb'; ncfieldr='turb'; compr='Amon'; regionr='bksmori'; 
+
+#fieldr='turb'; ncfieldr='turb'; compr='Amon'; regionr='bksmori'; #@@@
 #r1str='BKS Turb'; r1strlong='Barents/Kara turbulent heat flux'; r1units='W/m2'; r1key='bksturb'
 
 
@@ -90,20 +144,28 @@ regionr3='bksmori'; r3str='BKS Z500'; r3key='bksz500'
 diffttl3='High-Low'; diffmult3=-1; r3units='m'
 #leconvr=-1; #leconvr2=-1; #both conv -1 to get figs to show low-high equal to high heights and cold continent.
 
+#fieldr3='turb'; ncfieldr3='turb'; compr3='Amon'; regionr3='bksmori'; #@@@
+#r3str='BKS Turb'; r3strlong='Barents/Kara turbulent heat flux'; r3units='W/m2'; r3key='bksturb'
+
+
 sttl1='Comp on ' + r1str
 sttl2='Comp on ' + r2str
 sttl3='Comp on ' + r3str
 
 fdictsp = {'field': fieldsp, 'ncfield': ncfieldsp, 'comp': compsp}
 fdictsp2 = {'field': fieldsp2, 'ncfield': ncfieldsp2, 'comp': compsp2}
-fdictice = {'field': 'sic', 'ncfield': 'sic', 'comp':'OImon'}
+if fieldr=='turb':
+    fdictice = {'field': 'turb', 'ncfield': 'turb', 'comp': 'Amon'} #@@@ testing. misleading names.
+else:
+    fdictice = {'field': 'sic', 'ncfield': 'sic', 'comp':'OImon'}
+
 fdictr = {'field': fieldr+regionr, 'ncfield': ncfieldr, 'comp': compr}
 fdictr2 = {'field': fieldr2+regionr2, 'ncfield': ncfieldr2, 'comp': compr2}
 fdictr3 = {'field': fieldr3+regionr3,'ncfield': ncfieldr3, 'comp': compr3}
 
 # used for file loading & figures
 #regions=('bkssic','eursat','bksz500')
-regions=('eursat','bkssic','bksz500') # SWAP order
+regions=('eursat',r1key,r3key) # SWAP order
 #fields=('ice','sat','z500')
 fields=('sat','ice','z500') # SWAP order
 
@@ -191,6 +253,7 @@ def load_agcmfield(field,sims,seas,conv=1,region=None,subsampyrs=11,styears=None
     elif field=='zg50000.00': simfield='gz50000'; simncfield='PHI'; simconv=1/con.get_g()
     elif field=='sia': simfield='sicn'; simncfield='SICN'; print '@@ danger, sia actually sicn average'
     elif field=='sic': simfield='sicn'; simncfield='SICN'
+    elif field=='turb': simfield='turb'; simncfield='turb'; # the sim var names are placeholders
     else: print 'cannot addsims for ' + field
 
     
@@ -315,9 +378,9 @@ def do_composite(rfld,spfld,nn=10,rshape=None,verb=False,addcyc=False):
 
 if loadmat:
 
-    leallrdt={'bkssic':dict.fromkeys(fields),
+    leallrdt={r1key:dict.fromkeys(fields),
               'eursat':dict.fromkeys(fields),
-              'bksz500':dict.fromkeys(fields)}    
+              r3key:dict.fromkeys(fields)}    
 
     matbase='pymatfiles/LE_composites_'
     for rkey in regions:
@@ -325,9 +388,9 @@ if loadmat:
             matname = matbase + rkey + '_' + fkey + '_' + when + '.mat'
             leallrdt[rkey][fkey]=sio.loadmat(matname,squeeze_me=True)
 
-    piallrdt={'bkssic':dict.fromkeys(fields),
+    piallrdt={r1key:dict.fromkeys(fields),
               'eursat':dict.fromkeys(fields),
-              'bksz500':dict.fromkeys(fields)}    
+              r3key:dict.fromkeys(fields)}    
 
     matbase='pymatfiles/PI_composites_'
     for rkey in regions:
@@ -335,15 +398,25 @@ if loadmat:
             matname = matbase + rkey + '_' + fkey + '_' + when + '.mat'
             piallrdt[rkey][fkey]=sio.loadmat(matname,squeeze_me=True)
 
-    aallrdt={'bkssic':dict.fromkeys(fields),
+    aallrdt={r1key:dict.fromkeys(fields),
               'eursat':dict.fromkeys(fields),
-              'bksz500':dict.fromkeys(fields)}    
+              r3key:dict.fromkeys(fields)}    
 
     matbase='pymatfiles/AGCMRsims_composites_'
     for rkey in regions:
         for fkey in fields:
             matname = matbase + rkey + '_' + fkey + '_' + when + '.mat'
             aallrdt[rkey][fkey]=sio.loadmat(matname,squeeze_me=True)
+
+    aeallrdt={r1key:dict.fromkeys(fields),
+              'eursat':dict.fromkeys(fields),
+              r3key:dict.fromkeys(fields)}    
+
+    matbase='pymatfiles/AGCMEsims_composites_'
+    for rkey in regions:
+        for fkey in fields:
+            matname = matbase + rkey + '_' + fkey + '_' + when + '.mat'
+            aeallrdt[rkey][fkey]=sio.loadmat(matname,squeeze_me=True)
 
 
 #if not dataloaded:
@@ -426,7 +499,7 @@ else:
     ler2flds={'sat':lespr2dt,'z500':lesp2r2dt,'ice':leicer2dt}
     ler3flds={'sat':lespr3dt,'z500':lesp2r3dt,'ice':leicer3dt}
 
-    leallrdt={'bkssic':ler1flds,'eursat':ler2flds,'bksz500':ler3flds}    
+    leallrdt={r1key:ler1flds,'eursat':ler2flds,r3key:ler3flds}    
 
     if savemat:
         matbase='pymatfiles/LE_composites_'
@@ -440,7 +513,8 @@ else:
 
     # ========== PRE-IND ==============
 
-    piseasp,styear,anomyears = load_canesmfield(fdictsp,'piControl',seasp,conv=leconvsp,local=local)
+    piseasp,styear,anomyears = load_canesmfield(fdictsp,'piControl',seasp,conv=leconvsp,
+                                                local=local,styear=styearPI,anomyears=anomyearsPI)
     piseasp2,styear,anomyears = load_canesmfield(fdictsp2,'piControl',seasp,conv=leconvsp2,
                                                  local=local,styear=styear,anomyears=anomyears)
     piseaspice,styear,anomyears = load_canesmfield(fdictice,'piControl',sear,conv=1,
@@ -479,7 +553,7 @@ else:
     pir2flds={'sat':pispr2dt,'z500':pisp2r2dt,'ice':piicer2dt}
     pir3flds={'sat':pispr3dt,'z500':pisp2r3dt,'ice':piicer3dt}
 
-    piallrdt={'bkssic':pir1flds,'eursat':pir2flds,'bksz500':pir3flds}    
+    piallrdt={r1key:pir1flds,'eursat':pir2flds,r3key:pir3flds}    
 
     if savemat:
         matbase='pymatfiles/PI_composites_'
@@ -499,7 +573,7 @@ else:
     sims=('R1','R2','R3','R4','R5');
     simsO=('NSIDC',)
 
-    asseasp,styearsr = load_agcmfield(fieldsp,sims,seasp,styears=styearsr) # already anomalies
+    asseasp,styearsr = load_agcmfield(fieldsp,sims,seasp,styears=styearsR) # already anomalies
     asseasp2,styearsr = load_agcmfield(fieldsp2,sims,seasp,styears=styearsr) # already anomalies
     asseaice,styearsr = load_agcmfield('sic',sims,seasp,styears=styearsr,conv=100) # want the SICN pattern
 
@@ -533,7 +607,7 @@ else:
     ar2flds={'sat':aspr2dt,'z500':asp2r2dt,'ice':aicer2dt}
     ar3flds={'sat':aspr3dt,'z500':asp2r3dt,'ice':aicer3dt}
 
-    aallrdt={'bkssic':ar1flds,'eursat':ar2flds,'bksz500':ar3flds}    
+    aallrdt={r1key:ar1flds,'eursat':ar2flds,r3key:ar3flds}    
 
     if savemat:
         matbase='pymatfiles/AGCMRsims_composites_'
@@ -549,7 +623,7 @@ else:
     if compagcm: # if compare AGCM ensembles
 
         # ===  E sims:
-        aesseasp,styearse = load_agcmfield(fieldsp,simsE,seasp,styears=styearse) # already anomalies
+        aesseasp,styearse = load_agcmfield(fieldsp,simsE,seasp,styears=styearsE) # already anomalies
         aesseasp2,styearse = load_agcmfield(fieldsp2,simsE,seasp,styears=styearse) # already anomalies
         aesseaice,styearse = load_agcmfield('sic',simsE,seasp,styears=styearse,conv=100) # want the SICN pattern
 
@@ -580,7 +654,7 @@ else:
         aer2flds={'sat':aespr2dt,'z500':aesp2r2dt,'ice':aeicer2dt}
         aer3flds={'sat':aespr3dt,'z500':aesp2r3dt,'ice':aeicer3dt}
 
-        aeallrdt={'bkssic':aer1flds,'eursat':aer2flds,'bksz500':aer3flds}    
+        aeallrdt={r1key:aer1flds,'eursat':aer2flds,r3key:aer3flds}    
 
         if savemat:
             matbase='pymatfiles/AGCMEsims_composites_'
@@ -602,7 +676,7 @@ else:
 
         
         # ===  Obs sims (NSIDC):
-        aosseasp,styearso = load_agcmfield(fieldsp,simsO,seasp,styears=styearso) # already anomalies
+        aosseasp,styearso = load_agcmfield(fieldsp,simsO,seasp,styears=styearsN) # already anomalies
         aosseasp2,styearso = load_agcmfield(fieldsp2,simsO,seasp,styears=styearso) # already anomalies
         aosseaice,styearso = load_agcmfield('sic',simsO,seasp,styears=styearso,conv=100) # want the SICN pattern
 
@@ -637,6 +711,7 @@ else:
 
 # For each composite (r1, r2, r3), compute the BKS SIC average:
 allcasedt = {'Preindustrial':piallrdt, 'CGCM': leallrdt, 'AGCM':aallrdt}
+allcasedt = {'CGCM': leallrdt, 'AGCM': aallrdt}#, 'AGCM_fixed': aeallrdt}
 
 #  Here calculate the BKS SIC associated with each composite
 allregimdt={};allregimlodt={};allregimhidt={}; allregitdt={}; allregimcidt={}; allregitcidt={}
@@ -644,14 +719,13 @@ allregimlocidt={};allregimhicidt={};
 fkey='ice'
 print '@@@@@@@@@@@@@ calculating CI for ICE, all composites'
 for ckey in allcasedt.keys():
-    print ' ENS ' + ckey
+    print '=ENS ' + ckey
     regmdt={}; regmlodt={}; regmhidt={}; regtotdt={}; regmcidt={}; regtcidt={}
     regmlocidt={}; regmhicidt={}
     allrdt=allcasedt[ckey]
     for rkey in regions:
 
-        print '  REGION' + rkey
-
+        print '  REGION ' + rkey
         
         dt=allrdt[rkey][fkey]
 
@@ -659,7 +733,7 @@ for ckey in allcasedt.keys():
         regt = cutl.calc_regtotseaicearea(diff[...,:-1],lat,lon,'bksmori')
         regm = cutl.calc_regmean(diff[...,:-1],lat,lon,'bksmori')
 
-        # Confidence interval: 5=95% interval on the mean
+        # Confidence interval: 2.5-97.5% interval on the mean
         regmci = sp.stats.t.interval(1-cisiglevel,len(regm)-1,
                                      loc=regm.mean(axis=0),
                                      scale=regm.std(axis=0)/np.sqrt(len(regm)))
@@ -677,11 +751,13 @@ for ckey in allcasedt.keys():
         regmhici = sp.stats.t.interval(1-cisiglevel,len(regmhi)-1,
                                        loc=regmhi.mean(axis=0),
                                        scale=regmhi.std(axis=0)/np.sqrt(len(regmhi)))
-
+        
+        
         print '   LO: ' + str(regmlo.mean(axis=0)) + ', CI: ' + str(regmloci) # @@
-        print '   LO vals: ' + str(regmlo)
+        #print '   LO vals: ' + str(regmlo)
         print '   HI: ' + str(regmhi.mean(axis=0)) + ', CI: ' + str(regmhici) # @@
-
+        junk,regmdiffpval = cutl.ttest_ind(regmlo,regmhi)
+        print '   LO v HI pval: ' + str(regmdiffpval)
 
         regmdt[rkey]=regm.mean(axis=0)
         regmlodt[rkey]=regmlo.mean(axis=0)
@@ -710,20 +786,39 @@ allregitcidf=pd.DataFrame(allregitcidt)
 allregspmdt={}; allregspmcidt={};
 
 fkey='sat'
+print '@@@@@@@@@@@@@ calculating CI for SAT, all composites'
 for ckey in allcasedt.keys():
+    print '=ENS ' + ckey
+
     regmdt={}; regtotdt={}; regmcidt={}; regtcidt={}
     allrdt=allcasedt[ckey]
     for rkey in regions:
-        
+        print '  REGION ' + rkey
         dt=allrdt[rkey][fkey]
 
         diff = dt['lowspt']-dt['highspt']
         regm = cutl.calc_regmean(diff[...,:-1],lat,lon,'eurasiamori')
 
-        # Confidence interval: 5=95% interval on the mean
+        # Confidence interval: 2.5-97.5% interval on the mean
         regmci = sp.stats.t.interval(1-cisiglevel,len(regm)-1,
                                      loc=regm.mean(axis=0),
                                      scale=regm.std(axis=0)/np.sqrt(len(regm)))
+        print '   DIFF: ' + str(regm.mean(axis=0)) + ', CI: ' + str(regmci) # @@
+
+        # @@ CONFIDENCE interval on the low! (for John to compare)
+        regmlo = cutl.calc_regmean(dt['lowspt'][...,:-1],lat,lon,'eurasiamori')
+        regmhi = cutl.calc_regmean(dt['highspt'][...,:-1],lat,lon,'eurasiamori')
+        regmloci = sp.stats.t.interval(1-cisiglevel,len(regmlo)-1,
+                                       loc=regmlo.mean(axis=0),
+                                       scale=regmlo.std(axis=0)/np.sqrt(len(regmlo)))
+        regmhici = sp.stats.t.interval(1-cisiglevel,len(regmhi)-1,
+                                       loc=regmhi.mean(axis=0),
+                                       scale=regmhi.std(axis=0)/np.sqrt(len(regmhi)))
+        print '   LO: ' + str(regmlo.mean(axis=0)) + ', CI: ' + str(regmloci) # @@
+        #print '   LO vals: ' + str(regmlo)
+        print '   HI: ' + str(regmhi.mean(axis=0)) + ', CI: ' + str(regmhici) # @@
+        junk,regmdiffpval = cutl.ttest_ind(regmlo,regmhi)
+        print '   LO v HI pval: ' + str(regmdiffpval)
 
         regmdt[rkey]=regm.mean(axis=0)
         regmcidt[rkey]=regmci
@@ -741,7 +836,7 @@ allregsp2mhidt={}; allregsp2mhicidt={};
 fkey='z500'
 print '@@@@@@@@@@@@@ calculating CI for Z500, all composites'
 for ckey in allcasedt.keys():
-    print ' ENS ' + ckey # @@
+    print '=ENS ' + ckey # @@
 
     regmdt={};regmlodt={};regmhidt={}; regtotdt={}; regmcidt={}; regmlocidt={};regmhicidt={}
     allrdt=allcasedt[ckey]
@@ -754,7 +849,7 @@ for ckey in allcasedt.keys():
         diff = dt['lowspt']-dt['highspt']
         regm = cutl.calc_regmean(diff[...,:-1],lat,lon,'bksmori')
         
-        # Confidence interval: 5=95% interval on the mean
+        # Confidence interval: 2.5-97.5% interval on the mean
         regmci = sp.stats.t.interval(1-cisiglevel,len(regm)-1,
                                      loc=regm.mean(axis=0),
                                      scale=regm.std(axis=0)/np.sqrt(len(regm)))
@@ -770,8 +865,10 @@ for ckey in allcasedt.keys():
                                        loc=regmhi.mean(axis=0),
                                        scale=regmhi.std(axis=0)/np.sqrt(len(regmhi)))
         print '   LO: ' + str(regmlo.mean(axis=0)) + ', CI: ' + str(regmloci) # @@
-        print '   LO vals: ' + str(regmlo)
+        #print '   LO vals: ' + str(regmlo)
         print '   HI: ' + str(regmhi.mean(axis=0)) + ', CI: ' + str(regmhici) # @@
+        junk,regmdiffpval = cutl.ttest_ind(regmlo,regmhi)
+        print '   LO v HI pval: ' + str(regmdiffpval)
 
         regmdt[rkey]=regm.mean(axis=0)
         regmcidt[rkey]=regmci
@@ -810,6 +907,7 @@ xx=np.arange(stxx,(stxx+len(allregimdf.keys())-1)*1.2,1.2)
 
 multfacs=(1,1,-1) # multiply the comp on z500 by -1 to get high over bks
 enss=('CGCM','Preindustrial','AGCM')
+enss=('CGCM','AGCM')#,'AGCM_fixed')
 mkrs=('s','o','^')
 clrs=('r','b','0.4')
 #clrs=('.4','.4','.4')
@@ -1208,7 +1306,7 @@ for fii,fkey in enumerate(fields):
         xii=0
         for rii,reg in enumerate(regions):
             print '    reg: ' + reg
-            if (fkey in reg) or (fkey=='ice' and reg=='bkssic'):
+            if (fkey in reg) or (fkey=='ice' and reg==r1key) or (fkey=='z500' and reg==r3key):
                 print '    --SKIP'
             else:
                 mult=multfacs[rii]
@@ -1219,17 +1317,25 @@ for fii,fkey in enumerate(fields):
                 #print mult, (xpos,xpos), ci
                 ax.plot((xpos,xpos),mult*np.array(ci),marker='_',
                         mew=2,markersize=10,linewidth=2,color=clrs[eii])
-                ax.axvspan(xx[xii]-xincr-0.1,xx[xii]+xincr+0.1,color='0.8',alpha=0.5)
+                if len(enss)==3:
+                    ax.axvspan(xx[xii]-xincr-0.1,xx[xii]+xincr+0.1,color='0.8',alpha=0.5)
+                elif len(enss)==2:
+                    ax.axvspan(xx[xii]-xincr-0.1,xx[xii]+0.1,color='0.8',alpha=0.5)
                 xii+=1
                 
         stagger+=0.2
 
     ax.set_ylabel('Change in ' + reglabs[fii] + ' (' + reglabunits[fii] + ')')
     ax.axhline(y=0,color='k',linestyle='--')
-    ax.set_xlim((stxx-0.7,xx[-1]+0.7))
+    if len(enss)==3:
+        ax.set_xlim((stxx-0.7,xx[-1]+0.7))
+        ax.set_xticks(xx)
+    elif len(enss)==2:
+        ax.set_xlim((stxx-0.7,xx[-1]+0.5))
+        ax.set_xticks(xx-0.1)
     if fii==0:
         ax.legend(lgs,lgstrs,loc='lower left',fancybox=True,frameon=False)#,prop=fontP)
-    ax.set_xticks(xx)
+    
     ax.set_xticklabels(np.array(reglabs)[rlabbools],rotation=25)
     ax.annotate(plabs[pii],xy=(-0.02,1.04),
                 xycoords='axes fraction',fontsize=16,fontweight='bold')
