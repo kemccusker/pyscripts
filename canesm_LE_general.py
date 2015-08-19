@@ -105,11 +105,11 @@ anomyearsPI = [[79, 26],
 
 
 
-performop1 = True
+performop1 = False
 #op1='div'; region1op='gm' # polar amp: gt60n / gm
 #op1='sub'; region1op='deeptrop' # pole-eq temp gradient: gt60n - deeptrop (or trop)
-op1='sub'; region1op='less' # bks sea ice minus less (laptev/east siberian)
-#op1='sub'; region1op='eurasiamori'
+#op1='sub'; region1op='less' # bks sea ice minus less (laptev/east siberian)
+op1='sub'; region1op='eurasiamori'
 performop2 = False
 op2='sub'; region2op='nh'
 
@@ -121,7 +121,7 @@ timeselall = '1979-01-01,2012-12-31'
 #field1='turb'; ncfield1='turb'; comp1='Amon'; region1='bksmori'
 field1='zg50000.00'; ncfield1='zg'; comp1='Amon'; region1='bksmori'
 #field1='sia'; ncfield1='sianh'; comp1='OImon'; region1='nh'
-field1='sic'; ncfield1='sic'; comp1='OImon'; region1='bksmori' # @@ a hack. prefer SIA
+#field1='sic'; ncfield1='sic'; comp1='OImon'; region1='bksmori' # @@ a hack. prefer SIA
 #field1='tas'; ncfield1='tas'; comp1='Amon'; region1='eurasiamori' #region1='bksmori'
 leconv1= 1 
 sea1='DJF'
@@ -1480,7 +1480,7 @@ def main(dowhat=None,addobs=True,addsims=False,addnat=False,
             styear=styearPI; anomyears=anomyearsPI
             # the data must be seasonalized before using this func.
             pisea1,styear1,anomyears1 = subsamp_anom_pi(piseadat1, numyrs=11,
-                                                        styear=styear,anomyears=anomyears,threed=False)
+                                                        styear=styear,anomyears=anomyears)
 
             if verb:
                 print 'pidat1.shape, piseadat1.shape ' + str(pidat1.shape) + ',' + str(piseadat1.shape) # @@@
@@ -1492,7 +1492,7 @@ def main(dowhat=None,addobs=True,addsims=False,addnat=False,
                 pisubsea1 = cutl.seasonalize_monthlyts(pisub1,season=sea1)
 
                 pisubsea1,styear1,anomyears1 = subsamp_anom_pi(pisubsea1, numyrs=11,
-                                                               styear=styear1,anomyears=anomyears1,threed=False)
+                                                               styear=styear1,anomyears=anomyears1)
                 
 
                 if op1=='sub': # subtract
@@ -1508,14 +1508,14 @@ def main(dowhat=None,addobs=True,addsims=False,addnat=False,
             piseadat2 = cutl.seasonalize_monthlyts(pidat2,season=sea1)
             # the data must be seasonalized before using this func.
             pisea2,styear1,anomyears1 = subsamp_anom_pi(piseadat2, numyrs=11,
-                                                        styear=styear1,anomyears=anomyears1,threed=False)
+                                                        styear=styear1,anomyears=anomyears1)
             if performop2:
                 fdict2op = {'field': field2+region2op, 'ncfield': ncfield2, 'comp': comp2}
                 pisub2 = lcd.load_data(fdict2op,'piControl',conv=leconv2,local=local)
                 pisubsea2 = cutl.seasonalize_monthlyts(pisub2,season=sea2)
 
                 pisubsea2,styear1,anomyears1 = subsamp_anom_pi(pisubsea2, numyrs=11,
-                                                               styear=styear1,anomyears=anomyears1,threed=False)
+                                                               styear=styear1,anomyears=anomyears1)
 
                 if op2=='sub': # subtract
                     pifld2 = pisea2 - pisubsea2
@@ -1541,7 +1541,15 @@ def main(dowhat=None,addobs=True,addsims=False,addnat=False,
                 latera=cnc.getNCvar(erafile,'lat')
                 lonera=cnc.getNCvar(erafile,'lon')
                 obsreg1 = cutl.calc_regmean(eraz500p-eraz500c,latera,lonera,region1)
-                obsreg1=obsreg1.mean()
+                if performop1:
+                    opfld1 = cutl.calc_regmean(eraz500p-eraz500c,latera,lonera,region1op)
+
+                    if op1=='sub': # subtract
+                        obsreg1 = obsreg1.mean() - opfld1.mean()
+                    elif op1=='div': # divide
+                        obsreg1 = obsreg1.mean() / opfld1.mean()
+                else:
+                    obsreg1=obsreg1.mean()
             elif field1 == 'tas':
                 gisfile = '/HOME/rkm/work/DATA/GISS/gistemp1200_ERSST.nc'
                 latgis=cnc.getNCvar(gisfile,'lat')
@@ -1562,13 +1570,22 @@ def main(dowhat=None,addobs=True,addsims=False,addnat=False,
                 nsidcfile = '/HOME/rkm/work/BCs/NSIDC/td_bootstrap_197811_latest_128_64_sicn_1978111600-2013121612.nc'
                 latns = cnc.getNCvar(nsidcfile,'lat')
                 lonns = cnc.getNCvar(nsidcfile,'lon')
+                print 'OBS SIC: SELECT UP THROUGH 2011 ONLY @@@@@'
                 nssicc= cnc.getNCvar(nsidcfile,'SICN',timesel=timeselc,seas=sea1)*100
-                nssicp= cnc.getNCvar(nsidcfile,'SICN',timesel=timeselp,seas=sea1)*100
-                obsreg1 =  cutl.calc_regmean(nssicp-nssicc,latns,lonns,region1)
+                nssicp= cnc.getNCvar(nsidcfile,'SICN',timesel='2002-01-01,2011-12-31',seas=sea1)*100
+                obsreg1 =  cutl.calc_regmean(nssicp-nssicc.mean(axis=0),latns,lonns,region1)
                 if performop1:
-                    print '@@ no performop1 for field1=sic in addobs'
+                    opfld1 = cutl.calc_regmean(nssicp-nssicc.mean(axis=0),latns,lonns,region1op)
+
+                    if op1=='sub': # subtract
+                        print '========== OBS SIC: ' + str(obsreg1.mean()) + '-' + str(opfld1.mean()) +\
+                            ' = ' + str(obsreg1.mean() - opfld1.mean())
+                        obsreg1 = obsreg1.mean() - opfld1.mean()
+                    elif op1=='div': # divide
+                        obsreg1 = obsreg1.mean() / opfld1.mean()
                 else:
                     obsreg1=obsreg1.mean()
+                print 'obsreg1 (sic): ' + str(obsreg1)
             else:
                 print 'this field not supported with addobs @@: ' + field1; addobs=False
 
@@ -1577,7 +1594,11 @@ def main(dowhat=None,addobs=True,addsims=False,addnat=False,
                 latgis=cnc.getNCvar(gisfile,'lat')
                 longis=cnc.getNCvar(gisfile,'lon')
                 gissatc= cnc.getNCvar(gisfile,'tempanomaly',timesel=timeselc,seas=sea2) 
-                gissatp= cnc.getNCvar(gisfile,'tempanomaly',timesel=timeselp,seas=sea2)
+                if field1=='sic':
+                    print 'OBS TAS: SELECT UP THROUGH 2011 ONLY to match SIC @@@@@'
+                    gissatp= cnc.getNCvar(gisfile,'tempanomaly',timesel='2002-01-01,2011-12-31',seas=sea2)
+                else:
+                    gissatp= cnc.getNCvar(gisfile,'tempanomaly',timesel=timeselp,seas=sea2)
 
                 if sea1==sea2=='DJF' and performop2==True and op2=='sub' and region2=='eurasiamori' and region2op=='nh':
                     # a file already exists for this
@@ -1586,7 +1607,7 @@ def main(dowhat=None,addobs=True,addsims=False,addnat=False,
                     gissatp= cnc.getNCvar(gisfile,'tempanomaly',timesel=timeselp)
                     obsreg2=gissatp.mean()-gissatc.mean()
                 else:
-                    obsreg2 =  cutl.calc_regmean(gissatp-gissatc,latgis,longis,region2)
+                    obsreg2 =  cutl.calc_regmean(gissatp-gissatc.mean(axis=0),latgis,longis,region2)
                     obsreg2=obsreg2.mean()
             else:
                 print 'this field not supported with addobs @@: ' + field2; addobs=False
@@ -1736,11 +1757,14 @@ def main(dowhat=None,addobs=True,addsims=False,addnat=False,
                     if region1op=='nh':
                         fldssodf1 = fldssodf1 - fldssodf1op.mean() # want to subtract ens mean nh
                     else:
+                        print '========== NSIDC SIC: ' + str(fldssodf1.values.mean()) + '-' + str(fldssodf1op.values.mean()) +\
+                            ' = ' + str(fldssodf1.values.mean() - fldssodf1op.values.mean())
                         fldssodf1 = fldssodf1 - fldssodf1op # not sure if want ens mean here...
                 elif op1=='div': # divide
                     fldssodf1 = fldssodf1 / fldssodf1op
 
             fldssodf1,styrso = subsamp_sims(fldssodf1,numyrs=11)
+            
 
             fldssodf2 = pd.DataFrame(lmd.loaddata((simfield2,),simssso,ncfields=(simncfield2,), timefreq=sea2, 
                                             region=region2))*simconv2
