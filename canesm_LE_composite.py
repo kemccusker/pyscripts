@@ -84,7 +84,7 @@ savemat=False
 dofigures=False
 local=True
 addsig=False
-compagcm=False # compare R sims and E sims
+compagcm=True # compare R sims and E sims
 
 cisiglevel=0.05
 siglevel=0.05
@@ -124,9 +124,9 @@ cminsp2a=-10; cmaxsp2a=10 # to calc contour interval for AGCM
 leconvr=leconvr2=leconvr3=1
 
 # regional avg field 1
-fieldr='sic'; ncfieldr='sic'; compr='OImon'; regionr='bksmori'; 
-r1str='BKS SIC'; r1strlong='Barents/Kara sea ice concentration'; r1units='%'; r1key='bkssic'
-#leconvr=-1 # sea ice loss is linked with positive changes elsewhere
+#fieldr='sic'; ncfieldr='sic'; compr='OImon'; regionr='bksmori'; 
+#r1str='BKS SIC'; r1strlong='Barents/Kara sea ice concentration'; r1units='%'; r1key='bkssic'
+
 
 #fieldr='turb'; ncfieldr='turb'; compr='Amon'; regionr='bksmori'; #@@@
 #r1str='BKS Turb'; r1strlong='Barents/Kara turbulent heat flux'; r1units='W/m2'; r1key='bksturb'
@@ -494,6 +494,7 @@ else:
                                   verb=True,local=local)
 
     now = str(datetime.datetime.now().time())
+    #now=when
 
     ler1flds={'sat':lespr1dt,'z500':lesp2r1dt,'ice':leicer1dt}
     ler2flds={'sat':lespr2dt,'z500':lesp2r2dt,'ice':leicer2dt}
@@ -711,7 +712,7 @@ else:
 
 # For each composite (r1, r2, r3), compute the BKS SIC average:
 allcasedt = {'Preindustrial':piallrdt, 'CGCM': leallrdt, 'AGCM':aallrdt}
-allcasedt = {'CGCM': leallrdt, 'AGCM': aallrdt}#, 'AGCM_fixed': aeallrdt}
+allcasedt = {'CGCM': leallrdt, 'AGCM': aallrdt, 'AGCM_fixed': aeallrdt}
 
 #  Here calculate the BKS SIC associated with each composite
 allregimdt={};allregimlodt={};allregimhidt={}; allregitdt={}; allregimcidt={}; allregitcidt={}
@@ -907,7 +908,7 @@ xx=np.arange(stxx,(stxx+len(allregimdf.keys())-1)*1.2,1.2)
 
 multfacs=(1,1,-1) # multiply the comp on z500 by -1 to get high over bks
 enss=('CGCM','Preindustrial','AGCM')
-enss=('CGCM','AGCM')#,'AGCM_fixed')
+enss=('CGCM','AGCM','AGCM_fixed')
 mkrs=('s','o','^')
 clrs=('r','b','0.4')
 #clrs=('.4','.4','.4')
@@ -920,7 +921,7 @@ lgs=(mlines.Line2D([],[],color=clrs[0],linewidth=2),
      #mlines.Line2D([],[],color=clrs[1],linestyle='none',marker=mkrs[1]),
      #mlines.Line2D([],[],color=clrs[2],linestyle='none',marker=mkrs[2])) 
 #lgstrs=('BKS SIC','Eur SAT','BKS Z500')  
-lgstrs=('Eur SAT','BKS SIC','BKS Z500')  # SWAP order
+lgstrs=(r2str,r1str,r3str)  # SWAP order
         
 
 lespr1dt=leallrdt[r1key][spkey]
@@ -1070,7 +1071,7 @@ xincr=0.2
 plabs = list(string.ascii_lowercase)
 #reglabs=('BKS SIC','Eur SAT','BKS Z500')
 #reglabunits=('%','$^\circ$C','m')
-reglabs=('Eur SAT','BKS SIC','BKS Z500') # SWAP
+reglabs=(r2str,r1str,r3str) # SWAP
 reglabunits=('$^\circ$C','%','m') # SWAP
 
 
@@ -1308,6 +1309,9 @@ for fii,fkey in enumerate(fields):
             print '    reg: ' + reg
             if (fkey in reg) or (fkey=='ice' and reg==r1key) or (fkey=='z500' and reg==r3key):
                 print '    --SKIP'
+            elif (ens=='AGCM_fixed' and fkey=='ice') or (ens=='AGCM_fixed' and reg=='bkssic'):
+                print '    --SKIP (AGCM_fixed ice)'
+                xii+=1
             else:
                 mult=multfacs[rii]
                 xpos=xx[xii]+stagger
