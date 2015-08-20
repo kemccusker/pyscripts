@@ -17,10 +17,10 @@ import scipy.io as sio
 import datetime as datetime
 import string as string
 
-printtofile=True
+printtofile=False
 
 #dataloaded=True
-loadmat=True; 
+loadmat=False; 
 when='14:51:28.762886'; styearsR = [ 8.,  7.,  2.,  8.,  8.] # variable SIC styears
 styearsE=[ 4.,  1.,  7.,  3.,  1.]; styearsN=[1.] #when for these: 17:01:16.908687
 styearPI = 0 # PI styear
@@ -80,7 +80,7 @@ anomyearsPI = [[79, 26],
 
 
 saveascii=False
-savemat=False
+savemat=True
 dofigures=False
 local=True
 addsig=False
@@ -124,8 +124,8 @@ cminsp2a=-10; cmaxsp2a=10 # to calc contour interval for AGCM
 leconvr=leconvr2=leconvr3=1
 
 # regional avg field 1
-#fieldr='sic'; ncfieldr='sic'; compr='OImon'; regionr='bksmori'; 
-#r1str='BKS SIC'; r1strlong='Barents/Kara sea ice concentration'; r1units='%'; r1key='bkssic'
+fieldr='sic'; ncfieldr='sic'; compr='OImon'; regionr='bksmori'; 
+r1str='BKS SIC'; r1strlong='Barents/Kara sea ice concentration'; r1units='%'; r1key='bkssic'
 
 
 #fieldr='turb'; ncfieldr='turb'; compr='Amon'; regionr='bksmori'; #@@@
@@ -494,7 +494,7 @@ else:
                                   verb=True,local=local)
 
     now = str(datetime.datetime.now().time())
-    #now=when
+    now=when
 
     ler1flds={'sat':lespr1dt,'z500':lesp2r1dt,'ice':leicer1dt}
     ler2flds={'sat':lespr2dt,'z500':lesp2r2dt,'ice':leicer2dt}
