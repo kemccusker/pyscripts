@@ -372,7 +372,7 @@ def seasonalize_monthlyts(input,season=None,includenan=0,mo=0,climo=0,verb=False
         start=8
         incr=2
     else:
-        print "Season not supported!"
+        print 'seasonalize_monthlyts(): Season ' + season + ' not supported!'
         return None
 
     if len(dims)>1:
@@ -1042,6 +1042,14 @@ def calc_kernel(input):
     pdf,mn,sgm,xx= calc_normfit(input) # just to get x values
     
     return kernel(xx), xx
+
+
+def detrend(input, axis=0, dttype='linear'):
+    """ use scipy.signal.detrend() to linearly detrend the 
+           data. This function adds the mean back to data.
+
+    """
+    return sp.signal.detrend(input,axis=axis,type=dttype) + input.mean(axis=0)
 
 
 """ Trying to figure out correct way to calc 95% confidence interval
