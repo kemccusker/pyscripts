@@ -20,10 +20,64 @@ import string as string
 printtofile=False
 
 #dataloaded=True
-loadmat=False; 
+loadmat=True; 
 when='14:51:28.762886'; styearsR = [ 8.,  7.,  2.,  8.,  8.] # variable SIC styears
 styearsE=[ 4.,  1.,  7.,  3.,  1.]; styearsN=[1.] #when for these: 17:01:16.908687
-styearPI = 0 # PI styear
+styearsPI = 2
+# PI anomyrs  when: '14:51:28.762886sic'. mean eursat=-0.0026
+anomyearsPI =[[74,  8],
+       [57,  5],
+       [50, 53],
+       [51, 42],
+       [ 7, 81],
+       [15,  9],
+       [61, 57],
+       [48, 21],
+       [49, 24],
+       [65, 24],
+       [33, 66],
+       [71, 36],
+       [29, 43],
+       [48, 68],
+       [18, 67],
+       [ 5, 21],
+       [17,  1],
+       [40, 16],
+       [79, 18],
+       [10, 82],
+       [ 0, 19],
+       [70, 36],
+       [82, 67],
+       [14,  7],
+       [57, 13],
+       [18, 34],
+       [59, 29],
+       [20,  6],
+       [12,  6],
+       [58, 68],
+       [82, 49],
+       [66,  2],
+       [ 0, 10],
+       [28, 59],
+       [63, 73],
+       [28, 83],
+       [51, 54],
+       [19,  2],
+       [26, 47],
+       [52, 66],
+       [27, 10],
+       [37, 48],
+       [38, 64],
+       [33, 36],
+       [42, 85],
+       [28, 24],
+       [79, 51],
+       [80, 10],
+       [44, 57],
+       [32, 41]]
+
+
+"""styearPI = 0 # PI styear
 #<coldeur for PI> when='14:43:36.586252' 
 anomyearsPI = [[79, 26],
         [58, 17],
@@ -74,17 +128,17 @@ anomyearsPI = [[79, 26],
         [68, 26],
         [ 5, 67],
         [77, 13],
-        [74, 61]]
+        [74, 61]] """
 
 
 
 
 saveascii=False
-savemat=True
+savemat=False
 dofigures=False
 local=True
 addsig=False
-compagcm=True # compare R sims and E sims
+compagcm=False # compare R sims and E sims
 
 cisiglevel=0.05
 siglevel=0.05
@@ -125,7 +179,7 @@ leconvr=leconvr2=leconvr3=1
 
 # regional avg field 1
 fieldr='sic'; ncfieldr='sic'; compr='OImon'; regionr='bksmori'; 
-r1str='BKS SIC'; r1strlong='Barents/Kara sea ice concentration'; r1units='%'; r1key='bkssic'
+r1str='BKS SIC'; r1strlong='Barents/Kara SIC'; r1units='%'; r1key='bkssic'
 
 
 #fieldr='turb'; ncfieldr='turb'; compr='Amon'; regionr='bksmori'; #@@@
@@ -136,11 +190,11 @@ r1str='BKS SIC'; r1strlong='Barents/Kara sea ice concentration'; r1units='%'; r1
 # regional avg field 2
 # cooling=high heights
 fieldr2='tas'; ncfieldr2='tas'; compr2='Amon'; regionr2='eurasiamori'; 
-r2str='Eur SAT'; r2strlong='Eurasian surface air temperature'; r2units='$^\circ$C'; r2key='eursat' #leconvr2=-1
+r2str='Eur SAT'; r2strlong='Eurasian SAT'; r2units='$^\circ$C'; r2key='eursat' #leconvr2=-1
 
 # regional avg field 3
 fieldr3='zg50000.00'; ncfieldr3='zg'; compr3='Amon'; 
-regionr3='bksmori'; r3str='BKS Z500'; r3key='bksz500'
+regionr3='bksmori'; r3str='BKS Z500'; r3strlong='Barents/Kara Z500'; r3key='bksz500'
 diffttl3='High-Low'; diffmult3=-1; r3units='m'
 #leconvr=-1; #leconvr2=-1; #both conv -1 to get figs to show low-high equal to high heights and cold continent.
 
@@ -1259,9 +1313,15 @@ if printtofile:
     fig.savefig('Figure4_draft_6panel_CGCMmaps_compavgs' + prstr + 'swap2.png',dpi=400)
 
 
-
+printtofile=True
 print '---- plotting v4 of summary ----'
 xx=xx[:-1]
+fields2=('ice','z500','sat') # switch order of summary panels
+reglabs2=(r1strlong,r3strlong,r2strlong) # SWAP for summary
+reglabs2short=(r1str,r3str,r2str) # SWAP for summary
+reglabunits2=('%','m','$^\circ$C') # SWAP for summary
+regions2=('bkssic','bksz500','eursat')
+multfacs2=(1,-1,1)
 
 fig=plt.figure(figsize=(12,9))
 gs1 = gridspec.GridSpec(1, 3)
@@ -1290,10 +1350,10 @@ for rii,rkey in enumerate(regions):
 
 gs2 = gridspec.GridSpec(1, 3)
 gs2.update(top=0.44,left=0.08,right=0.92,wspace=0.28)
-for fii,fkey in enumerate(fields):
+for fii,fkey in enumerate(fields2):
 
     print 'fkey: ' + fkey
-    rlabbools = np.ones(len(reglabs),np.bool)
+    rlabbools = np.ones(len(reglabs2),np.bool)
     rlabbools[fii]=0
                 
     ax=plt.subplot(gs2[0,fii])
@@ -1305,7 +1365,7 @@ for fii,fkey in enumerate(fields):
     for eii,ens in enumerate(enss):
         print '  ens: ' + ens
         xii=0
-        for rii,reg in enumerate(regions):
+        for rii,reg in enumerate(regions2):
             print '    reg: ' + reg
             if (fkey in reg) or (fkey=='ice' and reg==r1key) or (fkey=='z500' and reg==r3key):
                 print '    --SKIP'
@@ -1313,7 +1373,7 @@ for fii,fkey in enumerate(fields):
                 print '    --SKIP (AGCM_fixed ice)'
                 xii+=1
             else:
-                mult=multfacs[rii]
+                mult=multfacs2[rii]
                 xpos=xx[xii]+stagger
                 ax.plot(xpos,mult*allregmdf[ens][reg],marker=mkrs[eii],
                         color=clrs[eii],mec=clrs[eii],linestyle='none',markersize=10)
@@ -1329,7 +1389,7 @@ for fii,fkey in enumerate(fields):
                 
         stagger+=0.2
 
-    ax.set_ylabel('Change in ' + reglabs[fii] + ' (' + reglabunits[fii] + ')')
+    ax.set_ylabel('Change in ' + reglabs2[fii] + ' (' + reglabunits2[fii] + ')')
     ax.axhline(y=0,color='k',linestyle='--')
     if len(enss)==3:
         ax.set_xlim((stxx-0.7,xx[-1]+0.7))
@@ -1337,10 +1397,10 @@ for fii,fkey in enumerate(fields):
     elif len(enss)==2:
         ax.set_xlim((stxx-0.7,xx[-1]+0.5))
         ax.set_xticks(xx-0.1)
-    if fii==0:
-        ax.legend(lgs,lgstrs,loc='lower left',fancybox=True,frameon=False)#,prop=fontP)
+    if fii==1:
+        ax.legend(lgs,lgstrs,loc='upper left',fancybox=True,frameon=False)#,prop=fontP)
     
-    ax.set_xticklabels(np.array(reglabs)[rlabbools],rotation=25)
+    ax.set_xticklabels(np.array(reglabs2short)[rlabbools],rotation=25)
     ax.annotate(plabs[pii],xy=(-0.02,1.04),
                 xycoords='axes fraction',fontsize=16,fontweight='bold')
     pii+=1
@@ -1354,11 +1414,11 @@ if addsig:
 else:
     prstr=''
 if printtofile:
-    fig.savefig('Figure4_draft_6panel_CGCMmaps_compavgs' + prstr + 'swapv4.pdf')
-    fig.savefig('Figure4_draft_6panel_CGCMmaps_compavgs' + prstr + 'swapv4.png',dpi=400)
+    fig.savefig('Figure4_draft_6panel_CGCMmaps_compavgs' + prstr + 'swapv5.pdf')
+    fig.savefig('Figure4_draft_6panel_CGCMmaps_compavgs' + prstr + 'swapv5.png',dpi=400)
 
 
-
+printtofile=False
 
 
 
