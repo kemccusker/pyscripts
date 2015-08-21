@@ -311,7 +311,7 @@ def getNCvar(filename,field,timesel=None,levsel=None,monsel=None,seas=None,calc=
                 fld = cutl.seasonalize_monthlyts(fld,mo=seas)
             else:
                 #print 'seasonalizing'
-                fld = cutl.seasonalize_monthlyts(fld,seas)
+                fld = cutl.seasonalize_monthlyts(fld,season=seas)
                 #print fld.shape
 
 
