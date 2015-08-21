@@ -50,7 +50,60 @@ styearsE=[ 4.,  1.,  7.,  3.,  1.]; # mean SIC styears
 styearsN=[1.] # NSIDC sim
 # composite when for 2: '14:51:28.762886'
 # composite when for ss and ns: 17:01:16.908687
-styearPI = 0 # PI styear
+styearsPI = 2
+# PI anomyrs  when: '14:51:28.762886sic'. mean eursat=-0.0026
+anomyearsPI =[[74,  8],
+       [57,  5],
+       [50, 53],
+       [51, 42],
+       [ 7, 81],
+       [15,  9],
+       [61, 57],
+       [48, 21],
+       [49, 24],
+       [65, 24],
+       [33, 66],
+       [71, 36],
+       [29, 43],
+       [48, 68],
+       [18, 67],
+       [ 5, 21],
+       [17,  1],
+       [40, 16],
+       [79, 18],
+       [10, 82],
+       [ 0, 19],
+       [70, 36],
+       [82, 67],
+       [14,  7],
+       [57, 13],
+       [18, 34],
+       [59, 29],
+       [20,  6],
+       [12,  6],
+       [58, 68],
+       [82, 49],
+       [66,  2],
+       [ 0, 10],
+       [28, 59],
+       [63, 73],
+       [28, 83],
+       [51, 54],
+       [19,  2],
+       [26, 47],
+       [52, 66],
+       [27, 10],
+       [37, 48],
+       [38, 64],
+       [33, 36],
+       [42, 85],
+       [28, 24],
+       [79, 51],
+       [80, 10],
+       [44, 57],
+       [32, 41]]
+
+"""styearPI = 0 # PI styear
 # PI anomyrs  when: '14:51:28.762886'
 anomyearsPI = [[79, 26],
         [58, 17],
@@ -101,7 +154,7 @@ anomyearsPI = [[79, 26],
         [68, 26],
         [ 5, 67],
         [77, 13],
-        [74, 61]]
+        [74, 61]]"""
 
 
 
@@ -359,8 +412,10 @@ def sample120yravg(lesea,numsamp,nummems=11,allowreps=True):
 
 
 def plot_shorttermpdf(fig,ax,field,region,xxdat,pdfdat,histdat,meandat,cidat,
-                      cifdat,pointdat,addsims=False,addnat=True,addmisc=True,addpi=False,
+                      cifdat,pointdat,startyearsdat=None,addsims=False,addnat=True,addmisc=True,addpi=False,
                       combagcm=False,addanno=True,plab=None,pversion=''):
+    """ startyearsdat is an unnecessary input, but is in 'retdict' from calc_shorttermpdf()
+    """
 
     fsz=18
 
@@ -478,6 +533,16 @@ def plot_shorttermpdf(fig,ax,field,region,xxdat,pdfdat,histdat,meandat,cidat,
 
     # add RAW LE
     #print 'plotting LE histogram.............' + str(lesea) #@@
+    # @@@ NOTES about np.histogram:
+    # counts,bins=np.histogram(agcm2,density=True)
+    #  The counts only add up to one if bin width is 1.
+    #  So np.sum(counts*np.diff(bins)) = 1.0
+    #  If want better y-axis ticks for "density" (now not plotted at all)
+    #    can do counts*np.diff(bins) as y-ticklabels (I'm guessing) Aug 20 2015 @@
+
+    # ALSO if want better binedges (for AGCM eursat anyway) where no bins
+    # cross over zero (encompass zero): (this example assumes 10 bins)
+    # binedges=np.arange(-1*max(np.abs(agcm2)), max(np.abs(agcm2))+2*max(np.abs(agcm2))/10., 2*max(np.abs(agcm2))/10.)
 
     if pversion not in ('d',):
         ax.hist(lesea,normed=True,color=hcol,alpha=0.3,histtype='stepfilled') 
@@ -798,9 +863,12 @@ def calc_shorttermpdf(fdict,field,region,sea,timesel,leconv=1,subnh=False,combag
          returns retdict, simsstr
             retdict = {'xxdat': xxdat, 'pdfdat': pdfdat, 'meandat': meandat,
                        'cidat': cidat, 'cifdat': cifdat, 'histdat': histdat,
-                       'pointdat',pointdat}
+                       'pointdat':pointdat, 'startyearsdat': startyearsdat }
     
     """
+    #pinumsamp=100; print 'pinumsamp= 100!'
+    pinumsamp=50
+
     timeselc=timesel[0]; timeselp=timesel[1]
     ncfield=fdict['ncfield']
     comp=fdict['comp']
@@ -939,20 +1007,25 @@ def calc_shorttermpdf(fdict,field,region,sea,timesel,leconv=1,subnh=False,combag
         rawmcif = sp.stats.t.interval(1-cisiglevel, rawmdf, loc=rawmmean, scale=rawmsd)
 
     if addpi:
-        pidat = lcd.load_data(fdict,'piControl',local=local,conv=leconv,verb=verb)
+        pidat = lcd.load_data(fdict,'piControl',local=local,conv=leconv,detrend=False,verb=verb)
         piseadat = cutl.seasonalize_monthlyts(pidat,season=sea)
+        piseadat = cutl.detrend(piseadat,axis=0)
+
         # this data needs to be put into anomalies
         # for now, set years to none
         styear=styearPI; anomyears=anomyearsPI
+        #styear=None; anomyears=None #@@@@@
+        #print '@@@@@@@@@ new PI subsampling @@@@@@@@'
         # the data must be seasonalized before using this func.
-        pisea,styear,anomyears = subsamp_anom_pi(piseadat, numyrs=11,
+        pisea,styear,anomyears = subsamp_anom_pi(piseadat, numyrs=11,numsamp=pinumsamp,
                                                  styear=styear,anomyears=anomyears)
 
         if subnh:
             fdictsub = {'field': field+'nh', 'ncfield': ncfield, 'comp': comp}
             pidatsub = lcd.load_data(fdictsub,'piControl',local=local,conv=leconv,verb=verb)
             piseadatsub = cutl.seasonalize_monthlyts(pidatsub,season=sea)
-            piseasub,styear,anomyears = subsamp_anom_pi(piseadatsub, numyrs=11,
+            piseadatsub = cutl.detrend(piseadatsub,axis=0)
+            piseasub,styear,anomyears = subsamp_anom_pi(piseadatsub, numyrs=11,numsamp=pinumsamp,
                                                         styear=styear,anomyears=anomyears)
             pisea = pisea - piseasub.mean(axis=0) # ??
 
@@ -962,6 +1035,8 @@ def calc_shorttermpdf(fdict,field,region,sea,timesel,leconv=1,subnh=False,combag
         pici = sp.stats.t.interval(1-cisiglevel, pidf, loc=pimean, scale=pistder)
         picif = sp.stats.t.interval(1-cisiglevel, pidf, loc=pimean, scale=pisd)
 
+        # save styear and anomyears for mat
+        styearpi = styear; anomyearspi = anomyears
 
     """if longtermLE:
         # second option: choose 4 random, non-overlapping groups of 11 members x 11-yrs
@@ -1211,32 +1286,35 @@ def calc_shorttermpdf(fdict,field,region,sea,timesel,leconv=1,subnh=False,combag
                     cutl.calc_regmean(nsidcfldc,latns,lonns,region=region).mean()
             obsreg = obsreg*100 # convert to %
 
-    xxdat={}; pdfdat={}; meandat={}; cidat={}; cifdat={}; histdat={}; pointdat={}
+    xxdat={}; pdfdat={}; meandat={}; cidat={}; cifdat={}; histdat={}; pointdat={}; startyearsdat={}
     # save data to call plot function
     if not combagcm:
         skey='AGCM2'
         histdat[skey]=plotsims2; xxdat[skey]=ss2xx; pdfdat[skey]=ss2pdf_fitted
         meandat[skey]=ss2mean; cidat[skey]=ss2ci; cifdat[skey]=ss2cif
+        startyearsdat[skey]=styears2
         skey='AGCM'
     else:
         skey='BOTHAGCM'
     histdat[skey]=plotsims; xxdat[skey]=ssxx; pdfdat[skey]=sspdf_fitted
-    meandat[skey]=ssmean; cidat[skey]=ssci; cifdat[skey]=sscif
+    meandat[skey]=ssmean; cidat[skey]=ssci; cifdat[skey]=sscif; startyearsdat[skey]=styearsss
+
     skey='histle'
     histdat[skey]=lesea; xxdat[skey]=rawxx; pdfdat[skey]=rawpdf_fitted
-    meandat[skey]=rawmean; cidat[skey]=rawci; cifdat[skey]=rawcif
+    meandat[skey]=rawmean; cidat[skey]=rawci; cifdat[skey]=rawcif; #startyearsdat[skey]=@@placeholder
     if addnat:
         skey='histnat'
         histdat[skey]=lensea; xxdat[skey]=rawnxx; pdfdat[skey]=rawnpdf_fitted
-        meandat[skey]=rawnmean; cidat[skey]=rawnci; cifdat[skey]=rawncif
+        meandat[skey]=rawnmean; cidat[skey]=rawnci; cifdat[skey]=rawncif; #startyearsdat[skey]=@@placeholder
     if addmisc:
         skey='histmisc'
         histdat[skey]=lemsea; xxdat[skey]=rawmxx; pdfdat[skey]=rawmpdf_fitted
-        meandat[skey]=rawmmean; cidat[skey]=rawmci; cifdat[skey]=rawmcif
+        meandat[skey]=rawmmean; cidat[skey]=rawmci; cifdat[skey]=rawmcif; #startyearsdat[skey]=@@placeholder
     if addpi:
         skey='pi'
         histdat[skey]=pisea; xxdat[skey]=pixx; pdfdat[skey]=pipdf_fitted
-        meandat[skey]=pimean; cidat[skey]=pici; cifdat[skey]=picif
+        meandat[skey]=pimean; cidat[skey]=pici; cifdat[skey]=picif; 
+        startyearsdat[skey]=styearpi; startyearsdat[skey+'anomyrs'] = anomyearspi
 
     pointdat['obs']=obsreg
     pointdat['orig']=or5sea
@@ -1244,7 +1322,7 @@ def calc_shorttermpdf(fdict,field,region,sea,timesel,leconv=1,subnh=False,combag
 
     retdict = {'xxdat': xxdat, 'pdfdat': pdfdat, 'meandat': meandat,
                'cidat': cidat, 'cifdat': cifdat, 'histdat': histdat,
-               'pointdat':pointdat}
+               'pointdat':pointdat, 'startyearsdat': startyearsdat}
 
     return retdict, simsstr
 
@@ -1280,7 +1358,8 @@ def main(dowhat=None,addobs=True,addsims=False,addnat=False,
         #addnat=True
         #addmisc=True
         savedat=False # save data to ascii for John
-
+        #pinumsamp=100; print 'pinumsamp= 100!!!' # @@
+        pinumsamp=50
         shorttermsims=True
         if field2=='tas':
             ymin=-2; ymax=3 # for Eurasia SAT v BKS Z500
@@ -1477,9 +1556,10 @@ def main(dowhat=None,addobs=True,addsims=False,addnat=False,
             ntime1pi = pidat1.shape
 
             piseadat1 = cutl.seasonalize_monthlyts(pidat1,season=sea1)
+            piseadat1 = cutl.detrend(piseadat1,axis=0)
             styear=styearPI; anomyears=anomyearsPI
             # the data must be seasonalized before using this func.
-            pisea1,styear1,anomyears1 = subsamp_anom_pi(piseadat1, numyrs=11,
+            pisea1,styear1,anomyears1 = subsamp_anom_pi(piseadat1, numyrs=11,numsamp=pinumsamp,
                                                         styear=styear,anomyears=anomyears)
 
             if verb:
@@ -1490,8 +1570,8 @@ def main(dowhat=None,addobs=True,addsims=False,addnat=False,
                 fdict1op = {'field': field1+region1op, 'ncfield': ncfield1, 'comp': comp1}
                 pisub1 = lcd.load_data(fdict1op,'piControl',conv=leconv1,local=local)
                 pisubsea1 = cutl.seasonalize_monthlyts(pisub1,season=sea1)
-
-                pisubsea1,styear1,anomyears1 = subsamp_anom_pi(pisubsea1, numyrs=11,
+                pisubsea1 = cutl.detrend(pisubsea1,axis=0)
+                pisubsea1,styear1,anomyears1 = subsamp_anom_pi(pisubsea1, numyrs=11,numsamp=pinumsamp,
                                                                styear=styear1,anomyears=anomyears1)
                 
 
@@ -1506,15 +1586,16 @@ def main(dowhat=None,addobs=True,addsims=False,addnat=False,
             ntime2pi = pidat2.shape
 
             piseadat2 = cutl.seasonalize_monthlyts(pidat2,season=sea1)
+            piseadat2 = cutl.detrend(piseadat2,axis=0)
             # the data must be seasonalized before using this func.
-            pisea2,styear1,anomyears1 = subsamp_anom_pi(piseadat2, numyrs=11,
+            pisea2,styear1,anomyears1 = subsamp_anom_pi(piseadat2, numyrs=11,numsamp=pinumsamp,
                                                         styear=styear1,anomyears=anomyears1)
             if performop2:
                 fdict2op = {'field': field2+region2op, 'ncfield': ncfield2, 'comp': comp2}
                 pisub2 = lcd.load_data(fdict2op,'piControl',conv=leconv2,local=local)
                 pisubsea2 = cutl.seasonalize_monthlyts(pisub2,season=sea2)
-
-                pisubsea2,styear1,anomyears1 = subsamp_anom_pi(pisubsea2, numyrs=11,
+                pisubsea2 = cutl.detrend(pisubsea2,axis=0)
+                pisubsea2,styear1,anomyears1 = subsamp_anom_pi(pisubsea2, numyrs=11,numsamp=pinumsamp,
                                                                styear=styear1,anomyears=anomyears1)
 
                 if op2=='sub': # subtract
@@ -2738,8 +2819,8 @@ def main(dowhat=None,addobs=True,addsims=False,addnat=False,
 
         else: # not longtermLE figs ===============================================
 
-            loadmat=True
-            savemat=False
+            loadmat=False
+            savemat=True
             vertical=False # vertical plot 
             #combagcm=True
             #comblenat=True
