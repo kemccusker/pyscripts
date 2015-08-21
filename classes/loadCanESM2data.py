@@ -2,6 +2,11 @@ import numpy as np
 import constants as con
 import cccmaNC as cnc
 import cccmautils as cutl
+import scipy as sp
+import scipy.signal 
+import matplotlib.pyplot as plt
+
+# from scipy import signal
 
 bp=con.get_LEbasepath()
 
@@ -66,9 +71,10 @@ def build_filenames(fielddict, casename, ftype=None,timesel=None,verb=True,local
 
 def load_data(fielddict, casename, seas=None, timesel=None,infodict=None,ftype='fullts',
               calctype=None, calcdict=None,conv=1, region=None,local=False,
-              orig=None,verb=True):
+              orig=None,verb=True, detrend=True):
     """ def load_data(fielddict, seas=('DJF','MAM','JJA','SON'), timesel=None, infodict=None, calctype=None, calcdict=None)
 
+            fielddict: should have {'field': field, 'ncfield': ncfield, 'comp': comp} at minimum
             ftype: type of filename to build. Right now just 'fullts' for full timeseries
               or '1950-2020_climo' or 'ensmean'
             seas has to be a tuple
@@ -76,8 +82,11 @@ def load_data(fielddict, casename, seas=None, timesel=None,infodict=None,ftype='
                       default is dict of DataFrames (to make a Panel). 
                       else, 'ndarray' is a 4D array
             local: is data in ~/work/DATA (local=True) or /raid/ra40
-                      
+            detrend: removes any spurious trend (drift) found in data, for e/ grid point 
+                     
+
             @@ add regional avg functionality?
+            @@ region, calctype, calcdict? not implemented
 
             returns an object of type rettype
     """
@@ -125,4 +134,9 @@ def load_data(fielddict, casename, seas=None, timesel=None,infodict=None,ftype='
             else:
                 fldret = np.vstack((fldret,fldseas))
         
+    if detrend and seas!=None: # @@@ eventually implement for monthly too
+        flddtr = sp.signal.detrend(fldret,axis=0,type='linear') + fldret.mean(axis=0)
+
+        fldret = flddtr
+
     return fldret
