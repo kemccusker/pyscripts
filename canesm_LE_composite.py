@@ -20,7 +20,7 @@ import string as string
 printtofile=False
 
 #dataloaded=True
-loadmat=True; 
+loadmat=False; 
 when='14:51:28.762886'; styearsR = [ 8.,  7.,  2.,  8.,  8.] # variable SIC styears
 styearsE=[ 4.,  1.,  7.,  3.,  1.]; styearsN=[1.] #when for these: 17:01:16.908687
 styearsPI = 2
@@ -137,7 +137,7 @@ saveascii=False
 savemat=False
 dofigures=False
 local=True
-addsig=False
+addsig=True
 compagcm=False # compare R sims and E sims
 
 cisiglevel=0.05
@@ -145,7 +145,6 @@ siglevel=0.05
 
 timeselc='1979-01-01,1989-12-31'
 timeselp='2002-01-01,2012-12-31'
-timeselall = '1979-01-01,2012-12-31'
 
 ftype='fullts' # 'fullclimo' or 'climo' or 'fullts'
 # this is not implemented here. but would do regressions in time on LE ensemble avg
@@ -153,6 +152,14 @@ ensmean=False
 
 seasp='DJF' # season of spatial field
 sear='DJF' # season of regional avgs
+#sear='SON'; print 'COMPOSITE ON SON!!! @@@@'
+
+if sear=='SON' and seasp=='DJF':
+    # make sure to be consistent with DJF following SON
+    # Choose the SON timeperiod to end one year early
+    timeselc='1979-01-01,1988-12-31'
+    timeselp='2002-01-01,2011-12-31'
+
 diffttl1=diffttl2=diffttl3='Low-High' # for comp on BKS SIC and Eur SAT (otherwise High-Low)
 diffmult1=diffmult2=diffmult3=1 # if High-Low then need to mult by -1
 
@@ -1313,7 +1320,6 @@ if printtofile:
     fig.savefig('Figure4_draft_6panel_CGCMmaps_compavgs' + prstr + 'swap2.png',dpi=400)
 
 
-printtofile=True
 print '---- plotting v4 of summary ----'
 xx=xx[:-1]
 fields2=('ice','z500','sat') # switch order of summary panels
@@ -1418,7 +1424,6 @@ if printtofile:
     fig.savefig('Figure4_draft_6panel_CGCMmaps_compavgs' + prstr + 'swapv5.png',dpi=400)
 
 
-printtofile=False
 
 
 
