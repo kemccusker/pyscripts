@@ -17,10 +17,10 @@ import scipy.io as sio
 import datetime as datetime
 import string as string
 
-printtofile=False
+printtofile=True
 
 #dataloaded=True
-loadmat=False; 
+loadmat=True; 
 when='14:51:28.762886'; styearsR = [ 8.,  7.,  2.,  8.,  8.] # variable SIC styears
 styearsE=[ 4.,  1.,  7.,  3.,  1.]; styearsN=[1.] #when for these: 17:01:16.908687
 styearsPI = 2
@@ -136,8 +136,8 @@ anomyearsPI = [[79, 26],
 saveascii=False
 savemat=False
 dofigures=False
-local=True
-addsig=True
+local=False
+addsig=False
 compagcm=False # compare R sims and E sims
 
 cisiglevel=0.05
@@ -773,7 +773,7 @@ else:
 
 # For each composite (r1, r2, r3), compute the BKS SIC average:
 allcasedt = {'Preindustrial':piallrdt, 'CGCM': leallrdt, 'AGCM':aallrdt}
-allcasedt = {'CGCM': leallrdt, 'AGCM': aallrdt, 'AGCM_fixed': aeallrdt}
+allcasedt = {'CGCM': leallrdt, 'AGCM_variable': aallrdt, 'AGCM_fixed': aeallrdt}
 
 #  Here calculate the BKS SIC associated with each composite
 allregimdt={};allregimlodt={};allregimhidt={}; allregitdt={}; allregimcidt={}; allregitcidt={}
@@ -969,7 +969,7 @@ xx=np.arange(stxx,(stxx+len(allregimdf.keys())-1)*1.2,1.2)
 
 multfacs=(1,1,-1) # multiply the comp on z500 by -1 to get high over bks
 enss=('CGCM','Preindustrial','AGCM')
-enss=('CGCM','AGCM','AGCM_fixed')
+enss=('CGCM','AGCM_variable','AGCM_fixed')
 mkrs=('s','o','^')
 clrs=('r','b','0.4')
 #clrs=('.4','.4','.4')
@@ -981,6 +981,7 @@ lgs=(mlines.Line2D([],[],color=clrs[0],linewidth=2),
      mlines.Line2D([],[],color=clrs[2],linewidth=2)) #,linestyle='none',marker=mkrs[0]),
      #mlines.Line2D([],[],color=clrs[1],linestyle='none',marker=mkrs[1]),
      #mlines.Line2D([],[],color=clrs[2],linestyle='none',marker=mkrs[2])) 
+
 #lgstrs=('BKS SIC','Eur SAT','BKS Z500')  
 lgstrs=(r2str,r1str,r3str)  # SWAP order
         
@@ -1328,6 +1329,14 @@ reglabs2short=(r1str,r3str,r2str) # SWAP for summary
 reglabunits2=('%','m','$^\circ$C') # SWAP for summary
 regions2=('bkssic','bksz500','eursat')
 multfacs2=(1,-1,1)
+clrs2=('0.4','blue','blue')
+linstyles=('-','-','--')
+
+lgs2=(mlines.Line2D([],[],color=clrs2[0],linestyle=linstyles[0],linewidth=2),
+     mlines.Line2D([],[],color=clrs2[1],linestyle=linstyles[1],linewidth=2),
+     mlines.Line2D([],[],color=clrs2[2],linestyle=linstyles[2],linewidth=2)) #,linestyle='none',marker=mkrs[0]),
+
+
 
 fig=plt.figure(figsize=(12,9))
 gs1 = gridspec.GridSpec(1, 3)
@@ -1382,11 +1391,11 @@ for fii,fkey in enumerate(fields2):
                 mult=multfacs2[rii]
                 xpos=xx[xii]+stagger
                 ax.plot(xpos,mult*allregmdf[ens][reg],marker=mkrs[eii],
-                        color=clrs[eii],mec=clrs[eii],linestyle='none',markersize=10)
+                        color=clrs2[eii],mec=clrs2[eii],linestyle='none',markersize=10)
                 ci=allregmcidf[ens][reg]
                 #print mult, (xpos,xpos), ci
                 ax.plot((xpos,xpos),mult*np.array(ci),marker='_',
-                        mew=2,markersize=10,linewidth=2,color=clrs[eii])
+                        mew=2,markersize=10,linestyle=linstyles[eii],linewidth=2,color=clrs2[eii])
                 if len(enss)==3:
                     ax.axvspan(xx[xii]-xincr-0.1,xx[xii]+xincr+0.1,color='0.8',alpha=0.5)
                 elif len(enss)==2:
@@ -1404,7 +1413,7 @@ for fii,fkey in enumerate(fields2):
         ax.set_xlim((stxx-0.7,xx[-1]+0.5))
         ax.set_xticks(xx-0.1)
     if fii==1:
-        ax.legend(lgs,lgstrs,loc='upper left',fancybox=True,frameon=False)#,prop=fontP)
+        ax.legend(lgs2,lgstrs,loc='upper left',fancybox=True,frameon=False)#,prop=fontP)
     
     ax.set_xticklabels(np.array(reglabs2short)[rlabbools],rotation=25)
     ax.annotate(plabs[pii],xy=(-0.02,1.04),
