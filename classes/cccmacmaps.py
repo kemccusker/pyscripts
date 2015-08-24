@@ -496,7 +496,8 @@ def get_linecolorwheel():
                   'warm5': np.array([255, 200, 1])/255.,
                   'turq': np.array([0, 153, 153])/255.,
                   'niceblue': np.array([0,102,204])/255.,
-                  'niceblue2': np.array([0,102,175])/255.}
+                  'niceblue2': np.array([0,102,175])/255.,
+                  'paperblue': np.array([0,56,226])/255.}
 
     return linecolors
 
