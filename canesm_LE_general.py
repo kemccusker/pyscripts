@@ -427,7 +427,7 @@ def plot_shorttermpdf(fig,ax,field,region,xxdat,pdfdat,histdat,meandat,cidat,
     #hcol=ccm.get_linecolor('niceblue')
     #hcolline=ccm.get_linecolor('niceblue')
     ltcol='0.5'#ccm.get_linecolor('darkseagreen4')
-    ltcol=ccm.get_linecolor('niceblue2') #'steelblue4')
+    ltcol=ccm.get_linecolor('paperblue') #'niceblue2') #'steelblue4')
     natcol=ccm.get_linecolor('steelblue3')
     natcolline=ccm.get_linecolor('steelblue3')#4')
     miscol=ccm.get_linecolor('orange3') #'deepskyblue')
@@ -830,9 +830,9 @@ def plot_shorttermpdf(fig,ax,field,region,xxdat,pdfdat,histdat,meandat,cidat,
     if field=='tas':
         legloc=(0.71,0.47)
         if pversion in ('c','d'): # no inset
-            legloc=(0.71,0.8)
+            legloc=(0.65,0.8) #0.71,0.8)
         if pversion not in ('c',):
-            legstr=legstr+('AGCM',)
+            legstr=legstr+('AGCM variable',)
             legh=legh+(sslg,)
         if pversion not in ('d',):
             legstr=legstr+('GIStemp',)
@@ -1333,7 +1333,7 @@ def calc_shorttermpdf(fdict,field,region,sea,timesel,leconv=1,subnh=False,combag
 # ==================== main() ====================================
 def main(dowhat=None,addobs=True,addsims=False,addnat=False,
          addmisc=False,addpi=False,verb=False,combagcm=False,
-         comblenat=False,pversion='',printtofile=False):
+         comblenat=False,pversion='',local=True,printtofile=False):
 
 
     """ dowhat options are: doscatter, dohist, doregress, dolongtermavg
@@ -2819,8 +2819,8 @@ def main(dowhat=None,addobs=True,addsims=False,addnat=False,
 
         else: # not longtermLE figs ===============================================
 
-            loadmat=False
-            savemat=True
+            loadmat=True
+            savemat=False
             vertical=False # vertical plot 
             #combagcm=True
             #comblenat=True
