@@ -21,7 +21,8 @@ def get_cccmacm():
 
 def list_cccmacms():
     # print the colormap name options
-    return ['kem_w20','blue2red_w20','blue2red_20', 'red2blue_w20', 'turq2orange_16',\
+    return ['kem_w20','blue2red_w20','blue2red_20', 'red2blue_w20', 'red2blue_20',\
+            'turq2orange_16',\
             'brown2blue_12', 'brown2blue_12g', 'brown2blue_12w',\
             'brown2blue_16w', 'brown2blue_16g', \
             'blue2blue_9', 'blue2blue_w10', 'blue2blue_bw10']
@@ -148,6 +149,12 @@ def register_cccmacms(cmap='all'):
     thecmap = col.ListedColormap(blue2red_20,'blue2red_20')
     cm.register_cmap(cmap=thecmap)
 
+    # ============================================
+    # red2blue_20 (the above, flipped)
+    #
+    red2blue_20 = np.flipud(cpool)/255.
+    thecmap = col.ListedColormap(red2blue_20,'red2blue_20')
+    cm.register_cmap(cmap=thecmap)
 
     # =============================================
     # turq2orange_16 (formerly named blue2orange_18)
