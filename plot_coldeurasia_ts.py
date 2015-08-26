@@ -16,7 +16,9 @@ write_siatimeseries=False # write the sea ice area timeseries to netcdf
 write_tempmap=False
 write_simsicmap=False
 write_nsidcsicmap=False
-write_simsatmap=True; casename='E4' # E4 cold, E1 warm
+write_simsatmap=False; casename='E4' # E4 cold, E1 warm
+write_simz500map=False
+
 
 printtofile=False
 plt.close('all')
@@ -164,6 +166,16 @@ if printtofile:
     fig.savefig(field + '_' + region + '-nh_' + sea + 'anom_' + str(styr) + '-2014_timeseries.pdf')
 
 
+
+plt.figure() # normalize by stddev
+plt.plot(gisnh/np.std(gisnh)); 
+plt.plot(gisreg/np.std(gisreg),'k')
+plt.plot( (gisreg-gisnh)/np.std(gisreg-gisnh),'r')
+plt.legend(('NH',region,region+'-NH'),loc='upper left')
+plt.title('SAT norm by stdev')
+
+
+
 fldsic = cnc.getNCvar(filesic,'SICN',timesel=timesel,seas=sicsea)
 fldsicreg = cutl.calc_regtotseaicearea(fldsic,latsic,lonsic,region=sicregion)#isarea=False
 nsidcreg = fldsicreg # to write to file
@@ -263,7 +275,7 @@ ttl = '1979-2014 ' + sea + ' trend: gm= ' + '$%.2f$'%(gmtr) + ' per ' + str(len(
 ptype='sq'
 fig,ax=plt.subplots(1,1)
 cplt.kemmap(slope*len(xx),lat,lon,title=ttl,axis=ax,cmin=-2,cmax=2,
-            cmap='blue2red_20',drawgrid=True,type=ptype)
+            cmap='blue2red_20',drawgrid=True,ptype=ptype)
 if printtofile:
     fig.savefig(field + 'trend_' + str(styr) + '-2014_' + sea + '_' + ptype + '.pdf')
 
@@ -346,7 +358,7 @@ ttl = '2000-14 ' + sea + ' trend: gm= ' + '$%.2f$'%(gmtr) + ' per ' + str(len(xx
 ptype='sq'
 fig,ax=plt.subplots(1,1)
 cplt.kemmap(slope*len(xx2),lat,lon,title=ttl,axis=ax,cmin=-3,cmax=3,
-            cmap='blue2red_20',drawgrid=True,type=ptype)
+            cmap='blue2red_20',drawgrid=True,ptype=ptype)
 if printtofile:
     fig.savefig(field + 'trend_2000-2014_' + sea + '_' + ptype + '.pdf')
 
@@ -360,13 +372,15 @@ mm, bb, rval, pval, std_err = sp.stats.linregress(xxs2,sic2rm)
 print sicregion + ' avg and ' + sicsea + ' avg trend (' + timesel2 + ') pval: ' + str(pval)
 
 
+
 ######## EPOCH differences
 cmin=-1; cmax=1 # -1,1 match simulated
 
 print '@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@'
 
-timesel1='1979-01-01,1989-12-31'
+timesel1='1979-01-01,1989-12-31' # @@ adding in another yr to get last DJF
 timesel2='2002-01-01,2012-12-31'
+print timesel1,timesel2
 fld1 = cnc.getNCvar(fname,'tempanomaly',timesel=timesel1, seas=sea)
 fld2 = cnc.getNCvar(fname,'tempanomaly',timesel=timesel2, seas=sea)
 tstatmap,pvalmap = cutl.ttest_ind(fld1,fld2)
@@ -374,11 +388,41 @@ tstatmap,pvalmap = cutl.ttest_ind(fld1,fld2)
 fld1regm= cutl.calc_regmean(fld1,lat,lon,region)
 fld2regm = cutl.calc_regmean(fld2,lat,lon,region)
 # SIGNIFICANCE b/w two means:
-tstat,pval = cutl.ttest_ind(fld1regm,fld2regm)
-print 'EPOCH diffs for ' + region + ' ' + sea + ' avg pval: ' + str(pval)
+tstat,pval = cutl.ttest_ind(fld2regm,fld1regm)
+print 'EPOCH diffs for ' + region + ' ' + sea + ' avg tstat,pval: '+ str(tstat) +',' + str(pval)
+print '  --- mean val: ' + str(fld2regm.mean(axis=0)-fld1regm.mean(axis=0))
+print ' (expect fld2 > fld1); can use 1-sided pval (pval/2) and tstat>0' # (see below)
+print ' tstat < 0 so fld2!>fld1, but pval is still only 0.3, so not signif'
+print ''
+fld1nhm= cutl.calc_regmean(fld1,lat,lon,'nh')
+fld2nhm = cutl.calc_regmean(fld2,lat,lon,'nh')
+tstat,pval = cutl.ttest_ind(fld2nhm,fld1nhm)
+print 'EPOCH diffs for nh ' + sea + ' avg tstat,pval: '+ str(tstat) +',' + str(pval)
+print '  --- mean val: ' + str(fld2nhm.mean(axis=0)-fld1nhm.mean(axis=0))
+print ' (expect fld2 > fld1); can use 1-sided pval (pval/2) and tstat>0' # (see below)
 
-fldregtm = fld1regm.mean(axis=0) - \
-         fld2regm.mean(axis=0)
+tstat,pval = cutl.ttest_ind(fld2regm-fld2nhm,fld1regm-fld1nhm)
+print 'EPOCH diffs for ' + region + ' ' + sea + '-NH: avg tstat,pval: ' + str(tstat) +',' +str(pval)
+print '  --- mean val: ' + str((fld2regm-fld2nhm).mean(axis=0)-(fld1regm-fld1nhm).mean(axis=0))
+
+"""
+http://stackoverflow.com/questions/15984221/how-to-perform-two-sample-one-tailed-t-test-with-numpy-scipy
+
+because the one-sided tests can be backed out from the two-sided tests. 
+(With symmetric distributions one-sided p-value is just half of the two-sided pvalue)...
+
+It goes on to say that scipy always gives the test statistic as signed. 
+This means that given p and t values from a two-tailed test, you would 
+reject the null hypothesis of a greater-than test when p/2 < alpha and t > 0, 
+and of a less-than test when p/2 < alpha and t < 0.
+
+"""
+
+fldregtm = fld2regm.mean(axis=0) - \
+         fld1regm.mean(axis=0)
+fldregnhtm = (fld2regm-fld2nhm).mean(axis=0) -\
+             (fld1regm-fld1nhm).mean(axis=0)
+
 plotfld = fld2.mean(axis=0) - fld1.mean(axis=0)
 gismap=plotfld # for write to file
 
@@ -390,11 +434,21 @@ gismap=plotfld # for write to file
 
 sic1=cnc.getNCvar(filesic,'SICN',timesel=timesel1,seas=sicsea)
 sic2=cnc.getNCvar(filesic,'SICN',timesel=timesel2,seas=sicsea)
+sia1regm = cutl.calc_regtotseaicearea(sic1,latsic,lonsic,region=sicregion)
+sia2regm = cutl.calc_regtotseaicearea(sic2,latsic,lonsic,region=sicregion)
+
 sic1regm= cutl.calc_regmean(sic1,latsic,lonsic,sicregion)
 sic2regm = cutl.calc_regmean(sic2,latsic,lonsic,sicregion)
 # SIGNIFICANCE b/w two means:
 tstat,pval = cutl.ttest_ind(sic1regm,sic2regm)
-print 'EPOCH diffs for ' + sicregion + ' ' + sicsea + ' avg pval: ' + str(pval)
+print 'EPOCH diffs for SIC ' + sicregion + ' ' + sicsea + ' avg tstat,pval: '+ str(tstat) +',' + str(pval)
+print '  --- mean val: ' + str(sic2regm.mean(axis=0)-sic1regm.mean(axis=0))
+
+# SIGNIFICANCE b/w two means:
+tstat,pval = cutl.ttest_ind(sia1regm,sia2regm)
+print 'EPOCH diffs for SIA ' + sicregion + ' ' + sicsea + ' avg tstat,pval: '+ str(tstat) +',' + str(pval)
+print '  --- mean val: ' + str(sia2regm.mean(axis=0)-sia1regm.mean(axis=0))
+
 
 
 cminsic=-.3; cmaxsic=.21
@@ -410,19 +464,25 @@ lons, lats = np.meshgrid(lonsic,latsic)
 # Observed temp anomaly with Observed (NSIDC) sic anomaly =====================
 ptype='eabkslamb' # 'eabksstere'
 fig,ax=plt.subplots(1,1)
-bm,pc=cplt.kemmap(plotfld,lat,lon,type=ptype,axis=ax,cmin=cmin,cmax=cmax,cmap='blue2red_20')
+bm,pc=cplt.kemmap(plotfld,lat,lon,ptype=ptype,axis=ax,cmin=cmin,cmax=cmax,cmap='blue2red_20')
 bm.contour(lons,lats,plotsic,levels=contssic,
            colors='w',linewidths=2,latlon=True,linestyles='-')
 cplt.addtsigm(bm,pvalmap,lat,lon,siglevel=0.1)
 if printtofile:
     fig.savefig(field + '_' + sea+ 'anomsig_sicncont_' + sicsea + '_' + ptype + '_giss1979-89_2002-12.pdf')
 
+fig,ax=plt.subplots(1,1)
+bm,pc=cplt.kemmap(plotfld,lat,lon,ptype='sq',axis=ax,cmin=cmin,cmax=cmax,cmap='blue2red_20')
+bm.contour(lons,lats,plotsic,levels=contssic,
+           colors='w',linewidths=2,latlon=True,linestyles='-')
+cplt.addtsigm(bm,pvalmap,lat,lon,siglevel=0.1)
+
 
 # Do both climo SIE contours instead === this one 
 #   is no good as contours are on top of e/o in DJF
 contssic=[0.15, 0.15]
 fig,ax=plt.subplots(1,1)
-bm,pc=cplt.kemmap(plotfld,lat,lon,type=ptype,axis=ax,cmin=cmin,cmax=cmax,cmap='blue2red_20')
+bm,pc=cplt.kemmap(plotfld,lat,lon,ptype=ptype,axis=ax,cmin=cmin,cmax=cmax,cmap='blue2red_20')
 bm.contour(lons,lats,sic1.mean(axis=0),levels=contssic,
            colors='w',linewidths=2,latlon=True,linestyles='-')
 bm.contour(lons,lats,sic2.mean(axis=0),levels=contssic,
@@ -438,25 +498,25 @@ fig,axs=plt.subplots(2,1)
 fig.set_size_inches((4,8.5))
 fig.subplots_adjust(hspace=.02,wspace=.02)
 ax=axs[0]
-bm,pc=cplt.kemmap(plotfld,lat,lon,type=ptype,axis=ax,cmin=cmin,cmax=cmax,cmap='blue2red_20')
+bm,pc=cplt.kemmap(plotfld,lat,lon,ptype=ptype,axis=ax,cmin=cmin,cmax=cmax,cmap='blue2red_20')
 bm.contour(lons,lats,plotsic,levels=contssic,
            colors='w',linewidths=2,latlon=True,linestyles='-')
 
 ax=axs[1]
-bm,pc=cplt.kemmap(plotregsim,latsim,lonsim,type=ptype,axis=ax,cmin=cmin,cmax=cmax,cmap='blue2red_20')
+bm,pc=cplt.kemmap(plotregsim,latsim,lonsim,ptype=ptype,axis=ax,cmin=cmin,cmax=cmax,cmap='blue2red_20')
 bm.contour(lons,lats,plotsic,levels=contssic,
            colors='w',linewidths=2,latlon=True,linestyles='-')
 if printtofile:
     fig.savefig(field + '_' + sea + 'anom_sicncont_' + sicsea + '_' + ptype + '_gissnsidcsim1979-89_2002-12.pdf')
 
 
-printtofile=True
+printtofile=False
 # # this one is 1 row
 fig,axs=plt.subplots(1,2)
 fig.set_size_inches((8,4))
 fig.subplots_adjust(hspace=.02,wspace=.02)
 ax=axs[0]
-bm,pc=cplt.kemmap(plotfld,lat,lon,type=ptype,axis=ax,cmin=cmin,cmax=cmax,
+bm,pc=cplt.kemmap(plotfld,lat,lon,ptype=ptype,axis=ax,cmin=cmin,cmax=cmax,
                   cmap='blue2red_20',lcol='0.3',suppcb=True)
 bm.contour(lons,lats,plotsic,levels=contssic,
            colors='w',linewidths=2,latlon=True,linestyles='-')
@@ -465,7 +525,7 @@ cplt.addtsigm(bm,pvalmap,lat,lon,siglevel=0.1)
 ax.set_title('a. Observed SAT change')
 
 ax=axs[1]
-bm,pc=cplt.kemmap(plotregsim,latsim,lonsim,type=ptype,axis=ax,cmin=cmin,cmax=cmax,
+bm,pc=cplt.kemmap(plotregsim,latsim,lonsim,ptype=ptype,axis=ax,cmin=cmin,cmax=cmax,
                   cmap='blue2red_20',lcol='0.3',suppcb=True)
 bm.contour(lons,lats,plotsic,levels=contssic,
            colors='w',linewidths=2,latlon=True,linestyles='-')
@@ -495,12 +555,12 @@ fig,axs=plt.subplots(1,2)
 fig.set_size_inches((8,4))
 fig.subplots_adjust(hspace=.02,wspace=.02)
 ax=axs[0]
-bm,pc=cplt.kemmap(plotfld,lat,lon,type=ptype,axis=ax,cmin=cmin,cmax=cmax,
+bm,pc=cplt.kemmap(plotfld,lat,lon,ptype=ptype,axis=ax,cmin=cmin,cmax=cmax,
                   cmap='blue2red_20',lcol='0.3',suppcb=True)
 ax.set_title('a. Observed SAT change')
 
 ax=axs[1]
-bm,pc=cplt.kemmap(plotregsim,latsim,lonsim,type=ptype,axis=ax,cmin=cmin,cmax=cmax,
+bm,pc=cplt.kemmap(plotregsim,latsim,lonsim,ptype=ptype,axis=ax,cmin=cmin,cmax=cmax,
                   cmap='blue2red_20',lcol='0.3',suppcb=True)
 ax.set_title('b. Simulated SAT change')
 cbar_ax = fig.add_axes([.25,0.07, 0.5, .04])
@@ -696,7 +756,7 @@ if write_simsicmap:
 
     # test
     plt.figure()
-    cplt.kemmap(pt-ctl,lat,lon,type='nh',cmap='red2blue_w20',cmin=-.2,cmax=.2)
+    cplt.kemmap(pt-ctl,lat,lon,ptype='nh',cmap='red2blue_w20',cmin=-.2,cmax=.2)
 
 
     from netCDF4 import Dataset
@@ -759,7 +819,7 @@ if write_nsidcsicmap:
 
     # test
     plt.figure()
-    cplt.kemmap(pt-ctl,lat,lon,type='nh',cmap='red2blue_w20',cmin=-.2,cmax=.2)
+    cplt.kemmap(pt-ctl,lat,lon,ptype='nh',cmap='red2blue_w20',cmin=-.2,cmax=.2)
 
 
     from netCDF4 import Dataset
@@ -823,7 +883,7 @@ if write_simsatmap:
 
     # test
     plt.figure()
-    cplt.kemmap(pt-ctl,lat,lon,type='eabksstere',cmap='blue2red_20',cmin=-1,cmax=1)
+    cplt.kemmap(pt-ctl,lat,lon,ptype='eabksstere',cmap='blue2red_20',cmin=-1,cmax=1)
 
 
     from netCDF4 import Dataset
@@ -885,7 +945,7 @@ if write_simz500map:
 
     # test
     plt.figure()
-    cplt.kemmap(pt-ctl,lat,lon,type='eabksstere',cmap='blue2red_20',cmin=-10,cmax=10)
+    cplt.kemmap(pt-ctl,lat,lon,ptype='eabksstere',cmap='blue2red_20',cmin=-10,cmax=10)
 
 
     from netCDF4 import Dataset
