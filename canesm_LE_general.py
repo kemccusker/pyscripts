@@ -158,13 +158,14 @@ anomyearsPI = [[79, 26],
 
 
 
-performop1 = False
+performop1 = True
 #op1='div'; region1op='gm' # polar amp: gt60n / gm
 #op1='sub'; region1op='deeptrop' # pole-eq temp gradient: gt60n - deeptrop (or trop)
-#op1='sub'; region1op='less' # bks sea ice minus less (laptev/east siberian)
-op1='sub'; region1op='eurasiamori'
-performop2 = False
-op2='sub'; region2op='nh'
+op1='sub'; region1op='less' # bks sea ice minus less (laptev/east siberian)
+#op1='sub'; region1op='eurasiamori'
+performop2 = True
+#op2='sub'; region2op='nh'
+op2='sub'; region2op='eurasiamori' # sub z500
 
 timeselc='1979-01-01,1989-12-31'
 timeselp='2002-01-01,2012-12-31'
@@ -172,27 +173,34 @@ timeselall = '1979-01-01,2012-12-31'
 
 # x field
 #field1='turb'; ncfield1='turb'; comp1='Amon'; region1='bksmori'
-field1='zg50000.00'; ncfield1='zg'; comp1='Amon'; region1='bksmori'
+#field1='zg50000.00'; ncfield1='zg'; comp1='Amon'; region1='bksmori'
 #field1='sia'; ncfield1='sianh'; comp1='OImon'; region1='nh'
-#field1='sic'; ncfield1='sic'; comp1='OImon'; region1='bksmori' # @@ a hack. prefer SIA
+field1='sic'; ncfield1='sic'; comp1='OImon'; region1='bksmori' # @@ a hack. prefer SIA
 #field1='tas'; ncfield1='tas'; comp1='Amon'; region1='eurasiamori' #region1='bksmori'
 leconv1= 1 
 sea1='DJF'
 
 # y field
-field2='tas'; ncfield2='tas'; comp2='Amon'; region2='eurasiamori' #'eurasiathicke'; #@@@region2='eurasiamori'
-#field2='zg50000.00'; ncfield2='zg'; comp2='Amon'; region2='bksmori'
+#field2='tas'; ncfield2='tas'; comp2='Amon'; region2='eurasiamori' #'eurasiathicke'; #@@@region2='eurasiamori'
+field2='zg50000.00'; ncfield2='zg'; comp2='Amon'; region2='bksmori'
 #field2='turb'; ncfield2='turb'; comp2='Amon'; region2='bksmori'
 leconv2=1
 sea2='DJF'
 
-fieldcnd = 'sic'; ncfieldcnd='sic'; compcnd='OImon'; regioncnd='bksmori'
+#fieldcnd = 'sic'; ncfieldcnd='sic'; compcnd='OImon'; regioncnd='bksmori'
+#leconvcnd=1
+#seacnd=sea1
+#cmincnd=-12; cmaxcnd=3 # for 5 color colorbar
+#cmapcnd='blue2red_20'
+
+fieldcnd = 'tas'; ncfieldcnd='tas'; compcnd='Amon'; regioncnd='eurasiamori'
 leconvcnd=1
 seacnd=sea1
-cmincnd=-12; cmaxcnd=3 # for 5 color colorbar
+cmincnd=-2; cmaxcnd=3 # for 5 color colorbar 
+cmapcnd='blue2red_20'
 
 cisiglevel=0.05
-siglevel=0.1
+siglevel=0.05
 simsR=('R1','R2','R3','R4','R5')
 simsE=('E1','E2','E3','E4','E5')
 
@@ -221,6 +229,8 @@ elif field2=='turb': simfield2='turb'; simncfield2='turb'; # the sim var names a
 else: print 'cannot addsims for ' + field2; addsims=False
 
 if fieldcnd=='sic': simfieldcnd='sicn'; simncfieldcnd='SICN'; simconvcnd=100
+elif fieldcnd=='tas': simfieldcnd='st'; simncfieldcnd='ST'; simconvcnd=1
+else: print 'cannot addsims for conditional: ' + fieldcnd; addsims=False
 
 
 ftype='fullts' # 'fullclimo' or 'climo' or 'fullts'
@@ -1370,9 +1380,11 @@ def main(dowhat=None,addobs=True,addsims=False,addnat=False,
 
         # historical
         casename='historical'
-        lecdat1 = le.load_LEdata(fdict1,casename,timesel=timeselc, rettype='ndarray',conv=leconv1,ftype=ftype,local=local)
+        lecdat1 = le.load_LEdata(fdict1,casename,timesel=timeselc, 
+                                 rettype='ndarray',conv=leconv1,ftype=ftype,local=local)
         (numens1,ntime1) = lecdat1.shape
-        lepdat1=le.load_LEdata(fdict1,casename,timesel=timeselp, rettype='ndarray',conv=leconv1,ftype=ftype,local=local)
+        lepdat1=le.load_LEdata(fdict1,casename,timesel=timeselp, 
+                               rettype='ndarray',conv=leconv1,ftype=ftype,local=local)
         lecsea1 = cutl.seasonalize_monthlyts(lecdat1.T,season=sea1).T
         lepsea1 = cutl.seasonalize_monthlyts(lepdat1.T,season=sea1).T
         lesea1 = lepsea1 - lecsea1
@@ -1381,9 +1393,12 @@ def main(dowhat=None,addobs=True,addsims=False,addnat=False,
             try:
                 fdict1op = {'field': field1+region1op, 'ncfield': ncfield1, 'comp': comp1}
                 # should rename these variables to be 'op' so it's more general
-                subc1 = le.load_LEdata(fdict1op,casename,timesel=timeselc, rettype='ndarray',conv=leconv1,ftype=ftype,local=local)
-                subp1 = le.load_LEdata(fdict1op,casename,timesel=timeselp, rettype='ndarray',conv=leconv1,ftype=ftype,local=local)
-                sub1 = cutl.seasonalize_monthlyts(subp1.T,season=sea1).T - cutl.seasonalize_monthlyts(subc1.T,season=sea1).T
+                subc1 = le.load_LEdata(fdict1op,casename,timesel=timeselc, 
+                                       rettype='ndarray',conv=leconv1,ftype=ftype,local=local)
+                subp1 = le.load_LEdata(fdict1op,casename,timesel=timeselp, 
+                                       rettype='ndarray',conv=leconv1,ftype=ftype,local=local)
+                sub1 = cutl.seasonalize_monthlyts(subp1.T,season=sea1).T - \
+                       cutl.seasonalize_monthlyts(subc1.T,season=sea1).T
 
                 if op1=='sub': # subtract
                     lefld1 = lesea1.mean(axis=1) - sub1.mean(axis=1)
@@ -1398,18 +1413,23 @@ def main(dowhat=None,addobs=True,addsims=False,addnat=False,
         else:
             lefld1=lepsea1.mean(axis=1)-lecsea1.mean(axis=1)
 
-        lecdat2 = le.load_LEdata(fdict2,casename,timesel=timeselc, rettype='ndarray',conv=leconv2,ftype=ftype,local=local)
+        lecdat2 = le.load_LEdata(fdict2,casename,timesel=timeselc, 
+                                 rettype='ndarray',conv=leconv2,ftype=ftype,local=local)
         (numens2,ntime2) = lecdat2.shape
-        lepdat2=le.load_LEdata(fdict2,casename,timesel=timeselp, rettype='ndarray',conv=leconv2,ftype=ftype,local=local)
+        lepdat2=le.load_LEdata(fdict2,casename,timesel=timeselp, 
+                               rettype='ndarray',conv=leconv2,ftype=ftype,local=local)
         lecsea2 = cutl.seasonalize_monthlyts(lecdat2.T,season=sea2).T
         lepsea2 = cutl.seasonalize_monthlyts(lepdat2.T,season=sea2).T
         lesea2 = lepsea2 - lecsea2
         if performop2:
             if op2=='sub': # subtract
                 fdict2sub = {'field': field2+region2op, 'ncfield': ncfield2, 'comp': comp2}
-                subc2 = le.load_LEdata(fdict2sub,casename,timesel=timeselc, rettype='ndarray',conv=leconv2,ftype=ftype,local=local)
-                subp2 = le.load_LEdata(fdict2sub,casename,timesel=timeselp, rettype='ndarray',conv=leconv2,ftype=ftype,local=local)
-                sub2 = cutl.seasonalize_monthlyts(subp2.T,season=sea2).T - cutl.seasonalize_monthlyts(subc2.T,season=sea2).T
+                subc2 = le.load_LEdata(fdict2sub,casename,timesel=timeselc, 
+                                       rettype='ndarray',conv=leconv2,ftype=ftype,local=local)
+                subp2 = le.load_LEdata(fdict2sub,casename,timesel=timeselp, 
+                                       rettype='ndarray',conv=leconv2,ftype=ftype,local=local)
+                sub2 = cutl.seasonalize_monthlyts(subp2.T,season=sea2).T -\
+                       cutl.seasonalize_monthlyts(subc2.T,season=sea2).T
                 lefld2 = lesea2.mean(axis=1) - sub2.mean(axis=1)
         else:
             lefld2=lepsea2.mean(axis=1)-lecsea2.mean(axis=1)
@@ -1697,6 +1717,7 @@ def main(dowhat=None,addobs=True,addsims=False,addnat=False,
         if addsims:
             # 120-yr averages
             sims=('E1','E2','E3','E4','E5','R1','R2','R3','R4','R5')
+            #sims=('R1','R2','R3','R4','R5')
             # why did this work before? had to change to Series (jun 11 2015)
             flddf1 = pd.Series(lmd.loaddata((simfield1,),sims,ncfields=(simncfield1,), timefreq=sea1, 
                                                meantype='time',region=region1))*simconv1
@@ -1897,10 +1918,18 @@ def main(dowhat=None,addobs=True,addsims=False,addnat=False,
             #scaled_cnd = (lefldcnd - lefldcnd.min()) / lefldcnd.ptp()
             #cndcolors = plt.cm.afmhot(scaled_cnd,alpha=0.7) #edgecolors=cndcolors
 
-            b2r20cm = plt.cm.get_cmap('blue2red_20')
+            if fieldcnd=='sic':
+                b2r20cm = plt.cm.get_cmap(cmapcnd) #'blue2red_20')
+                testclrs = np.flipud(b2r20cm.colors[[6,11,14,-3,-1],:]) 
+                clabcnd='$\Delta$ BKS SIC (%)'
+            elif fieldcnd=='tas':
+                b2r20cm = plt.cm.get_cmap(cmapcnd)
+                testclrs = b2r20cm.colors[[3,6,11,14,-3],:]
+                clabcnd='$\Delta$ Eur SAT ($^\circ$C)'
+
             #testcm = plt.cm.autumn.from_list('testcm',plt.cm.autumn(scaled_cnd,alpha=0.7),N=4)
             #testclrs = np.flipud(b2r20cm.colors[[7,11,14,-1],:]) # 4 color clims -9 to 3
-            testclrs = np.flipud(b2r20cm.colors[[6,11,14,-3,-1],:]) 
+            ### testclrs = np.flipud(b2r20cm.colors[[6,11,14,-3,-1],:]) 
             #testclrs = np.flipud(b2r20cm.colors[[6,11,11,-3,-1],:]) 
             #testclrs = np.flipud(b2r20cm.colors[[6,11,13,13,-1],:]) # 5 color clims -12 to 3
             #testcm = b2r20cm.from_list('testcm',testclrs,N=4)
@@ -1916,7 +1945,7 @@ def main(dowhat=None,addobs=True,addsims=False,addnat=False,
 
             cbar_ax = fig.add_axes([.91,.25, .02,.5]) 
             cb=fig.colorbar(ledat,cax=cbar_ax)#,orientation='horizontal')
-            cb.set_label('$\Delta$ BKS SIC (%)')
+            cb.set_label(clabcnd)
             lcolor='brown'
             leghnds=(ledatlg,)
         else:
