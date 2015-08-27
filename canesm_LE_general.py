@@ -158,14 +158,15 @@ anomyearsPI = [[79, 26],
 
 
 
-performop1 = True
+performop1 = False
 #op1='div'; region1op='gm' # polar amp: gt60n / gm
 #op1='sub'; region1op='deeptrop' # pole-eq temp gradient: gt60n - deeptrop (or trop)
-op1='sub'; region1op='less' # bks sea ice minus less (laptev/east siberian)
+#op1='sub'; region1op='less' # bks sea ice minus less (laptev/east siberian)
 #op1='sub'; region1op='eurasiamori'
 performop2 = True
+op2='div'; region2op='gm' # polar amp: gt60n / gm
 #op2='sub'; region2op='nh'
-op2='sub'; region2op='eurasiamori' # sub z500
+#op2='sub'; region2op='eurasiamori' # sub z500
 
 timeselc='1979-01-01,1989-12-31'
 timeselp='2002-01-01,2012-12-31'
@@ -175,14 +176,14 @@ timeselall = '1979-01-01,2012-12-31'
 #field1='turb'; ncfield1='turb'; comp1='Amon'; region1='bksmori'
 #field1='zg50000.00'; ncfield1='zg'; comp1='Amon'; region1='bksmori'
 #field1='sia'; ncfield1='sianh'; comp1='OImon'; region1='nh'
-field1='sic'; ncfield1='sic'; comp1='OImon'; region1='bksmori' # @@ a hack. prefer SIA
+field1='sic'; ncfield1='sic'; comp1='OImon'; region1='gt60n' #region1='bksmori' # @@ a hack. prefer SIA
 #field1='tas'; ncfield1='tas'; comp1='Amon'; region1='eurasiamori' #region1='bksmori'
 leconv1= 1 
 sea1='DJF'
 
 # y field
-#field2='tas'; ncfield2='tas'; comp2='Amon'; region2='eurasiamori' #'eurasiathicke'; #@@@region2='eurasiamori'
-field2='zg50000.00'; ncfield2='zg'; comp2='Amon'; region2='bksmori'
+field2='tas'; ncfield2='tas'; comp2='Amon'; region2='gt60n' #region2='eurasiamori' #'eurasiathicke'; #@@@region2='eurasiamori'
+#field2='zg50000.00'; ncfield2='zg'; comp2='Amon'; region2='bksmori'
 #field2='turb'; ncfield2='turb'; comp2='Amon'; region2='bksmori'
 leconv2=1
 sea2='DJF'
@@ -193,10 +194,13 @@ sea2='DJF'
 #cmincnd=-12; cmaxcnd=3 # for 5 color colorbar
 #cmapcnd='blue2red_20'
 
-fieldcnd = 'tas'; ncfieldcnd='tas'; compcnd='Amon'; regioncnd='eurasiamori'
+fieldcnd = 'tas'; ncfieldcnd='tas'; compcnd='Amon'; regioncnd='gm' #regioncnd='eurasiamori'
 leconvcnd=1
 seacnd=sea1
-cmincnd=-2; cmaxcnd=3 # for 5 color colorbar 
+if regioncnd=='eurasiamori':
+    cmincnd=-2; cmaxcnd=3 # for 5 color colorbar 
+elif regioncnd=='gm':
+    cmincnd=0.5; cmaxcnd=1
 cmapcnd='blue2red_20'
 
 cisiglevel=0.05
@@ -1372,7 +1376,10 @@ def main(dowhat=None,addobs=True,addsims=False,addnat=False,
         pinumsamp=50
         shorttermsims=True
         if field2=='tas':
-            ymin=-2; ymax=3 # for Eurasia SAT v BKS Z500
+            if region2=='eurasiamori':
+                ymin=-2; ymax=3 # for Eurasia SAT v BKS Z500
+            elif performop2 and region2op=='gm':
+                ymin=1; ymax=5
         elif field2=='turb':
             ymin=-15; ymax=25
         elif field2=='zg50000.00':
@@ -1400,6 +1407,7 @@ def main(dowhat=None,addobs=True,addsims=False,addnat=False,
                 sub1 = cutl.seasonalize_monthlyts(subp1.T,season=sea1).T - \
                        cutl.seasonalize_monthlyts(subc1.T,season=sea1).T
 
+                
                 if op1=='sub': # subtract
                     lefld1 = lesea1.mean(axis=1) - sub1.mean(axis=1)
                 elif op1=='div': # divide
@@ -1422,15 +1430,21 @@ def main(dowhat=None,addobs=True,addsims=False,addnat=False,
         lepsea2 = cutl.seasonalize_monthlyts(lepdat2.T,season=sea2).T
         lesea2 = lepsea2 - lecsea2
         if performop2:
+            
+            fdict2sub = {'field': field2+region2op, 'ncfield': ncfield2, 'comp': comp2}
+            subc2 = le.load_LEdata(fdict2sub,casename,timesel=timeselc, 
+                                   rettype='ndarray',conv=leconv2,ftype=ftype,local=local)
+            subp2 = le.load_LEdata(fdict2sub,casename,timesel=timeselp, 
+                                   rettype='ndarray',conv=leconv2,ftype=ftype,local=local)
+            sub2 = cutl.seasonalize_monthlyts(subp2.T,season=sea2).T -\
+                   cutl.seasonalize_monthlyts(subc2.T,season=sea2).T
+
+            print '######### gm tas: ' + str(sub2.mean(axis=1))
+
             if op2=='sub': # subtract
-                fdict2sub = {'field': field2+region2op, 'ncfield': ncfield2, 'comp': comp2}
-                subc2 = le.load_LEdata(fdict2sub,casename,timesel=timeselc, 
-                                       rettype='ndarray',conv=leconv2,ftype=ftype,local=local)
-                subp2 = le.load_LEdata(fdict2sub,casename,timesel=timeselp, 
-                                       rettype='ndarray',conv=leconv2,ftype=ftype,local=local)
-                sub2 = cutl.seasonalize_monthlyts(subp2.T,season=sea2).T -\
-                       cutl.seasonalize_monthlyts(subc2.T,season=sea2).T
                 lefld2 = lesea2.mean(axis=1) - sub2.mean(axis=1)
+            elif op2=='div': # divide
+                lefld2 = lesea2.mean(axis=1) / sub2.mean(axis=1)
         else:
             lefld2=lepsea2.mean(axis=1)-lecsea2.mean(axis=1)
 
@@ -1483,15 +1497,20 @@ def main(dowhat=None,addobs=True,addsims=False,addnat=False,
             lepsea2n = cutl.seasonalize_monthlyts(lepdat2n.T,season=sea2).T
             lesea2n = lepsea2n - lecsea2n
             if performop2:
+                
+                fdict2sub = {'field': field2+region2op, 'ncfield': ncfield2, 'comp': comp2}
+                subc2n = le.load_LEdata(fdict2sub,casename2,timesel=timeselc, 
+                                        rettype='ndarray',conv=leconv2,ftype=ftype,local=local)
+                subp2n = le.load_LEdata(fdict2sub,casename2,timesel=timeselp, 
+                                        rettype='ndarray',conv=leconv2,ftype=ftype,local=local)
+                sub2n = cutl.seasonalize_monthlyts(subp2n.T,season=sea2).T -\
+                        cutl.seasonalize_monthlyts(subc2n.T,season=sea2).T
+
                 if op2=='sub': # subtract
-                    fdict2sub = {'field': field2+region2op, 'ncfield': ncfield2, 'comp': comp2}
-                    subc2n = le.load_LEdata(fdict2sub,casename2,timesel=timeselc, 
-                                            rettype='ndarray',conv=leconv2,ftype=ftype,local=local)
-                    subp2n = le.load_LEdata(fdict2sub,casename2,timesel=timeselp, 
-                                            rettype='ndarray',conv=leconv2,ftype=ftype,local=local)
-                    sub2n = cutl.seasonalize_monthlyts(subp2n.T,season=sea2).T -\
-                            cutl.seasonalize_monthlyts(subc2n.T,season=sea2).T
                     lefld2n = lesea2n.mean(axis=1) - sub2n.mean(axis=1)
+                elif op2=='div': # divide
+                    lefld2n = lesea2n.mean(axis=1) / sub2n.mean(axis=1)
+                    
             else:
                 lefld2n=lepsea2n.mean(axis=1)-lecsea2n.mean(axis=1)
 
@@ -1545,15 +1564,19 @@ def main(dowhat=None,addobs=True,addsims=False,addnat=False,
             lepsea2m = cutl.seasonalize_monthlyts(lepdat2m.T,season=sea2).T
             lesea2m = lepsea2m - lecsea2m
             if performop2:
+                
+                fdict2sub = {'field': field2+region2op, 'ncfield': ncfield2, 'comp': comp2}
+                subc2m = le.load_LEdata(fdict2sub,casename3,timesel=timeselc, 
+                                        rettype='ndarray',conv=leconv2,ftype=ftype,local=local)
+                subp2m = le.load_LEdata(fdict2sub,casename3,timesel=timeselp, 
+                                        rettype='ndarray',conv=leconv2,ftype=ftype,local=local)
+                sub2m = cutl.seasonalize_monthlyts(subp2m.T,season=sea2).T -\
+                        cutl.seasonalize_monthlyts(subc2m.T,season=sea2).T
+
                 if op2=='sub': # subtract
-                    fdict2sub = {'field': field2+region2op, 'ncfield': ncfield2, 'comp': comp2}
-                    subc2m = le.load_LEdata(fdict2sub,casename3,timesel=timeselc, 
-                                            rettype='ndarray',conv=leconv2,ftype=ftype,local=local)
-                    subp2m = le.load_LEdata(fdict2sub,casename3,timesel=timeselp, 
-                                            rettype='ndarray',conv=leconv2,ftype=ftype,local=local)
-                    sub2m = cutl.seasonalize_monthlyts(subp2m.T,season=sea2).T -\
-                            cutl.seasonalize_monthlyts(subc2m.T,season=sea2).T
                     lefld2m = lesea2m.mean(axis=1) - sub2m.mean(axis=1)
+                elif op2=='div': # divide
+                    lefld2m = lesea2m.mean(axis=1) / sub2m.mean(axis=1)
             else:
                 lefld2m=lepsea2m.mean(axis=1)-lecsea2m.mean(axis=1)
 
@@ -1620,7 +1643,7 @@ def main(dowhat=None,addobs=True,addsims=False,addnat=False,
 
                 if op2=='sub': # subtract
                     pifld2 = pisea2 - pisubsea2
-                elif op1=='div': # divide
+                elif op2=='div': # divide
                     pifld2 = pisea2 / pisubsea2
             else:
                 pifld2 = pisea2
@@ -1709,7 +1732,16 @@ def main(dowhat=None,addobs=True,addsims=False,addnat=False,
                     obsreg2=gissatp.mean()-gissatc.mean()
                 else:
                     obsreg2 =  cutl.calc_regmean(gissatp-gissatc.mean(axis=0),latgis,longis,region2)
-                    obsreg2=obsreg2.mean()
+                    if performop2:
+                        opfld2 = cutl.calc_regmean(gissatp-gissatc.mean(axis=0),latgis,longis,region2op)
+
+                        if op2=='sub': # subtract
+                            obsreg2 = obsreg2.mean() - opfld2.mean()
+                        elif op2=='div': # divide
+                            obsreg2 = obsreg2.mean() / opfld2.mean()
+                    else:
+                        obsreg2=obsreg2.mean()
+                    
             else:
                 print 'this field not supported with addobs @@: ' + field2; addobs=False
 
@@ -2035,7 +2067,7 @@ def main(dowhat=None,addobs=True,addsims=False,addnat=False,
         fontP.set_size('small')
         ax.legend(leghnds,legstrs,
                    loc='best',fancybox=True,framealpha=0.5,prop=fontP,frameon=False) 
-        if field2 in ('tas','turb','zg50000.00'):
+        if field2 in ('tas','turb','zg50000.00') and performop2==False:
             ax.set_ylim((ymin,ymax))
             
         """ax.annotate(casename + ' R= ' + '$%.2f$'%(lerval) + ', p='+ '$%.2f$'%(lepval),
