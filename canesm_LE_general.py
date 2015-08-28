@@ -30,16 +30,6 @@ import loadCanESM2data as lcd
 
 # exception handling works below. add to other clauses @@
 
-#printtofile=False
-#dohist=False
-#doregress=False
-#doscatter=False
-#dolongtermavg=True
-
-#addobs=True # to scatter plot
-#addnat=False
-#addsims=True # add the idealized simulations. only good for DJF polar amp vs eurasia SAT
-#addpi=True
 
 local=True
 
@@ -163,7 +153,7 @@ performop1 = False
 #op1='sub'; region1op='deeptrop' # pole-eq temp gradient: gt60n - deeptrop (or trop)
 #op1='sub'; region1op='less' # bks sea ice minus less (laptev/east siberian)
 #op1='sub'; region1op='eurasiamori'
-performop2 = True
+performop2 = False
 op2='div'; region2op='gm' # polar amp: gt60n / gm
 #op2='sub'; region2op='nh'
 #op2='sub'; region2op='eurasiamori' # sub z500
@@ -2880,7 +2870,7 @@ def main(dowhat=None,addobs=True,addsims=False,addnat=False,
 
         else: # not longtermLE figs ===============================================
 
-            loadmat=True
+            loadmat=False
             savemat=False
             vertical=False # vertical plot 
             #combagcm=True
@@ -2889,7 +2879,9 @@ def main(dowhat=None,addobs=True,addsims=False,addnat=False,
             simsstr=''
 
             #fielda='sia'; ncfielda='sianh'; compa='OImon'; regiona='nh';
-            fielda='sic'; ncfielda='sic'; compa='OImon'; regiona='bksmori';
+            #fielda='sic'; ncfielda='sic'; compa='OImon'; regiona='bksmori';
+            fielda='zg50000.00'; ncfielda='zg'; compa='Amon'; regiona='bksmori'
+
             fdicta = {'field': fielda+regiona, 'ncfield': ncfielda, 'comp': compa}
 
             if loadmat:
