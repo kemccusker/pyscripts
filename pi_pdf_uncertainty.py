@@ -10,23 +10,50 @@ import collections as coll
 import constants as con
 
 
-printtofile=False
+printtofile=True
 local=True
-nresamp=100 # number of times to resample PI (50-members each time)
+nresamp=1000 # number of times to resample PI (50-members each time)
+doscatter=True
 
-fieldr='tas'; ncfieldr='tas'; compr='Amon'; regionr='eurasiamori'; 
-rstr='Eur SAT'; rstrlong='Eurasian SAT'; runits='$^\circ$C'; rkey='eursat'
+fieldr='sic'; ncfieldr='sic'; compr='OImon'; 
+##regionr='nh'; rstr='NH SIC'; rstrlong='Northern Hem SIC'; runits='%'; rkey='nhsic'
+regionr='bksmori'; rstr='BKS SIC'; rstrlong='Barents/Kara SIC'; runits='%'; rkey='bkssic'
 convr=1
-aconvr=1 # for agcm sims
+aconvr=100 # for agcm sims
 ylev=0.3 # for mean dots
 
-fieldr='zg50000.00'; ncfieldr='zg'; compr='Amon'; 
-regionr='gt60n'; rstr='POL Z500'; rstrlong='Polar Z500'; runits='m'; rkey='gt60nz500'
-#regionr='bksmori'; rstr='BKS Z500'; rstrlong='Barents/Kara Z500'; runits='m'; rkey='bksz500'
-convr=1
-aconvr=1/con.get_g() # for agcm sims
-ylev=0.005 # for mean dots
+#fieldr='sia'; ncfieldr='sianh'; compr='OImon'; 
+#regionr='nh'; rstr='NH SIA'; rstrlong='Northern Hem SIA'; runits='m$^2$'; rkey='nhsia'
+#convr=1
+#aconvr=1 # for agcm sims
+#ylev=0.3 # for mean dots
 
+#fieldr='tas'; ncfieldr='tas'; compr='Amon'; regionr='eurasiamori'; 
+#rstr='Eur SAT'; rstrlong='Eurasian SAT'; runits='$^\circ$C'; rkey='eursat'
+#convr=1
+#aconvr=1 # for agcm sims
+#ylev=0.3 # for mean dots
+
+#fieldr='zg50000.00'; ncfieldr='zg'; compr='Amon'; 
+##regionr='gt60n'; rstr='POL Z500'; rstrlong='Polar Z500'; runits='m'; rkey='gt60nz500'
+#regionr='bksmori'; rstr='BKS Z500'; rstrlong='Barents/Kara Z500'; runits='m'; rkey='bksz500'
+#convr=1
+#aconvr=1/con.get_g() # for agcm sims
+#ylev=0.005 # for mean dots in pdf fig
+
+
+fieldr2='zg50000.00'; ncfieldr2='zg'; compr2='Amon'; 
+regionr2='bksmori'; rstr2='BKS Z500'; rstr2long='Barents/Kara Z500'; runits2='m'; rkey2='bksz500'
+convr2=1
+aconvr2=1/con.get_g() # for agcm sims
+ylev=0.005 # for mean dots in pdf fig
+
+
+#fieldr2='tas'; ncfieldr2='tas'; compr2='Amon'; 
+#regionr2='eurasiamori'; rstr2='Eur SAT'; rstr2long='Eurasian SAT'; runits2='$^\circ$C'; rkey2='eursat'
+#convr2=1
+#aconvr2=1 # for agcm sims
+sear2='DJF'
 
 sear='DJF'
 timeselc='1979-01-01,1989-12-31'
@@ -173,10 +200,11 @@ def test_significance(dat1, dat2, siglevel=0.05,verb=False):
 
 # ########### Processing #############
 fdictr = {'field': fieldr+regionr, 'ncfield': ncfieldr, 'comp': compr}
+fdictr2 = {'field': fieldr2+regionr2, 'ncfield': ncfieldr2, 'comp': compr2}
 
 piseardt={}; styeardt={}; anomyearsdt={}
 pipdfdt={}; pimeandt={}; pixxdt={}
-
+pisear2dt={}; slopedt={}; rvaldt={}; pvaldt={};sterrdt={}; yintdt={} 
 for ii in range(0,nresamp):
 
     pisear,styear,anomyears = load_pifield(fdictr,sear,conv=convr,
@@ -190,6 +218,20 @@ for ii in range(0,nresamp):
     pipdfdt[ii] = pipdf
     pimeandt[ii] = pimean
     pixxdt[ii] = pixx
+
+    # if scatter, do second field
+    if doscatter:
+        pisear2,styear,anomyears = load_pifield(fdictr2,sear2,conv=convr2,
+                                                styear=styear,anomyears=anomyears,
+                                                local=local,addcyc=False)
+        pisear2dt[ii] = pisear2
+        # scatter vals
+        smm, sbb, srval, spval, sstd_err = sp.stats.linregress(pisear,pisear2)
+        slopedt[ii] = smm
+        rvaldt[ii] = srval
+        pvaldt[ii] = spval
+        sterrdt[ii] = sstd_err
+        yintdt[ii] = sbb
 
 piseardf=pd.DataFrame(piseardt)
 pipdfdf=pd.DataFrame(pipdfdt)
@@ -217,6 +259,28 @@ lepsear = load_field(fdictr, 'historical', timeselp, sear,
 lesear = lepsear-lecsear
 lepdf, lemean, lexx = calc_pdf(lesear)
 
+if doscatter:
+    arsear2,styearsr = load_agcmfield(fieldr2,simsR,sear2,region=regionr2,
+                                     conv=aconvr2,styears=styearsR)
+
+    aesear2,styearse = load_agcmfield(fieldr2,simsE,sear2,region=regionr2,
+                                     conv=aconvr2,styears=styearsE)
+
+    lecsear2 = load_field(fdictr2, 'historical', timeselc, sear2,
+                         ftype='fullts', conv=convr2,local=local)
+    lepsear2 = load_field(fdictr2, 'historical', timeselp, sear2,
+                         ftype='fullts', conv=convr2,local=local)
+    lesear2 = lepsear2-lecsear2
+
+
+    arsmm, arsbb, arsrval, arspval, arsstd_err = sp.stats.linregress(arsear,arsear2)
+    aesmm, aesbb, aesrval, aespval, aesstd_err = sp.stats.linregress(aesear,aesear2)
+    lesmm, lesbb, lesrval, lespval, lesstd_err = sp.stats.linregress(lesear,lesear2)
+
+    pismm, pisbb, pisrval, pispval, pisstd_err = sp.stats.linregress(pisear,pisear2)
+
+print '====' 
+print '====' + fieldr + ' ' + regionr + ' ' + sear
 print '====R SIMS v E SIMS'
 test_significance(arsear, aesear, verb=True)
 print ''
@@ -251,7 +315,7 @@ legdt['Preindustrial mean of ' + str(nresamp*50)] =  mlines.Line2D([],[],
 legdt['AGCM_variable'] = mlines.Line2D([],[],color=acol,linewidth=2)
 legdt['AGCM_fixed'] = mlines.Line2D([],[],color=acol,linewidth=2,
                                     linestyle='--')
-legdt['CGCM']=mlines.Line2D([],[],color='0.7',linewidth=2)
+legdt['CGCM']=mlines.Line2D([],[],color=lecol,linewidth=2)
 
 
 fig,ax=plt.subplots(1,1)
@@ -268,8 +332,8 @@ ax.plot(armean, ylev, linestyle='none',marker='s', color=acol,alpha=0.5)
 ax.plot(aexx, aepdf, color=acol,linewidth=3,linestyle='--')
 ax.plot(aemean, ylev, linestyle='none',marker='o', color=acol,alpha=0.5)
 
-ax.plot(lexx, lepdf, color='0.7',linewidth=2)
-ax.plot(lemean, ylev, linestyle='none', marker='^', color='0.7')
+ax.plot(lexx, lepdf, color=lecol,linewidth=2)
+ax.plot(lemean, ylev, linestyle='none', marker='^', color=lecol)
 
 #ax.set_xlabel('Full PI sample mean: ' + str(pimeandf.mean()))
 ax.set_ylabel('Density')
@@ -279,9 +343,67 @@ ax.legend((legdt.values()), (legdt.keys()),loc='upper left',
           fancybox=True,framealpha=0.5,frameon=False)
 if printtofile:
     fig.savefig(fieldr + regionr + '_' + sear + '_' +\
-                'pi' + str(nresamp) + 'resamp_AGCMer_LE' +'.pdf')
+                'pi' + str(nresamp) + 'resamp_AGCMer_LE_PDF.pdf')
 
 
+
+if doscatter:
+
+
+    print '-=-=-=-= regression vals -=-=-=-='
+    print '-=-=-=-= ' + fieldr + ' ' + regionr + ' ' + sear +\
+        ' v ' + fieldr2 + ' ' + regionr2 + ' ' + sear2
+    print '        R SIMS slope,r,pval ' + str(arsmm),str(arsrval),str(arspval)
+    print '        E SIMS slope,r,pval ' + str(aesmm),str(aesrval),str(aespval)
+    print '        LE slope,r,pval ' + str(lesmm),str(lesrval),str(lespval)
+    print '        PI slope,r,pval ' + str(pismm),str(pisrval),str(pispval)
+   
+
+
+    pisear2df=pd.DataFrame(pisear2dt)
+    slopedf=pd.Series(slopedt)
+    yintdf=pd.Series(yintdt)
+
+    fig,ax=plt.subplots(1,1)
+    fig.set_size_inches(9,8)
+    ax.scatter(piseardf.values,pisear2df.values, marker='.', color=picol,alpha=0.5)
+
+    axylims = ax.get_ylim()
+    axxlims = ax.get_xlim()
+    onex=np.linspace(axxlims[0],axxlims[1])
+    
+    for ii in range(0,len(slopedf.values)):
+        ax.plot(onex,slopedf[ii]*onex + yintdf[ii], color='0.7',linewidth=1)
+
+    ax.plot(onex,pismm*onex + pisbb, color='k',linewidth=2,linestyle='--')
+    ax.plot(onex,slopedf.mean()*onex + yintdf.mean(), color='k',linewidth=2)
+    ax.plot(onex,arsmm*onex + arsbb, color=acol,linewidth=2)
+    ax.plot(onex,aesmm*onex + aesbb, color=acol,linewidth=2,linestyle='--')
+    ax.plot(onex,lesmm*onex + lesbb, color=lecol, linewidth=2)
+
+    ax.set_xlabel('Change in ' + rstrlong + ' (' + runits + ')')
+    ax.set_ylabel('Change in ' + rstr2long + ' (' + runits2 + ')')
+    ax.set_ylim(axylims); ax.set_xlim(axxlims)
+    ax.legend((legdt.values()), (legdt.keys()),loc='lower left',
+              fancybox=True,framealpha=0.5,frameon=False)
+    if printtofile:
+        fig.savefig(fieldr + regionr + '_' + sear + '_' + fieldr2+regionr2+'_' +sear2+\
+                    '_pi' + str(nresamp) + 'resamp_AGCMer_LE_SCATTER.pdf')
+
+
+    plt.figure()
+    slopeci=sp.stats.t.interval(1-0.05,len(slopedf.values)-1,
+                                loc=slopedf.mean(),scale=slopedf.std())
+    plt.axvspan(slopeci[0],slopeci[1],color='blue',alpha=0.1)
+    plt.hist(slopedf.values,color=picol,alpha=0.7)
+    plt.axvline(x=arsmm,color=acol,linewidth=2)
+    plt.axvline(x=aesmm,color=acol,linewidth=2,linestyle='--')
+    plt.axvline(x=lesmm,color=lecol,linewidth=2)
+    plt.xlabel('slopes: ' + rstr + ' v ' + rstr2)
+    if printtofile:
+        plt.savefig(fieldr + regionr + '_' + sear + '_' + fieldr2+regionr2+'_' +sear2+\
+                    '_pi' + str(nresamp) + 'resamp_SLOPEHIST.pdf')
+    
 
 # SAVE SOME OUTPUT
 """
@@ -433,5 +555,62 @@ LSTAT: 0.264296082404 PVAL: 0.607184159031
    The ensemble means are significantly different (0.95)
   LSTAT: 1.69412618173 PVAL: 0.193117335082
 
+
+
+
+
+****************************************************
+
+
+====sic bksmori DJF
+====R SIMS v E SIMS
+  Mean1: -4.13895896533, Mean2: -4.13896063321
+  TSTAT: 6.92120265097e-06 PVAL: 0.999994491749
+  LSTAT: 86.1572184431 PVAL: 4.37710753759e-15
+   The ensemble variances are significantly different (0.95)
+
+====R SIMS v PI avg subsamp
+  Mean1: -4.13895896533, Mean2: -0.0114985260866
+  TSTAT: -17.1139159282 PVAL: 3.35790952493e-31
+   The ensemble means are significantly different (0.95)
+  LSTAT: 79.3352918116 PVAL: 2.84306030468e-14
+   The ensemble variances are significantly different (0.95)
+====E SIMS v PI avg subsamp
+  Mean1: -4.13896063321, Mean2: -0.0114985260866
+  TSTAT: -425.713519836 PVAL: 6.46246744825e-162
+   The ensemble means are significantly different (0.95)
+  LSTAT: 89.5377488456 PVAL: 1.77770369851e-15
+   The ensemble variances are significantly different (0.95)
+====LE v PI avg subsamp
+  Mean1: -5.8410614811, Mean2: -0.0114985260866
+  TSTAT: -13.5356240796 PVAL: 3.65847108405e-24
+   The ensemble means are significantly different (0.95)
+  LSTAT: 86.5263352741 PVAL: 3.96371847757e-15
+   The ensemble variances are significantly different (0.95)
+
+====R SIMS v PI flatten (50*1000)
+  Mean1: -4.13895896533, Mean2: -0.0114985260866
+  TSTAT: -13.3277093499 PVAL: 1.87254388148e-40
+   The ensemble means are significantly different (0.95)
+  LSTAT: 4.05017086204 PVAL: 0.0441722207273
+   The ensemble variances are significantly different (0.95)
+====E SIMS v PI flatten (50*1000)
+  Mean1: -4.13896063321, Mean2: -0.0114985260866
+  TSTAT: -13.3316708812 PVAL: 1.77603935761e-40
+   The ensemble means are significantly different (0.95)
+  LSTAT: 88.4400990234 PVAL: 5.45308956409e-21
+   The ensemble variances are significantly different (0.95)
+====LE v PI flatten (50*1000)
+  Mean1: -5.8410614811, Mean2: -0.0114985260866
+  TSTAT: -18.8116225283 PVAL: 1.13442203656e-78
+   The ensemble means are significantly different (0.95)
+  LSTAT: 14.7388981125 PVAL: 0.000123624259492
+   The ensemble variances are significantly different (0.95)
+-=-=-=-= regression vals -=-=-=-=
+-=-=-=-= sic bksmori DJF v zg50000.00 bksmori DJF
+        R SIMS slope,r,pval -2.27291054962 -0.193605723514 0.177928875634
+        E SIMS slope,r,pval nan 0.0 1.0
+        LE slope,r,pval -1.52694237681 -0.28408601672 0.0455664758446
+        PI slope,r,pval -3.12111933708 -0.407511964889 0.00331053112668
 
 """
