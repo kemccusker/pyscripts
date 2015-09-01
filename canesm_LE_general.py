@@ -27,6 +27,7 @@ import random
 import numpy.ma as ma
 import scipy.io as sio
 import loadCanESM2data as lcd
+import corrstats as corrstats
 
 # exception handling works below. add to other clauses @@
 
@@ -40,7 +41,7 @@ styearsE=[ 4.,  1.,  7.,  3.,  1.]; # mean SIC styears
 styearsN=[1.] # NSIDC sim
 # composite when for 2: '14:51:28.762886'
 # composite when for ss and ns: 17:01:16.908687
-styearsPI = 2
+styearPI = 2
 # PI anomyrs  when: '14:51:28.762886sic'. mean eursat=-0.0026
 anomyearsPI =[[74,  8],
        [57,  5],
@@ -164,34 +165,35 @@ timeselall = '1979-01-01,2012-12-31'
 
 # x field
 #field1='turb'; ncfield1='turb'; comp1='Amon'; region1='bksmori'
-#field1='zg50000.00'; ncfield1='zg'; comp1='Amon'; region1='bksmori'
+field1='zg50000.00'; ncfield1='zg'; comp1='Amon'; region1='bksmori'
 #field1='sia'; ncfield1='sianh'; comp1='OImon'; region1='nh'
-field1='sic'; ncfield1='sic'; comp1='OImon'; region1='gt60n' #region1='bksmori' # @@ a hack. prefer SIA
+#field1='sic'; ncfield1='sic'; comp1='OImon'; region1='gt60n' #region1='bksmori' # @@ a hack. prefer SIA
 #field1='tas'; ncfield1='tas'; comp1='Amon'; region1='eurasiamori' #region1='bksmori'
 leconv1= 1 
 sea1='DJF'
 
 # y field
-field2='tas'; ncfield2='tas'; comp2='Amon'; region2='gt60n' #region2='eurasiamori' #'eurasiathicke'; #@@@region2='eurasiamori'
+field2='tas'; ncfield2='tas'; comp2='Amon'; region2='eurasiamori' #'eurasiathicke'; 
+#field2='tas'; ncfield2='tas'; comp2='Amon'; region2='gt60n'
 #field2='zg50000.00'; ncfield2='zg'; comp2='Amon'; region2='bksmori'
 #field2='turb'; ncfield2='turb'; comp2='Amon'; region2='bksmori'
 leconv2=1
 sea2='DJF'
 
-#fieldcnd = 'sic'; ncfieldcnd='sic'; compcnd='OImon'; regioncnd='bksmori'
-#leconvcnd=1
-#seacnd=sea1
-#cmincnd=-12; cmaxcnd=3 # for 5 color colorbar
-#cmapcnd='blue2red_20'
-
-fieldcnd = 'tas'; ncfieldcnd='tas'; compcnd='Amon'; regioncnd='gm' #regioncnd='eurasiamori'
+fieldcnd = 'sic'; ncfieldcnd='sic'; compcnd='OImon'; regioncnd='bksmori'
 leconvcnd=1
 seacnd=sea1
-if regioncnd=='eurasiamori':
-    cmincnd=-2; cmaxcnd=3 # for 5 color colorbar 
-elif regioncnd=='gm':
-    cmincnd=0.5; cmaxcnd=1
+cmincnd=-12; cmaxcnd=3 # for 5 color colorbar
 cmapcnd='blue2red_20'
+
+#fieldcnd = 'tas'; ncfieldcnd='tas'; compcnd='Amon'; regioncnd='gm' #regioncnd='eurasiamori'
+#leconvcnd=1
+#seacnd=sea1
+#if regioncnd=='eurasiamori':
+#    cmincnd=-2; cmaxcnd=3 # for 5 color colorbar 
+#elif regioncnd=='gm':
+#    cmincnd=0.5; cmaxcnd=1
+#cmapcnd='blue2red_20'
 
 cisiglevel=0.05
 siglevel=0.05
@@ -1862,6 +1864,31 @@ def main(dowhat=None,addobs=True,addsims=False,addnat=False,
             simssrmm, simssrbb, simssrrval, simssrpval, simssrstd_err = sp.stats.linregress(fldssrdf1,
                                                                                        fldssrdf2)
             print '-------- (subsamp) SIMS sbRonly slope, rval, pval: ' + str(simssrmm),str(simssrrval),str(simssrpval)
+
+            # test correlations b/w R and E sims
+            zre, pvre = corrstats.independent_corr(simssrrval, simssrval, len(fldssdf1), n2=len(fldssrdf1))
+            print '-------- (subsamp) SIMS R vs E diff b/w correlations zscore, pval : ' + str(zre),str(pvre)
+
+            # test correlations b/w R sims and LE
+            zrle, pvrle = corrstats.independent_corr(simssrrval, lerval, len(fldssrdf1), n2=len(lefld1))
+            print '-------- (subsamp) SIMS R vs LE diff b/w correlations zscore, pval : ' + str(zrle),str(pvrle)
+            # test correlations b/w E sims and LE
+            zele, pvele = corrstats.independent_corr(simssrval, lerval, len(fldssdf1), n2=len(lefld1))
+            print '-------- (subsamp) SIMS E vs LE diff b/w correlations zscore, pval : ' + str(zele),str(pvele)
+
+            if addpi:
+                # test correlations b/w E sims and PI
+                zepi, pvepi = corrstats.independent_corr(simssrval, pirval, len(fldssdf1), n2=len(pifld1))
+                print '-------- (subsamp) SIMS E vs PI diff b/w correlations zscore, pval : ' + str(zepi),str(pvepi)
+                
+                # test correlations b/w R sims and PI
+                zrpi, pvrpi = corrstats.independent_corr(simssrrval, pirval, len(fldssrdf1), n2=len(pifld1))
+                print '-------- (subsamp) SIMS R vs PI diff b/w correlations zscore, pval : ' + str(zrpi),str(pvrpi)
+
+                # test correlations b/w LE sims and PI
+                zlepi, pvlepi = corrstats.independent_corr(lerval, pirval, len(lefld1), n2=len(pifld1))
+                print '-------- (subsamp) SIMS LE vs PI diff b/w correlations zscore, pval : ' + str(zlepi),str(pvlepi)
+
 
             if conditional:
                 fldssrdfcnd = pd.DataFrame(lmd.loaddata((simfieldcnd,),simsssr,ncfields=(simncfieldcnd,), timefreq=seacnd, 
