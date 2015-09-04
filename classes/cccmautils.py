@@ -161,13 +161,16 @@ def calc_totseaicevol(fld,sic,lat,lon,repeat=False,isarea=False):
            input is expected to be time x lat x lon in units of thickness (not mass)
            sic is fractional sea ice concentration
            if sic must be repeated to match input, set
-              repeat=True (@@ not yet implemented)
+              repeat=True (@@ not yet tested)
            set isarea=True if sic input is actually sea ice area,
               otherwise sia will be calc'd from incoming sic
     """
 
     if repeat:
-        print 'add repeat@@'
+        nrep = repeat[0:-2] # leave off last 2 dims (lat, lon)
+        nrep = nrep + (1,1)
+        sic = np.tile(sic,nrep)
+        
 
     if area==False:
         sia=calc_seaicearea(sic,lat,lon)
@@ -1042,6 +1045,76 @@ def calc_kernel(input):
     pdf,mn,sgm,xx= calc_normfit(input) # just to get x values
     
     return kernel(xx), xx
+
+
+def trend(input):
+    """  Calculate linear trend on axis=0
+        use scipy.stats.linregress() or np.polyfit with order=1
+
+        for 1-D
+        returns slope, y-intercept, r-value, p-value, standard error
+
+        for >=2-D
+        returns slope, y-intercept
+    """
+    shape = input.shape
+
+    xx = np.arange(0,shape[0])
+
+    if input.ndim==1:
+        mm, bb, rval, pval, std_err = sp.stats.linregress(xx,input)
+        return mm,bb,rval,pval,std_err
+
+    elif input.ndim==2:
+        mm,bb = np.polyfit(xx,input,1) 
+        return mm,bb
+    elif input.ndim==3:
+        # polyfit will accept multiple dims I think?
+        tmp = input.reshape((len(xx),shape[1]*shape[2]))
+        mm,bb = np.polyfit(xx,tmp,1) 
+        mm=mm.reshape((shape[1],shape[2])) # matrix of trends
+        bb=bb.reshape((shape[1],shape[2]))
+        return mm,bb
+    else:
+        # THROW EXCEPTION
+        print 'trend() is not implemented for dim>3'
+        return None
+
+
+def trend_monthly(input):
+    """ calls trend() for each month.
+           input is assumed to be a monthly timeseries (axis=0).
+           If timeseries partially goes into next year (ie. is not divisible by 12),
+           extra months will be ignored.
+    """
+    shape = input.shape
+    
+    
+    if input.ndim>1:
+        initshape=(12,)+shape[1:]
+       
+    elif input.ndim==1:
+        initshape=(12,)
+        rval=np.zeros(initshape)
+        pval=np.zeros(initshape)
+        std_err=np.zeros(initshape)
+
+    mm=np.zeros(initshape)
+    bb=np.zeros(initshape)
+
+    
+    for moidx in np.arange(0,12): # loop through 12 months
+
+            tmp = input[moidx::12,...]
+            if input.ndim==1:
+                mm[moidx],bb[moidx],rval[moidx],pval[moidx],std_err[moidx]=trend(tmp)
+            else:
+                mm[moidx,...],bb[moidx,...] = trend(tmp)
+    
+    if input.ndim==1:
+        return mm,bb,rval,pval,std_err
+    else:
+        return mm,bb
 
 
 def detrend(input, axis=0, dttype='linear'):
