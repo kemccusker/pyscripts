@@ -15,12 +15,12 @@ local=True
 nresamp=1000 # number of times to resample PI (50-members each time)
 doscatter=True
 
-fieldr='sic'; ncfieldr='sic'; compr='OImon'; 
+#fieldr='sic'; ncfieldr='sic'; compr='OImon'; 
 ##regionr='nh'; rstr='NH SIC'; rstrlong='Northern Hem SIC'; runits='%'; rkey='nhsic'
-regionr='bksmori'; rstr='BKS SIC'; rstrlong='Barents/Kara SIC'; runits='%'; rkey='bkssic'
-convr=1
-aconvr=100 # for agcm sims
-ylev=0.3 # for mean dots
+#regionr='bksmori'; rstr='BKS SIC'; rstrlong='Barents/Kara SIC'; runits='%'; rkey='bkssic'
+#convr=1
+#aconvr=100 # for agcm sims
+#ylev=0.3 # for mean dots
 
 #fieldr='sia'; ncfieldr='sianh'; compr='OImon'; 
 #regionr='nh'; rstr='NH SIA'; rstrlong='Northern Hem SIA'; runits='m$^2$'; rkey='nhsia'
@@ -28,38 +28,40 @@ ylev=0.3 # for mean dots
 #aconvr=1 # for agcm sims
 #ylev=0.3 # for mean dots
 
-#fieldr='tas'; ncfieldr='tas'; compr='Amon'; regionr='eurasiamori'; 
-#rstr='Eur SAT'; rstrlong='Eurasian SAT'; runits='$^\circ$C'; rkey='eursat'
+#fieldr='tas'; ncfieldr='tas'; compr='Amon'; 
+#regionr='eurasiamori'; rstr='Eur SAT'; rstrlong='Eurasian SAT'; runits='$^\circ$C'; rkey='eursat'
+#regionr='eurasiathicke'; rstr='EEur SAT'; rstrlong='East Eurasian SAT'; runits='$^\circ$C'; rkey='eeursat'
 #convr=1
 #aconvr=1 # for agcm sims
 #ylev=0.3 # for mean dots
 
-#fieldr='zg50000.00'; ncfieldr='zg'; compr='Amon'; 
-##regionr='gt60n'; rstr='POL Z500'; rstrlong='Polar Z500'; runits='m'; rkey='gt60nz500'
+fieldr='zg50000.00'; ncfieldr='zg'; compr='Amon'; 
+regionr='gt60n'; rstr='POL Z500'; rstrlong='Polar Z500'; runits='m'; rkey='gt60nz500'
 #regionr='bksmori'; rstr='BKS Z500'; rstrlong='Barents/Kara Z500'; runits='m'; rkey='bksz500'
-#convr=1
-#aconvr=1/con.get_g() # for agcm sims
-#ylev=0.005 # for mean dots in pdf fig
-
-
-fieldr2='zg50000.00'; ncfieldr2='zg'; compr2='Amon'; 
-regionr2='bksmori'; rstr2='BKS Z500'; rstr2long='Barents/Kara Z500'; runits2='m'; rkey2='bksz500'
-convr2=1
-aconvr2=1/con.get_g() # for agcm sims
+convr=1
+aconvr=1/con.get_g() # for agcm sims
 ylev=0.005 # for mean dots in pdf fig
 
 
-#fieldr2='tas'; ncfieldr2='tas'; compr2='Amon'; 
-#regionr2='eurasiamori'; rstr2='Eur SAT'; rstr2long='Eurasian SAT'; runits2='$^\circ$C'; rkey2='eursat'
+#fieldr2='zg50000.00'; ncfieldr2='zg'; compr2='Amon'; 
+#regionr2='bksmori'; rstr2='BKS Z500'; rstr2long='Barents/Kara Z500'; runits2='m'; rkey2='bksz500'
 #convr2=1
-#aconvr2=1 # for agcm sims
+#aconvr2=1/con.get_g() # for agcm sims
+#ylev=0.005 # for mean dots in pdf fig
+
+
+fieldr2='tas'; ncfieldr2='tas'; compr2='Amon'; 
+regionr2='eurasiamori'; rstr2='Eur SAT'; rstr2long='Eurasian SAT'; runits2='$^\circ$C'; rkey2='eursat'
+convr2=1
+aconvr2=1 # for agcm sims
 sear2='DJF'
 
 sear='DJF'
 timeselc='1979-01-01,1989-12-31'
 timeselp='2002-01-01,2012-12-31'
 
-
+lecol='red'
+ocol='green'
 picol = '0.8'
 acol=ccm.get_linecolor('paperblue')
 
@@ -250,6 +252,12 @@ aesear,styearse = load_agcmfield(fieldr,simsE,sear,region=regionr,
                                  conv=aconvr,styears=styearsE)
 aepdf, aemean, aexx = calc_pdf(aesear)
 
+#    NSIDC
+simsO=('NSIDC',)
+osear,ostyearsr = load_agcmfield(fieldr,simsO,sear,region=regionr,
+                                 conv=aconvr,styears=styearsN)
+opdf, omean, oxx = calc_pdf(osear)
+
 
 # Load LE (historical)
 lecsear = load_field(fdictr, 'historical', timeselc, sear,
@@ -265,6 +273,8 @@ if doscatter:
 
     aesear2,styearse = load_agcmfield(fieldr2,simsE,sear2,region=regionr2,
                                      conv=aconvr2,styears=styearsE)
+    osear2,ostyearsr = load_agcmfield(fieldr2,simsO,sear2,region=regionr2,
+                                 conv=aconvr2,styears=styearsN)
 
     lecsear2 = load_field(fdictr2, 'historical', timeselc, sear2,
                          ftype='fullts', conv=convr2,local=local)
@@ -276,6 +286,7 @@ if doscatter:
     arsmm, arsbb, arsrval, arspval, arsstd_err = sp.stats.linregress(arsear,arsear2)
     aesmm, aesbb, aesrval, aespval, aesstd_err = sp.stats.linregress(aesear,aesear2)
     lesmm, lesbb, lesrval, lespval, lesstd_err = sp.stats.linregress(lesear,lesear2)
+    osmm, osbb, osrval, ospval, osstd_err = sp.stats.linregress(osear,osear2)
 
     pismm, pisbb, pisrval, pispval, pisstd_err = sp.stats.linregress(pisear,pisear2)
 
@@ -283,6 +294,9 @@ print '===='
 print '====' + fieldr + ' ' + regionr + ' ' + sear
 print '====R SIMS v E SIMS'
 test_significance(arsear, aesear, verb=True)
+print '====R SIMS v NSIDC SIMS'
+test_significance(arsear, osear, verb=True)
+
 print ''
 print '====R SIMS v PI avg subsamp'
 test_significance(arsear,piseardf.mean(axis=1), verb=True)
@@ -290,6 +304,8 @@ print '====E SIMS v PI avg subsamp'
 test_significance(aesear,piseardf.mean(axis=1), verb=True)
 print '====LE v PI avg subsamp'
 test_significance(lesear,piseardf.mean(axis=1), verb=True)
+print '====NSIDC v PI avg subsamp'
+test_significance(osear,piseardf.mean(axis=1), verb=True)
 print ''
 
 print '====R SIMS v PI flatten (50*' + str(nresamp) + ')'
@@ -298,6 +314,8 @@ print '====E SIMS v PI flatten (50*' + str(nresamp) + ')'
 test_significance(aesear,piseardf.values.flatten(), verb=True)
 print '====LE v PI flatten (50*' + str(nresamp) + ')'
 test_significance(lesear,piseardf.values.flatten(), verb=True)
+print '====NSIDC v PI flatten (50*' + str(nresamp) + ')'
+test_significance(osear,piseardf.values.flatten(), verb=True)
 
 
 
@@ -316,6 +334,7 @@ legdt['AGCM_variable'] = mlines.Line2D([],[],color=acol,linewidth=2)
 legdt['AGCM_fixed'] = mlines.Line2D([],[],color=acol,linewidth=2,
                                     linestyle='--')
 legdt['CGCM']=mlines.Line2D([],[],color=lecol,linewidth=2)
+legdt['NSIDC']=mlines.Line2D([],[],color=ocol,linewidth=2)
 
 
 fig,ax=plt.subplots(1,1)
@@ -334,6 +353,9 @@ ax.plot(aemean, ylev, linestyle='none',marker='o', color=acol,alpha=0.5)
 
 ax.plot(lexx, lepdf, color=lecol,linewidth=2)
 ax.plot(lemean, ylev, linestyle='none', marker='^', color=lecol)
+
+ax.plot(oxx, opdf, color=ocol,linewidth=2)
+ax.plot(omean, ylev, linestyle='none', marker='^', color=ocol)
 
 #ax.set_xlabel('Full PI sample mean: ' + str(pimeandf.mean()))
 ax.set_ylabel('Density')
@@ -357,7 +379,7 @@ if doscatter:
     print '        E SIMS slope,r,pval ' + str(aesmm),str(aesrval),str(aespval)
     print '        LE slope,r,pval ' + str(lesmm),str(lesrval),str(lespval)
     print '        PI slope,r,pval ' + str(pismm),str(pisrval),str(pispval)
-   
+    print '        NSIDC slope,r,pval ' + str(osmm),str(osrval),str(ospval)
 
 
     pisear2df=pd.DataFrame(pisear2dt)
@@ -380,6 +402,7 @@ if doscatter:
     ax.plot(onex,arsmm*onex + arsbb, color=acol,linewidth=2)
     ax.plot(onex,aesmm*onex + aesbb, color=acol,linewidth=2,linestyle='--')
     ax.plot(onex,lesmm*onex + lesbb, color=lecol, linewidth=2)
+    ax.plot(onex,osmm*onex + osbb, color=ocol, linewidth=2)
 
     ax.set_xlabel('Change in ' + rstrlong + ' (' + runits + ')')
     ax.set_ylabel('Change in ' + rstr2long + ' (' + runits2 + ')')
@@ -399,6 +422,8 @@ if doscatter:
     plt.axvline(x=arsmm,color=acol,linewidth=2)
     plt.axvline(x=aesmm,color=acol,linewidth=2,linestyle='--')
     plt.axvline(x=lesmm,color=lecol,linewidth=2)
+    plt.axvline(x=osmm,color=ocol,linewidth=2)
+
     plt.xlabel('slopes: ' + rstr + ' v ' + rstr2)
     if printtofile:
         plt.savefig(fieldr + regionr + '_' + sear + '_' + fieldr2+regionr2+'_' +sear2+\
@@ -612,5 +637,135 @@ LSTAT: 0.264296082404 PVAL: 0.607184159031
         E SIMS slope,r,pval nan 0.0 1.0
         LE slope,r,pval -1.52694237681 -0.28408601672 0.0455664758446
         PI slope,r,pval -3.12111933708 -0.407511964889 0.00331053112668
+
+
+
+
+
+$$$$$$$$$$$$$$$$$$$$$$$$$ include NSIDC
+SAMPLE=1000
+
+====zg50000.00 bksmori DJF
+====R SIMS v E SIMS
+  Mean1: 3.34624519573, Mean2: 4.08476507306
+  TSTAT: -0.203966108758 PVAL: 0.838802946149
+  LSTAT: 1.30148791711 PVAL: 0.256721855393
+====R SIMS v NSIDC SIMS
+  Mean1: 3.34624519573, Mean2: 1.304501494
+  TSTAT: 0.294518805923 PVAL: 0.76941305851
+  LSTAT: 0.00354983436691 PVAL: 0.952694576802
+
+====R SIMS v PI avg subsamp
+  Mean1: 3.34624519573, Mean2: -0.112099637759
+  TSTAT: 1.22193270617 PVAL: 0.224664126933
+  LSTAT: 62.7222446738 PVAL: 3.76146015831e-12
+   The ensemble variances are significantly different (0.95)
+====E SIMS v PI avg subsamp
+  Mean1: 4.08476507306, Mean2: -0.112099637759
+  TSTAT: 1.85606291265 PVAL: 0.0664493304483
+  LSTAT: 75.3362549404 PVAL: 8.81410661105e-14
+   The ensemble variances are significantly different (0.95)
+====LE v PI avg subsamp
+  Mean1: 20.9342897461, Mean2: -0.112099637759
+  TSTAT: 9.08858761728 PVAL: 1.14999498237e-14
+   The ensemble means are significantly different (0.95)
+  LSTAT: 72.2113860681 PVAL: 2.17438459097e-13
+   The ensemble variances are significantly different (0.95)
+====NSIDC v PI avg subsamp
+  Mean1: 1.304501494, Mean2: -0.112099637759
+  TSTAT: 0.516542520745 PVAL: 0.607439540702
+  LSTAT: 78.717361952 PVAL: 2.15561939914e-12
+   The ensemble variances are significantly different (0.95)
+
+====R SIMS v PI flatten (50*1000)
+  Mean1: 3.34624519573, Mean2: -0.112099637759
+  TSTAT: 1.29135823287 PVAL: 0.196585450662
+  LSTAT: 0.00675346412636 PVAL: 0.934504333045
+====E SIMS v PI flatten (50*1000)
+  Mean1: 4.08476507306, Mean2: -0.112099637759
+  TSTAT: 1.56743448682 PVAL: 0.117019490347
+  LSTAT: 2.4231127868 PVAL: 0.119563472043
+====LE v PI flatten (50*1000)
+  Mean1: 20.9342897461, Mean2: -0.112099637759
+  TSTAT: 7.86021854275 PVAL: 3.91078957391e-15
+   The ensemble means are significantly different (0.95)
+  LSTAT: 1.70145391435 PVAL: 0.192103944905
+====NSIDC v PI flatten (50*1000)
+  Mean1: 1.304501494, Mean2: -0.112099637759
+  TSTAT: 0.23666539358 PVAL: 0.812917353576
+  LSTAT: 0.0123623716918 PVAL: 0.911469138564
+-=-=-=-= regression vals -=-=-=-=
+-=-=-=-= zg50000.00 bksmori DJF v tas eurasiamori DJF
+        R SIMS slope,r,pval -0.0259499202434 -0.807961779808 1.32131111876e-12
+        E SIMS slope,r,pval -0.018372879055 -0.48963119319 0.000307644171986
+        LE slope,r,pval -0.0165286796574 -0.413836962376 0.00281317881451
+        PI slope,r,pval -0.0177782325744 -0.649875789688 3.27492326874e-07
+        NSIDC slope,r,pval -0.0163907086317 -0.55607007061 0.0950805453678
+
+
+
+
+SAMPLE=1000
+
+====zg50000.00 gt60n DJF
+====R SIMS v E SIMS
+  Mean1: 4.34329642586, Mean2: 4.05086208953
+  TSTAT: 0.124864173526 PVAL: 0.900886856615
+  LSTAT: 1.23105032791 PVAL: 0.269918102382
+====R SIMS v NSIDC SIMS
+  Mean1: 4.34329642586, Mean2: 0.453203404306
+  TSTAT: 0.870099837881 PVAL: 0.387832725954
+  LSTAT: 0.000546081317477 PVAL: 0.981436637394
+
+====R SIMS v PI avg subsamp
+  Mean1: 4.34329642586, Mean2: -0.0420948555995
+  TSTAT: 2.4709697515 PVAL: 0.0152007628743
+   The ensemble means are significantly different (0.95)
+  LSTAT: 75.5874515631 PVAL: 8.20296027151e-14
+   The ensemble variances are significantly different (0.95)
+====E SIMS v PI avg subsamp
+  Mean1: 4.05086208953, Mean2: -0.0420948555995
+  TSTAT: 2.67501360614 PVAL: 0.00875775973691
+   The ensemble means are significantly different (0.95)
+  LSTAT: 62.6566227074 PVAL: 3.83865363406e-12
+   The ensemble variances are significantly different (0.95)
+====LE v PI avg subsamp
+  Mean1: 22.6614946398, Mean2: -0.0420948555995
+  TSTAT: 17.0999008301 PVAL: 3.5667870127e-31
+   The ensemble means are significantly different (0.95)
+  LSTAT: 90.4182185449 PVAL: 1.40967838773e-15
+   The ensemble variances are significantly different (0.95)
+====NSIDC v PI avg subsamp
+  Mean1: 0.453203404306, Mean2: -0.0420948555995
+  TSTAT: 0.246053836203 PVAL: 0.806509247192
+  LSTAT: 41.9363746164 PVAL: 2.21228289594e-08
+   The ensemble variances are significantly different (0.95)
+
+====R SIMS v PI flatten (50*1000)
+  Mean1: 4.34329642586, Mean2: -0.0420948555995
+  TSTAT: 2.72542884967 PVAL: 0.00642403372391
+   The ensemble means are significantly different (0.95)
+  LSTAT: 0.579464241089 PVAL: 0.446525984601
+====E SIMS v PI flatten (50*1000)
+  Mean1: 4.05086208953, Mean2: -0.0420948555995
+  TSTAT: 2.54407644225 PVAL: 0.0109596892491
+   The ensemble means are significantly different (0.95)
+  LSTAT: 0.845295664505 PVAL: 0.35789101817
+====LE v PI flatten (50*1000)
+  Mean1: 22.6614946398, Mean2: -0.0420948555995
+  TSTAT: 14.1135108392 PVAL: 3.82862100909e-45
+   The ensemble means are significantly different (0.95)
+  LSTAT: 2.11633230683 PVAL: 0.145741449257
+====NSIDC v PI flatten (50*1000)
+  Mean1: 0.453203404306, Mean2: -0.0420948555995
+  TSTAT: 0.137721445832 PVAL: 0.890461124062
+  LSTAT: 0.0960458004409 PVAL: 0.756628735748
+-=-=-=-= regression vals -=-=-=-=
+-=-=-=-= zg50000.00 gt60n DJF v tas eurasiamori DJF
+        R SIMS slope,r,pval -0.0310884060413 -0.606940319432 2.97219893946e-06
+        E SIMS slope,r,pval -0.0240196543376 -0.433151275689 0.00167791876122
+        LE slope,r,pval -0.0232146201281 -0.33317518497 0.0180638323556
+        PI slope,r,pval -0.0114353689086 -0.2590476681 0.0692843640745
+        NSIDC slope,r,pval -0.0192763401821 -0.480175036169 0.160137094547
 
 """
