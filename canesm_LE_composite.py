@@ -17,7 +17,7 @@ import scipy.io as sio
 import datetime as datetime
 import string as string
 
-printtofile=True
+printtofile=False
 
 #dataloaded=True
 loadmat=True; 
@@ -136,7 +136,7 @@ anomyearsPI = [[79, 26],
 saveascii=False
 savemat=False
 dofigures=False
-local=False
+local=True
 addsig=False
 compagcm=False # compare R sims and E sims
 
@@ -1233,6 +1233,7 @@ if printtofile:
     
 
 
+
 # VERSION 3 of SUMMARY ====================
 
 lgstrs=(enss)          
@@ -1432,6 +1433,185 @@ if printtofile:
     fig.savefig('Figure4_draft_6panel_CGCMmaps_compavgs' + prstr + 'swapv5.pdf')
     fig.savefig('Figure4_draft_6panel_CGCMmaps_compavgs' + prstr + 'swapv5.png',dpi=400)
 
+
+print '---- plotting v6 of summary (group bottom by composite as in scramble fig above----'
+fourpanel=True # fourpanel leaves out EUR SAT map and summary. also leaves out AGCM_fixed.
+
+# order: BKS Z500, BKS SIC maps
+# summary order: [BKS Z500] change in eur sat, bks sic ; [BKS SIC] eur sat, bks z500 (?)
+
+#xx=xx[:-1]
+if fourpanel:
+    regions2=('bksz500','bkssic')#,'eursat')
+    enss=('CGCM','AGCM_variable')
+    lgstrs=('CGCM','AGCM')
+    lgs2=(mlines.Line2D([],[],color=clrs2[0],linestyle=linstyles[0],linewidth=2),
+          mlines.Line2D([],[],color=clrs2[1],linestyle=linstyles[1],linewidth=2))
+else:
+    regions2=('bksz500','bkssic','eursat')
+    lgs2=(mlines.Line2D([],[],color=clrs2[0],linestyle=linstyles[0],linewidth=2),
+          mlines.Line2D([],[],color=clrs2[1],linestyle=linstyles[1],linewidth=2),
+          mlines.Line2D([],[],color=clrs2[2],linestyle=linstyles[2],linewidth=2)) #,linestyle='none',marker=mkrs[0]),
+
+fields2=('z500','ice','sat') # switch order of summary panels
+reglabs2=(r3strlong,r1strlong,r2strlong) # SWAP for summary
+reglabs2short=(r3str,r1str,r2str) # SWAP for summary
+reglabunits2=('m','%','$^\circ$C') # SWAP for summary
+multfacs2=(-1,1,1)
+ylims2=((-10,70),(-5,4),(-2,1))
+
+clrs2=('0.4','blue','blue')
+linstyles=('-','-','--')
+
+
+
+if fourpanel:
+    fig=plt.figure(figsize=(7,8))
+    gs1 = gridspec.GridSpec(1, 2)
+    gs1.update(top=0.97,bottom=0.55,left=0.06,right=0.94,wspace=0.1)
+else: # six panel
+    fig=plt.figure(figsize=(12,9))
+    gs1 = gridspec.GridSpec(1, 3)
+    gs1.update(top=0.97,bottom=0.55,left=0.06,right=0.94,wspace=0.07)
+
+cii=0; ckey='CGCM'; pii=0
+for rii,rkey in enumerate(regions2):
+    mult=multfacs2[rii]
+    print '  maps ' + rkey + ' (mult=' + str(mult) + ')'
+    ax=plt.subplot(gs1[cii,rii])
+    dt=allcasedt[ckey][rkey]
+
+    bm,pc=cplt.kemmap(mult*(dt[spkey]['lowsp']-dt[spkey]['highsp']),alat,alon,
+                      ptype='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
+                      title='',suppcb=True,
+                      panellab=plabs[pii],lcol='0.2')
+    if addsig:
+        cplt.addtsigm(bm,dt[spkey]['sppval'], alat, alon)
+    bm.contour(alons,alats,mult*(dt[sp2key]['lowsp']-dt[sp2key]['highsp']),levels=conts,
+               colors='0.5',linewidths=1,latlon=True)
+    if addsig:
+        cplt.addtsigm(bm,dt[sp2key]['sppval'],alat,alon,sigtype='cont',color='g')
+
+    if ax.is_first_row(): ax.set_title(reglabs2short[rii])
+    pii+=1
+
+if fourpanel:
+    gs2 = gridspec.GridSpec(1, 2)
+    gs2.update(top=0.44,left=0.1,right=0.90,wspace=0.65)
+else:
+    gs2 = gridspec.GridSpec(1, 3)
+    gs2.update(top=0.44,left=0.08,right=0.92,wspace=0.28)
+
+for fii,fkey in enumerate(regions2):#fields2):#loop thru composites
+
+    print 'fkey: ' + fkey
+    rlabbools = np.ones(len(reglabs2),np.bool)
+    rlabbools[fii]=0 # will be plotting all changes except for what it being composited
+    
+    needtwin=False
+    ax=plt.subplot(gs2[0,fii])
+    ax1=ax
+    #ax2=ax.twinx()
+    #allregmdf=allflddt[fkey]
+    #allregmcidf=allcidt[fkey]
+    xincr=0.2
+    #stagger=-xincr # stagger ensembles within one column
+
+
+
+    #for eii,ens in enumerate(enss):
+    #    print '  ens: ' + ens
+        
+    xii=0 # keep track of x index for plotting groups of ensembles
+    for rii,reg in enumerate(fields2):#regions2):#loop thru fields (change in field val).@@should only be 2, use 2 y-axes
+
+        stagger=-xincr # stagger ensembles within one column
+        print '    reg: ' + reg
+        allregmdf=allflddt[reg]
+        allregmcidf=allcidt[reg]
+        
+        if (reg in fkey) or (reg=='ice' and fkey==r1key) or (reg=='z500' and fkey==r3key):
+            print '    --SKIP'
+        else:
+            if needtwin:
+                ax=ax.twinx()
+
+            for eii,ens in enumerate(enss):
+                print '  ens: ' + ens
+
+                if (ens=='AGCM_fixed' and reg=='ice') or (ens=='AGCM_fixed' and fkey=='bkssic'):
+                    print '    --SKIP (AGCM_fixed ice)'
+                    #xii+=1
+                    #stagger+=0.2
+                else:
+                    mult=multfacs2[fii]
+                    xpos=xx[xii]+stagger
+                    print '    mult*allregmdf[ens][fkey]: ' + str(mult*allregmdf[ens][fkey])
+                    ax.plot(xpos,mult*allregmdf[ens][fkey],marker=mkrs[eii],
+                            color=clrs2[eii],mec=clrs2[eii],linestyle='none',markersize=10)
+                    ci=allregmcidf[ens][fkey]
+                    #print mult, (xpos,xpos), ci
+                    ax.plot((xpos,xpos),mult*np.array(ci),marker='_',
+                            mew=2,markersize=10,linestyle=linstyles[eii],linewidth=2,color=clrs2[eii])
+                    if len(enss)==3:
+                        ax.axvspan(xx[xii]-xincr-0.1,xx[xii]+xincr+0.1,color='0.8',alpha=0.5)
+                    elif len(enss)==2:
+                        ax.axvspan(xx[xii]-xincr-0.1,xx[xii]+0.1,color='0.8',alpha=0.5)
+                    #xii+=1
+                    stagger+=0.2
+                    if needtwin:
+                        ax.set_ylabel('Change in ' + reglabs2[rii] + ' (' + reglabunits2[rii] + ')',
+                                      rotation=270,horizontalalignment='center',verticalalignment='top')
+                    else:
+                        ax.set_ylabel('Change in ' + reglabs2[rii] + ' (' + reglabunits2[rii] + ')')
+                    ax.set_ylim(ylims2[rii])
+                    ax.tick_params(which='major',right='on')
+                    if not fourpanel:
+                        ax.tick_params(pad=-28)
+                        ylabs=ax.get_yticks()
+                        ax.set_yticklabels(('',)+tuple(ylabs[1:-1])+('',))
+            # first time thru per composite, needtwin=False. After use that axis, make the twin
+            needtwin=True
+            xii+=1
+        #stagger+=0.2
+
+        
+        #ax.axhline(y=0,color='k',linestyle='--')
+    if len(enss)==3:
+        ax.set_xlim((stxx-0.7,xx[-1]+0.7))
+        ax.set_xticks(xx)
+    elif len(enss)==2:
+        ax.set_xlim((stxx-0.7,xx[-1]+0.5))
+        ax.set_xticks(xx-0.1)
+    ax.set_xticklabels((''))
+    ax.tick_params(length=0)
+    if fourpanel:
+        if fii==0:
+            ax.legend(lgs2,lgstrs,loc='upper left',fancybox=True,frameon=False)#,prop=fontP)
+    else:
+        if fii==1:
+            ax.legend(lgs2,lgstrs,loc='upper left',fancybox=True,frameon=False)#,prop=fontP)
+    
+    #@@@ax.set_xticklabels(np.array(reglabs2short)[rlabbools],rotation=25)
+    ax.annotate(plabs[pii],xy=(-0.02,1.04),
+                xycoords='axes fraction',fontsize=16,fontweight='bold')
+    pii+=1
+
+cbar_ax,cbar = cplt.add_colorbar(fig,pc,orientation='horizontal',
+                                 pos=[.25,.53, .5,.03],
+                                 label='Change in surface air temperature, $\Delta$SAT (' + r2units +')')
+#cbar.add_lines(pc)
+if addsig:
+    prstr='sig'
+else:
+    prstr=''
+if printtofile:
+    if fourpanel:
+        fig.savefig('Figure5_draft_4panel_CGCMmaps_compavgs' + prstr + 'swapv6.pdf')
+        fig.savefig('Figure5_draft_4panel_CGCMmaps_compavgs' + prstr + 'swapv6.png',dpi=400)
+    else:
+        fig.savefig('Figure5_draft_6panel_CGCMmaps_compavgs' + prstr + 'swapv6.pdf')
+        fig.savefig('Figure5_draft_6panel_CGCMmaps_compavgs' + prstr + 'swapv6.png',dpi=400)
 
 
 
