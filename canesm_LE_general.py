@@ -165,9 +165,9 @@ timeselall = '1979-01-01,2012-12-31'
 
 # x field
 #field1='turb'; ncfield1='turb'; comp1='Amon'; region1='bksmori'
-field1='zg50000.00'; ncfield1='zg'; comp1='Amon'; region1='bksmori'
+#field1='zg50000.00'; ncfield1='zg'; comp1='Amon'; region1='bksmori'
 #field1='sia'; ncfield1='sianh'; comp1='OImon'; region1='nh'
-#field1='sic'; ncfield1='sic'; comp1='OImon'; region1='gt60n' #region1='bksmori' # @@ a hack. prefer SIA
+field1='sic'; ncfield1='sic'; comp1='OImon'; region1='bksmori'; #'gt60n' #region1='bksmori' # @@ a hack. prefer SIA
 #field1='tas'; ncfield1='tas'; comp1='Amon'; region1='eurasiamori' #region1='bksmori'
 leconv1= 1 
 sea1='DJF'
