@@ -838,7 +838,7 @@ def plot_shorttermpdf(fig,ax,field,region,xxdat,pdfdat,histdat,meandat,cidat,
         if pversion in ('c','d'): # no inset
             legloc=(0.65,0.8) #0.71,0.8)
         if pversion not in ('c',):
-            legstr=legstr+('AGCM variable',)
+            legstr=legstr+('AGCM',)# variable',)
             legh=legh+(sslg,)
         if pversion not in ('d',):
             legstr=legstr+('GIStemp',)
@@ -2906,8 +2906,8 @@ def main(dowhat=None,addobs=True,addsims=False,addnat=False,
             simsstr=''
 
             #fielda='sia'; ncfielda='sianh'; compa='OImon'; regiona='nh';
-            #fielda='sic'; ncfielda='sic'; compa='OImon'; regiona='bksmori';
-            fielda='zg50000.00'; ncfielda='zg'; compa='Amon'; regiona='bksmori'
+            fielda='sic'; ncfielda='sic'; compa='OImon'; regiona='bksmori';
+            #fielda='zg50000.00'; ncfielda='zg'; compa='Amon'; regiona='bksmori'
 
             fdicta = {'field': fielda+regiona, 'ncfield': ncfielda, 'comp': compa}
 
