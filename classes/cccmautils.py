@@ -164,6 +164,11 @@ def calc_totseaicevol(fld,sic,lat,lon,repeat=False,isarea=False):
               repeat=True (@@ not yet tested)
            set isarea=True if sic input is actually sea ice area,
               otherwise sia will be calc'd from incoming sic
+
+       @@@@ NOTE for CMIP sit, this function is incorrect.
+            do not need sea ice area to calc SIT.
+            See calc_totseaicevol_cmip5() 10/1/2015
+
     """
 
     if repeat:
@@ -184,7 +189,34 @@ def calc_totseaicevol(fld,sic,lat,lon,repeat=False,isarea=False):
     sh = ma.sum(ma.sum(gridvols,2),1)
     
     return nh,sh
+  
+def calc_totseaicevol_cmip5(fld,lat,lon,repeat=False,isarea=False):
+    """ calculate total ice volume
+           returns nh, sh
+           input is expected to be time x lat x lon in units of 
+              thickness over ocean portion of grid cell
+
+    """
+
+    if repeat:
+        nrep = repeat[0:-2] # leave off last 2 dims (lat, lon)
+        nrep = nrep + (1,1)
+        sic = np.tile(sic,nrep)
+        
+
+    if area==False:
+        sia=calc_seaicearea(sic,lat,lon)
+    else:
+        sia=sic
     
+    gridvoln = fld[:,lat>0,...]*sia[:,lat>0,...] # north
+    gridvols = fld[:,lat<0,...]*sia[:,lat<0,...] # south
+    # Changed to ma.sum() on 12/10/14
+    nh = ma.sum(ma.sum(gridvoln,2),1)
+    sh = ma.sum(ma.sum(gridvols,2),1)
+    
+    return nh,sh
+  
     
 def global_mean_areawgted3d(fld, lat, lon):
 
