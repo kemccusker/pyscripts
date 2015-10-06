@@ -117,33 +117,43 @@ def calc_seaicearea(input,lat,lon):
     else:
         remcyc=True
         
-    if ndims>2: # first dim is tim
+    if ndims>2: # first dim is time
         areas = calc_cellareas(lat,lon,repeat=ishape)
         lmask = con.get_t63landmask(repeat=ishape,remcyclic=remcyc) # @@ note assuming T63 here...
     else:
         areas = calc_cellareas(lat,lon)
         lmask = con.get_t63landmask(remcyclic=remcyc)
+    areas = ma.masked_where(input.mask, areas)
 
     sia = input*areas
     sia = ma.masked_where(lmask==-1,sia) # mask where land
     
     return sia
 
-def calc_totseaicearea(fld,lat,lon,isarea=False):
+def calc_totseaicearea(fld,lat,lon,isarea=False, extent=False):
     """ calculate total sea ice area
            returns nh,sh
            input is expected to be time x lat x lon SEA ICE CONC
               unless isarea=True
 
+        extent: specify if want extent instead (>=15% sic)
+
         @@ needs testing 9/9/2014
     """
     if isarea:
+        if extent: 
+            print 'Cannot do extent with sea ice area as input, need frac!' #@@
+            return -1
         sia=fld 
     else:
+        if extent:
+            #mask <=0.15
+            fld=ma.masked_where(fld<0.15, fld)
         sia = calc_seaicearea(fld,lat,lon)
+
     # Changed to ma.sum() on 12/10/14
-    nh = ma.sum(ma.sum(sia[:,lat>0,:],axis=2),axis=1)
-    sh = ma.sum(ma.sum(sia[:,lat<0,:],axis=2),axis=1)
+    nh = ma.sum(ma.sum(sia[...,lat>0,:],axis=-1),axis=-1)
+    sh = ma.sum(ma.sum(sia[...,lat<0,:],axis=-1),axis=-1)
 
     return nh,sh
 
@@ -1093,11 +1103,11 @@ def trend(input):
 
     xx = np.arange(0,shape[0])
 
-    if input.ndim==1:
-        mm, bb, rval, pval, std_err = sp.stats.linregress(xx,input)
-        return mm,bb,rval,pval,std_err
+    #if input.ndim==1:
+    #    mm, bb, rval, pval, std_err = sp.stats.linregress(xx,input)
+    #    return mm,bb,rval,pval,std_err
 
-    elif input.ndim==2:
+    if input.ndim<=2:
         mm,bb = np.polyfit(xx,input,1) 
         return mm,bb
     elif input.ndim==3:
@@ -1118,6 +1128,8 @@ def trend_monthly(input):
            input is assumed to be a monthly timeseries (axis=0).
            If timeseries partially goes into next year (ie. is not divisible by 12),
            extra months will be ignored.
+
+        returns slope, y-intercept
     """
     shape = input.shape
     
@@ -1138,16 +1150,17 @@ def trend_monthly(input):
     for moidx in np.arange(0,12): # loop through 12 months
 
             tmp = input[moidx::12,...]
-            if input.ndim==1:
-                mm[moidx],bb[moidx],rval[moidx],pval[moidx],std_err[moidx]=trend(tmp)
-            else:
-                mm[moidx,...],bb[moidx,...] = trend(tmp)
+            #if input.ndim==1:
+            #    mm[moidx],bb[moidx],rval[moidx],pval[moidx],std_err[moidx]=trend(tmp)
+            #else:
+            #    mm[moidx,...],bb[moidx,...] = trend(tmp)
+            mm[moidx,...],bb[moidx,...] = trend(tmp)
     
-    if input.ndim==1:
-        return mm,bb,rval,pval,std_err
-    else:
-        return mm,bb
-
+    #if input.ndim==1:
+    #    return mm,bb,rval,pval,std_err
+    #else:
+    #    return mm,bb
+    return mm,bb
 
 def detrend(input, axis=0, dttype='linear'):
     """ use scipy.signal.detrend() to linearly detrend the 
