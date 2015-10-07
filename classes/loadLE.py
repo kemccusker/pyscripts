@@ -128,8 +128,11 @@ def load_LEdata(fielddict, ens, seas=None, timesel=None,infodict=None,ftype='ful
 def load_originalfive(fielddict, ens,seas=None, timesel=None,infodict=None,ftype='fullts',
                       calctype=None, calcdict=None, rettype='dict',conv=1, region=None,local=False,
                       orig='just',verb=True):
-    """ orig='just' means just load the original 5 runs. 
-        orig='add' means add the original 5 to the full LE.
+    """ orig='just' means just load the original 5 (historical+rcp85) runs (consistent w/ LE). 
+        orig='just45' means just load original 5 (historical+rcp45) to the full LE.
+
+        orig='add' means add the original 5 (historical+rcp85) to the full LE (consistent w/ LE)
+        orig='add45' means add the original 5 (historical+rcp45) to the full LE.
     """
 
     return load_LEdata(fielddict, ens, seas=seas, timesel=timesel, infodict=infodict,
@@ -146,7 +149,13 @@ def build_filenames(fielddict, ens, ftype='fullts',timesel=None,verb=True,local=
               for styr-enyr_climo. or 'ensmean'
         local: is the data on /raid/ra40 or ~/work/DATA (local=True)
               
-        returns a list of all filenames (50). @@add original 5?!
+        orig='just' means just load the original 5 (historical+rcp85) runs (consistent w/ LE). 
+        orig='just45' means just load original 5 (historical+rcp45) to the full LE.
+
+        orig='add' means add the original 5 (historical+rcp85) to the full LE (consistent w/ LE)
+        orig='add45' means add the original 5 (historical+rcp45) to the full LE.
+
+        returns a list of all filenames (50).
         
     """
     if ens=='historicalMisc':
@@ -181,17 +190,30 @@ def build_filenames(fielddict, ens, ftype='fullts',timesel=None,verb=True,local=
     comp=fielddict['comp']
     
     flist=[]
-    if orig=='just':
+    if orig in ('just','just45'):
+
+        #try:
         if ens=='historical':
-            casename='historicalrcp45'
+            if orig=='just45':
+                casename='historicalrcp45'
+                timeext='185001-201212'
+            else:
+                casename='historicalrcp85'
+                timeext='185001-202012'
+        else:
+            print 'ens != historical. What to do?'
+                #raise
+        #except:
+        #    raise Exception
 
         orignum=5
         basedir='/HOME/rkm/work/DATA/CanESM2/' + casename
 
         for eii in np.arange(1,orignum+1):
             fname=basedir + '/' + field + '/' + field + '_' + comp + '_CanESM2_' +\
-                   casename + '_r' + str(eii) + 'i1p' + pnum + '_185001-201212.nc'
-
+                   casename + '_r' + str(eii) + 'i1p' + pnum + '_' + timeext + '.nc'
+            if verb:
+                print fname
             flist.append(fname)
     else:
         if ensmean: # @@ note, should add the casename to ensmean filename!
@@ -212,18 +234,32 @@ def build_filenames(fielddict, ens, ftype='fullts',timesel=None,verb=True,local=
                     if verb:
                         print fname
                     flist.append(fname)
-        if orig=='add':
-            if ens=='historical':
-                casename='historicalrcp45'
-                
-            orignum=5
-            basedir='/HOME/rkm/work/DATA/CanESM2/' + casename
 
-            for eii in np.arange(1,orignum+1):
-                fname=basedir + '/' + field + '/' + field + '_' + comp + '_CanESM2_' +\
-                       casename + '_r' + str(eii) + 'i1p' + pnum + '_185001-201212.nc'
-                
-                flist.append(fname)
+            if orig in ('add','add45'):
+                #try:
+                if ens=='historical':
+                    if orig=='add45':
+                        casename='historicalrcp45'
+                        timeext='185001-201212'
+                    else:
+                        casename='historicalrcp85'
+                        timeext='185001-202012'
+                else:
+                    print 'ens != historical. What to do?'
+                        #raise
+                #except:
+                #    raise Exception
+
+                orignum=5
+                basedir='/HOME/rkm/work/DATA/CanESM2/' + casename
+
+                for eii in np.arange(1,orignum+1):
+                    fname=basedir + '/' + field + '/' + field + '_' + comp + '_CanESM2_' +\
+                           casename + '_r' + str(eii) + 'i1p' + pnum + '_' + timeext + '.nc'
+
+                    if verb:
+                        print fname
+                    flist.append(fname)
 
     return flist
         
