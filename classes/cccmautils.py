@@ -96,12 +96,15 @@ def calc_mincorr(N):
     return rmin
 
 
-def calc_seaicearea(input,lat,lon):
+def calc_seaicearea(input,lat,lon, model='CanESM2'):
     """ Calculate sea ice area from sea ice concentration
         input: 2D or greater array of sea ice concentration.
                If > 2D, time must be first dimension
         lat: array of coordinate lats
         lon: array of coordinate lons
+
+        if model=='CanESM2' (default), return areacella from file.
+        if model==None, use calc_cellareas() function which uses lat/lon
 
         returns: MASKED array of sea ice area with same
                  shape as input. The array is masked such
@@ -112,16 +115,30 @@ def calc_seaicearea(input,lat,lon):
     ishape = input.shape
     ndims=len(ishape)
 
-    if np.mod(input.shape[-1],2) != 0: # if lon is odd, leave cyclic lon in landmask
+    if np.mod(input.shape[-1],2) != 0: # if lon is odd, leave cyclic lon in landmask. #@@? keep extra lon tho?
         remcyc=False
     else:
         remcyc=True
         
     if ndims>2: # first dim is time
-        areas = calc_cellareas(lat,lon,repeat=ishape)
+        if model=='CanESM2':
+            areas = con.get_t63cellareas(repeat=ishape)
+        elif model==None:
+            areas = calc_cellareas(lat,lon,repeat=ishape)
+        else:
+            print 'model setting incorrect. Either CanESM2 or None' # @@
+            return -1
+
         lmask = con.get_t63landmask(repeat=ishape,remcyclic=remcyc) # @@ note assuming T63 here...
     else:
-        areas = calc_cellareas(lat,lon)
+        if model=='CanESM2':
+            areas = con.get_t63cellareas()
+        elif model==None:
+            areas = calc_cellareas(lat,lon)
+        else:
+            print 'model setting incorrect. Either CanESM2 or None' # @@
+            return -1
+
         lmask = con.get_t63landmask(remcyclic=remcyc)
     areas = ma.masked_where(input.mask, areas)
 
@@ -130,13 +147,11 @@ def calc_seaicearea(input,lat,lon):
     
     return sia
 
-def calc_totseaicearea(fld,lat,lon,isarea=False, extent=False):
+def calc_totseaicearea(fld,lat,lon,isarea=False):
     """ calculate total sea ice area
            returns nh,sh
            input is expected to be time x lat x lon SEA ICE CONC
               unless isarea=True
-
-        extent: specify if want extent instead (>=15% sic)
 
         @@ needs testing 9/9/2014
     """
@@ -146,9 +161,6 @@ def calc_totseaicearea(fld,lat,lon,isarea=False, extent=False):
             return -1
         sia=fld 
     else:
-        if extent:
-            #mask <=0.15
-            fld=ma.masked_where(fld<0.15, fld)
         sia = calc_seaicearea(fld,lat,lon)
 
     # Changed to ma.sum() on 12/10/14
@@ -156,6 +168,38 @@ def calc_totseaicearea(fld,lat,lon,isarea=False, extent=False):
     sh = ma.sum(ma.sum(sia[...,lat<0,:],axis=-1),axis=-1)
 
     return nh,sh
+
+def calc_seaiceextent(fld, lat, lon=None, model='CanESM2'):
+    """ 
+         fld should be time x lat x lon SEA ICE CONC [fraction]
+
+         model: 'CanESM2' uses grid cell area from file
+                None uses calc_cellareas(lat,lon)
+    
+         returns nhsie, shsie
+    """
+    ishape = fld.shape
+
+    if model=='CanESM2':
+        areas=con.get_t63cellareas(repeat=ishape)
+    elif model==None:
+        if lon==None:
+            print 'need lon if model==None!!' # @@
+            return -1
+
+        areas=calc_cellareas(lat,lon, repeat=ishape)
+    else:
+        print 'model setting incorrect. Either CanESM2 or None' # @@
+        return -1
+
+    fld[fld>=0.15] = 1
+    fld[fld<0.15] = 0
+
+    nhsie=(fld[...,lat>0,:]*areas[...,lat>0,:]).sum(axis=-1).sum(axis=-1)
+    shsie = (fld[...,lat<0,:]*areas[...,lat<0,:]).sum(axis=-1).sum(axis=-1)
+
+    return nhsie,shsie
+
 
 def calc_meanseaicethick(fld,sia,lat,lon):
     """ calc_meanseaicethick(input,sia,lat,lon)
@@ -228,12 +272,22 @@ def calc_totseaicevol_cmip5(fld,lat,lon,repeat=False,isarea=False):
     return nh,sh
   
     
-def global_mean_areawgted3d(fld, lat, lon):
+def global_mean_areawgted3d(fld, lat, lon, model='CanESM2'):
+    """
+        if model=='CanESM2': use areacella from file
+        if model==None: use calc_cellareas() using lat/lon
+    """
 
     earthrad = con.get_earthrad()
     totalarea = 4*np.pi*earthrad**2
 
-    cellareas = calc_cellareas(lat,lon)
+    if model=='CanESM2':
+        cellareas = con.get_t63cellareas()
+    elif model==None:
+        cellareas = calc_cellareas(lat,lon)
+    else:
+        print 'model setting incorrect. Either CanESM2 or None' # @@
+        return -1
 
     nt = fld.shape[0]
     wgts = cellareas/np.float(totalarea)
@@ -245,11 +299,21 @@ def global_mean_areawgted3d(fld, lat, lon):
     return gm
    
 def global_mean_areawgted(fld, lat, lon):
+    """
+        if model=='CanESM2': use areacella from file
+        if model==None: use calc_cellareas() using lat/lon
+    """
 
     earthrad = con.get_earthrad()
     totalarea = 4*np.pi*earthrad**2
 
-    cellareas = calc_cellareas(lat,lon)
+    if model=='CanESM2':
+        cellareas = con.get_t63cellareas()
+    elif model==None:
+        cellareas = calc_cellareas(lat,lon)
+    else:
+        print 'model setting incorrect. Either CanESM2 or None' # @@
+        return -1
 
     #nt = fld.shape[0]
     wgts = cellareas/np.float(totalarea)
@@ -258,16 +322,26 @@ def global_mean_areawgted(fld, lat, lon):
         
     return gm
 
-def polar_mean_areawgted3d(fld,lat,lon,latlim=60,hem='nh',cellareas=None,includenan=False):
+def polar_mean_areawgted3d(fld,lat,lon,latlim=60,hem='nh',cellareas=None,includenan=False, model='CanESM2'):
     """ Pass in cellareas if you want some of the cells masked, e.g. if masking ocean or land.
         This ONLY works if the mask is the same for each time in timeseries.
             includenan: whether or not to consider NaN values. if True, a mean of a NaN is NaN.
                         Default is False
+
+        if model=='CanESM2': use areacella from file
+        if model==None: use calc_cellareas() using lat/lon
     """
 
     if cellareas == None:
-        cellareas = calc_cellareas(lat,lon)
-        # else cellareas are provided
+        if model=='CanESM2':
+            cellareas = con.get_t63cellareas()
+        elif model==None:
+            cellareas = calc_cellareas(lat,lon)
+        else:
+            print 'model setting incorrect. Either CanESM2 or None' # @@
+            return -1
+
+    # else cellareas are provided
         
     # @@ what does this do if just an ocean field, etc?
 
@@ -456,6 +530,7 @@ def calc_cellareas(lat,lon, repeat=None):
 
     """ assumes longitudes are evenly spaced and lat and lon cover whole globe
         DOES NOT work for fraction of globe
+
         repeat should be the shape of the field that
         we want to multiply cellareas by. Assume the last
         two numbers are lat and lon sizes
@@ -500,18 +575,31 @@ def calc_cellareas(lat,lon, repeat=None):
         
     return cellareas
                      
-def get_cellwgts(lat,lon,repeat=None):
+def get_cellwgts(lat,lon,repeat=None, model='CanESM2'):
 
     """ basically, repeat should be the shape of the field that
     #   we want to weight with cell weights. Assume the last
     #   two numbers are lat and lon sizes
     #   If None, no repeating necessary
+
+        if model=='CanESM2': use areacella from file
+        if model==None: use calc_cellareas() using lat/lon
     """
     
     earthrad = con.get_earthrad()
     totalarea = 4*np.pi*earthrad**2
-    wgts = calc_cellareas(lat,lon)/totalarea
-    
+    if model=='CanESM2':
+        print 'totalarea from earthrad= ' + str(totalarea) # @@
+        print 'total area from sum(grid cell areas)= ' + str(con.get_t63cellareas().sum()) # @@
+        print 'diff= ' + str(totalarea-con.get_t63cellareas().sum())
+
+        wgts = con.get_t63cellareas()/totalarea
+    elif model==None:
+        wgts = calc_cellareas(lat,lon)/totalarea
+    else:
+        print 'model setting incorrect. Either CanESM2 or None' # @@
+        return -1
+
     if repeat != None:
         nrep = repeat[0:-2] # leave off last 2 dims (lat, lon)
         nrep = nrep + (1,1)
@@ -664,7 +752,7 @@ def mask_region(fld,lat,lon,region,limsdict=None):
 
     return fld, regmaskt
 
-def calc_regmean(fld,lat,lon,region,limsdict=None):
+def calc_regmean(fld,lat,lon,region,limsdict=None, model='CanESM2'):
     """ calc_regmean(fld, lat,lon,region,limsdict=None):
                  Mask the input data with the given region either defined
                     already in regiondict, or overridden with limsdict.
@@ -680,6 +768,9 @@ def calc_regmean(fld,lat,lon,region,limsdict=None):
                  limsdict: a dictionary of 'latlim' array and 'lonlim' array
                            (ie from a region dictionary, or user-defined)
 
+                 model: 'CanESM2', gets grid cell areas from file.
+                        None, uses calc_cellareas(lat,lon)
+
                  Returns: Regional mean (or series of regional means with length ndim1)
     """
 
@@ -693,12 +784,19 @@ def calc_regmean(fld,lat,lon,region,limsdict=None):
         fldm,regmask = mask_region(fld,lat,lon,region,limsdict)
 
         # calculate area-weights
-        areas = calc_cellareas(lat,lon)
+        if model=='CanESM2':
+            areas = con.get_t63cellareas()
+        elif model==None:
+            areas = calc_cellareas(lat,lon)
+        else:
+            print 'model setting incorrect. Either CanESM2 or None' # @@
+            return -1
+
         if regmask.ndim>2:
             areasm = ma.masked_where(np.squeeze(regmask[0,...]),areas)
         else:
             areasm = ma.masked_where(regmask,areas)
-        weightsm = areasm / np.sum(np.sum(areasm,axis=1),axis=0) # weights masked
+        weightsm = areasm / ma.sum(ma.sum(areasm,axis=1),axis=0) # weights masked
 
         if fld.ndim>2:
             ndim1 = fld.shape[0]
@@ -828,9 +926,12 @@ def calc_monthlytstat(input1,input2):
 
     return (tstat,pval)
 
-def calc_monthlysigarea(input1,input2,siglevel=0.05,latlim=60,region=None):
+def calc_monthlysigarea(input1,input2,siglevel=0.05,latlim=60,region=None, model='CanESM2'):
     """ calc_monthlysigarea(input1,input2,siglevel=0.05,latlim=60,region=None)
               If 'region' is set, it supercedes latlim!!
+
+              model: 'CanESM2' gets grid cell area from file
+                     None uses calc_cellareas(lat,lon)
 
               returns: sigarea AS PERCENT OF DOMAIN
     """
@@ -841,7 +942,14 @@ def calc_monthlysigarea(input1,input2,siglevel=0.05,latlim=60,region=None):
     lon = con.get_t63lon()
     lons,lats = np.meshgrid(lon,lat)
     
-    cellareas = calc_cellareas(lat,lon,repeat=pval.shape)
+    if model=='CanESM2':
+        cellareas=con.get_t63cellareas(repeat=pval.shape)
+    elif model==None:
+        cellareas = calc_cellareas(lat,lon,repeat=pval.shape)
+    else:
+        print 'model setting incorrect. Either CanESM2 or None' # @@
+        return -1
+
     totmask = cellareas # for computing total area
     
     amask = ma.masked_where(pval>siglevel,cellareas) # mask out non-sig cells
