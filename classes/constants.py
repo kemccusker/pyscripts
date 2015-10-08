@@ -117,6 +117,45 @@ def get_t63landmask(repeat=None,remcyclic=False):
         
     return lmask
         
+def get_t63cellareas(repeat=None, model='CanESM2'):
+    """ Return cell areas.
+        64x128
+
+        repeat: shape you want cellareas as. assume last 2 dims are lat,lon
+        
+    """
+    try:
+        if model!='CanESM2':
+            print 'get_t63cellareas() only has grid file for CanESM2 (atmos) right now'
+            raise Exception
+    except:
+        raise
+
+    plat = platform.system()
+
+    if plat == "Linux":
+        basepath = '/HOME/rkm/work/DATA/CanAM4/constants/'
+    else:
+        basepath = '/Users/kelly/CCCma/CanSISE/DATA/constants/' #@@
+
+    # /HOME/rkm/work/DATA/CanESM2/areacella_fx_CanESM2_historical-r1_r0i0p0.nc
+    ncfile = Dataset(basepath + 'areacella_fx_CanESM2_historical-r1_r0i0p0.nc','r')
+    #float areacella(lat, lon) ;
+    #            areacella:standard_name = "cell_area" ;
+    #            areacella:long_name = "Atmosphere Grid-Cell Area" ;
+    #            areacella:units = "m2" ;
+    #            areacella:missing_value = 1.e+20f ;
+    #            areacella:_FillValue = 1.e+20f ;
+
+    cellareas = ncfile.variables['areacella'][...] # 64 x 128
+
+    if repeat != None:
+        nrep = repeat[0:-2] # leave off last 2 dims (lat, lon)
+        nrep = nrep + (1,1)
+        cellareas = np.tile(cellareas,nrep)
+        
+    return cellareas
+
 def get_t63lat():
     plat = platform.system()
 
@@ -129,7 +168,7 @@ def get_t63lat():
 
     return cnc.getNCvar(fname,'lat')
 
-def get_t63lon():
+def get_t63lon(remcyclic=False):
 
     plat = platform.system()
 
@@ -139,8 +178,14 @@ def get_t63lon():
         basepath = '/Users/kelly/CCCma/CanSISE/DATA/constants/' #@@
 
     fname = basepath + 't63_landmask.nc'
-    
-    return cnc.getNCvar(fname,'lon')
+    lon=cnc.getNCvar(fname,'lon')
+
+    if remcyclic:
+        # if an extra lon exists, remove it.
+        if np.mod(lon.shape[0],2) != 0: # if lon is odd, remove extra
+            lon=lon[:-1]
+
+    return lon
 
 def get_t63lev(): # prob isn't tied to t63..
 
