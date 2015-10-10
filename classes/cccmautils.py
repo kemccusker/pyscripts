@@ -774,6 +774,14 @@ def calc_regmean(fld,lat,lon,region,limsdict=None, model='CanESM2'):
                  Returns: Regional mean (or series of regional means with length ndim1)
     """
 
+    # check if fld has extra lon, if so, remove it before doing reg avg
+    if np.mod(fld.shape[-1],2) != 0:
+        fld=fld[...,:-1]
+        print 'calc_regmean() removing extra lon. fld new shape: ' + str(fld.shape)
+    if np.mod(lon.shape[0],2) != 0:
+        lon=lon[:-1]
+        #print 'calc_regmean() removing extra lon. lon new shape: ' + str(lon.shape)
+
     if region=='gm':
         print 'Global average!'
         if fld.ndim>2: # @@ hack. just make global mean func better
