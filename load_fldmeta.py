@@ -101,7 +101,7 @@ def loadfldmeta(field,infodict,plottype,ptparams,level=None):
 
     # reserved for expansion into the plotfunction call
     pparams = {'cmin': None, 'cmax': None, 'cmap': 'blue2red_20',              
-               'type':'nh', 'latlim': latlim, 'lmask': 0} # plotparams
+               'ptype':'nh', 'latlim': latlim, 'lmask': 0} # plotparams
     if seasonalmap:
         pparams['round'] = round
         
