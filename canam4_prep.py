@@ -27,7 +27,7 @@ plt.ion()
        # coords = {'lat': con.get_t63lat(), 'lon': con.get_t63lon()}
 
 
-printtofile=True
+printtofile=False
 
 field = 'st'
 smclim=True
@@ -42,7 +42,7 @@ field2='gz'
 level2=50000
 
 # seasonalmap, seasonalvert, plotzonmean, plotseacyc, pattcorrwithtime, plotregmean,calcregmeanwithtime, calcregunccascade,calccomposites, timetosig, timetosigsuper, plotscatter
-plottype='calcregunccascade' 
+plottype='seasonalmap' 
 projtype='nh' #'eastere' # 'nh','sh','sq','eastere','nastere','eabksstere','ealamb','eabkslamb'
 
 # None, nh, polcap60, polcap65, polcap70, eurasia, eurasiamori, eurasiasth,eurasiathin,eurasiathinw,eurasiathine,ntham, nthatl, bks, bksmori, soo
@@ -51,7 +51,7 @@ screen=True # just for seasonalvert
 seacyclatlim=60
 withlat=False
 pattcorryr=False # need anymore?
-latlim = None # None #45 # lat limit for NH plots. Set to None otherwise. use 45 for BC-type maps
+latlim = 45 # None #45 # lat limit for NH plots. Set to None otherwise. use 45 for BC-type maps
 round=False # if latlim is not None, this specifies whether the polar stereographic figure should be square or round
 levlim= 100 # level limit for vertical ZM plots (in hPa). ignored if screen=True
 fallwin=False # just SON and DJF
@@ -81,7 +81,7 @@ addobs=True # add mean of kemhad* & kemnsidc* runs to line plots, seasonal maps.
 addr4ct=False # add kem1pert2r4ct (constant thickness version of ens4)
 addsens=False # add sensitivity runs (kem1pert1b, kem1pert3)
 addrcp=False # add kem1rcp85a simulation (and others if we do more)
-addcanens=True # add "initial condition" ensemble of kemctl1/kem1pert2
+addcanens=False # add "initial condition" ensemble of kemctl1/kem1pert2
 addsuper=False # add superensemble mean
 
 
@@ -336,7 +336,7 @@ infodict ={'cmapclimo': 'Spectral_r','leglocs': None,
            'model': model, 'sigtype': sigtype, 'sigoff': sigoff,
            'pct': pct, 'seacyclatlim': seacyclatlim, 'region': region,
            'shadeens': shadeens, 'corrlim': corrlim, 'figtrans':figtrans,
-           'type': projtype,'contclr': '0.3', 'contthk': 1, 'contstl': None} # random other info. projtype for maps only
+           'ptype': projtype,'contclr': '0.3', 'contthk': 1, 'contstl': None} # random other info. projtype for maps only
 
 fdict,pparams=ld.loadfldmeta(field,infodict,plottype,ptparams,level=level)
 

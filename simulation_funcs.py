@@ -70,7 +70,7 @@ def calc_plot_seasonal_maps(fielddict,coords,sims,pparams,vert=False,loctimesel=
     savestr=info['savestr']
     screen = info['screen']
     figtrans = info['figtrans'] # boolean specifying whether to switch rows/cols
-    pltype= info['type'] # plot projection type for kemmap
+    pltype= info['ptype'] # plot projection type for kemmap
     
     bp=con.get_basepath()
     basepath=bp['basepath'] + model + '/'; subdir=bp['subdir'] # @@ move out of function?
@@ -296,7 +296,7 @@ def calc_plot_seasonal_maps(fielddict,coords,sims,pparams,vert=False,loctimesel=
                         
                 pc = cplt.vert_plot(plotfld,lev,lat,**pparams)
                 if sigoff==False: # add sig
-                     cplt.addtsig(ax,pval[rowidx,...],lat,lev/100.,type=sigtype) # @@ dims?
+                     cplt.addtsig(ax,pval[rowidx,...],lat,lev/100.,sigtype=sigtype) # @@ dims?
                 if addcont:
                     lats,levs = np.meshgrid(lat,lev/100.)
                     ax.contour(lats,levs,plotfldadd,levels=contsadd,colors=contclradd,linewidths=contthkadd,linestyles=contstladd)
@@ -318,13 +318,13 @@ def calc_plot_seasonal_maps(fielddict,coords,sims,pparams,vert=False,loctimesel=
                         
             else: # maps
                 if pltype !=None:
-                    pparams['type']=pltype
+                    pparams['ptype']=pltype
                     
                 pparams['suppcb'] = 1
                 bm,pc = cplt.kemmap(plotfld,lat,lon,**pparams)#@@
 
                 if sigoff==False:
-                    cplt.addtsigm(bm,pval[rowidx,:,:],lat,lon,type=sigtype)
+                    cplt.addtsigm(bm,pval[rowidx,:,:],lat,lon,sigtype=sigtype)
                     
                 if addcont:
                     lons, lats = np.meshgrid(lon,lat)
