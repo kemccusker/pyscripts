@@ -143,7 +143,7 @@ def kemmap(fld, lat, lon,title='',units='',cmap='blue2red_w20',ptype='sq',
 
     bm = Basemap(**mapparams)
         
-    if np.mod(lon.shape,2) == 0:
+    if np.mod(lon.shape[0],2) == 0:
         # add cyclic lon
         fld,lon = mpltk.basemap.addcyclic(fld,lon)
      
