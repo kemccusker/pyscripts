@@ -729,6 +729,7 @@ def get_regiondict():
     regdict['eurasiathinw'] = {'latlims': [35,55], 'lonlims': [40,80]}
     regdict['eurasiathine'] = {'latlims': [35,50], 'lonlims': [80,120]}
     regdict['eurasiathicke'] = {'latlims': [40,70], 'lonlims': [90,130]}
+    regdict['eurasiamorie'] = {'latlims': [40,60], 'lonlims': [90,120]}# eastern half of eurasiamori
     regdict['ntham'] = {'latlims': [35,60], 'lonlims': [240,280]}
     regdict['nthamsth'] = {'latlims': [32,55], 'lonlims': [240,280]}
     regdict['nthamthick'] = {'latlims': [32,60], 'lonlims': [238,282]}
@@ -743,6 +744,10 @@ def get_regiondict():
     regdict['etroppac'] = {'latlims': [-15, 15], 'lonlims': [180,280]} # eastern trop pacific 15S-15N, 180W-80W
     regdict['trop'] = {'latlims': [-30, 30], 'lonlims': [0,360]} # wide tropics
     regdict['deeptrop'] = {'latlims': [-10, 10], 'lonlims': [0,360]} # deep tropics
+    regdict['eurasiase'] = {'latlims': [25,45], 'lonlims': [90,120]}
+    regdict['eurasialarge'] = {'latlims': [30,70], 'lonlims': [40,120]}
+    regdict['eurasiagrad'] = {'latlims': [35,55], 'lonlims': [100,130]}
+    regdict['eurasiagrad2'] = {'latlims': [45,60], 'lonlims': [90,130]}
 
     regdict['pig'] = {'latlims':[0,384], 'lonlims': [230,280]} # CCSM4 OCEAN!!! @@@ untested 10/6/2014
     
