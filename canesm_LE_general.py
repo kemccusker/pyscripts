@@ -30,7 +30,7 @@ import loadCanESM2data as lcd
 import corrstats as corrstats
 
 # exception handling works below. add to other clauses @@
-
+cutl=reload(cutl)
 
 local=True
 
@@ -149,11 +149,14 @@ anomyearsPI = [[79, 26],
 
 
 
-performop1 = False
+performop1 = True
 #op1='div'; region1op='gm' # polar amp: gt60n / gm
 #op1='sub'; region1op='deeptrop' # pole-eq temp gradient: gt60n - deeptrop (or trop)
 #op1='sub'; region1op='less' # bks sea ice minus less (laptev/east siberian)
-#op1='sub'; region1op='eurasiamori'
+op1='sub'; region1op='eurasiamori' # z500 grad b/w bks and eurasia
+#op1='sub'; region1op='eurasiagrad2' # z500 grad b/w bks and eurasia
+#op1='sub'; region1op='eurasiamorie' # z500 grad b/w bks and eurasia
+
 performop2 = False
 op2='div'; region2op='gm' # polar amp: gt60n / gm
 #op2='sub'; region2op='nh'
@@ -165,9 +168,9 @@ timeselall = '1979-01-01,2012-12-31'
 
 # x field
 #field1='turb'; ncfield1='turb'; comp1='Amon'; region1='bksmori'
-#field1='zg50000.00'; ncfield1='zg'; comp1='Amon'; region1='bksmori'
+field1='zg50000.00'; ncfield1='zg'; comp1='Amon'; region1='bksmori'
 #field1='sia'; ncfield1='sianh'; comp1='OImon'; region1='nh'
-field1='sic'; ncfield1='sic'; comp1='OImon'; region1='bksmori'; #'gt60n' #region1='bksmori' # @@ a hack. prefer SIA
+#field1='sic'; ncfield1='sic'; comp1='OImon'; region1='bksmori'; #'gt60n' #region1='bksmori' # @@ a hack. prefer SIA
 #field1='tas'; ncfield1='tas'; comp1='Amon'; region1='eurasiamori' #region1='bksmori'
 leconv1= 1 
 sea1='DJF'
@@ -1363,7 +1366,7 @@ def main(dowhat=None,addobs=True,addsims=False,addnat=False,
         #printtofile=True
         #addnat=True
         #addmisc=True
-        savedat=False # save data to ascii for John
+        savedat=True # save data to ascii for John
         #pinumsamp=100; print 'pinumsamp= 100!!!' # @@
         pinumsamp=50
         shorttermsims=True
@@ -1656,9 +1659,9 @@ def main(dowhat=None,addobs=True,addsims=False,addnat=False,
                 eraz500p= cnc.getNCvar(erafile,'PHI',timesel=timeselp,seas=sea1)/graveraint
                 latera=cnc.getNCvar(erafile,'lat')
                 lonera=cnc.getNCvar(erafile,'lon')
-                obsreg1 = cutl.calc_regmean(eraz500p-eraz500c,latera,lonera,region1)
+                obsreg1 = cutl.calc_regmean(eraz500p-eraz500c,latera,lonera,region1,model=None)
                 if performop1:
-                    opfld1 = cutl.calc_regmean(eraz500p-eraz500c,latera,lonera,region1op)
+                    opfld1 = cutl.calc_regmean(eraz500p-eraz500c,latera,lonera,region1op,model=None)
 
                     if op1=='sub': # subtract
                         obsreg1 = obsreg1.mean() - opfld1.mean()
@@ -1672,9 +1675,9 @@ def main(dowhat=None,addobs=True,addsims=False,addnat=False,
                 longis=cnc.getNCvar(gisfile,'lon')
                 gissatc= cnc.getNCvar(gisfile,'tempanomaly',timesel=timeselc,seas=sea1) 
                 gissatp= cnc.getNCvar(gisfile,'tempanomaly',timesel=timeselp,seas=sea1)
-                obsreg1 =  cutl.calc_regmean(gissatp-gissatc,latgis,longis,region1)
+                obsreg1 =  cutl.calc_regmean(gissatp-gissatc,latgis,longis,region1,model=None)
                 if performop1:
-                    opfld1 = cutl.calc_regmean(gissatp-gissatc,latgis,longis,region1op)
+                    opfld1 = cutl.calc_regmean(gissatp-gissatc,latgis,longis,region1op,model=None)
 
                     if op1=='sub': # subtract
                         obsreg1 = obsreg1.mean() - opfld1.mean()
@@ -1689,9 +1692,9 @@ def main(dowhat=None,addobs=True,addsims=False,addnat=False,
                 print 'OBS SIC: SELECT UP THROUGH 2011 ONLY @@@@@'
                 nssicc= cnc.getNCvar(nsidcfile,'SICN',timesel=timeselc,seas=sea1)*100
                 nssicp= cnc.getNCvar(nsidcfile,'SICN',timesel='2002-01-01,2011-12-31',seas=sea1)*100
-                obsreg1 =  cutl.calc_regmean(nssicp-nssicc.mean(axis=0),latns,lonns,region1)
+                obsreg1 =  cutl.calc_regmean(nssicp-nssicc.mean(axis=0),latns,lonns,region1,model=None)
                 if performop1:
-                    opfld1 = cutl.calc_regmean(nssicp-nssicc.mean(axis=0),latns,lonns,region1op)
+                    opfld1 = cutl.calc_regmean(nssicp-nssicc.mean(axis=0),latns,lonns,region1op,model=None)
 
                     if op1=='sub': # subtract
                         print '========== OBS SIC: ' + str(obsreg1.mean()) + '-' + str(opfld1.mean()) +\
@@ -1723,9 +1726,9 @@ def main(dowhat=None,addobs=True,addsims=False,addnat=False,
                     gissatp= cnc.getNCvar(gisfile,'tempanomaly',timesel=timeselp)
                     obsreg2=gissatp.mean()-gissatc.mean()
                 else:
-                    obsreg2 =  cutl.calc_regmean(gissatp-gissatc.mean(axis=0),latgis,longis,region2)
+                    obsreg2 =  cutl.calc_regmean(gissatp-gissatc.mean(axis=0),latgis,longis,region2,model=None)
                     if performop2:
-                        opfld2 = cutl.calc_regmean(gissatp-gissatc.mean(axis=0),latgis,longis,region2op)
+                        opfld2 = cutl.calc_regmean(gissatp-gissatc.mean(axis=0),latgis,longis,region2op,model=None)
 
                         if op2=='sub': # subtract
                             obsreg2 = obsreg2.mean() - opfld2.mean()
@@ -1908,8 +1911,8 @@ def main(dowhat=None,addobs=True,addsims=False,addnat=False,
                     if region1op=='nh':
                         fldssodf1 = fldssodf1 - fldssodf1op.mean() # want to subtract ens mean nh
                     else:
-                        print '========== NSIDC SIC: ' + str(fldssodf1.values.mean()) + '-' + str(fldssodf1op.values.mean()) +\
-                            ' = ' + str(fldssodf1.values.mean() - fldssodf1op.values.mean())
+                        #print '========== NSIDC SIC: ' + str(fldssodf1.values.mean()) + '-' + str(fldssodf1op.values.mean()) +\
+                        #    ' = ' + str(fldssodf1.values.mean() - fldssodf1op.values.mean())
                         fldssodf1 = fldssodf1 - fldssodf1op # not sure if want ens mean here...
                 elif op1=='div': # divide
                     fldssodf1 = fldssodf1 / fldssodf1op
@@ -2144,17 +2147,18 @@ def main(dowhat=None,addobs=True,addsims=False,addnat=False,
             plt.legend(('AGCM var','AGCM mean','AGCM NSIDC','Hist LE'),loc='best')
 
             # write ascii file for john:
+            print 'OBS DATA: ' + str(obsreg1),str(obsreg2)
             agcmout1=np.hstack((fldssrdfcnd,fldssodfcnd,fldssdfcnd)) # column 1
             agcmout2=np.hstack((fldssrdf2,fldssodf2,fldssdf2)) # column 2
             agcmout3=np.hstack((fldssrdf1,fldssodf1,fldssdf1)) # column 3
             agcmout = np.vstack((agcmout1,agcmout2,agcmout3)).T
-            np.savetxt('agcmout2.ascii',agcmout,delimiter='\t')
+            np.savetxt('agcmout3.ascii',agcmout,delimiter='\t')
 
             cgcmout1=np.hstack((lefldcnd,lefldncnd,lefldmcnd))
             cgcmout2=np.hstack((lefld2,lefld2n,lefld2m))
             cgcmout3=np.hstack((lefld1,lefld1n,lefld1m))
             cgcmout = np.vstack((cgcmout1,cgcmout2,cgcmout3)).T
-            np.savetxt('cgcmout.ascii',cgcmout,delimiter='\t')
+            np.savetxt('cgcmout3.ascii',cgcmout,delimiter='\t')
 
     if dohist:
         conv=leconv1 # just assume we are doing variable 1
@@ -2198,7 +2202,7 @@ def main(dowhat=None,addobs=True,addsims=False,addnat=False,
     if doregress:
         donorm=True
         addfld=True # add contours of second field
-        ensmean=True
+        ensmean=False
 
         seasp=sea1 # season of spatial field
         sear=sea2 # season of regional avgs
@@ -2325,7 +2329,7 @@ def main(dowhat=None,addobs=True,addsims=False,addnat=False,
 
         #mm, bb, rval, pval, std_err = sp.stats.linregress(lesear,leseasp) # errors. why? @@
         slope,intercept = np.polyfit(lesear,leseasp,1)
-        bkssat=slope.reshape((nlat,nlon)) # SAT regress on SIC
+        bkssat=slope.reshape((nlat,nlon)) # SAT regress on SIC (fieldr actually)
         slope,intercept = np.polyfit(lesear,leseasp2,1)
         bkszg=slope.reshape((nlat,nlon)) # Z500 regress on SIC
 
@@ -2358,19 +2362,19 @@ def main(dowhat=None,addobs=True,addsims=False,addnat=False,
 
 
 
-        fig,axs=plt.subplots(1,2)
+        """fig,axs=plt.subplots(1,2)
         fig.set_size_inches(10,5)
         ax=axs[0]#
-        cplt.kemmap(bkszg,lat,lon,type='nh',axis=ax,cmin=cmin,cmax=cmax,
+        cplt.kemmap(bkszg,lat,lon,ptype='nheur',axis=ax,cmin=cmin,cmax=cmax,
                     title=seasp + ' ' + fieldsp + ' regressed onto ' + sear + ' ' +fieldr+regionr )
 
         ax=axs[1] #
-        cplt.kemmap(eurzg,lat,lon,type='nh',axis=ax, cmin=cmin2,cmax=cmax2,
+        cplt.kemmap(eurzg,lat,lon,ptype='nheur',axis=ax, cmin=cmin2,cmax=cmax2,
                     title= seasp + ' ' + fieldsp + ' regressed onto ' + sear + ' ' +fieldr2+regionr2)
 
         if printtofile:
             fig.savefig(fieldr +regionr + '_' + fieldsp + seasp + \
-                        + '_regresson_' + fieldr2 + regionr2 + sear + normstr + '.pdf') 
+                        + '_regresson_' + fieldr2 + regionr2 + sear + normstr + '.pdf') """
 
         # @@ create a figure with regression contours on top of other regression:
         #   e.g. z500 regressed onto BKS SIC contours on SAT regressed onto BKS SIC map
@@ -2384,7 +2388,7 @@ def main(dowhat=None,addobs=True,addsims=False,addnat=False,
 
         fig,ax=plt.subplots(1,1)
         fig.set_size_inches(5,5)
-        bm,pc=cplt.kemmap(bkssat,lat,lon,type='nh',axis=ax,cmin=cmin,cmax=cmax,
+        bm,pc=cplt.kemmap(bkssat,lat,lon,ptype='nheur',axis=ax,cmin=cmin,cmax=cmax,
                     title=seasp + ' regressions onto ' + sear + ' ' + fieldr+regionr)
         bm.contour(lons,lats,bkszg,levels=conts,
                    colors='k',linewidths=1,latlon=True)
@@ -2393,19 +2397,20 @@ def main(dowhat=None,addobs=True,addsims=False,addnat=False,
                         + '_regresson_' + fieldr + regionr + sear + normstr + '.pdf') 
 
 
-        tmp=np.zeros(bkssat.shape)
+        """tmp=np.zeros(bkssat.shape)
         fig,ax=plt.subplots(1,1)
         fig.set_size_inches(5,5)
-        bm,pc=cplt.kemmap(tmp,lat,lon,type='nh',axis=ax,cmin=cmin,cmax=cmax,
+        bm,pc=cplt.kemmap(tmp,lat,lon,ptype='nheur',axis=ax,cmin=cmin,cmax=cmax,
                           title=seasp + ' regressions onto ' + sear + ' ' + fieldr+regionr,suppcb=True)
 
         bm.contour(lons,lats,bkszg,levels=conts,
                    colors='k',linewidths=1,latlon=True)
         if printtofile:
             fig.savefig(fieldsp2 + seasp \
-                        + '_regresson_' + fieldr + regionr + sear + normstr + '.pdf') 
+                        + '_regresson_' + fieldr + regionr + sear + normstr + '.pdf') """
 
 
+        return bkssat,bkszg
 
 
     if dolongtermavg:
