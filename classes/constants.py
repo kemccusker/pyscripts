@@ -745,6 +745,8 @@ def get_regiondict():
     regdict['trop'] = {'latlims': [-30, 30], 'lonlims': [0,360]} # wide tropics
     regdict['deeptrop'] = {'latlims': [-10, 10], 'lonlims': [0,360]} # deep tropics
     regdict['eurasiase'] = {'latlims': [25,45], 'lonlims': [90,120]}
+    regdict['eurasiasebig'] = {'latlims': [30,55], 'lonlims': [80,125]}
+    regdict['eurasiasemed'] = {'latlims': [35,55], 'lonlims': [80,125]}
     regdict['eurasialarge'] = {'latlims': [30,70], 'lonlims': [40,120]}
     regdict['eurasiagrad'] = {'latlims': [35,55], 'lonlims': [100,130]}
     regdict['eurasiagrad2'] = {'latlims': [45,60], 'lonlims': [90,130]}
