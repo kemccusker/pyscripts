@@ -153,9 +153,10 @@ performop1 = True
 #op1='div'; region1op='gm' # polar amp: gt60n / gm
 #op1='sub'; region1op='deeptrop' # pole-eq temp gradient: gt60n - deeptrop (or trop)
 #op1='sub'; region1op='less' # bks sea ice minus less (laptev/east siberian)
-op1='sub'; region1op='eurasiamori' # z500 grad b/w bks and eurasia
+#op1='sub'; region1op='eurasiamori' # z500 grad b/w bks and eurasia
 #op1='sub'; region1op='eurasiagrad2' # z500 grad b/w bks and eurasia
 #op1='sub'; region1op='eurasiamorie' # z500 grad b/w bks and eurasia
+op1='sub'; region1op='eurasiasemed' # z500 grad b/w bks and eurasia
 
 performop2 = False
 op2='div'; region2op='gm' # polar amp: gt60n / gm
