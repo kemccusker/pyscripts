@@ -17,6 +17,7 @@ import copy
 import constants as con
 import cccmacmaps as ccm
 import cccmautils as cutl
+from matplotlib.patches import Polygon
 
 """
 kemmap(fld, lat, lon, title='', units='', cmap='blue2red_w20', ptype='sq', cmin='', cmax='',
@@ -75,11 +76,12 @@ def kemmap(fld, lat, lon,title='',units='',cmap='blue2red_w20',ptype='sq',
             
         else:
             # try mill, hammer, merc
-            mapparams = dict(projection='ortho',lon_0=lon0,lat_0=90.,\
+            mapparams = dict(projection='ortho',lon_0=lon0,lat_0=89.5,\
                              resolution='c') #llcrnrlon='-180',llcrnrlat='45',urcrnrlon='180',urcrnrlat='90'
         # I thought the above corner limits would work to zoom on NH but I'm getting
         # AttributeError: 'Basemap' object has no attribute '_height'
         # 5/12/14 -- don't know why. same goes for lat_0=0.        
+        # 10/13/2015: changed lat_0 to 89.5 from 90. b/c .eps figure file wouldn't save
         
     elif ptype == 'sh':
         if latlim != None: # try 'round=True' !@@@
@@ -87,7 +89,7 @@ def kemmap(fld, lat, lon,title='',units='',cmap='blue2red_w20',ptype='sq',
             if round==True:
                 mapparams['round'] = True
         else:
-            mapparams = dict(projection='ortho',lon_0=0.,lat_0=-90., resolution='c')
+            mapparams = dict(projection='ortho',lon_0=0.,lat_0=-89.5, resolution='c')
             # same error if add: llcrnrlon='-180',llcrnrlat='-90',urcrnrlon='180',urcrnrlat='-45'
     elif ptype == 'eastere': # Eurasia stere projection
         #mapparams = dict(width=2500000,height=2700000,resolution='i',projection='laea',\
@@ -169,6 +171,7 @@ def kemmap(fld, lat, lon,title='',units='',cmap='blue2red_w20',ptype='sq',
         if ptype in ('eastere','eabksstere','nastere','ealamb','eabkslamb'):
             pc=bm.pcolormesh(lons,lats,fld,**pcparams)
         else:
+            #print '@@@@@@@@@@@ ' + str(pcparams)
             pc = bm.contourf(lons,lats,fld,**pcparams)
 
     if drawgrid:
@@ -628,7 +631,39 @@ def plot_allregions(ptype='nh'):
         ax.set_xlabel(str(limsdict['latlims']) + ',' +str(limsdict['lonlims']) )
         
         if aii==nreg-1: break # get out of loop if done with regions
-        
+   
+
+def plot_regions(regions, ptype='nh', colors='k', latlim=None, drawgrid=False):
+    """ plot multiple region boundaries on one map
+
+           regions: tuple of region names
+
+           default color = black
+           colors can be a tuple of color specifications. 
+                index will wrap if not enough
+
+    """
+
+    dummy = con.get_t63landmask()
+    lat = con.get_t63lat()
+    lon = con.get_t63lon()
+
+    lons,lats = np.meshgrid(lon,lat)
+    dummy = dummy*np.nan
+
+    plt.figure()
+    bm,pc = kemmap(dummy,lat,lon,ptype=ptype,latlim=latlim,suppcb=1,
+                   drawgrid=drawgrid, lmask=True)
+    
+    for ii,reg in enumerate(regions):
+
+        if len(colors)==1: clr=colors
+        else:
+            if ii==len(colors): ii=0 # wrap index
+            clr=colors[ii]
+
+        add_regionpolym(reg,bm, ec=clr)
+
     
 def kemscatter(fldx,fldy,weights=None,axis=None,xlims=None,ylims=None,suppregress=False,
                supponetoone=False, marker='.',color='k',grid=True):
@@ -890,3 +925,84 @@ def plot_onecascade(topdata,bottdata,topy,botty,ax=None, mparams=None, lparams=N
             #print 'element of bottdata: ' + str(b)
 
             ax.plot((b,td), (botty,topy),**lparams) # individual lines
+
+def add_regionpolym(region, bm, limsdict=None,ax=None, fc='none', ec='black', lw=2, alpha=1):
+    """ add region box in map coords to a basemap.
+
+            if region=='other', use limsdict 
+    """
+
+    if region=='other':
+        rlims=limsdict
+    else:
+        rlims=con.get_regionlims(region)
+
+    lats,lons = corners_to_poly(rlims)
+    add_polym(lats,lons,bm,ax=ax,fc=fc,ec=ec,lw=lw,alpha=alpha)
+
+
+def add_polym( lats, lons, bm, ax=None, fc='red', ec='none', lw=1.0, alpha=0.4):
+    """ from:http://stackoverflow.com/questions/12251189/how-to-draw-rectangles-on-a-basemap
+
+        Adds a polygon given lat/lon vertices. Use corners_to_poly() to convert
+             limsdict (latlims/lonlims) to lats, lons.
+
+        lats: array of lat vertices (in degrees)
+        lons: array of lon vertices matching lats (in degrees)
+        bm: Basemap instance
+        ax: axis
+        fc: facecolor for polygon patch
+        ec: edgecolor of patch
+        lw= linewidth for edge
+        alpha: opacity of patch
+
+    """
+
+    x, y = bm( lons, lats )
+    xy = zip(x,y)
+    poly = Polygon( xy, facecolor=fc, alpha=alpha, edgecolor=ec, linewidth=lw )
+    if ax==None:
+        ax=plt.gca()
+
+    ax.add_patch(poly)
+
+
+def corners_to_poly(limsdict, resolution=30):
+    """ utility function to convert corners in a limsdict (from constants.get_regionlims())
+           to vertices for a polygon, by defining each of the 4
+           line segments (with num points = resolution). This is useful
+           for drawing a region polygon on a basemap using 
+           
+           limsdict: {'latlims': [southern lat lim, northern lat lim], 
+                      'lonlims': [western lon lim, eastern lon lim] }
+           resolution: number of points to include in line segment
+           
+           returns lats, lons (stacked arrays of all lat points and all lon points)
+    """
+    
+    lllat = limsdict['latlims'][0]; ullat = limsdict['latlims'][1] # lower/upper left lats
+    lllon = limsdict['lonlims'][0]; ullon = limsdict['lonlims'][0] # lower/upper left lons
+    urlat = limsdict['latlims'][1]; lrlat = limsdict['latlims'][0] # upper/lower right lats
+    urlon = limsdict['lonlims'][1]; lrlon = limsdict['lonlims'][1] # upper/lower right lons
+
+    # left side line segment
+    latsL = np.linspace(lllat,ullat,resolution)
+    lonsL = np.linspace(lllon,ullon,resolution)
+
+    # top line segment
+    latsT = np.linspace(ullat,urlat,resolution)
+    lonsT = np.linspace(ullon,urlon,resolution)
+
+    # right line segment
+    latsR = np.linspace(urlat,lrlat,resolution)
+    lonsR = np.linspace(urlon,lrlon,resolution)
+
+    # bottom line segment
+    latsB = np.linspace(lrlat,lllat, resolution )
+    lonsB = np.linspace(lrlon,lllon, resolution )
+
+
+    lats=np.hstack((latsL,latsT,latsR,latsB))
+    lons=np.hstack((lonsL,lonsT,lonsR,lonsB))
+
+    return lats,lons
