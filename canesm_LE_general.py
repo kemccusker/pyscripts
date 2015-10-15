@@ -28,6 +28,8 @@ import numpy.ma as ma
 import scipy.io as sio
 import loadCanESM2data as lcd
 import corrstats as corrstats
+import mpl_toolkits as mpltk
+
 
 # exception handling works below. add to other clauses @@
 cutl=reload(cutl)
@@ -1343,7 +1345,8 @@ def calc_shorttermpdf(fdict,field,region,sea,timesel,leconv=1,subnh=False,combag
 # ==================== main() ====================================
 def main(dowhat=None,addobs=True,addsims=False,addnat=False,
          addmisc=False,addpi=False,verb=False,combagcm=False,
-         comblenat=False,pversion='',local=True,printtofile=False):
+         comblenat=False,pversion='',local=True,printtofile=False,
+         title=None):
 
 
     """ dowhat options are: doscatter, dohist, doregress, dolongtermavg
@@ -2386,16 +2389,27 @@ def main(dowhat=None,addobs=True,addsims=False,addnat=False,
         incr = (cmaxsp2-cminsp2) / (cmlen)
         conts = np.arange(cminsp2,cmaxsp2+incr,incr)
 
+        if title==None:
+            ttl=seasp + ' regressions onto ' + sear + ' ' + fieldr+regionr
+        else:
+            ttl=title
 
         fig,ax=plt.subplots(1,1)
         fig.set_size_inches(5,5)
         bm,pc=cplt.kemmap(bkssat,lat,lon,ptype='nheur',axis=ax,cmin=cmin,cmax=cmax,
-                    title=seasp + ' regressions onto ' + sear + ' ' + fieldr+regionr)
+                          title=ttl)
+        if np.mod(len(lon),2) == 0:
+            # add cyclic lon
+            bkszg,lon = mpltk.basemap.addcyclic(bkszg,lon)
+        lons, lats = np.meshgrid(lon,lat)
         bm.contour(lons,lats,bkszg,levels=conts,
                    colors='k',linewidths=1,latlon=True)
         if printtofile:
             fig.savefig(fieldsp + seasp + '_' + fieldsp2 + seasp \
                         + '_regresson_' + fieldr + regionr + sear + normstr + '.pdf') 
+            fig.savefig(fieldsp + seasp + '_' + fieldsp2 + seasp \
+                        + '_regresson_' + fieldr + regionr + sear + normstr + '.eps',
+                        format='eps',dpi=600) 
 
 
         """tmp=np.zeros(bkssat.shape)
