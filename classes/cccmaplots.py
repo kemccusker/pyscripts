@@ -145,7 +145,8 @@ def kemmap(fld, lat, lon,title='',units='',cmap='blue2red_w20',ptype='sq',
 
     bm = Basemap(**mapparams)
         
-    if np.mod(lon.shape[0],2) == 0:
+    #if np.mod(lon.shape[0],2) == 0:
+    if np.mod(len(lon),2) == 0:
         # add cyclic lon
         fld,lon = mpltk.basemap.addcyclic(fld,lon)
      
@@ -427,6 +428,10 @@ def map_allmonths(fld, lat, lon,title='',units='',cmap='blue2red_w20',ptype='sq'
     return fig
 
 def add_colorbar(fig,phand,orientation='vertical',pos=None,label=None):
+    """
+        returns cbar_ax, cbar
+
+    """
 
     try:
         if pos==None:
@@ -440,8 +445,13 @@ def add_colorbar(fig,phand,orientation='vertical',pos=None,label=None):
     except:
         raise
 
+    cparams={'orientation': orientation}
+    if label!=None:
+        cparams['label']=label
+
     cbar_ax = fig.add_axes(pos)
-    cbar = fig.colorbar(phand,cax=cbar_ax,orientation=orientation,label=label)
+    cparams['cax'] = cbar_ax
+    cbar = fig.colorbar(phand,**cparams) #cax=cbar_ax,orientation=orientation,label=label)
 
     return cbar_ax, cbar
 
