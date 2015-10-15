@@ -14,6 +14,7 @@ import numpy.ma as ma
 import scipy as sp
 import scipy.stats
 from scipy.stats import norm
+import copy
 
 con = reload(con)
 
@@ -147,7 +148,7 @@ def calc_seaicearea(input,lat,lon, model='CanESM2'):
     
     return sia
 
-def calc_totseaicearea(fld,lat,lon,isarea=False):
+def calc_totseaicearea(fld,lat,lon,isarea=False,model='CanESM2'):
     """ calculate total sea ice area
            returns nh,sh
            input is expected to be time x lat x lon SEA ICE CONC
@@ -156,12 +157,9 @@ def calc_totseaicearea(fld,lat,lon,isarea=False):
         @@ needs testing 9/9/2014
     """
     if isarea:
-        if extent: 
-            print 'Cannot do extent with sea ice area as input, need frac!' #@@
-            return -1
         sia=fld 
     else:
-        sia = calc_seaicearea(fld,lat,lon)
+        sia = calc_seaicearea(fld,lat,lon,model=model)
 
     # Changed to ma.sum() on 12/10/14
     nh = ma.sum(ma.sum(sia[...,lat>0,:],axis=-1),axis=-1)
@@ -187,16 +185,26 @@ def calc_seaiceextent(fld, lat, lon=None, model='CanESM2'):
             print 'need lon if model==None!!' # @@
             return -1
 
+        if np.mod(len(lon),2)!=0:
+            # remove extra lon before calc
+            lon=lon[:-1]
+            fld=fld[...,:-1]
+            ishape=fld.shape
+
         areas=calc_cellareas(lat,lon, repeat=ishape)
     else:
         print 'model setting incorrect. Either CanESM2 or None' # @@
         return -1
 
-    fld[fld>=0.15] = 1
-    fld[fld<0.15] = 0
+    tmp = copy.copy(fld)
+    tmp[fld>=0.15] = 1
+    tmp[fld<0.15] = 0
 
-    nhsie=(fld[...,lat>0,:]*areas[...,lat>0,:]).sum(axis=-1).sum(axis=-1)
-    shsie = (fld[...,lat<0,:]*areas[...,lat<0,:]).sum(axis=-1).sum(axis=-1)
+    nh = tmp[...,lat>0,:]*areas[...,lat>0,:]
+    nhsie = ma.sum(ma.sum(nh,axis=-1),axis=-1)
+
+    #nhsie=(tmp[...,lat>0,:]*areas[...,lat>0,:]).sum(axis=-1).sum(axis=-1)
+    shsie = (tmp[...,lat<0,:]*areas[...,lat<0,:]).sum(axis=-1).sum(axis=-1)
 
     return nhsie,shsie
 
@@ -209,7 +217,7 @@ def calc_meanseaicethick(fld,sia,lat,lon):
     
     print "Not finished! @@"
 
-def calc_totseaicevol(fld,sic,lat,lon,repeat=False,isarea=False):
+def calc_totseaicevol(fld,sic,lat,lon,repeat=False,isarea=False,model=None):
     """ calculate total ice volume
            returns nh, sh
            input is expected to be time x lat x lon in units of thickness (not mass)
@@ -231,8 +239,8 @@ def calc_totseaicevol(fld,sic,lat,lon,repeat=False,isarea=False):
         sic = np.tile(sic,nrep)
         
 
-    if area==False:
-        sia=calc_seaicearea(sic,lat,lon)
+    if isarea==False:
+        sia=calc_seaicearea(sic,lat,lon,model=model)
     else:
         sia=sic
     
@@ -244,27 +252,28 @@ def calc_totseaicevol(fld,sic,lat,lon,repeat=False,isarea=False):
     
     return nh,sh
   
-def calc_totseaicevol_cmip5(fld,lat,lon,repeat=False,isarea=False):
+def calc_totseaicevol_cmip5(fld,lat,lon, model='CanESM2'):
     """ calculate total ice volume
            returns nh, sh
            input is expected to be time x lat x lon in units of 
               thickness over ocean portion of grid cell
 
+          For cmip5 input, just need to multiply by grid cell area to
+            get volume
     """
 
-    if repeat:
-        nrep = repeat[0:-2] # leave off last 2 dims (lat, lon)
-        nrep = nrep + (1,1)
-        sic = np.tile(sic,nrep)
-        
+    ishape = fld.shape
 
-    if area==False:
-        sia=calc_seaicearea(sic,lat,lon)
+    if model=='CanESM2':
+        areas=con.get_t63cellareas(repeat=ishape)
+    elif model==None:
+        areas=calc_cellareas(lat,lon, repeat=ishape)
     else:
-        sia=sic
+        print 'model setting incorrect. Either CanESM2 or None' # @@
+        return -1
     
-    gridvoln = fld[:,lat>0,...]*sia[:,lat>0,...] # north
-    gridvols = fld[:,lat<0,...]*sia[:,lat<0,...] # south
+    gridvoln = fld[:,lat>0,...]*areas[:,lat>0,...] # north
+    gridvols = fld[:,lat<0,...]*areas[:,lat<0,...] # south
     # Changed to ma.sum() on 12/10/14
     nh = ma.sum(ma.sum(gridvoln,2),1)
     sh = ma.sum(ma.sum(gridvols,2),1)
