@@ -5,17 +5,18 @@
 import cccmautils as cutl
 import constants as con
 import pandas as pd
+import numpy.ma as ma
 
 
-printtofile=True
+printtofile=False
 
 #zonal=False 
-#calctype='vertint' # 'vertint' or 'vertavg', for calc'ing PHT in script
-calctype='vertavg'
+calctype='vertint' # 'vertint' or 'vertavg', for calc'ing PHT in script
+#calctype='vertavg'
 
 # this next setting is for calcs already done in nc file
-#fldpre = '_vert_int'
-fldpre = '_vert_avg'; 
+fldpre = '_vert_int'
+#fldpre = '_vert_avg'; 
 
 
 domonth=False # otherwise do season
@@ -79,10 +80,24 @@ lon = con.get_t63lon()
 #lev = con.get_t63lev() # 37 levs
 fname=basepath + casename + '_u_' + timeper + '_ts.nc' # 22 levs!!
 lev = cnc.getNCvar(fname,'plev')
-
 dp = np.diff(lev)
 nlon = len(lon)-1 # removing extra lon
 
+# get surface pressure to do vert avg and int here
+fname=basepath + casename + '_ps_' + timeper + '_ts.nc'
+sfcp = cnc.getNCvar(fname,'PS',timesel=timesel)*100 # into Pa
+
+def clear_belowsfc(fld, sfcp, lev):
+
+    #levt=np.tile(lev,((sfcp.shape)+(1,)))
+    #levt = np.transpose(levt,(3,0,1,2)) # lev x time x lat x lon (for now)
+    
+    for levii,level in enumerate(lev):
+        # for each level, check if the surface pressure is 
+        #print level
+        fld[:,levii,...] = ma.masked_where(sfcp<level,fld[:,levii,...])
+
+    return fld
 
 def calc_PHT(fld, onelat, nlon, dp, calc='vertint'):
     """
@@ -153,44 +168,72 @@ def calc_PHT2(fld, onelat, nlon, dp=None, calc='vertint'):
     return fldpint
 
 
-def calc_PHT3(fld, onelat, nlon, dp=None, calc='vertint'):
+def calc_PHT3(fld, onelat, nlon, dp=None, vcalc='vertint',zcalc='zonavg'):
     """
-         calculates zonal AVERAGE and vertical integration/average
+         calculates zonal AVERAGE/or zonal INTEGRAL
+         and vertical integration/average
 
-            calc='vertint' calculates zonal and vertical integral
-            calc='vertavg' calculates zonal integral and vertical average
-            calc='none' just zonal integral, b/c already vertically integrated(?)
+            vcalc='vertint' calculates zonal and vertical integral
+            vcalc='vertavg' calculates zonal integral and vertical average
+            vcalc='none' just zonal integral, b/c already vertically integrated(?)
+
+            zcalc='zonint' calculates zonal integral
+            zcalc='zonavg' calculates zonal average
+
+         Vertical dim is done first, then zonal.
+         This func should supercede the other calc_PHT funcs b/c it can do it all.
     """
-    #print 'calc_PHT2()'
+
+    # dims of fld will be: lev x lon
+    #   OR  x lon
 
     latrad = np.deg2rad(onelat)
     totlam=2*np.pi 
     dlam=totlam/np.float(nlon) # div by number of lons
 
-    
+    if vcalc == 'none':
+        # this means the vertical dimension has already been
+        #  taken care of in the .nc file
+        tmpfld = fld # div by g done in .nc file
 
-    if calc != 'none':
-        tmpfld = np.sum(fld,axis=1)*erad*np.cos(latrad)*dlam # zonal integration
-        tmpfld = tmpfld / totlam # zonal AVERAGE
-        fldzint= (tmpfld[0:-1] + tmpfld[1:]) / 2 # interp in b/w levels
-    else:
-        tmpfld = np.sum(fld,axis=0)*erad*np.cos(latrad)*dlam # zonal integration
-        tmpfld = tmpfld / totlam # zonal AVERAGE
-        fldzint = tmpfld
+    elif vcalc=='vertint':
+        # do a VERTICAL INTEGRAL (first dim)
+        #  tile dp
+        dpt=np.tile(dp,(nlon,1)).T
+        #  interp in b/w levels
+        tmpfld= (fld[0:-1,...] + fld[1:,...]) / 2. 
+        tmpfld = np.sum(tmpfld*dpt,axis=0)/grav
+        # now it's  x lon
 
-    if calc=='vertint':
-        fldpint = np.sum(fldzint*dp) # vertically integrate
-    elif calc=='vertavg':
-        fldpint = np.average(fldzint, weights=dp)
-    elif calc=='none':
-        fldpint = fldzint
+    elif vcalc=='vertavg':
+        # do a VERTICAL INTEGRAL (first dim)
+        #  tile dp
+        dptot=np.sum(dp)
+        dpw=np.tile(dp/np.float(dptot),(nlon,1)).T # create weights and tile them w/ lon
+        #  interp in b/w levels
+        tmpfld= (fld[0:-1,...] + fld[1:,...]) / 2. 
+        tmpfld = np.average(tmpfld, axis=0, weights=dpw)/grav
+        # now it's  x lon
+
     else:
-        print 'calc type not supported' # @@@
+        print 'vcalc type not supported' # @@@
         return -1
 
-    fldpint = fldpint/grav
+
+    fldpint = np.sum(tmpfld,axis=0)*erad*np.cos(latrad)*dlam # zonal integration
+
+    if zcalc=='zonint':
+        pass
+    elif zcalc=='zonavg':
+        # do the ZONAL AVERAGE
+        fldpint = fldpint / totlam
+    else:
+        print 'zcalc type not supported' # @@@
+        return -1
 
     return fldpint
+
+
 
 
 fdict={'MPEF': basepath + casename + '_meridional_potential_energy_flux' + fldsuff +'_' + timeper + '_ts.nc',
@@ -216,19 +259,24 @@ for fkey in fdict.keys():
     conv=condt[fkey] 
 
     fld=cnc.getNCvar(fname,ncfield,timesel=timesel)*conv
+    fld=clear_belowsfc(fld, sfcp, lev)
+
+    print fname + ', fld.shape ' + str(fld.shape) # @@@
 
     fldint=np.zeros(len(lat))
     fldintza=np.zeros(len(lat))
     latidx=0
     for ll in lat: # do all lats
-        latrad = np.deg2rad(ll)
+        #latrad = np.deg2rad(ll)
 
         fldsub = np.squeeze(fld[:,:,latidx,:-1]) # get just one lat and remove extra lon
         fldtm = np.mean(cutl.seasonalize_monthlyts(fldsub,**seasonalizedt),axis=0) # time mean
     
+        #print fldtm
+
         #fldint[latidx] = calc_PHT(fldtm, latidx, nlon, dp, calc=calctype)
-        fldint[latidx] = calc_PHT2(fldtm, latidx, nlon, dp, calc=calctype) # zonal integration
-        fldintza[latidx] = calc_PHT3(fldtm, latidx, nlon, dp, calc=calctype) # zonal average
+        fldint[latidx] = calc_PHT3(fldtm, ll, nlon, dp, vcalc=calctype, zcalc='zonint') # zonal integration
+        fldintza[latidx] = calc_PHT3(fldtm, ll, nlon, dp, vcalc=calctype, zcalc='zonavg') # zonal average
 
         latidx += 1
     
@@ -240,7 +288,7 @@ fldtot = flddf.sum(axis=1)
 fldzadf = pd.DataFrame(fldintzadt)
 fldzatot = fldzadf.sum(axis=1)
 
-
+# @@ Comment out global fig for now
 flddf.plot(x=lat)
 plt.plot(lat,fldtot,color='k')
 plt.axhline(y=0,color='0.5')
@@ -254,7 +302,7 @@ if printtofile:
 flddf.plot(x=lat)
 plt.plot(lat,fldtot,color='k')
 plt.axhline(y=0,color='0.5')
-plt.ylim(ylimsW)
+#plt.ylim(ylimsW)
 plt.xlim((-15,75))
 plt.xlabel('latitude')
 plt.ylabel('poleward transport (W)')
@@ -262,7 +310,7 @@ plt.title(str(seasonalizedt) + ' ' + calctype + ' done in script')
 if printtofile:
     plt.savefig('PHTnh_W_' + str(seasonalizedt.values()) + '_' + calctype + '_inscript2.pdf')
 
-(flddf*W2calperday/1e19).plot(x=lat)
+"""(flddf*W2calperday/1e19).plot(x=lat)
 plt.plot(lat,fldtot*W2calperday/1e19,color='k')
 plt.axhline(y=0,color='0.5')
 plt.ylim(ylimscal)
@@ -270,13 +318,13 @@ plt.ylabel('poleward transport 1e19 cal/day()')
 plt.xlim((-15,75))
 plt.title(str(seasonalizedt) + ' ' + calctype + ' done in script')
 if printtofile:
-    plt.savefig('PHTnh_calpday_' + str(seasonalizedt.values()) + '_' + calctype + '_inscript2.pdf')
+    plt.savefig('PHTnh_calpday_' + str(seasonalizedt.values()) + '_' + calctype + '_inscript2.pdf')"""
 
 # ------ zonal AVERAGE
 fldzadf.plot(x=lat)
 plt.plot(lat,fldzatot,color='k')
 plt.axhline(y=0,color='0.5')
-plt.ylim(ylimszaW)
+#plt.ylim(ylimszaW)
 plt.xlim((-15,75))
 plt.xlabel('latitude')
 plt.ylabel('(zonal average) poleward transport (W)')
@@ -287,8 +335,9 @@ if printtofile:
 
 
 # =================
-# Now test vertical int / avg outputs
+# Now test vertical int / avg .nc outputs
 
+print 'Doing ' + fldpre + ' .nc files'
 
 if fldpre == '_vert_int':
     flddt2 = flddt
@@ -312,18 +361,19 @@ for fkey in fdict2:
     conv=condt[fkey] 
 
     fld=cnc.getNCvar(fname,ncfield,timesel=timesel)*conv
+    print fname + ', fld.shape ' + str(fld.shape) # @@@
 
     fldint=np.zeros(len(lat))
     fldintza=np.zeros(len(lat))
     latidx=0
     for ll in lat: # do all lats
-        latrad = np.deg2rad(ll)
+        #latrad = np.deg2rad(ll)
 
         fldsub = np.squeeze(fld[:,latidx,:-1]) # get just one lat and remove extra lon
         fldtm = np.mean(cutl.seasonalize_monthlyts(fldsub,**seasonalizedt),axis=0) # time mean
     
-        fldint[latidx] = calc_PHT2(fldtm, latidx, nlon, calc='none') # zonal integration
-        fldintza[latidx] = calc_PHT3(fldtm, latidx, nlon, calc='none') # zonal average
+        fldint[latidx] = calc_PHT3(fldtm, ll, nlon, vcalc='none', zcalc='zonint') # zonal integration
+        fldintza[latidx] = calc_PHT3(fldtm, ll, nlon, vcalc='none',zcalc='zonavg') # zonal average
 
         latidx += 1
     
@@ -337,6 +387,7 @@ fldzadf2 = pd.DataFrame(fldintzadt2)
 fldzatot2 = fldzadf2.sum(axis=1)
 
 
+# @@ Comment out global for now
 flddf2.plot(x=lat)
 plt.plot(lat,fldtot2,color='k')
 plt.axhline(y=0,color='0.5')
@@ -357,7 +408,7 @@ plt.title(fldpre + ' ' + str(seasonalizedt) + ' calc in file')
 if printtofile:
     plt.savefig('PHTnh_W_' + str(seasonalizedt.values()) + fldpre + '_infile.pdf')
 
-(flddf2*W2calperday/1e19).plot(x=lat)
+"""(flddf2*W2calperday/1e19).plot(x=lat)
 plt.plot(lat,fldtot2*W2calperday/1e19,color='k')
 plt.axhline(y=0,color='0.5')
 plt.ylim(ylimscal)
@@ -365,14 +416,14 @@ plt.xlim((-15,75))
 plt.ylabel('(1e19 cal/day)')
 plt.title(fldpre + ' ' + str(seasonalizedt) + ' calc in file')
 if printtofile:
-    plt.savefig('PHTglob_calpday_' + str(seasonalizedt.values()) + fldpre + '_infile.pdf')
+    plt.savefig('PHTglob_calpday_' + str(seasonalizedt.values()) + fldpre + '_infile.pdf')"""
 
 
 # ------ zonal AVERAGE
 fldzadf2.plot(x=lat)
 plt.plot(lat,fldzatot2,color='k')
 plt.axhline(y=0,color='0.5')
-plt.ylim(ylimszaW2)
+#plt.ylim(ylimszaW2)
 plt.xlim((-15,75))
 plt.xlabel('latitude')
 plt.ylabel('(zonal average) poleward transport (W)')
