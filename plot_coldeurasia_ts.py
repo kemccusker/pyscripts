@@ -11,6 +11,7 @@ cutl=reload(cutl)
 write_temptimeseries=False # write the temperature timeseries to netcdf
 euranom=False
 nhanom=False # if both False and temptimeseries=True, do eur - nh
+glob=True # if True, then write_temptimeseries will write global mean data
 
 write_siatimeseries=False # write the sea ice area timeseries to netcdf
 write_tempmap=False
@@ -68,9 +69,9 @@ dates = cnc.get_NCdates(fname)
 # ADD Simulated obs == NSIDC
 filecnsidc,filepnsidc=con.build_filepathpair('NSIDC','st')
 
-fldreg = cutl.calc_regmean(fld,lat,lon,region=region)
-fldgm = cutl.global_mean_areawgted3d(fld,lat,lon)
-fldnh = cutl.calc_regmean(fld,lat,lon,region='nh')
+fldreg = cutl.calc_regmean(fld,lat,lon,region=region,model=None)
+fldgm = cutl.global_mean_areawgted3d(fld,lat,lon,model=None)
+fldnh = cutl.calc_regmean(fld,lat,lon,region='nh',model=None)
 
 
 # ####### plotting timeseries #######
@@ -119,17 +120,17 @@ lonsim = cnc.getNCvar(filecnsidc,'lon')
 fldpsim = cnc.getNCvar(filepnsidc,'ST',seas=sea,timesel='002-01-01,121-12-31')
 tstatmapsim,pvalmapsim=cutl.ttest_ind(fldcsim,fldpsim)
 
-fldregsim = cutl.calc_regmean(fldpsim-fldcsim,latsim,lonsim,region=region)
+fldregsim = cutl.calc_regmean(fldpsim-fldcsim,latsim,lonsim,region=region,model=None)
 plotregsim = fldpsim.mean(axis=0)-fldcsim.mean(axis=0)
 regsimm = fldregsim.mean()
 regsimstd=fldregsim.std()
 
 
 fld = cnc.getNCvar(fname,'tempanomaly',timesel=timesel, seas=sea)
-fldreg = cutl.calc_regmean(fld,lat,lon,region=region)
+fldreg = cutl.calc_regmean(fld,lat,lon,region=region,model=None)
 gisreg=fldreg # write to file
-gisnh = cutl.calc_regmean(fld,lat,lon,region='nh') # seasonal
-
+gisnh = cutl.calc_regmean(fld,lat,lon,region='nh',model=None) # seasonal
+gisgm = cutl.calc_regmean(fld,lat,lon,region='gm',model=None)
 
 xx=np.arange(0,len(fldreg))
 
@@ -176,8 +177,42 @@ plt.title('SAT norm by stdev')
 
 
 
+def runmean(input, window=5,axis=0) :
+    ret = np.cumsum(input, dtype=float,axis=axis)
+    ret[window:,...] = ret[window:,...] - ret[:-window,...]
+    return ret[window - 1:,...] / np.float(window)
+
+window=5
+xxrun = xx[window/2:-window/2+1]
+fig,ax=plt.subplots(1,1)
+ax.plot(xxrun, runmean((gisgm)/np.std(gisgm),window=window),'0.1',linewidth=2)
+ax.plot(xxrun,runmean(gisnh/np.std(gisnh),window=window),color='0.5',linewidth=2); 
+ax.plot(xxrun,runmean(gisreg/np.std(gisreg),window=window),'b',linewidth=2)
+ax.plot(xx, (gisgm)/np.std(gisgm),'0.1',linewidth=1,alpha=0.5)
+ax.plot(xx,gisnh/np.std(gisnh),color='0.5',linewidth=1,alpha=0.5); 
+ax.plot(xx,gisreg/np.std(gisreg),'b',linewidth=1,alpha=0.5)
+ax.legend(('GM','NH','Eurasia'),loc='upper left',frameon=False)
+ax.set_title(sea + ' Normalized SAT ($\sigma$) + ' + str(window) + ' yr smooth')
+ax.set_xticks(np.arange(0,len(gisnh),5)) # ticks for each decade, in July
+#ax.minorticks_on()
+ax.set_xticklabels(np.arange(styr,2014,5))
+if printtofile:
+    fig.savefig(field + 'gm_' + sea + 'anom_' + str(styr) + '-2014_run' + str(window)+'timeseries.pdf')
+
+
+fig,ax=plt.subplots(1,1)
+ax.plot(xxrun,runmean(gisnh/np.std(gisnh),window=window),color='orange',linewidth=2); 
+ax.plot(xxrun,runmean(gisreg/np.std(gisreg),window=window),'b',linewidth=2)
+ax.plot(xxrun, runmean((gisgm)/np.std(gisgm),window=window),'r',linewidth=2)
+ax.legend(('NH',region,'GM'),loc='upper left',frameon=False)
+ax.set_title(sea + ' Normalized SAT ($\sigma$), ' + str(window) + ' yr smooth')
+ax.set_xticks(np.arange(0,len(gisnh),5)) 
+#ax.minorticks_on()
+ax.set_xticklabels(np.arange(styr,2014,5))
+
+
 fldsic = cnc.getNCvar(filesic,'SICN',timesel=timesel,seas=sicsea)
-fldsicreg = cutl.calc_regtotseaicearea(fldsic,latsic,lonsic,region=sicregion)#isarea=False
+fldsicreg = cutl.calc_regtotseaicearea(fldsic,latsic,lonsic,region=sicregion,model=None)#isarea=False
 nsidcreg = fldsicreg # to write to file
 
 sicrstd=fldsicreg.std()
@@ -260,10 +295,10 @@ fldrs = fld.reshape((len(xx),nlat*nlon))
 slope,intercept = np.polyfit(xx,fldrs,1) # seasonal trend
 
 slope=slope.reshape((nlat,nlon))
-gmtr = cutl.global_mean_areawgted(slope*len(xx),lat,lon)
+gmtr = cutl.global_mean_areawgted(slope*len(xx),lat,lon,model=None)
 
 # 1D trend:
-fldregfull = cutl.calc_regmean(fld,lat,lon,region=region)
+fldregfull = cutl.calc_regmean(fld,lat,lon,region=region,model=None)
 
 mm, bb, rval, pval, std_err = sp.stats.linregress(xx,fldregfull)
 print region + ' avg and ' + sea + ' avg trend (' + timesel + ') pval: ' + str(pval)
@@ -338,7 +373,7 @@ if printtofile:
 ########  TREND SINCE 2000
 timesel2='2000-01-01,2014-12-31'
 fld2 = cnc.getNCvar(fname,'tempanomaly',timesel=timesel2, seas=sea)
-fldreg2 = cutl.calc_regmean(fld2,lat,lon,region=region)
+fldreg2 = cutl.calc_regmean(fld2,lat,lon,region=region,model=None)
 
 
 xx2=np.arange(0,len(fldreg2))
@@ -351,7 +386,7 @@ slope,intercept = np.polyfit(xx2,fldrs2,1) # seasonal trend
 
 slope=slope.reshape((nlat,nlon))
 
-gmtr = cutl.global_mean_areawgted(slope*len(xx2),lat,lon)
+gmtr = cutl.global_mean_areawgted(slope*len(xx2),lat,lon,model=None)
 
 ttl = '2000-14 ' + sea + ' trend: gm= ' + '$%.2f$'%(gmtr) + ' per ' + str(len(xx2)) + 'yr'
 
@@ -365,7 +400,7 @@ if printtofile:
 
 #  # SIC
 sic2=cnc.getNCvar(filesic,'SICN',timesel=timesel2,seas=sicsea)
-sic2rm = cutl.calc_regtotseaicearea(sic2,latsic,lonsic,region=sicregion)
+sic2rm = cutl.calc_regtotseaicearea(sic2,latsic,lonsic,region=sicregion,model=None)
 xxs2=np.arange(0,len(sic2rm))
 
 mm, bb, rval, pval, std_err = sp.stats.linregress(xxs2,sic2rm)
@@ -385,8 +420,8 @@ fld1 = cnc.getNCvar(fname,'tempanomaly',timesel=timesel1, seas=sea)
 fld2 = cnc.getNCvar(fname,'tempanomaly',timesel=timesel2, seas=sea)
 tstatmap,pvalmap = cutl.ttest_ind(fld1,fld2)
 
-fld1regm= cutl.calc_regmean(fld1,lat,lon,region)
-fld2regm = cutl.calc_regmean(fld2,lat,lon,region)
+fld1regm= cutl.calc_regmean(fld1,lat,lon,region,model=None)
+fld2regm = cutl.calc_regmean(fld2,lat,lon,region,model=None)
 # SIGNIFICANCE b/w two means:
 tstat,pval = cutl.ttest_ind(fld2regm,fld1regm)
 print 'EPOCH diffs for ' + region + ' ' + sea + ' avg tstat,pval: '+ str(tstat) +',' + str(pval)
@@ -394,8 +429,8 @@ print '  --- mean val: ' + str(fld2regm.mean(axis=0)-fld1regm.mean(axis=0))
 print ' (expect fld2 > fld1); can use 1-sided pval (pval/2) and tstat>0' # (see below)
 print ' tstat < 0 so fld2!>fld1, but pval is still only 0.3, so not signif'
 print ''
-fld1nhm= cutl.calc_regmean(fld1,lat,lon,'nh')
-fld2nhm = cutl.calc_regmean(fld2,lat,lon,'nh')
+fld1nhm= cutl.calc_regmean(fld1,lat,lon,'nh',model=None)
+fld2nhm = cutl.calc_regmean(fld2,lat,lon,'nh',model=None)
 tstat,pval = cutl.ttest_ind(fld2nhm,fld1nhm)
 print 'EPOCH diffs for nh ' + sea + ' avg tstat,pval: '+ str(tstat) +',' + str(pval)
 print '  --- mean val: ' + str(fld2nhm.mean(axis=0)-fld1nhm.mean(axis=0))
@@ -434,11 +469,11 @@ gismap=plotfld # for write to file
 
 sic1=cnc.getNCvar(filesic,'SICN',timesel=timesel1,seas=sicsea)
 sic2=cnc.getNCvar(filesic,'SICN',timesel=timesel2,seas=sicsea)
-sia1regm = cutl.calc_regtotseaicearea(sic1,latsic,lonsic,region=sicregion)
-sia2regm = cutl.calc_regtotseaicearea(sic2,latsic,lonsic,region=sicregion)
+sia1regm = cutl.calc_regtotseaicearea(sic1,latsic,lonsic,region=sicregion,model=None)
+sia2regm = cutl.calc_regtotseaicearea(sic2,latsic,lonsic,region=sicregion,model=None)
 
-sic1regm= cutl.calc_regmean(sic1,latsic,lonsic,sicregion)
-sic2regm = cutl.calc_regmean(sic2,latsic,lonsic,sicregion)
+sic1regm= cutl.calc_regmean(sic1,latsic,lonsic,sicregion,model=None)
+sic2regm = cutl.calc_regmean(sic2,latsic,lonsic,sicregion,model=None)
 # SIGNIFICANCE b/w two means:
 tstat,pval = cutl.ttest_ind(sic1regm,sic2regm)
 print 'EPOCH diffs for SIC ' + sicregion + ' ' + sicsea + ' avg tstat,pval: '+ str(tstat) +',' + str(pval)
@@ -589,6 +624,8 @@ if write_temptimeseries:
         outfile='giss_' + sea + '_' + region + '_1979-2013_timeseries.nc'
     elif nhanom:
         outfile='giss_' + sea + '_nh_1979-2013_timeseries.nc'
+    elif glob:
+        outfile='giss_' + sea + '_gm_1979-2013_timeseries.nc'
     else:
         outfile='giss_' + sea + '_' + region + '-nh_1979-2013_timeseries.nc'
 
@@ -611,6 +648,8 @@ if write_temptimeseries:
         outfld.long_name = 'Surface temperature anomaly from 1951-1980, regional avg: ' + region + ', seasonal avg: ' + sea
     elif nhanom:
         outfld.long_name = 'Surface temperature anomaly from 1951-1980, regional avg: NH, seasonal avg: ' + sea
+    elif glob: 
+        outfld.long_name = 'Surface temperature anomaly from 1951-1980, regional avg: global mean, seasonal avg: ' + sea
     else: # eurasia - NH
         outfld.long_name = 'Surface temperature anomaly regional avg: ' + region + '-NH avg, seasonal avg: ' + sea
 
@@ -635,6 +674,8 @@ if write_temptimeseries:
         outnc.title = 'original file: gistemp1200_ERSST.nc. Regional avg: ' + region + ', Seasonal avg: ' + sea
     elif nhanom:
         outnc.title = 'original file: gistemp1200_ERSST.nc. Regional avg: NH, Seasonal avg: ' + sea
+    elif glob:
+        outnc.title = 'original file: gistemp1200_ERSST.nc. Regional avg: global mean, Seasonal avg: ' + sea
     else:
         outnc.title = 'original file: gistemp1200_ERSST.nc. Regional avg: ' + region + '-NH avg, Seasonal avg: ' + sea
 
@@ -650,6 +691,8 @@ if write_temptimeseries:
         outfld[:] = gisreg
     elif nhanom:
         outfld[:] = gisnh
+    elif glob:
+        outfld[:] = gisgm
     else:
         outfld[:] = gisreg-gisnh
 
