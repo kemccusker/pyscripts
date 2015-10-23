@@ -127,7 +127,7 @@ def calc_seaicearea(input,lat,lon, model='CanESM2'):
         elif model==None:
             areas = calc_cellareas(lat,lon,repeat=ishape)
         else:
-            print 'model setting incorrect. Either CanESM2 or None' # @@
+            print 'model setting incorrect. Either ''CanESM2'' or None' # @@
             return -1
 
         lmask = con.get_t63landmask(repeat=ishape,remcyclic=remcyc) # @@ note assuming T63 here...
@@ -137,7 +137,7 @@ def calc_seaicearea(input,lat,lon, model='CanESM2'):
         elif model==None:
             areas = calc_cellareas(lat,lon)
         else:
-            print 'model setting incorrect. Either CanESM2 or None' # @@
+            print 'model setting incorrect. Either ''CanESM2'' or None' # @@
             return -1
 
         lmask = con.get_t63landmask(remcyclic=remcyc)
@@ -193,7 +193,7 @@ def calc_seaiceextent(fld, lat, lon=None, model='CanESM2'):
 
         areas=calc_cellareas(lat,lon, repeat=ishape)
     else:
-        print 'model setting incorrect. Either CanESM2 or None' # @@
+        print 'model setting incorrect. Either ''CanESM2'' or None' # @@
         return -1
 
     tmp = copy.copy(fld)
@@ -269,7 +269,7 @@ def calc_totseaicevol_cmip5(fld,lat,lon, model='CanESM2'):
     elif model==None:
         areas=calc_cellareas(lat,lon, repeat=ishape)
     else:
-        print 'model setting incorrect. Either CanESM2 or None' # @@
+        print 'model setting incorrect. Either ''CanESM2'' or None' # @@
         return -1
     
     gridvoln = fld[:,lat>0,...]*areas[:,lat>0,...] # north
@@ -295,7 +295,7 @@ def global_mean_areawgted3d(fld, lat, lon, model='CanESM2'):
     elif model==None:
         cellareas = calc_cellareas(lat,lon)
     else:
-        print 'model setting incorrect. Either CanESM2 or None' # @@
+        print 'model setting incorrect. Either ''CanESM2'' or None' # @@
         return -1
 
     nt = fld.shape[0]
@@ -307,7 +307,7 @@ def global_mean_areawgted3d(fld, lat, lon, model='CanESM2'):
         
     return gm
    
-def global_mean_areawgted(fld, lat, lon):
+def global_mean_areawgted(fld, lat, lon,model='CanESM2'):
     """
         if model=='CanESM2': use areacella from file
         if model==None: use calc_cellareas() using lat/lon
@@ -321,7 +321,7 @@ def global_mean_areawgted(fld, lat, lon):
     elif model==None:
         cellareas = calc_cellareas(lat,lon)
     else:
-        print 'model setting incorrect. Either CanESM2 or None' # @@
+        print 'model setting incorrect. Either ''CanESM2'' or None' # @@
         return -1
 
     #nt = fld.shape[0]
@@ -347,7 +347,7 @@ def polar_mean_areawgted3d(fld,lat,lon,latlim=60,hem='nh',cellareas=None,include
         elif model==None:
             cellareas = calc_cellareas(lat,lon)
         else:
-            print 'model setting incorrect. Either CanESM2 or None' # @@
+            print 'model setting incorrect. Either ''CanESM2'' or None' # @@
             return -1
 
     # else cellareas are provided
@@ -606,7 +606,7 @@ def get_cellwgts(lat,lon,repeat=None, model='CanESM2'):
     elif model==None:
         wgts = calc_cellareas(lat,lon)/totalarea
     else:
-        print 'model setting incorrect. Either CanESM2 or None' # @@
+        print 'model setting incorrect. Either ''CanESM2'' or None' # @@
         return -1
 
     if repeat != None:
@@ -794,9 +794,9 @@ def calc_regmean(fld,lat,lon,region,limsdict=None, model='CanESM2'):
     if region=='gm':
         print 'Global average!'
         if fld.ndim>2: # @@ hack. just make global mean func better
-            fldreg = global_mean_areawgted3d(fld,lat,lon)
+            fldreg = global_mean_areawgted3d(fld,lat,lon,model=model)
         else:
-            fldreg = global_mean_areawgted(fld,lat,lon)
+            fldreg = global_mean_areawgted(fld,lat,lon,model=model)
     else:
         fldm,regmask = mask_region(fld,lat,lon,region,limsdict)
 
@@ -806,7 +806,7 @@ def calc_regmean(fld,lat,lon,region,limsdict=None, model='CanESM2'):
         elif model==None:
             areas = calc_cellareas(lat,lon)
         else:
-            print 'model setting incorrect. Either CanESM2 or None' # @@
+            print 'model setting incorrect. Either ''CanESM2'' or None' # @@
             return -1
 
         if regmask.ndim>2:
@@ -832,7 +832,7 @@ def calc_regmean(fld,lat,lon,region,limsdict=None, model='CanESM2'):
     return fldreg
 
 
-def calc_regtotseaicearea(fld,lat,lon,region,limsdict=None,isarea=False):
+def calc_regtotseaicearea(fld,lat,lon,region,limsdict=None,isarea=False,model='CanESM2'):
     """ calc_regtotseaicearea(fld, lat,lon,region,limsdict=None,isarea=False):
                  Mask the input data with the given region either defined
                     already in regiondict, or overridden with limsdict.
@@ -850,12 +850,15 @@ def calc_regtotseaicearea(fld,lat,lon,region,limsdict=None,isarea=False):
                  isarea: specifies whether the incoming data is already converted
                          to sea ice area from concentration
 
+                 model: 'CanESM2', gets grid cell areas from file.
+                        None, uses calc_cellareas(lat,lon)
+
                  Returns: Regional total SIA (or series of regional totals with length ndim1)
     """
     if isarea:
         sia=fld
     else: # note that this function also masks out land
-        sia = calc_seaicearea(fld,lat,lon)
+        sia = calc_seaicearea(fld,lat,lon,model=model)
     
     fldm,regmask = mask_region(sia,lat,lon,region,limsdict)
 
@@ -964,7 +967,7 @@ def calc_monthlysigarea(input1,input2,siglevel=0.05,latlim=60,region=None, model
     elif model==None:
         cellareas = calc_cellareas(lat,lon,repeat=pval.shape)
     else:
-        print 'model setting incorrect. Either CanESM2 or None' # @@
+        print 'model setting incorrect. Either ''CanESM2'' or None' # @@
         return -1
 
     totmask = cellareas # for computing total area
