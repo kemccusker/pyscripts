@@ -207,6 +207,11 @@ def get_monweights():
     monwgts = monwgts / 365.
     return monwgts
 
+def get_dayspermon():
+    
+    return np.array([31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31])
+
+
 def get_mon():
     months = 'Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'
     return months
