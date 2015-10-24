@@ -308,10 +308,12 @@ def getNCvar(filename,field,timesel=None,levsel=None,monsel=None,seas=None,calc=
                 #elif seas not in ('ANN','DJF','JJA','MAM','SON','NDJ'):
                 # means seas is an int value for a month
                 
-                fld = cutl.seasonalize_monthlyts(fld,mo=seas)
+                #fld = cutl.seasonalize_monthlyts(fld,mo=seas)
+                fld = cutl.seasonalize(fld,mo=seas)
             else:
                 #print 'seasonalizing'
-                fld = cutl.seasonalize_monthlyts(fld,season=seas)
+                #fld = cutl.seasonalize_monthlyts(fld,season=seas)
+                fld = cutl.seasonalize(fld,season=seas)
                 #print fld.shape
 
 
@@ -540,7 +542,8 @@ def getNCvar_old(filename,field,timechunk=None,monsel=None,level=None,seas=None,
             return
         else:
             #print 'seasonalizing ' + seas # @@@
-            fld = cutl.seasonalize_monthlyts(fld,seas)
+            #fld = cutl.seasonalize_monthlyts(fld,seas)
+            fld = cutl.seasonalize(fld,seas)
             #print fld.shape
 
     if monsel != None:
