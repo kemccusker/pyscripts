@@ -8,12 +8,16 @@ import platform as platform
 cnc=reload(cnc)
 cutl=reload(cutl)
 
-write_temptimeseries=False # write the temperature timeseries to netcdf
-euranom=False
+euranom=True
 nhanom=False # if both False and temptimeseries=True, do eur - nh
-glob=True # if True, then write_temptimeseries will write global mean data
+glob=False # if True, then write_temptimeseries will write global mean data
+bksanom=False # for Z500/circ index: if True and euranom=False, write out bksmori Z500 timeseries
 
+write_temptimeseries=True # write the temperature timeseries to netcdf (GISTEMP)
+write_temptimeseriesera=False # write erainterim's ST instead
 write_siatimeseries=False # write the sea ice area timeseries to netcdf
+write_circtimeseries=False # write circulation index time series. if anom flags all False, do sicregion-region
+
 write_tempmap=False
 write_simsicmap=False
 write_nsidcsicmap=False
@@ -26,6 +30,7 @@ plt.close('all')
 
 styr=1979
 timesel=str(styr) + '-01-01,2014-12-31'
+timesel=str(styr) + '-01-01,2015-07-01'
 
 region='eurasiamori'
 sicregion='bksmori'
@@ -55,11 +60,17 @@ lonsic=cnc.getNCvar(filesic,'lon')
 #basepath = '/Volumes/MyPassport2TB/DATA/OBSERVATIONS/'
 #basepath = '/HOME/rkm/work/DATA/GISS/'
 gisfile = 'GISS/gistemp1200_ERSST.nc'
+gisfile = 'GISS/td_giss_tsurf1200_188001_201509_128_64_st_1880011612-2015091600.nc'
+gisfile = 'GISS/td_giss_tsurf1200_188001_201509_fill_128_64_st_1880011612-2015091600.nc'
 # base is 1951-1980
 
 fname = obasepath2 + gisfile
 
-fld = cnc.getNCvar(fname,'tempanomaly',timesel=timesel)
+#satfield='tempanomaly'
+satfield='ST' # for the model-prepared file
+#fld = cnc.getNCvar(fname,'tempanomaly',timesel=timesel)
+fld = cnc.getNCvar(fname,satfield,timesel=timesel)
+
 lat = cnc.getNCvar(fname,'lat')
 lon = cnc.getNCvar(fname,'lon')
 gistime = cnc.getNCvar(fname,'time',timesel=timesel)
@@ -126,7 +137,7 @@ regsimm = fldregsim.mean()
 regsimstd=fldregsim.std()
 
 
-fld = cnc.getNCvar(fname,'tempanomaly',timesel=timesel, seas=sea)
+fld = cnc.getNCvar(fname,satfield,timesel=timesel, seas=sea)
 fldreg = cutl.calc_regmean(fld,lat,lon,region=region,model=None)
 gisreg=fldreg # write to file
 gisnh = cutl.calc_regmean(fld,lat,lon,region='nh',model=None) # seasonal
@@ -372,7 +383,7 @@ if printtofile:
 
 ########  TREND SINCE 2000
 timesel2='2000-01-01,2014-12-31'
-fld2 = cnc.getNCvar(fname,'tempanomaly',timesel=timesel2, seas=sea)
+fld2 = cnc.getNCvar(fname,satfield,timesel=timesel2, seas=sea)
 fldreg2 = cutl.calc_regmean(fld2,lat,lon,region=region,model=None)
 
 
@@ -416,8 +427,8 @@ print '@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@'
 timesel1='1979-01-01,1989-12-31' # @@ adding in another yr to get last DJF
 timesel2='2002-01-01,2012-12-31'
 print timesel1,timesel2
-fld1 = cnc.getNCvar(fname,'tempanomaly',timesel=timesel1, seas=sea)
-fld2 = cnc.getNCvar(fname,'tempanomaly',timesel=timesel2, seas=sea)
+fld1 = cnc.getNCvar(fname,satfield,timesel=timesel1, seas=sea)
+fld2 = cnc.getNCvar(fname,satfield,timesel=timesel2, seas=sea)
 tstatmap,pvalmap = cutl.ttest_ind(fld1,fld2)
 
 fld1regm= cutl.calc_regmean(fld1,lat,lon,region,model=None)
@@ -621,25 +632,21 @@ if write_temptimeseries:
     from netCDF4 import Dataset
 
     if euranom:
-        outfile='giss_' + sea + '_' + region + '_1979-2013_timeseries.nc'
+        outfile='giss_' + sea + '_' + region + '_1979-2014_timeseries.nc'
     elif nhanom:
-        outfile='giss_' + sea + '_nh_1979-2013_timeseries.nc'
+        outfile='giss_' + sea + '_nh_1979-2014_timeseries.nc'
     elif glob:
-        outfile='giss_' + sea + '_gm_1979-2013_timeseries.nc'
+        outfile='giss_' + sea + '_gm_1979-2014_timeseries.nc'
     else:
-        outfile='giss_' + sea + '_' + region + '-nh_1979-2013_timeseries.nc'
+        outfile='giss_' + sea + '_' + region + '-nh_1979-2014_timeseries.nc'
 
     outnc = Dataset(outfile,'w',format='NETCDF3_CLASSIC')
 
     # create the dimensions
     outtime = outnc.createDimension('time', None)
-    #outlat = outnc.createDimension('lat',len(lat))
-    #outlon = outnc.createDimension('lon',len(lon))
 
     # create variables
     outtimes = outnc.createVariable('time','f8',('time',)) # f8 and d are the same dtype
-    #outlats = outnc.createVariable('lat','d',('lat',))
-    #outlons = outnc.createVariable('lon','d',('lon',))
     outfld = outnc.createVariable('tempanomaly','f4',('time',),fill_value=1.0e38)       
 
     # add attributes to variables
@@ -658,33 +665,31 @@ if write_temptimeseries:
     outtimes.long_name = 'time'
     outtimes.units = 'days since 1800-01-01 00:00:00'
     outtimes.calendar = '365_day'
-
-    #outlats.units = 'degrees_north'
-    #outlats.long_name = 'Latitude'
-    #outlats.standard_name = 'latitude'
-
-    #outlons.units = 'degrees_east'
-    #outlons.long_name = 'Longitude'
-    #outlons.standard_name = 'longitude'
     
     # global attributes
     import time
 
     if euranom:
-        outnc.title = 'original file: gistemp1200_ERSST.nc. Regional avg: ' + region + ', Seasonal avg: ' + sea
+        #outnc.title = 'original file: gistemp1200_ERSST.nc. Regional avg: ' + region + ', Seasonal avg: ' + sea
+        outnc.title = 'original file: td_giss_tsurf1200_188001_201509_fill_128_64_st_1880011612-2015091600.nc Regional avg: ' + region + ', Seasonal avg: ' + sea
     elif nhanom:
-        outnc.title = 'original file: gistemp1200_ERSST.nc. Regional avg: NH, Seasonal avg: ' + sea
+        #outnc.title = 'original file: gistemp1200_ERSST.nc. Regional avg: NH, Seasonal avg: ' + sea
+        outnc.title = 'original file: td_giss_tsurf1200_188001_201509_fill_128_64_st_1880011612-2015091600.nc. Regional avg: NH, Seasonal avg: ' + sea
     elif glob:
-        outnc.title = 'original file: gistemp1200_ERSST.nc. Regional avg: global mean, Seasonal avg: ' + sea
+        #outnc.title = 'original file: gistemp1200_ERSST.nc. Regional avg: global mean, Seasonal avg: ' + sea
+        outnc.title = 'original file: td_giss_tsurf1200_188001_201509_fill_128_64_st_1880011612-2015091600.nc. Regional avg: global mean, Seasonal avg: ' + sea
     else:
         outnc.title = 'original file: gistemp1200_ERSST.nc. Regional avg: ' + region + '-NH avg, Seasonal avg: ' + sea
+        outnc.title = 'original file: td_giss_tsurf1200_188001_201509_fill_128_64_st_1880011612-2015091600.nc. Regional avg: ' + region + '-NH avg, Seasonal avg: ' + sea
 
     outnc.creation_date = time.ctime(time.time())
     outnc.created_by = 'Kelly E. McCusker, CCCma / U. of Victoria'
 
     # set the data to the variables: important to have [:]!
-    outtimes[:] = gistime[11:-12:12] # get all ~Dec except last one
-    print 'gistime size ' + str(gistime[11:-12:12].shape)
+    #outtimes[:] = gistime[11:-12:12] # get all ~Dec except last one
+    #print 'gistime size ' + str(gistime[11:-12:12].shape)
+    outtimes[:] = gistime[11::12] # get all ~Dec 
+    print 'gistime size ' + str(gistime[11::12].shape)
     #outlats[:] = bclat
     #outlons[:] = bclon
     if euranom:
@@ -699,6 +704,260 @@ if write_temptimeseries:
     print 'gisreg size ' + str(gisreg.shape)
 
     outnc.close()
+
+
+if write_circtimeseries:
+
+
+
+    graveraint= 9.80665 # m/s2 (different from Canadian models)
+
+    #erafile = '/HOME/rkm/work/DATA/ERAINT/td_era_int_197901_201412_gp_128_64_phi500_1979011612-2014121612.nc'
+    erafile = '/HOME/rkm/work/DATA/ERAINT/td_era_int_197901_201507_gp_128_64_phi500_1979011612-2015071612.nc'
+    eraz500= cnc.getNCvar(erafile,'PHI',timesel='1979-01-01,2015-07-01',seas=sea)/graveraint
+    latera=cnc.getNCvar(erafile,'lat')
+    lonera=cnc.getNCvar(erafile,'lon')
+    erareg = cutl.calc_regmean(eraz500,latera,lonera,sicregion,model=None)
+    eraregeur = cutl.calc_regmean(eraz500,latera,lonera,'eurasiamori',model=None)
+
+    eratime = cnc.getNCvar(erafile,'time',timesel=timesel)
+
+    #eraz5002= cnc.getNCvar(erafile2,'PHI',timesel='1979-01-01,2015-07-01',seas=sea)/graveraint
+    ##eraz5002 = cutl.seasonalize_monthlyts(eraz5002,season=sea)# doesn't seem to get last season...check func@@
+    #latera2=cnc.getNCvar(erafile2,'lat')
+    #lonera2=cnc.getNCvar(erafile2,'lon')
+    #erareg2 = cutl.calc_regmean(eraz5002,latera2,lonera2,sicregion,model=None)
+
+
+    xx=np.arange(0,len(erareg))
+    #xx2=np.arange(0,len(erareg2))
+
+    window=5
+    xxrun = xx[window/2:-window/2+1]
+    #xxrun2 = xx2[window/2:-window/2+1]
+    fig,ax=plt.subplots(1,1)
+    ax.plot(xxrun, runmean(erareg,window=window),'0.1',linewidth=2)
+    #ax.plot(xxrun2, runmean(erareg2,window=window),'0.1',linewidth=2)
+    ax.plot(xx, (erareg),'0.1',linewidth=1,alpha=0.5)
+    #ax.plot(xx2, (erareg2),'g',linewidth=1,alpha=0.5)
+
+    #ax.legend(('GM','NH','Eurasia'),loc='upper left',frameon=False)
+    #ax.set_title(sea + ' Normalized SAT ($\sigma$) + ' + str(window) + ' yr smooth')
+    ax.set_xticks(np.arange(0,len(erareg),5)) # ticks for each decade, in July
+    #ax.minorticks_on()
+    ax.set_xticklabels(np.arange(styr,2015,5))
+    #if printtofile:
+    #    fig.savefig(field + 'gm_' + sea + 'anom_' + str(styr) + '-2014_run' + str(window)+'timeseries.pdf')
+
+    fig,ax=plt.subplots(1,1)
+    ax.plot(xxrun, runmean(erareg-eraregeur,window=window),'0.1',linewidth=2)
+    ax.plot(xx, (erareg-eraregeur),'0.1',linewidth=1,alpha=0.5)
+    ax.legend(('BKS-EUR',),loc='upper left',frameon=False)
+    ax.set_title(sea + ' BKS Z500-EUR Z500 circ index (m) + ' + str(window) + ' yr smooth')
+    ax.set_xticks(np.arange(0,len(erareg),5)) # ticks for each decade, in July
+    #ax.minorticks_on()
+    ax.set_xticklabels(np.arange(styr,2015,5))
+
+
+    fig,ax=plt.subplots(1,1)
+    ax.plot(xxrun, runmean( (erareg-erareg.mean())/np.std(erareg),window=window),'0.5',linewidth=2)
+    ax.plot(xxrun, runmean( ((erareg-eraregeur)-(erareg-eraregeur).mean())/np.std(erareg-eraregeur),
+                           window=window),'0.1',linewidth=2)
+    ax.plot(xxrun, runmean( (erareg-erareg.mean())/np.std(erareg)-(eraregeur-eraregeur.mean())/np.std(eraregeur),
+                            window=window),'r',linewidth=2)
+    ax.plot(xx, (erareg-erareg.mean())/np.std(erareg),'0.5',linewidth=1,alpha=0.5)
+    ax.plot(xx, ((erareg-eraregeur)-(erareg-eraregeur).mean())/np.std(erareg-eraregeur),
+            '0.1',linewidth=1,alpha=0.5)
+
+    ax.plot(xx, (erareg-erareg.mean())/np.std(erareg)-(eraregeur-eraregeur.mean())/np.std(eraregeur),
+            'r',linewidth=1,alpha=0.5)
+
+    ax.legend(('BKS','BKS-EUR','BKS standardized - EUR standardized'),loc='upper left',frameon=False)
+    ax.set_title(sea + ' Normalized Z500 index ($\sigma$) + ' + str(window) + ' yr smooth')
+    ax.set_xticks(np.arange(0,len(erareg),5)) # ticks for each decade, in July
+    #ax.minorticks_on()
+    ax.set_xticklabels(np.arange(styr,2015,5))
+
+
+
+    from netCDF4 import Dataset
+
+    if euranom:
+        outfile='eraz500_' + sea + '_' + region + '_1979-2014_timeseries.nc'
+    elif bksanom:
+        outfile='eraz500_' + sea + '_' + sicregion + '_1979-2014_timeseries.nc'
+    #elif glob:
+    #    outfile='eraz500_' + sea + '_gm_1979-2014_timeseries.nc'
+    else:
+        outfile='eraz500_' + sea + '_' + sicregion + '-' + region + '_1979-2014_timeseries.nc'
+
+    outnc = Dataset(outfile,'w',format='NETCDF3_CLASSIC')
+
+    # create the dimensions
+    outtime = outnc.createDimension('time', None)
+
+
+    # create variables
+    outtimes = outnc.createVariable('time','f8',('time',)) # f8 and d are the same dtype
+    outfld = outnc.createVariable('z500','f4',('time',),fill_value=1.0e38)       
+
+    # add attributes to variables
+    outfld.units = 'm'
+    if euranom:
+        outfld.long_name = 'Z500 regional avg: ' + region + ', seasonal avg: ' + sea
+    elif bksanom:
+        outfld.long_name = 'Z500 regional avg: ' + sicregion + ', seasonal avg: ' + sea
+    #elif glob: 
+    #    outfld.long_name = 'Z500 regional avg: global mean, seasonal avg: ' + sea
+    else: # eurasia - NH
+        outfld.long_name = 'Z500 regional avg: ' + sicregion + '-' + region + ' avg, seasonal avg: ' + sea
+
+
+    outtimes.long_name = 'time'
+    outtimes.units = 'days since 1850-1-1'
+    outtimes.calendar = '365_day'
+
+    
+    # global attributes
+    import time
+
+    if euranom:
+        outnc.title = 'original file: td_era_int_197901_201507_gp_128_64_phi500_1979011612-2015071612.nc. Regional avg: ' + region + ', Seasonal avg: ' + sea
+    elif bksanom:
+        outnc.title = 'original file: td_era_int_197901_201507_gp_128_64_phi500_1979011612-2015071612.nc. Regional avg: ' + sicregion + ', Seasonal avg: ' + sea
+    #elif glob:
+    #    outnc.title = 'original file: td_era_int_197901_201507_gp_128_64_phi500_1979011612-2015071612.nc. Regional avg: global mean, Seasonal avg: ' + sea
+    else:
+        outnc.title = 'original file: td_era_int_197901_201507_gp_128_64_phi500_1979011612-2015071612.nc. Regional avg: ' + sicregion + '-' + region + ' avg, Seasonal avg: ' + sea
+
+    outnc.creation_date = time.ctime(time.time())
+    outnc.created_by = 'Kelly E. McCusker, CCCma / U. of Victoria'
+
+    # set the data to the variables: important to have [:]!
+    #outtimes[:] = eratime[11:-12:12] # get all ~Dec except last one
+    outtimes[:] = eratime[11::12] # get all ~Dec 
+    print 'eratime size ' + str(eratime[11::12].shape) 
+    #outlats[:] = bclat
+    #outlons[:] = bclon
+    if euranom:
+        outfld[:] = eraregeur
+    elif bksanom:
+        outfld[:] = erareg
+    #elif glob:
+    #    outfld[:] = gisgm
+    else:
+        outfld[:] = erareg-eraregeur
+
+    print 'erareg size ' + str(erareg.shape)
+
+    outnc.close()
+
+
+if write_temptimeseriesera:
+
+
+    erafile = '/HOME/rkm/work/DATA/ERAINT/td_era_int_197901_201507_gp_128_64_st_1979011612-2015071612.nc'
+    erast= cnc.getNCvar(erafile,'ST',timesel='1979-01-01,2015-07-01',seas=sea)
+    latera=cnc.getNCvar(erafile,'lat')
+    lonera=cnc.getNCvar(erafile,'lon')
+    erareg = cutl.calc_regmean(erast,latera,lonera,region,model=None)
+    eragm = cutl.calc_regmean(erast,latera,lonera,'gm',model=None)
+    eranh = cutl.calc_regmean(erast,latera,lonera,'nh',model=None)
+
+    eratime = cnc.getNCvar(erafile,'time',timesel=timesel)
+
+    xx=np.arange(0,len(erareg))
+
+    window=5
+    xxrun = xx[window/2:-window/2+1]
+    fig,ax=plt.subplots(1,1)
+    ax.plot(xxrun, runmean(erareg,window=window),'0.1',linewidth=2)
+    ax.plot(xx, (erareg),'0.1',linewidth=1,alpha=0.5)
+
+    #ax.legend(('GM','NH','Eurasia'),loc='upper left',frameon=False)
+    #ax.set_title(sea + ' Normalized SAT ($\sigma$) + ' + str(window) + ' yr smooth')
+    ax.set_xticks(np.arange(0,len(erareg),5)) 
+    ax.minorticks_on()
+    ax.set_xticklabels(np.arange(styr,2015,5))
+    #if printtofile:
+    #    fig.savefig(field + 'gm_' + sea + 'anom_' + str(styr) + '-2014_run' + str(window)+'timeseries.pdf')
+
+
+
+    from netCDF4 import Dataset
+
+    if euranom:
+        outfile='erast_' + sea + '_' + region + '_1979-2014_timeseries.nc'
+    elif nhanom:
+        outfile='erast_' + sea + '_NH_1979-2014_timeseries.nc'
+    elif glob:
+        outfile='erast_' + sea + '_gm_1979-2014_timeseries.nc'
+    else:
+        outfile='erast_' + sea + '_' + region + '-NH_1979-2014_timeseries.nc'
+
+    outnc = Dataset(outfile,'w',format='NETCDF3_CLASSIC')
+
+    # create the dimensions
+    outtime = outnc.createDimension('time', None)
+
+
+    # create variables
+    outtimes = outnc.createVariable('time','f8',('time',)) # f8 and d are the same dtype
+    outfld = outnc.createVariable('ST','f4',('time',),fill_value=1.0e38)       
+
+    # add attributes to variables
+    outfld.units = 'K'
+    if euranom:
+        outfld.long_name = 'ST regional avg: ' + region + ', seasonal avg: ' + sea
+    elif nhanom:
+        outfld.long_name = 'ST regional avg: NH, seasonal avg: ' + sea
+    elif glob: 
+        outfld.long_name = 'ST regional avg: global mean, seasonal avg: ' + sea
+    else: # eurasia - NH
+        outfld.long_name = 'ST regional avg: ' + region + '-NH avg, seasonal avg: ' + sea
+
+
+    outtimes.long_name = 'time'
+    outtimes.units = 'days since 1850-1-1'
+    outtimes.calendar = '365_day'
+
+    
+    # global attributes
+    import time
+
+    if euranom:
+        outnc.title = 'original file: td_era_int_197901_201507_gp_128_64_st_1979011612-2015071612.nc. Regional avg: ' + region + ', Seasonal avg: ' + sea
+    elif nhanom:
+        outnc.title = 'original file: td_era_int_197901_201507_gp_128_64_st_1979011612-2015071612.nc. Regional avg: NH, Seasonal avg: ' + sea
+    elif glob:
+        outnc.title = 'original file: td_era_int_197901_201507_gp_128_64_st_1979011612-2015071612.nc. Regional avg: global mean, Seasonal avg: ' + sea
+    else:
+        outnc.title = 'original file: td_era_int_197901_201507_gp_128_64_st_1979011612-2015071612.nc. Regional avg: ' + region + '-NH avg, Seasonal avg: ' + sea
+
+    outnc.creation_date = time.ctime(time.time())
+    outnc.created_by = 'Kelly E. McCusker, CCCma / U. of Victoria'
+
+    # set the data to the variables: important to have [:]!
+    #outtimes[:] = eratime[11:-12:12] # get all ~Dec except last one
+    outtimes[:] = eratime[11::12] # get all ~Dec 
+    print 'eratime size ' + str(eratime[11::12].shape) 
+    #outlats[:] = bclat
+    #outlons[:] = bclon
+    if euranom:
+        outfld[:] = erareg
+    elif nhanom:
+        outfld[:] = eranh
+    elif glob:
+        outfld[:] = eragm
+    else:
+        outfld[:] = erareg-eranh
+
+    print 'erareg size ' + str(erareg.shape)
+
+    outnc.close()
+
+
+
 
 if write_siatimeseries:
     from netCDF4 import Dataset
