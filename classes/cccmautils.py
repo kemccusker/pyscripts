@@ -435,6 +435,9 @@ def annualize_monthlyts(input, includenan=0,verb=False):
     return annts
 
 def seasonalize_monthlyts(input,season=None,includenan=0,mo=0,climo=0,verb=False):
+    """ suggest using seasonalize() instead. it will not chop off remainder months
+          if doing a seasonal avg that spans a year transition.
+    """
 
     if season == None and mo==0:
         print 'Must specify either season or mo! Months indexed starting from 1'
@@ -497,6 +500,144 @@ def seasonalize_monthlyts(input,season=None,includenan=0,mo=0,climo=0,verb=False
         incr=2
     elif season=='SO':
         subwgts = wgts[8:10]
+        start=8
+        incr=2
+    else:
+        print 'seasonalize_monthlyts(): Season ' + season + ' not supported!'
+        return None
+
+    if len(dims)>1:
+        diml = list(dims[1:]) # this one is for subwgts array
+        diml.append(1) # insert size nyrs into first dimension
+        diml = tuple(diml)
+        
+        diml2 = list(dims[1:]) # this one is for initializing the timeseries array
+        diml2.insert(0,nyrs) # insert size nyrs into first dimension
+
+        subwgts = np.tile(subwgts,diml)
+        # put the 3rd dim (2) in first spot, 1st dim (0) in second spot, 2nd dim (1) in third spot
+        # this effectively shifts the dimensions back to time,dim2,dim3
+        if len(dims)==2:
+            subwgts = np.transpose(subwgts,(1,0))
+        else: # assume 3 dims
+            subwgts = np.transpose(subwgts,(2,0,1))
+    
+    else:
+        diml2 = nyrs,
+
+
+    seasts = ma.zeros(diml2)
+    #print subwgts.shape
+    
+    for yridx in range(0,nyrs):
+        subsamp = range(start+yridx*12,start+yridx*12+incr)
+        seasts[yridx,...] = ma.average(input[subsamp,...],weights=subwgts,axis=0)        
+    # @@ implement includenan? If set = 1, then the mean will not ignore a NaN
+    #    such that if a NaN is present, the mean is NaN
+    
+    return seasts
+
+
+
+def seasonalize(input,season=None,includenan=0,mo=0,climo=0,verb=False):
+    """ new version of seasonalize_monthlyts()
+
+             first dim must be time. first time index is expected to be Jan.
+
+    """
+
+    if season == None and mo==0:
+        print 'Must specify either season or mo! Months indexed starting from 1'
+        return
+
+    dims = input.shape
+    nt = input.shape[0]
+    nyrs = nt/12 # should be integer
+    incr=3 # default increment is 3 (for 3-month "seasons")
+    
+    wgts = con.get_monweights()
+    dpm = con.get_dayspermon()
+
+    if includenan == 1:
+        print 'this flag not yet implemented'
+        return
+    
+    if mo != 0:
+        # simply pick out the month and return ts
+        incr=0
+        seasts = input[(mo-1)::12,...] # increments of 12 months
+        return seasts
+    elif season=='ANN':
+        return annualize_monthlyts(input,includenan,verb=verb)
+    elif season=='DJF':
+        # do weighted average for requested season
+        indices=[0,1,11]
+        if np.mod(input.shape[0],12)>=2:
+            # then we have Jan-Feb of last year
+            nyrs=nt/12
+        else:
+            nyrs=nt/12-1
+            
+        subwgts = dpm[indices]/np.float(np.sum(dpm[indices]))
+
+        if climo==1:
+            #subwgts = wgts[indices]
+            seasts = ma.average(input[indices,...],weights=subwgts,axis=0)
+            return seasts
+
+        #subwgts = wgts[indices] 
+        
+        #nyrs=nyrs-1
+        start=11 # start with December of first year (skip that year's JF)
+    elif season=='JJA':
+        indices = [5,6,7]
+        subwgts = dpm[indices]/np.float(np.sum(dpm[indices]))
+        #subwgts = wgts[5:8] # doesn't include index 8
+        start=5
+    elif season=='NDJ':
+        indices = [0,10,11]
+        if np.mod(input.shape[0],12)>=1:
+            # then we have Jan of last year
+            nyrs=nt/12
+        else:
+            nyrs=nt/12-1
+            
+        subwgts = dpm[indices]/np.float(np.sum(dpm[indices]))
+
+        if climo==1:
+            #subwgts = wgts[[0,10,11]]
+            seasts = ma.average(input[indices,...],weights=subwgts,axis=0)
+            return seasts
+        
+        #subwgts = wgts[[0,10,11]]
+        start=10 # start with Nov of first year (skip that year's J)
+        #nyrs=nyrs-1
+    elif season=='MAM':
+        indices=[2,3,4]
+        subwgts = dpm[indices]/np.float(np.sum(dpm[indices]))
+        #subwgts = wgts[2:5]
+        start=2
+    elif season=='SON':
+        indices=[8,9,10]
+        subwgts = dpm[indices]/np.float(np.sum(dpm[indices]))
+        #subwgts = wgts[8:11]
+        start=8
+    elif season=='ND':
+        indices=[10,11]
+        subwgts = dpm[indices]/np.float(np.sum(dpm[indices]))
+        #subwgts = wgts[10:]
+        start=10
+        incr=2
+    elif season=='JF':
+        indices=[0,1]
+        subwgts = dpm[indices]/np.float(np.sum(dpm[indices]))
+        #subwgts = wgts[0:2]
+        start=0
+        incr=2
+    elif season=='SO':
+        indices = [8,9]
+        subwgts = dpm[indices]/np.float(np.sum(dpm[indices]))
+        #subwgts = wgts[8:10]
         start=8
         incr=2
     else:
