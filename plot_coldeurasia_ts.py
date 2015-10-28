@@ -8,13 +8,13 @@ import platform as platform
 cnc=reload(cnc)
 cutl=reload(cutl)
 
-euranom=True
-nhanom=False # if both False and temptimeseries=True, do eur - nh
+euranom=False
+nhanom=True # if both False and temptimeseries=True, do eur - nh
 glob=False # if True, then write_temptimeseries will write global mean data
 bksanom=False # for Z500/circ index: if True and euranom=False, write out bksmori Z500 timeseries
 
-write_temptimeseries=True # write the temperature timeseries to netcdf (GISTEMP)
-write_temptimeseriesera=False # write erainterim's ST instead
+write_temptimeseries=False # write the temperature timeseries to netcdf (GISTEMP)
+write_temptimeseriesera=True # write erainterim's ST instead
 write_siatimeseries=False # write the sea ice area timeseries to netcdf
 write_circtimeseries=False # write circulation index time series. if anom flags all False, do sicregion-region
 
@@ -629,6 +629,55 @@ if printtofile:
 ################### WRITE NETCDF #####################
 if write_temptimeseries:
 
+    testdata=False
+
+    # get the data again to be safe (since script is a mess):
+    #gisfile = '/HOME/rkm/work/DATA/GISS/td_giss_tsurf1200_188001_201509_fill_128_64_st_1880011612-2015091600.nc'
+    #gisfile = '/HOME/rkm/work/DATA/GISS/td_giss_tsurf1200_188001_201509_128_64_st_1880011612-2015091600.nc'
+    # Use the data obtained directy from GISS
+    gisfile = '/HOME/rkm/work/DATA/GISS/gistemp1200_ERSSTv4.nc'
+    gisst= cnc.getNCvar(gisfile,'tempanomaly',timesel='1979-01-01,2015-07-01',seas=sea) # 'tempanomaly'
+    latgis=cnc.getNCvar(gisfile,'lat')
+    longis=cnc.getNCvar(gisfile,'lon')
+    print 'write_temptimeseries, region= ' + region
+    gisreg = cutl.calc_regmean(gisst,latgis,longis,region,model=None)
+    gisgm = cutl.calc_regmean(gisst,latgis,longis,'gm',model=None)
+    gisnh = cutl.calc_regmean(gisst,latgis,longis,'nh',model=None)
+
+
+    if testdata:
+        gisfileor = '/HOME/rkm/work/DATA/GISS/gistemp1200_ERSST.nc'
+        gisfilev4 = '/HOME/rkm/work/DATA/GISS/gistemp1200_ERSSTv4.nc'
+        gisor = cnc.getNCvar(gisfileor,'tempanomaly',timesel='1979-01-01,2015-07-01',seas=sea) 
+        lator = cnc.getNCvar(gisfileor,'lat')
+        lonor = cnc.getNCvar(gisfileor,'lon')
+        gisorv4 = cnc.getNCvar(gisfilev4,'tempanomaly',timesel='1979-01-01,2015-07-01',seas=sea) 
+
+        gisnhv3 = cutl.calc_regmean(gisor,lator,lonor,'nh',model=None)
+        gisnhv4 = cutl.calc_regmean(gisorv4,lator,lonor,'nh',model=None)
+
+        plt.figure()
+        plt.plot(gisnhv3,'r')
+        plt.plot(gisnhv4,'k')
+        #plt.plot(gisnh,'b')
+        plt.legend(('NH v3.2', 'NH v4'))#,'NH model grid'))
+
+        gfnhornc='/HOME/rkm/pyscripts/netcdf/giss_DJF_nh_1979-2013_timeseries.nc'
+        gnhor=cnc.getNCvar(gfnhornc,'tempanomaly')
+        plt.plot(gnhor,'g')
+        plt.legend(('NH v3.2', 'NH v4','NH model grid','NH 1979-2013 processed data'))
+
+        gfnhnc='/HOME/rkm/pyscripts/netcdf/giss_DJF_nh_1979-2014_timeseries.nc'
+        gnh=cnc.getNCvar(gfnhnc,'tempanomaly')
+        plt.plot(gnh,'y')
+        plt.legend(('NH v3.2', 'NH v4','NH model grid','NH 1979-2013 processed data','NH 1979-2014 processed data'))
+
+        gfnhnc2='/HOME/rkm/pyscripts/giss_DJF_nh_1979-2014_timeseries.nc'
+        gnh2=cnc.getNCvar(gfnhnc2,'tempanomaly')
+        plt.plot(gnh2,'cyan',linestyle='--')
+        plt.legend(('NH v3.2', 'NH v4','NH model grid','NH 1979-2013 processed data',
+                    'NH 1979-2014 processed data','NH 1979-2014 processed data fix?'))
+
     from netCDF4 import Dataset
 
     if euranom:
@@ -671,16 +720,16 @@ if write_temptimeseries:
 
     if euranom:
         #outnc.title = 'original file: gistemp1200_ERSST.nc. Regional avg: ' + region + ', Seasonal avg: ' + sea
-        outnc.title = 'original file: td_giss_tsurf1200_188001_201509_fill_128_64_st_1880011612-2015091600.nc Regional avg: ' + region + ', Seasonal avg: ' + sea
+        outnc.title = 'original file: gistemp1200_ERSSTv4.nc. Regional avg: ' + region + ', Seasonal avg: ' + sea
     elif nhanom:
         #outnc.title = 'original file: gistemp1200_ERSST.nc. Regional avg: NH, Seasonal avg: ' + sea
-        outnc.title = 'original file: td_giss_tsurf1200_188001_201509_fill_128_64_st_1880011612-2015091600.nc. Regional avg: NH, Seasonal avg: ' + sea
+        outnc.title = 'original file: gistemp1200_ERSSTv4.nc. Regional avg: NH, Seasonal avg: ' + sea
     elif glob:
         #outnc.title = 'original file: gistemp1200_ERSST.nc. Regional avg: global mean, Seasonal avg: ' + sea
-        outnc.title = 'original file: td_giss_tsurf1200_188001_201509_fill_128_64_st_1880011612-2015091600.nc. Regional avg: global mean, Seasonal avg: ' + sea
+        outnc.title = 'original file: gistemp1200_ERSSTv4.nc. Regional avg: global mean, Seasonal avg: ' + sea
     else:
         outnc.title = 'original file: gistemp1200_ERSST.nc. Regional avg: ' + region + '-NH avg, Seasonal avg: ' + sea
-        outnc.title = 'original file: td_giss_tsurf1200_188001_201509_fill_128_64_st_1880011612-2015091600.nc. Regional avg: ' + region + '-NH avg, Seasonal avg: ' + sea
+        outnc.title = 'original file: gistemp1200_ERSSTv4.nc. Regional avg: ' + region + '-NH avg, Seasonal avg: ' + sea
 
     outnc.creation_date = time.ctime(time.time())
     outnc.created_by = 'Kelly E. McCusker, CCCma / U. of Victoria'
