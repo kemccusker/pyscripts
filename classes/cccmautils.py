@@ -874,6 +874,14 @@ def mask_region(fld,lat,lon,region,limsdict=None):
                  Returns: Tuple of masked field, mask
     """
 
+    # @@ if given lons from -180 to 180, have to modify this:
+    if np.any(lon<0):
+        tmplon=lon
+        # will convert the negative lons to positive lons >180
+        # The first bit on RHS gets diff from 180
+        tmplon[lon<0] = (lon[lon<0] + 180) + 180 
+        lon = tmplon
+
     lons,lats = np.meshgrid(lon,lat)    
         
     # create mask
@@ -883,7 +891,7 @@ def mask_region(fld,lat,lon,region,limsdict=None):
         limsdict = con.get_regionlims(region)
         
     latlims = limsdict['latlims']
-    lonlims = limsdict['lonlims']
+    lonlims = limsdict['lonlims']    
 
     reglatsbool = np.logical_and(lat>latlims[0],lat<latlims[1])
     reglonsbool = np.logical_and(lon>lonlims[0],lon<lonlims[1])
