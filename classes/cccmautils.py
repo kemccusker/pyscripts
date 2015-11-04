@@ -1365,6 +1365,20 @@ def calc_kernel(input):
     
     return kernel(xx), xx
 
+def regress(input1,input2):
+    """ Calculate linear regression b/w two variables
+
+        Uses scipy.stats.linregress(input1,input2)
+
+        returns mm,bb,rval,pval
+
+    """
+    mm, bb, rval, pval, std_err = sp.stats.linregress(input1,input2)
+    # How to plot: onex=np.linspace(axxlims[0],axxlims[1])    
+    #              ax.plot(onex,mm*onex + bb, color='k',linewidth=2)
+
+    
+    return mm,bb,rval,pval
 
 def trend(input):
     """  Calculate linear trend on axis=0
