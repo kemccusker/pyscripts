@@ -1016,3 +1016,19 @@ def corners_to_poly(limsdict, resolution=30):
     lons=np.hstack((lonsL,lonsT,lonsR,lonsB))
 
     return lats,lons
+
+
+def add_regressline(input1,input2,ax=None,axxlims=None,color='k',linewidth=1):
+
+    
+    if ax==None:
+        ax=plt.gca()
+
+    if axxlims==None:
+        axxlims = ax.get_xlim()
+
+    mm,bb,rval,pval = cutl.regress(input1,input2)
+    print 'regress pval,rval: ' + str(pval),str(rval)
+
+    onex=np.linspace(axxlims[0],axxlims[1])    
+    ax.plot(onex,mm*onex + bb, color=color,linewidth=linewidth)
