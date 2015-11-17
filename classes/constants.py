@@ -756,6 +756,7 @@ def get_regiondict():
     regdict['eurasiagrad'] = {'latlims': [35,55], 'lonlims': [100,130]}
     regdict['eurasiagrad2'] = {'latlims': [45,60], 'lonlims': [90,130]}
 
+    regdict['nino34'] = {'latlims': [-5,5], 'lonlims': [240,290]} #Nino-3.4 index, defined as average SST in a region bounded by 5S-5N, 120-170W
     regdict['pig'] = {'latlims':[0,384], 'lonlims': [230,280]} # CCSM4 OCEAN!!! @@@ untested 10/6/2014
     
     return regdict
