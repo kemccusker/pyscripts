@@ -15,6 +15,7 @@ import scipy as sp
 import scipy.stats
 from scipy.stats import norm
 import copy
+from scipy import signal # ???
 
 con = reload(con)
 
@@ -1367,13 +1368,25 @@ def calc_kernel(input):
 
 def regress(input1,input2):
     """ Calculate linear regression b/w two variables
+           Over axis=0!
+           Will only do 1-D or 2-D
 
         Uses scipy.stats.linregress(input1,input2)
 
         returns mm,bb,rval,pval
 
     """
-    mm, bb, rval, pval, std_err = sp.stats.linregress(input1,input2)
+
+    if input1.ndim==1:
+        mm, bb, rval, pval, std_err = sp.stats.linregress(input1,input2)
+    else:
+        mm=np.zeros(input1.shape[1])
+        bb=np.zeros(input1.shape[1])
+        rval=np.zeros(input1.shape[1])
+        pval=np.zeros(input1.shape[1])
+        for ii in np.arange(input1.shape[1]):
+            mm[ii],bb[ii],rval[ii],pval[ii],_ = sp.stats.linregress(input1[:,ii],input2[:,ii])
+
     # How to plot: onex=np.linspace(axxlims[0],axxlims[1])    
     #              ax.plot(onex,mm*onex + bb, color='k',linewidth=2)
 
