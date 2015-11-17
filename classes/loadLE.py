@@ -15,7 +15,7 @@ ensnum=10
 
 def load_LEdata(fielddict, ens, seas=None, timesel=None,infodict=None,ftype='fullts',
                 calctype=None, calcdict=None, rettype='dict',conv=1, region=None,local=False,
-                orig=None,verb=True):
+                orig=None,subens=False,verb=True):
     """ def loadLEdata(fielddict, seas=('DJF','MAM','JJA','SON'), timesel=None, infodict=None, calctype=None, calcdict=None)
 
             ftype: type of filename to build. Right now just 'fullts' for full timeseries
@@ -26,6 +26,8 @@ def load_LEdata(fielddict, ens, seas=None, timesel=None,infodict=None,ftype='ful
                       else, 'ndarray' is a 4D array
             local: is data in ~/work/DATA (local=True) or /raid/ra40
                       
+            subens: overrides getting all sim groups in ensemble. must be tuple. e.g. ('historical-r1',)
+
             @@ add regional avg functionality?
 
             returns an object of type rettype
@@ -35,7 +37,8 @@ def load_LEdata(fielddict, ens, seas=None, timesel=None,infodict=None,ftype='ful
     ncfield=fielddict['ncfield']
     comp = fielddict['comp']
 
-    flist = build_filenames(fielddict, ens,ftype=ftype,timesel=timesel,local=local,orig=orig,verb=verb)
+    flist = build_filenames(fielddict, ens,ftype=ftype,timesel=timesel,local=local,
+                            orig=orig,subens=subens,verb=verb)
 
     fname1 = flist[0]
     if verb:
@@ -141,12 +144,14 @@ def load_originalfive(fielddict, ens,seas=None, timesel=None,infodict=None,ftype
     
 
 
-def build_filenames(fielddict, ens, ftype='fullts',timesel=None,verb=True,local=False,orig=None):
+def build_filenames(fielddict, ens, ftype='fullts',timesel=None,verb=True,local=False,orig=None,subens=False):
     """ here we know that each 'sim' has 10 sub-ensemble members
 
         ftype: type of filename to build. Right now just 'fullts' for full timeseries
               or 'fullclimo' for '1950-2020_climo' or, given timesel:
-              for styr-enyr_climo. or 'ensmean'
+              for styr-enyr_climo. or 'ensmean'. 
+              Also can override default time period by setting ftype to timeperiod.
+                   e.g. ftype = '195001-201012'
         local: is the data on /raid/ra40 or ~/work/DATA (local=True)
               
         orig='just' means just load the original 5 (historical+rcp85) runs (consistent w/ LE). 
@@ -154,6 +159,8 @@ def build_filenames(fielddict, ens, ftype='fullts',timesel=None,verb=True,local=
 
         orig='add' means add the original 5 (historical+rcp85) to the full LE (consistent w/ LE)
         orig='add45' means add the original 5 (historical+rcp45) to the full LE.
+
+        subens: overrides getting all sim groups in ensemble. must be tuple. e.g. ('historical-r1',)
 
         returns a list of all filenames (50).
         
@@ -171,7 +178,7 @@ def build_filenames(fielddict, ens, ftype='fullts',timesel=None,verb=True,local=
         ensmean=True
     elif ftype=='fullclimo':
         suff=ftype
-    else: # climo with specified years
+    elif 'climo' in ftype: # @@ not the right test. want to test for substr@@@ # climo with specified years
         if timesel==None:
             print 'timesel cannot be None if ftype=climo'
             return -1
@@ -179,6 +186,10 @@ def build_filenames(fielddict, ens, ftype='fullts',timesel=None,verb=True,local=
         (styear,stmon,stday) = timselst.split('-')
         (enyear,enmon,enday) = timselen.split('-')
         suff=str(styear)+ '-' + str(enyear) + '_climo'
+    else:
+        # assume ftype is a time period -- add Exception here @@@@@
+        suff = ftype # a way to override default timeperiod
+
 
     if local:
         basepath = '/HOME/rkm/work/DATA/CanESM2/LE/'
@@ -224,7 +235,10 @@ def build_filenames(fielddict, ens, ftype='fullts',timesel=None,verb=True,local=
             flist.append(fname)
 
         else:
-            sims = get_sims(ens)
+            if subens:
+                sims=subens
+            else:
+                sims = get_sims(ens)
 
             for sim in sims:
                 for eii in range(1,ensnum+1):
