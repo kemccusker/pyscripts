@@ -42,9 +42,11 @@ leconvr=-1; aconvr=-1 # this way, sea ice loss is linked with positive changes e
 fieldr='zg50000.00'; ncfieldr='zg'; compr='Amon'; regionr='bksmori'; leconvr=1; aconvr=1 # @@@@
 
 # regional avg field 2
-leconvr2=-1; aconvr2=-1 # so cooling=high heights
-fieldr2='tas'; ncfieldr2='tas'; compr2='Amon'; regionr2='eurasiamori';
+#leconvr2=-1; aconvr2=-1 # so cooling=high heights
+#fieldr2='tas'; ncfieldr2='tas'; compr2='Amon'; regionr2='eurasiamori';
 
+leconvr2=-1; aconvr2=-1 # so loss=high heights
+fieldr2='sic'; ncfieldr2='sic'; compr2='OImon'; regionr2='bksmori'; 
 
 
 fdictsp = {'field': fieldsp, 'ncfield': ncfieldsp, 'comp': compsp}
@@ -222,7 +224,7 @@ aesp2onfldr2 = slopemap(aessear2*aconvr2,aesseasp2.reshape(rshape),(anlat,anlon)
 
 
 # ====================== FIGURES ===============
-printtofile=True
+printtofile=False
 
 lons, lats = np.meshgrid(lon,lat)
 cmlen=15.
@@ -238,14 +240,14 @@ fig,axs=plt.subplots(1,2)
 fig.set_size_inches(10,5)
 fig.subplots_adjust(wspace=0.05)
 ax=axs[0]
-bm,pc=cplt.kemmap(fldsponfldr,lat,lon,type='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
+bm,pc=cplt.kemmap(fldsponfldr,lat,lon,ptype='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
                   title=ttl1,suppcb=True,
                   panellab='a',lcol='0.2')
 bm.contour(lons,lats,fldsp2onfldr,levels=conts,
            colors='0.5',linewidths=1,latlon=True)
 
 ax=axs[1]
-bm,pc=cplt.kemmap(fldsponfldr2,lat,lon,type='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
+bm,pc=cplt.kemmap(fldsponfldr2,lat,lon,ptype='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
                   title=ttl2,suppcb=True,
                   panellab='b',lcol='0.2')
 
@@ -273,14 +275,14 @@ fig,axs=plt.subplots(1,2)
 fig.set_size_inches(10,5)
 fig.subplots_adjust(wspace=0.05)
 ax=axs[0]
-bm,pc=cplt.kemmap(asponfldr,alat,alon,type='nheur',axis=ax,cmin=cminspa,cmax=cmaxspa,
+bm,pc=cplt.kemmap(asponfldr,alat,alon,ptype='nheur',axis=ax,cmin=cminspa,cmax=cmaxspa,
                   title=ttl1,suppcb=True,
                   panellab='a',lcol='0.2')
 bm.contour(alons,alats,asp2onfldr,levels=contsa,
            colors='0.5',linewidths=1,latlon=True)
 
 ax=axs[1]
-bm,pc=cplt.kemmap(asponfldr2,alat,alon,type='nheur',axis=ax,cmin=cminspa,cmax=cmaxspa,
+bm,pc=cplt.kemmap(asponfldr2,alat,alon,ptype='nheur',axis=ax,cmin=cminspa,cmax=cmaxspa,
                   title=ttl2,suppcb=True,
                   panellab='b',lcol='0.2')
 
@@ -300,7 +302,7 @@ fig,axs=plt.subplots(2,2)
 fig.set_size_inches(10,10)
 fig.subplots_adjust(wspace=0.05,hspace=0.05)
 ax=axs[0,0]
-bm,pc=cplt.kemmap(fldsponfldr,lat,lon,type='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
+bm,pc=cplt.kemmap(fldsponfldr,lat,lon,ptype='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
                   title=ttl1,suppcb=True,
                   panellab='a',lcol='0.2')
 bm.contour(lons,lats,fldsp2onfldr,levels=conts,
@@ -308,7 +310,7 @@ bm.contour(lons,lats,fldsp2onfldr,levels=conts,
 ax.set_ylabel('CGCM')
 
 ax=axs[0,1]
-bm,pc=cplt.kemmap(fldsponfldr2,lat,lon,type='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
+bm,pc=cplt.kemmap(fldsponfldr2,lat,lon,ptype='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
                   title=ttl2,suppcb=True,
                   panellab='b',lcol='0.2')
 
@@ -317,7 +319,7 @@ bm.contour(lons,lats,fldsp2onfldr2,levels=conts,
 cplt.add_colorbar(fig,pc,orientation='horizontal')
 
 ax=axs[1,0]
-bm,pc=cplt.kemmap(asponfldr,alat,alon,type='nheur',axis=ax,cmin=cminspa,cmax=cmaxspa,
+bm,pc=cplt.kemmap(asponfldr,alat,alon,ptype='nheur',axis=ax,cmin=cminspa,cmax=cmaxspa,
                   title='',suppcb=True,
                   panellab='c',lcol='0.2')
 bm.contour(alons,alats,asp2onfldr,levels=contsa,
@@ -325,7 +327,7 @@ bm.contour(alons,alats,asp2onfldr,levels=contsa,
 ax.set_ylabel('AGCM var ICE')
 
 ax=axs[1,1]
-bm,pc=cplt.kemmap(asponfldr2,alat,alon,type='nheur',axis=ax,cmin=cminspa,cmax=cmaxspa,
+bm,pc=cplt.kemmap(asponfldr2,alat,alon,ptype='nheur',axis=ax,cmin=cminspa,cmax=cmaxspa,
                   title='',suppcb=True,
                   panellab='d',lcol='0.2')
 
@@ -347,7 +349,7 @@ ax=axs[0]
 #bbox=ax.get_position()
 
 #ax=fig.add_axes([bbox.x0,bbox.y0-bbox.height,bbox.width,bbox.height])
-bm,pc=cplt.kemmap(aesponfldr2,alat,alon,type='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
+bm,pc=cplt.kemmap(aesponfldr2,alat,alon,ptype='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
                   title=ttl2,suppcb=True,
                   panellab='e',lcol='0.2')
 bm.contour(alons,alats,aesp2onfldr2,levels=conts,
@@ -360,7 +362,7 @@ ax.set_ylabel('AGCM const ICE')
 #fig,axs=plt.subplots(1,1)
 #fig.set_size_inches(5,5)
 ax=axs[1]
-bm,pc=cplt.kemmap(asponfldr2-aesponfldr2,alat,alon,type='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
+bm,pc=cplt.kemmap(asponfldr2-aesponfldr2,alat,alon,ptype='nheur',axis=ax,cmin=cminsp,cmax=cmaxsp,
                   title='residual: var - const',suppcb=True,
                   panellab='f',lcol='0.2')
 bm.contour(alons,alats,asp2onfldr2-aesp2onfldr2,levels=conts,
