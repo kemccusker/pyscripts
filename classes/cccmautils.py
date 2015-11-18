@@ -1367,7 +1367,7 @@ def calc_kernel(input):
     return kernel(xx), xx
 
 def regress(input1,input2):
-    """ Calculate linear regression b/w two variables
+    """ Calculate linear regression b/w two variables (x, y)
            Over axis=0!
            Will only do 1-D or 2-D
 
