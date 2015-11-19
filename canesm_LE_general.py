@@ -96,60 +96,6 @@ anomyearsPI =[[74,  8],
        [44, 57],
        [32, 41]]
 
-"""styearPI = 0 # PI styear
-# PI anomyrs  when: '14:51:28.762886'
-anomyearsPI = [[79, 26],
-        [58, 17],
-        [79, 41],
-        [28, 24],
-        [37, 80],
-        [25, 48],
-        [30, 49],
-        [33, 85],
-        [51, 43],
-        [82,  6],
-        [62, 34],
-        [ 3, 17],
-        [56, 63],
-        [67,  4],
-        [29, 73],
-        [74,  0],
-        [28,  8],
-        [46, 56],
-        [14, 76],
-        [72, 37],
-        [88,  4],
-        [31, 56],
-        [31,  4],
-        [40,  0],
-        [20, 49],
-        [21, 81],
-        [68, 56],
-        [77, 37],
-        [18,  1],
-        [82, 26],
-        [78, 55],
-        [22, 47],
-        [78, 16],
-        [54, 76],
-        [ 5, 47],
-        [58, 25],
-        [49, 20],
-        [64, 36],
-        [34,  2],
-        [62, 18],
-        [89,  3],
-        [25, 10],
-        [10, 30],
-        [84, 55],
-        [88, 18],
-        [87, 50],
-        [68, 26],
-        [ 5, 67],
-        [77, 13],
-        [74, 61]]"""
-
-
 
 performop1 = True
 #op1='div'; region1op='gm' # polar amp: gt60n / gm
@@ -401,64 +347,29 @@ def sliding_subsamp_pi(pidat, overlap=.6, numyrs=33,verb=False):
         # what is this mysterious shape?
         (ntime,nspace)=pidat.shape
         
-    overyr = np.trunc(numyrs*overlap)
-    samp = ntime/overyr
+    overyr = np.trunc(numyrs*overlap) # number of yrs of overlap
+    samp = ntime/overyr # number of samples (s/b at least 50)
     print samp
 
-    #@@@@ middle of creating this function @@@@
-
-
-    #samp = ntime/numyrs
-    allsii=0 # keep track of all subsamps
-    anomshape = (samp,)+initshape 
-    initshape=(samp,)+initshape
-
-    subsampavg=np.zeros(initshape)
-    subsampanom=np.zeros(anomshape)
-
-    # chunk up non-overlapping time periods
-    # then take anomalies
-    if styear == None:
-        # random index to start looping, since we have a remainder when ntime/numyrs
-        startyr = np.random.randint(np.mod(ntime,numyrs))
-    else:
-        # start years were passed in: use them
-        startyr = styear
+    allsubsamp = np.zeros((samp,numyrs)+initshape)
+    allanom = np.zeros((samp,)+initshape
     
-    if verb:
-        print 'start ' + str(startyr)
+    aii=0
+    for slideii in np.arange(0,len(pidat),overyr):
+        
+        # select numyrs data
+        sel = pidat[slideii:slideii+numyrs,...]
+        print sel.shape
+        print slideii, slideii+numyrs
+        selanom = sel[:-10,...].mean(axis=0) - sel[:10,...].mean(axis=0) # difference first and last decades
 
-    for sii in np.arange(startyr,ntime-numyrs,numyrs):
+        allsubsamp[aii,...] = sel # [samp x numyrs x lat x lon]
 
-        subsampavg[allsii,...] = pidat[sii:sii+numyrs,...].mean(axis=0)
-        allsii+=1
+        allanom[aii,...] = selanom # [samp x lat x lon]
 
-    # now select 2 random time periods to generate anomalies
-    # make sure they are at least a decade apart
-    anomyrs=[]
-    for ii in np.arange(0,numsamp):
+        aii+=1
 
-        keepgoing=True
-
-        while keepgoing:
-            if anomyears == None:
-                sel = random.sample(np.arange(0,samp),2) # 2 time periods, no dupes
-            else:
-                sel = anomyears[ii]
-
-            if sel[0] in np.arange(sel[1]-1,sel[1]+2):
-                # should not happen with anomyrs that are passed in.
-                if verb:
-                    print 'Bad anom time period indices. Keepgoing. ' + str(sel)
-            else:
-                if verb:
-                    print 'anom time period indices: ' + str(sel)
-                subsampanom[ii,...] = subsampavg[sel[1],...] - subsampavg[sel[0],...]
-                anomyrs.append(sel)
-                keepgoing=False
-                
-
-    return subsampanom, startyr, anomyrs
+    return allsubsamp, allanom
 
 
 
