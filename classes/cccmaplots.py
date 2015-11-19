@@ -18,6 +18,7 @@ import constants as con
 import cccmacmaps as ccm
 import cccmautils as cutl
 from matplotlib.patches import Polygon
+import matplotlib.font_manager as fm
 
 """
 kemmap(fld, lat, lon, title='', units='', cmap='blue2red_w20', ptype='sq', cmin='', cmax='',
@@ -42,6 +43,9 @@ kemmap(fld, lat, lon, title='', units='', cmap='blue2red_w20', ptype='sq', cmin=
             drawgrid: if True, draw parallels and meridians
             round: default True. Used if ptype 'nh' or 'sh' and latlim provided
                    otherwise the zoomed in figure will be square
+            coastres: resolution of coastline dataset to plot. default 'c'=coarsest. 'l' is low res
+            coastwidth: linewidth of coastlines
+            area_thresh: threshold of rivers lakes to be drawn in km^2. default is for 'c' resolution
             lcol: color of land contours, default 0.7 (lightish gray)
 
     Returns: basemap handle (to add to bm after function call),
@@ -51,10 +55,11 @@ kemmap(fld, lat, lon, title='', units='', cmap='blue2red_w20', ptype='sq', cmin=
 
 def kemmap(fld, lat, lon,title='',units='',cmap='blue2red_w20',ptype='sq',
            cmin='',cmax='',axis=None, suppcb=0,lmask=0,flipmask=0,latlim=None,drawgrid=False,
-           round=True,lcol='0.7',panellab=None):
+           round=True,lcol='0.7',coastres='c',coastwidth=1,area_thresh=10000,panellab=None):
     """ returns bm,pc (Basemap,Pcolor handle)
     """
 
+    
     if cmap =='' or cmap==None:
         cmap='blue2red_w20'
         
@@ -63,21 +68,23 @@ def kemmap(fld, lat, lon,title='',units='',cmap='blue2red_w20',ptype='sq',
     
     # default Basemap dictionary
     if ptype == 'sq':
-        mapparams = dict(projection='robin',lon_0=180,lat_0=0, resolution='c')
+        mapparams = dict(projection='robin',lon_0=180,lat_0=0, 
+                         resolution=coastres,area_thresh=area_thresh)
     elif ptype == 'nh' or ptype=='nheur':
         if ptype=='nheur':
             lon0 = 90.
         else:
             lon0=0.
         if latlim != None: # try 'round=True' !@@@
-            mapparams = dict(projection='npstere',boundinglat=latlim,lon_0=lon0,resolution='c')
+            mapparams = dict(projection='npstere',boundinglat=latlim,lon_0=lon0,
+                             resolution=coastres,area_thresh=area_thresh)
             if round==True:
                 mapparams['round'] = True
             
         else:
             # try mill, hammer, merc
             mapparams = dict(projection='ortho',lon_0=lon0,lat_0=89.5,\
-                             resolution='c') #llcrnrlon='-180',llcrnrlat='45',urcrnrlon='180',urcrnrlat='90'
+                             resolution=coastres,area_thresh=area_thresh) #llcrnrlon='-180',llcrnrlat='45',urcrnrlon='180',urcrnrlat='90'
         # I thought the above corner limits would work to zoom on NH but I'm getting
         # AttributeError: 'Basemap' object has no attribute '_height'
         # 5/12/14 -- don't know why. same goes for lat_0=0.        
@@ -85,31 +92,33 @@ def kemmap(fld, lat, lon,title='',units='',cmap='blue2red_w20',ptype='sq',
         
     elif ptype == 'sh':
         if latlim != None: # try 'round=True' !@@@
-            mapparams = dict(projection='spstere',boundinglat=latlim,lon_0=0,resolution='c')
+            mapparams = dict(projection='spstere',boundinglat=latlim,lon_0=0,
+                             resolution=coastres,area_thresh=area_thresh)
             if round==True:
                 mapparams['round'] = True
         else:
-            mapparams = dict(projection='ortho',lon_0=0.,lat_0=-89.5, resolution='c')
+            mapparams = dict(projection='ortho',lon_0=0.,lat_0=-89.5, 
+                             resolution=coastres,area_thresh=area_thresh)
             # same error if add: llcrnrlon='-180',llcrnrlat='-90',urcrnrlon='180',urcrnrlat='-45'
     elif ptype == 'eastere': # Eurasia stere projection
         #mapparams = dict(width=2500000,height=2700000,resolution='i',projection='laea',\
         #    lat_ts=62.5,lat_0=62.5,lon_0=77.0)
         mapparams = dict(llcrnrlon=40.,llcrnrlat=10.,urcrnrlon=160.,urcrnrlat=50.,
-                         resolution='c',projection='stere',lat_0=45.,lon_0=80.)
+                         resolution=coastres,area_thresh=area_thresh,projection='stere',lat_0=45.,lon_0=80.)
         #mapparams = dict(width=3000000,height=3000000,resolution='c',projection='laea',\
         #                 lat_0=55.,lon_0=80.)# can't get width/height big enough -- errors
     elif ptype == 'eabksstere': # Eurasia + Barents Kara attempt
         mapparams = dict(llcrnrlon=40.,llcrnrlat=10.,urcrnrlon=175.,urcrnrlat=60.,
-                         resolution='c',projection='stere',lat_0=45.,lon_0=80.)
+                         resolution=coastres,area_thresh=area_thresh,projection='stere',lat_0=45.,lon_0=80.)
     elif ptype == 'ealamb': # Lambert azimuthal equal-area
         mapparams = dict(llcrnrlon=40.,llcrnrlat=10.,urcrnrlon=160.,urcrnrlat=50.,
-                         resolution='c',projection='laea',lat_0=45.,lon_0=80.)
+                         resolution=coastres,area_thresh=area_thresh,projection='laea',lat_0=45.,lon_0=80.)
     elif ptype == 'eabkslamb': # Lambert azimuthal equal-area
         mapparams = dict(llcrnrlon=40.,llcrnrlat=10.,urcrnrlon=175.,urcrnrlat=60.,
-                         resolution='c',projection='laea',lat_0=45.,lon_0=80.)
+                         resolution=coastres,area_thresh=area_thresh,projection='laea',lat_0=45.,lon_0=80.)
     elif ptype == 'nastere': # North America stere projection
         mapparams = dict(llcrnrlon=220.,llcrnrlat=20.,urcrnrlon=320.,urcrnrlat=50.,
-                         resolution='c',projection='stere',lat_0=45.,lon_0=230.)
+                         resolution=coastres,area_thresh=area_thresh,projection='stere',lat_0=45.,lon_0=230.)
     else:
         print "Incorrect map ptype. Choose sq,nh,sh,nastere,eastere,eabksstere,ealamb,eabkslamb"
         return -1
@@ -180,12 +189,12 @@ def kemmap(fld, lat, lon,title='',units='',cmap='blue2red_w20',ptype='sq',
         bm.drawmeridians(np.arange(0.,360.,30.),labels=[0,0,0,1])
 
 
-    bm.drawcoastlines(color=lcol)
+    bm.drawcoastlines(color=lcol,linewidth=coastwidth)
     #bm.drawmapboundary(fill_color='#99ffff')
 
     if lmask==1:
         #@@@bm.drawmapboundary(fill_color='0.7')
-        bm.drawcoastlines(color='.3')
+        bm.drawcoastlines(color='.3',linewidth=coastwidth)
         bm.fillcontinents(color='0.7')
 
     # I think drawlsmask puts the mask on the bottom
@@ -194,13 +203,13 @@ def kemmap(fld, lat, lon,title='',units='',cmap='blue2red_w20',ptype='sq',
     if axis!=None:
         axis.set_title(title,fontsize=10)
         if panellab!=None:
-            axis.annotate(panellab,xy=(0.01,1.01),
-                          xycoords='axes fraction',fontsize=16,fontweight='bold')
+            axis.annotate(panellab,xy=(0.01,1.02),
+                          xycoords='axes fraction',fontsize=18,fontweight='bold')
     else:
         plt.title(title,fontsize=10)
         if panellab!=None:
-            plt.annotate(panellab,xy=(0.01,1.01),
-                         xycoords='axes fraction',fontsize=16,fontweight='bold')
+            plt.annotate(panellab,xy=(0.01,1.02),
+                         xycoords='axes fraction',fontsize=18,fontweight='bold')
 
     # add colorbar.
     if suppcb == 0:
@@ -208,6 +217,17 @@ def kemmap(fld, lat, lon,title='',units='',cmap='blue2red_w20',ptype='sq',
         cbar.set_label(units)
 
     return bm,pc
+
+
+def add_contours(basem, fld, lat, lon, levels=None, colors='0.5',linewidths=1):
+
+    if np.mod(len(lon),2) == 0:
+        # add cyclic lon
+        fld,lon = mpltk.basemap.addcyclic(fld,lon)
+
+    lons, lats = np.meshgrid(lon,lat)
+    basem.contour(lons,lats,fld,levels=levels,
+           colors=colors,linewidths=linewidths,latlon=True)
 
 
 def addtsigm(basem, pvals, lat, lon, siglevel=0.05,color='k',sigtype='hatch'):
@@ -427,7 +447,7 @@ def map_allmonths(fld, lat, lon,title='',units='',cmap='blue2red_w20',ptype='sq'
     
     return fig
 
-def add_colorbar(fig,phand,orientation='vertical',pos=None,label=None):
+def add_colorbar(fig,phand,orientation='vertical',pos=None,label=None,fontsize=14):
     """
         returns cbar_ax, cbar
 
@@ -445,11 +465,20 @@ def add_colorbar(fig,phand,orientation='vertical',pos=None,label=None):
     except:
         raise
 
+    cbar_ax = fig.add_axes(pos)
     cparams={'orientation': orientation}
+
     if label!=None:
         cparams['label']=label
+    
+        if orientation=='horizontal':
+            lab = cbar_ax.xaxis.label
+        else:
+            lab = cbar_ax.yaxis.label
 
-    cbar_ax = fig.add_axes(pos)
+        font = fm.FontProperties(size=fontsize)
+        lab.set_font_properties(font)
+
     cparams['cax'] = cbar_ax
     cbar = fig.colorbar(phand,**cparams) #cax=cbar_ax,orientation=orientation,label=label)
 
