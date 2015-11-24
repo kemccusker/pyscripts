@@ -192,10 +192,13 @@ def kemmap(fld, lat, lon,title='',units='',cmap='blue2red_w20',ptype='sq',
     bm.drawcoastlines(color=lcol,linewidth=coastwidth)
     #bm.drawmapboundary(fill_color='#99ffff')
 
-    if lmask==1:
+    if lmask:
         #@@@bm.drawmapboundary(fill_color='0.7')
-        bm.drawcoastlines(color='.3',linewidth=coastwidth)
-        bm.fillcontinents(color='0.7')
+        if float(lcol)>0.7:
+            bm.drawcoastlines(color='.5',linewidth=coastwidth)
+        else:
+            bm.drawcoastlines(color='.3',linewidth=coastwidth)
+        bm.fillcontinents(color=lcol)
 
     # I think drawlsmask puts the mask on the bottom
     #bm.drawlsmask(land_color='0.7',lsmask=con.get_t63landmask(),ax=axis)
