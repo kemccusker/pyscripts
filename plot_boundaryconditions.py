@@ -5,7 +5,7 @@ import matplotlib.lines as mlines
 
 plt.close('all')
 masksicn=True # use present day sicn to mask SST
-printtofile=True
+printtofile=False
 
 deni = 913. # kg/m3 density of ice
 timesel='0011-01-01,0011-12-31' # don't have to load much b/c constant
@@ -78,39 +78,57 @@ def load_BCs(fields, season=None, timesel='0011-01-01,0011-12-31'):
 
 gt={}; sicn={}; sic={}
 gt['cmin'] = -2.; gt['cmax'] = 2.; gt['cmap']='blue2red_w20'
-sicn['cmin'] = -15; sicn['cmax'] = 15; sicn['cmap']='red2blue_w20'
+#sicn['cmin'] = -30; sicn['cmax'] = 30; sicn['cmap']='red2blue_w24sic'
+sicn['cmin'] = -25; sicn['cmax'] = 25; sicn['cmap']='red2blue_w20sic'
 sic['cmin'] = -0.5; sic['cmax'] = 0.5; sic['cmap']='red2blue_w20'
 
 meta = {'gt': gt, 'sicn': sicn, 'sic': sic}
-ylabs = {5: 'OBS', 0: 'E1', 1: 'E2', 2: 'E3', 3: 'E4', 4:'E5'} 
+ylabs = {0: 'OBS', 1: 'E1', 2: 'E2', 3: 'E3', 4: 'E4', 5:'E5'} 
 convdt = {'gt': 1, 'sicn': 100, 'sic': 1/np.float(deni)}
 
 
 # === load one year for seasonal cycle:
-flddat,fldcdat,fldpdat,sicnpdat = load_BCs(fields, season=None, timesel=timesel)
+#flddat,fldcdat,fldpdat,sicnpdat = load_BCs(fields, season=None, timesel=timesel)
+
+
 
 
 # ============== PLOT ==============
+printtofile=True
 lat = con.get_t63lat() #cnc.getNCvar(fnamec,'lat')
 lon = con.get_t63lon() #cnc.getNCvar(fnamep,'lon')
 
-fliptohoriz=True
+fliptohoriz=False
+latlim=57
+pparams = {'lcol':'0.9', 'coastres': 'c', 'coastwidth': 0.5, 
+           'area_thresh':70000,'lmask':True}
 
 fields=('sicn','sic','gt')
+fields=('sicn',)
 tlabs = {'gt': '$\Delta$ SST ($^\circ$C)', 'sicn': '$\Delta$ SIC (%)', 'sic': '$\Delta$ SIT (m)'}
 
 if fliptohoriz:
-    psuff='_horizor' # horizontal orientation
+    psuff='_horizor'+str(len(fields))+'b' # horizontal orientation
     # rows are fields and cols are sims
-    fig,axs = plt.subplots(3,6)
-    fig.set_size_inches((10,5))
-    fig.subplots_adjust(wspace=0.05,hspace=0.1)
+    if len(fields)==1:
+        fig,axs = plt.subplots(2,3)
+        fig.set_size_inches((5,len(fields)*2))
+        fig.subplots_adjust(wspace=0.05,hspace=0.1)
+    else:
+        fig,axs = plt.subplots(len(fields),6)
+        fig.set_size_inches((10,len(fields)*2))
+        fig.subplots_adjust(wspace=0.05,hspace=0.1)
 else:
-    psuff='_vertor' # vertical orientation
+    psuff='_vertor'+str(len(fields))+'b' # vertical orientation
     # cols are fields and rows are sims
-    fig,axs = plt.subplots(6,3)
-    fig.set_size_inches((7,14))
-    fig.subplots_adjust(wspace=0.1,hspace=0.05)
+    if len(fields)==1:
+        fig,axs = plt.subplots(3,2)
+        fig.set_size_inches((len(fields)*2+1,6))
+        fig.subplots_adjust(wspace=0.05,hspace=0.05)
+    else:
+        fig,axs = plt.subplots(6,len(fields))
+        fig.set_size_inches((len(fields)*2+1,14))
+        fig.subplots_adjust(wspace=0.1,hspace=0.05)
 
 for fii,field in enumerate(fields):
 
@@ -120,12 +138,16 @@ for fii,field in enumerate(fields):
 
     flddiff=flddat[field]
 
-    for ii in range(0,6):
+    for ii in range(0,6): # 6 sims
 
-        if fliptohoriz:
-            ax=axs[fii,ii]
+        if len(fields)==1:
+            ax=axs.flatten()[ii]
+
         else:
-            ax=axs[ii,fii]
+            if fliptohoriz:
+                ax=axs[fii,ii]
+            else:
+                ax=axs[ii,fii]
 
         plotfld=flddiff[ii]*conv
         plotfld = cutl.seasonalize_monthlyts(plotfld,season=sea, climo=1)
@@ -136,15 +158,20 @@ for fii,field in enumerate(fields):
             plotfld[tmp>=0.15] = 0 # mask where model sees grid cell as sea ice (not SST)
 
         bm,pc = cplt.kemmap(plotfld, lat, lon, ptype='nheur',
-                            latlim=45, axis=ax, suppcb=True, 
-                            round=False,lmask=True,**metap)
+                            latlim=latlim, axis=ax, suppcb=True, 
+                            round=False,lcol=pparams['lcol'], coastres= 'c', 
+                            coastwidth= 0.5, area_thresh=70000,
+                            lmask=True,**metap)
 
-        if fliptohoriz:
-            if ax.is_first_col(): ax.set_ylabel(tlabs[field])
-            if ax.is_first_row(): ax.set_title(ylabs[ii])
+        if len(fields)==1:
+            ax.set_title(ylabs[ii])
         else:
-            if ax.is_first_row(): ax.set_title(tlabs[field])
-            if ax.is_first_col(): ax.set_ylabel(ylabs[ii])
+            if fliptohoriz:
+                if ax.is_first_col(): ax.set_ylabel(tlabs[field])
+                if ax.is_first_row(): ax.set_title(ylabs[ii])
+            else:
+                if ax.is_first_row(): ax.set_title(tlabs[field])
+                if ax.is_first_col(): ax.set_ylabel(ylabs[ii])
 
     axposx = ax.get_position().get_points()[0][0] # x position of last ax
     axposy = ax.get_position().get_points()[0][1] # y position of last ax
@@ -154,10 +181,17 @@ for fii,field in enumerate(fields):
         cpos=[0.91, axposy,.02,axht]
         cbar_ax,cbar = cplt.add_colorbar(fig,pc,orientation='vertical',pos=cpos)
     else:
-        cpos=[axposx,.07, axwi,.02]
+        if len(fields)==1:
+            cpos=[0.12,0.07,0.8,.02]
+        else:
+            cpos=[axposx,.07, axwi,.02]
         cbar_ax,cbar = cplt.add_colorbar(fig,pc,orientation='horizontal',pos=cpos)
-    cbar.set_ticks([metap['cmin'],0,metap['cmax']])
-    cbar.set_ticklabels((metap['cmin'],0,metap['cmax']))
+    if field=='sicn':
+        cbar.set_ticks([metap['cmin'],-20,-15,-10,-5,0,5,10,15,20,metap['cmax']])
+        cbar.set_ticklabels(('',-20,'',-10,'',0,'',10,'',20,''))
+    else:
+        cbar.set_ticks([metap['cmin'],0,metap['cmax']])
+        cbar.set_ticklabels((metap['cmin'],0,metap['cmax']))
 
 if printtofile:
     fig.savefig('suppfig_boundaryconditions' + psuff+'.pdf',bbox_inches='tight')
@@ -167,6 +201,10 @@ if printtofile:
 #tst=flddat['sicn'][1]
 #cplt.map_allmonths(tst,lat,lon,ptype='nheur',
 #                   cmin=-.15,cmax=.15,cmap='red2blue_w20')
+
+
+printtofile=False
+
 
 # ======== plot seasonal cycle
 
