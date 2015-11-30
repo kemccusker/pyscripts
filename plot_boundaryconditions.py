@@ -98,7 +98,8 @@ printtofile=True
 lat = con.get_t63lat() #cnc.getNCvar(fnamec,'lat')
 lon = con.get_t63lon() #cnc.getNCvar(fnamep,'lon')
 
-fliptohoriz=False
+fsz=16
+fliptohoriz=True
 latlim=57
 pparams = {'lcol':'0.9', 'coastres': 'c', 'coastwidth': 0.5, 
            'area_thresh':70000,'lmask':True}
@@ -112,8 +113,8 @@ if fliptohoriz:
     # rows are fields and cols are sims
     if len(fields)==1:
         fig,axs = plt.subplots(2,3)
-        fig.set_size_inches((5,len(fields)*2))
-        fig.subplots_adjust(wspace=0.05,hspace=0.1)
+        fig.set_size_inches((6,len(fields)*2+2))
+        fig.subplots_adjust(wspace=0.01,hspace=0.3)
     else:
         fig,axs = plt.subplots(len(fields),6)
         fig.set_size_inches((10,len(fields)*2))
@@ -164,7 +165,7 @@ for fii,field in enumerate(fields):
                             lmask=True,**metap)
 
         if len(fields)==1:
-            ax.set_title(ylabs[ii])
+            ax.set_title(ylabs[ii],fontsize=fsz)
         else:
             if fliptohoriz:
                 if ax.is_first_col(): ax.set_ylabel(tlabs[field])
@@ -178,8 +179,12 @@ for fii,field in enumerate(fields):
     axwi = ax.get_position().width # width of last ax
     axht = ax.get_position().height # height of last ax
     if fliptohoriz:
-        cpos=[0.91, axposy,.02,axht]
-        cbar_ax,cbar = cplt.add_colorbar(fig,pc,orientation='vertical',pos=cpos)
+        if len(fields)==1:
+            pass
+            cpos=[.91,.15, .02,.7]
+        else:
+            cpos=[0.91, axposy,.02,axht]
+        cbar_ax,cbar = cplt.add_colorbar(fig,pc,orientation='vertical',pos=cpos,label='(%)')
     else:
         if len(fields)==1:
             cpos=[0.12,0.07,0.8,.02]
@@ -231,6 +236,8 @@ fig2,axs2 = plt.subplots(2,1)
 fig2.set_size_inches((5.2,5))
 fig2.subplots_adjust(wspace=0.1,hspace=0.1)
 
+savedjf={}
+
 for fii,field in enumerate(fields):
 
     metap = meta[field]
@@ -281,6 +288,10 @@ for fii,field in enumerate(fields):
         else:
             clr='0.5'
         ax.plot(xx,plotfld, color=clr, linewidth=2)
+        if field=='sicn':
+            print ii, plotfld[[0,1,11]] # @@@@
+            print '   MEAN: ' + str(plotfld[[0,1,11]].mean())
+            savedjf[ii] = plotfld[[0,1,11]].mean()
 
         ax2.plot(xx,plotfldc,color=clr,linewidth=2)
         ax2.plot(xx,plotfldp,color=clr,linewidth=2,linestyle='--')
