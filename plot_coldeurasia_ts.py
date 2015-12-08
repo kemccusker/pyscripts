@@ -9,14 +9,14 @@ cnc=reload(cnc)
 cutl=reload(cutl)
 
 euranom=False
-nhanom=True # if both False and temptimeseries=True, do eur - nh
+nhanom=False # if both False and temptimeseries=True, do eur - nh
 glob=False # if True, then write_temptimeseries will write global mean data
 bksanom=False # for Z500/circ index: if True and euranom=False, write out bksmori Z500 timeseries
 
 write_temptimeseries=False # write the temperature timeseries to netcdf (GISTEMP)
-write_temptimeseriesera=True # write erainterim's ST instead
+write_temptimeseriesera=False # write erainterim's ST instead
 write_siatimeseries=False # write the sea ice area timeseries to netcdf
-write_circtimeseries=False # write circulation index time series. if anom flags all False, do sicregion-region
+write_circtimeseries=True # write circulation index time series. if anom flags all False, do sicregion-region
 
 write_tempmap=False
 write_simsicmap=False
@@ -838,7 +838,8 @@ if write_circtimeseries:
     #elif glob:
     #    outfile='eraz500_' + sea + '_gm_1979-2014_timeseries.nc'
     else:
-        outfile='eraz500_' + sea + '_' + sicregion + '-' + region + '_1979-2014_timeseries.nc'
+        #outfile='eraz500_' + sea + '_' + sicregion + '-' + region + '_1979-2014_timeseries.nc'
+        outfile='eraz500_' + sea + '_stdized' + sicregion + '-' + region + '_1979-2014_timeseries.nc'
 
     outnc = Dataset(outfile,'w',format='NETCDF3_CLASSIC')
 
@@ -858,8 +859,9 @@ if write_circtimeseries:
         outfld.long_name = 'Z500 regional avg: ' + sicregion + ', seasonal avg: ' + sea
     #elif glob: 
     #    outfld.long_name = 'Z500 regional avg: global mean, seasonal avg: ' + sea
-    else: # eurasia - NH
-        outfld.long_name = 'Z500 regional avg: ' + sicregion + '-' + region + ' avg, seasonal avg: ' + sea
+    else:
+        #outfld.long_name = 'Z500 regional avg: ' + sicregion + '-' + region + ' avg, seasonal avg: ' + sea
+        outfld.long_name = 'standardized Z500 regional avg: ' + sicregion + '-' + region + ' avg, seasonal avg: ' + sea
 
 
     outtimes.long_name = 'time'
@@ -895,7 +897,9 @@ if write_circtimeseries:
     #elif glob:
     #    outfld[:] = gisgm
     else:
-        outfld[:] = erareg-eraregeur
+        #outfld[:] = erareg-eraregeur
+        # NORMALIZE FIRST
+        outfld[:] = (erareg-erareg[:10].mean())/erareg.std() - (eraregeur-eraregeur[:10].mean())/eraregeur.std()
 
     print 'erareg size ' + str(erareg.shape)
 
