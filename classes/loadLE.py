@@ -25,7 +25,12 @@ def load_LEdata(fielddict, ens, seas=None, timesel=None,infodict=None,ftype='ful
                       default is dict of DataFrames (to make a Panel). 
                       else, 'ndarray' is a 4D array
             local: is data in ~/work/DATA (local=True) or /raid/ra40
-                      
+            orig='just' means just load the original 5 (historical+rcp85) runs (consistent w/ LE). 
+            orig='just45' means just load original 5 (historical+rcp45) to the full LE.
+
+            orig='add' means add the original 5 (historical+rcp85) to the full LE (consistent w/ LE)
+            orig='add45' means add the original 5 (historical+rcp45) to the full LE.
+          
             subens: overrides getting all sim groups in ensemble. must be tuple. e.g. ('historical-r1',)
 
             @@ add regional avg functionality?
