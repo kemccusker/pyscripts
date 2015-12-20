@@ -2119,6 +2119,8 @@ def main(dowhat=None,addobs=True,addsims=False,addnat=False,
 
         if performop1:
             try:
+                # @@@@@@@@@ check the shapes of these. not sure the right dim is being
+                #   averaged??? 12/18/2015
                 fdict1op = {'field': field1+region1op, 'ncfield': ncfield1, 'comp': comp1}
                 # should rename these variables to be 'op' so it's more general
                 subc1 = le.load_LEdata(fdict1op,casename,timesel=timeselc, 
