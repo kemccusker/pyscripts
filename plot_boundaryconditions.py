@@ -1,11 +1,14 @@
 import cccmautils as cutl
 import constants as con
 import loadmodeldata as lmd
+import loadLE as le
 import matplotlib.lines as mlines
 
 plt.close('all')
 masksicn=True # use present day sicn to mask SST
 printtofile=False
+
+addle=True
 
 deni = 913. # kg/m3 density of ice
 timesel='0011-01-01,0011-12-31' # don't have to load much b/c constant
@@ -73,6 +76,22 @@ def load_BCs(fields, season=None, timesel='0011-01-01,0011-12-31'):
     return flddat, fldcdat, fldpdat, sicnpdat
 
 
+def load_LE(fdict,casename='historical',conv=1,season=None,timesel1='1979-01-01,1989-12-31',timesel2='2002-01-01,2012-12-31'):
+    
+
+    ledatc = le.load_LEdata(fdict,casename,timesel=timesel1, 
+                            rettype='ndarray',conv=conv,ftype='fullts',local=True,verb=False)
+    ledatp = le.load_LEdata(fdict,casename,timesel=timesel2, 
+                            rettype='ndarray',conv=conv,ftype='fullts',local=True,verb=False)
+    lediff = ledatp-ledatc
+
+    print lediff.shape
+    leclimo,_ = cutl.climatologize(lediff.T)
+    print leclimo.shape
+
+    return leclimo
+    
+
 
 # === info for plot:
 
@@ -94,7 +113,7 @@ convdt = {'gt': 1, 'sicn': 100, 'sic': 1/np.float(deni)}
 
 
 # ============== PLOT ==============
-printtofile=True
+printtofile=False
 lat = con.get_t63lat() #cnc.getNCvar(fnamec,'lat')
 lon = con.get_t63lon() #cnc.getNCvar(fnamep,'lon')
 
@@ -213,11 +232,23 @@ printtofile=False
 
 # ======== plot seasonal cycle
 
+sie=False  # else it's sea ice area
+
+if addle:
+
+    if sie:
+        fdict = {'field': 'sienh', 'ncfield': 'sienh', 'comp': 'OImon'}
+    else:
+        fdict = {'field': 'sianh', 'ncfield': 'sianh', 'comp': 'OImon'}
+
+    print '@@@@@@@@@@@@@@'
+    leclimo = load_LE(fdict)
+
+
 simslg=mlines.Line2D([],[],color='0.5',linewidth=2) 
 osimlg=mlines.Line2D([],[],color='r',linewidth=2) 
 
 
-sie=False  # else it's sea ice area
 fields=('sicn','sic')
 xx=range(0,12)
 xxticks=np.arange(0,12)
@@ -238,6 +269,7 @@ fig2.subplots_adjust(wspace=0.1,hspace=0.1)
 
 savedjf={}
 
+obsdat={}
 for fii,field in enumerate(fields):
 
     metap = meta[field]
@@ -285,9 +317,15 @@ for fii,field in enumerate(fields):
         
         if ii==5:
             clr='r'
+            print 'obs field,dat ' + field,str(plotfld)
+            # save obs:
+            obsdat[field]=plotfld
         else:
             clr='0.5'
         ax.plot(xx,plotfld, color=clr, linewidth=2)
+        if addle and field=='sicn':
+            ax.plot(xx,leclimo,color='0.7',alpha=0.5)
+
         if field=='sicn':
             print ii, plotfld[[0,1,11]] # @@@@
             print '   MEAN: ' + str(plotfld[[0,1,11]].mean())
@@ -328,8 +366,55 @@ if printtofile:
 #cplt.map_allmonths(tst,lat,lon,ptype='nheur',
 #                   cmin=-.15,cmax=.15,cmap='red2blue_w20')
 
+if addle:
+    # not a boundary condition figure: shows how LE compares to obs
+
+    fig,ax = plt.subplots(1,1)
+    fig.set_size_inches((5.2,3))
+    #fig.subplots_adjust(wspace=0.1,hspace=0.1)
+
+    ax.plot(xx,leclimo,color='0.7',alpha=0.5)
+    ax.plot(xx,obsdat['sicn'],color='r',linewidth=2)
+
+    yticks=ax.get_yticks()
+    ax.set_yticklabels(yticks/1e12)
+    ax.set_xticks(xxticks)
+    ax.set_xticklabels(xxlabs)
+    #ax.legend((simslg,osimlg),('Model BCs','Observational BC'),loc='lower left',
+    #          frameon=False)
+    ax.set_xlim(0,11)
+    ax.set_ylabel('Change in ' + tlabs['sicn'])
 
 
+
+    # or fill between
+    maxle = leclimo.max(axis=1)
+    minle = leclimo.min(axis=1)
+
+    printtofile=True
+
+    fig,ax = plt.subplots(1,1)
+    fig.set_size_inches((6,5))
+    #fig.subplots_adjust(wspace=0.1,hspace=0.1)
+
+    
+    ax.plot(xx,leclimo,color='0.7',alpha=0.5)
+    ax.plot(xx,obsdat['sicn'],color='r',linewidth=2)
+    ax.fill_between(xx,maxle,minle,color='0.8',alpha=0.5)
+
+    yticks=ax.get_yticks()
+    ax.set_yticklabels(yticks/1e12)
+    ax.set_xticks(xxticks)
+    ax.set_xticklabels(xxlabs)
+    #ax.legend((simslg,osimlg),('Model BCs','Observational BC'),loc='lower left',
+    #          frameon=False)
+    ax.set_xlim(0,11)
+    ax.set_ylabel('Change in ' + tlabs['sicn'], fontsize=17)
+    ax.set_xlabel('Month',fontsize=17)
+    if printtofile:
+        fig.savefig('SuppFig_seacycle_LE.pdf')
+
+printtofile=False
 # @@@@@@@@@@@@@ also, plot regions for paper: supp fig (save code)
 cplt.plot_regions(('bksmori','eurasiamori'),colors=('k','blue'),ptype='nheur'); 
 if printtofile:
