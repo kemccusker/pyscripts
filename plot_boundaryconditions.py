@@ -368,10 +368,16 @@ if printtofile:
 
 if addle:
     # not a boundary condition figure: shows how LE compares to obs
+    cisiglevel=0.05
 
     fig,ax = plt.subplots(1,1)
     fig.set_size_inches((5.2,3))
     #fig.subplots_adjust(wspace=0.1,hspace=0.1)
+
+    lemean = leclimo.mean(axis=1)
+    ci = sp.stats.t.interval(1-cisiglevel, leclimo.shape[1]-1, 
+                             loc=lemean, scale=leclimo.std(axis=1))
+    print len(ci), ci[0].shape
 
     ax.plot(xx,leclimo,color='0.7',alpha=0.5)
     ax.plot(xx,obsdat['sicn'],color='r',linewidth=2)
@@ -398,9 +404,12 @@ if addle:
     #fig.subplots_adjust(wspace=0.1,hspace=0.1)
 
     
-    ax.plot(xx,leclimo,color='0.7',alpha=0.5)
+    #ax.plot(xx,leclimo,color='0.7',alpha=0.5)
+    ax.plot(xx,lemean,color='0.6')
     ax.plot(xx,obsdat['sicn'],color='r',linewidth=2)
-    ax.fill_between(xx,maxle,minle,color='0.8',alpha=0.5)
+    #ax.fill_between(xx,maxle,minle,color='0.8',alpha=0.5)
+    ax.fill_between(xx,ci[0], ci[1],color='0.8',alpha=0.5)
+
 
     yticks=ax.get_yticks()
     ax.set_yticklabels(yticks/1e12)
@@ -409,10 +418,10 @@ if addle:
     #ax.legend((simslg,osimlg),('Model BCs','Observational BC'),loc='lower left',
     #          frameon=False)
     ax.set_xlim(0,11)
-    ax.set_ylabel('Change in ' + tlabs['sicn'], fontsize=17)
-    ax.set_xlabel('Month',fontsize=17)
+    ax.set_ylabel('Change in sea ice area (million square km)', fontsize=16)
+    ax.set_xlabel('Month',fontsize=16)
     if printtofile:
-        fig.savefig('SuppFig_seacycle_LE.pdf')
+        fig.savefig('SuppFig_seacycle_LE2.pdf')
 
 printtofile=False
 # @@@@@@@@@@@@@ also, plot regions for paper: supp fig (save code)
