@@ -364,7 +364,7 @@ def vert_plot(fld, lev, lat, title='',units='',cmap='blue2red_w20',cmin='',cmax=
         if ptype=='nh':
             ax.set_xlim(latlim,90)
             ax.set_xticks([20, 45, 70])
-            if suppxlab:
+            if suppxlab==False:
                 ax.set_xticklabels((20, 45, 70))
             else:
                 ax.set_xticklabels('')
@@ -405,6 +405,35 @@ def vert_plot(fld, lev, lat, title='',units='',cmap='blue2red_w20',cmin='',cmax=
         plt.colorbar(cf) #pc,cax=cbar_ax)
 
     return cf
+
+def add_contoursvert(ax,fld,lat,lev,cmin=None,cmax=None,conts=None,cmlen=15,
+                     colors='.3',hPa=False,verb=False,clab=False,fmt='%2.1f'):
+
+    """ 
+        conts will supercede cmin/cmax
+        use cmlen to make contours if cmin/cmax are given, but not conts
+
+        if verb is True, print out conts
+    """
+
+    if hPa:
+        lats,levs = np.meshgrid(lat,lev) # do not divide by 100, already in hPa
+    else:
+        lats,levs = np.meshgrid(lat,lev/100.)
+
+    if conts != None:
+        cs = ax.contour(lats,levs,fld,levels=conts,colors=colors)
+    elif cmin != None:
+        incr = (cmax-cmin) /cmlen
+        conts = np.arange(cmin,cmax+incr,incr)
+        cs = ax.contour(lats,levs,fld,levels=conts,colors=colors)
+    else:
+        cs = ax.contour(lats,levs,fld,colors=colors)
+
+    if clab:
+        ax.clabel(cs, fmt = fmt,inline=0,fontsize=10)
+    if verb:
+        print conts
 
 def map_allmonths(fld, lat, lon,title='',units='',cmap='blue2red_w20',ptype='sq',
            cmin='',cmax='',axis=None, suppcb=0,lmask=0,climo=0,flipmask=0,
