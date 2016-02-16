@@ -15,11 +15,14 @@ ensnum=10
 
 def load_LEdata(fielddict, ens, seas=None, timesel=None,infodict=None,ftype='fullts',
                 calctype=None, calcdict=None, rettype='dict',conv=1, region=None,local=False,
-                orig=None,subens=False,verb=True):
+                orig=None,subens=False,verb=True,zonal=False):
     """ def loadLEdata(fielddict, seas=('DJF','MAM','JJA','SON'), timesel=None, infodict=None, calctype=None, calcdict=None)
 
-            ftype: type of filename to build. Right now just 'fullts' for full timeseries
-              or '1950-2020_climo' or 'ensmean'
+            ftype: type of filename to build. Default 'fullts' for full timeseries.
+              'fullclimo' for '1950-2020_climo' or, given timesel:
+              for styr-enyr_climo. or 'ensmean'. 
+              Also can override default time period of file by setting ftype to timeperiod.
+                   e.g. ftype = '195001-201012'
             seas has to be a tuple
             rettype: 'dict' or 'ndarray' as return type. 
                       default is dict of DataFrames (to make a Panel). 
@@ -54,7 +57,10 @@ def load_LEdata(fielddict, ens, seas=None, timesel=None,infodict=None,ftype='ful
     if rettype=='dict':
         fldret={}
     elif rettype=='ndarray':
-        tmp = cnc.getNCvar(fname1,ncfield,timesel=timesel)*conv
+        if zonal:
+            tmp = cnc.getNCvar(fname1,ncfield,timesel=timesel,calc='zm')*conv
+        else:
+            tmp = cnc.getNCvar(fname1,ncfield,timesel=timesel)*conv
 
         if len(tmp.shape)>3:
             print '4D variable not supported! @@@@'
@@ -90,7 +96,10 @@ def load_LEdata(fielddict, ens, seas=None, timesel=None,infodict=None,ftype='ful
         
         if seas==None:
             # don't average, return all months
-            fld = cnc.getNCvar(fname,ncfield,timesel=timesel)*conv
+            if zonal:
+                fld = cnc.getNCvar(fname,ncfield,timesel=timesel,calc='zm')*conv
+            else:
+                fld = cnc.getNCvar(fname,ncfield,timesel=timesel)*conv
             #if region!=None:
             #    lat=cnc.getNCvar(fname,'lat')
             #    lon=cnc.getNCvar(fname,'lon')
@@ -113,7 +122,11 @@ def load_LEdata(fielddict, ens, seas=None, timesel=None,infodict=None,ftype='ful
         else:
             fldseas={}
             for sea in seas:
-                fld = cnc.getNCvar(fname,ncfield,timesel=timesel,seas=sea)*conv
+                if zonal:
+                    # @@@ not expecting this to work.
+                    fld = cnc.getNCvar(fname,ncfield,timesel=timesel,seas=sea,calc='zm')*conv
+                else:
+                    fld = cnc.getNCvar(fname,ncfield,timesel=timesel,seas=sea)*conv
 
                 # do calcs
                 if calctype!=None:
