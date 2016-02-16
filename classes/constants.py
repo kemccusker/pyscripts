@@ -741,7 +741,13 @@ def get_regiondict():
     regdict['nthamw'] = {'latlims': [32,60], 'lonlims': [235,265]}
     regdict['nthame'] = {'latlims': [34,60], 'lonlims': [265,295]}
     regdict['usa'] = {'latlims': [32,49], 'lonlims': [235,285]}
+
     regdict['nthatl'] = {'latlims': [35,60], 'lonlims': [300,360]}
+    regdict['nthatlthn'] = {'latlims': [25,60], 'lonlims': [305,350]}
+    regdict['nthatlthnnh'] = {'latlims': [0,90], 'lonlims': [305,350]}
+    regdict['nthpac'] = {'latlims': [25, 55], 'lonlims': [145,235]}
+    regdict['nthpacnh'] = {'latlims': [0, 90], 'lonlims': [145,235]}
+
     regdict['bks'] = {'latlims': [65,80], 'lonlims': [27,96]} # Barents-Kara Seas 65N-80N,27E-96E
     regdict['bksmori'] = {'latlims': [65,85], 'lonlims': [30,90]} # Barents-Kara Seas 65N-85N,30E-90E
     regdict['less'] = {'latlims': [70,85], 'lonlims': [110,180]}# Laptev-East Siberian Seas 70N-85N, 110E-180E
