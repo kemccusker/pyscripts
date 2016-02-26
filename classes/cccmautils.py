@@ -149,6 +149,53 @@ def calc_seaicearea(input,lat,lon, model='CanESM2'):
     
     return sia
 
+def mask_t63land(input):
+    """ masks out land (do not consider land) in input field
+             using the canesm t63 landmask
+             2/25/2016
+
+        return masked input, input.mask
+
+        @@@ check if input already has a mask?
+    """
+
+    ishape = input.shape
+
+    nrep = ishape[0:-2] # leave off last 2 dims (lat, lon)
+    nrep = nrep + (1,1) # I think this should work for 2D or >2D
+
+    if np.mod(input.shape[-1],2) != 0: # if lon is odd, leave cyclic lon in landmask. 
+        remcyc=False
+    else:
+        remcyc=True
+
+    lmask = con.get_t63landmask(repeat=nrep,remcyclic=remcyc) 
+
+    input = ma.masked_where(lmask==-1,input) # mask where land
+
+    return input,input.mask
+
+def mask_t63ocean(input):
+    """  masks out ocean (do not consider ocean) in input field
+             using the canesm t63 landmask
+
+    """
+
+    ishape = input.shape
+
+    nrep = ishape[0:-2] # leave off last 2 dims (lat, lon)
+    nrep = nrep + (1,1) # I think this should work for 2D or >2D
+
+    if np.mod(input.shape[-1],2) != 0: # if lon is odd, leave cyclic lon in landmask. 
+        remcyc=False
+    else:
+        remcyc=True
+
+    lmask = con.get_t63landmask(repeat=nrep,remcyclic=remcyc) 
+
+    input = ma.masked_where(lmask==0,input) # mask where ocean
+
+
 def calc_totseaicearea(fld,lat,lon,isarea=False,model='CanESM2'):
     """ calculate total sea ice area
            returns nh,sh
@@ -280,7 +327,49 @@ def calc_totseaicevol_cmip5(fld,lat,lon, model='CanESM2'):
     sh = ma.sum(ma.sum(gridvols,2),1)
     
     return nh,sh
-  
+
+def rem_seasonalcycle(input, remclimo=None):
+    """ 
+        Remove seasonal cycle from timeseries.
+        
+            input: the data. time must be first dimension and start with Jan!
+            
+            remclimo: if given, remove this climatology, otherwise
+                      a climatology will be computed over entire input and removed.
+                      The shape must be the same as input.shape[1:]
+                      
+    """
+    
+    print input.shape
+    
+    ntime = input.shape[0]
+    nyr = ntime/12
+    rem = np.mod(ntime,12) # remaining months not making up a full year
+    
+    if remclimo==None:
+        
+        remclimo,std = cutl.climatologize(input)
+        
+        
+    otherdims=input.shape[1:]
+    oshape = tuple(np.ones(len(otherdims)))
+    
+    print 'nyr, otherdims, oshape ' + str(nyr),str(otherdims),str(oshape)
+    print 'remclimo.shape ' + str(remclimo.shape)
+    
+    #if len(otherdims)==1:
+    #    tshape = (nyr,)
+    #else:
+    tshape = (nyr,)+oshape
+        
+    print 'tshape ' + str(tshape)
+    
+    remclimot=np.tile(remclimo,tshape)
+
+    # remove the monthly climo
+    inrem = input-remclimot
+        
+    return inrem  
     
 def global_mean_areawgted3d(fld, lat, lon, model='CanESM2'):
     """
@@ -572,7 +661,7 @@ def seasonalize(input,season=None,includenan=0,mo=0,climo=0,verb=False):
         return annualize_monthlyts(input,includenan,verb=verb)
     elif season=='DJF':
         # do weighted average for requested season
-        indices=[0,1,11]
+        indices=[0,1,11] # don't worry, these indices only for weights
         if np.mod(input.shape[0],12)>=2:
             # then we have Jan-Feb of last year
             nyrs=nt/12
@@ -911,7 +1000,7 @@ def mask_region(fld,lat,lon,region,limsdict=None):
 
     return fld, regmaskt
 
-def calc_regmean(fld,lat,lon,region,limsdict=None, model='CanESM2'):
+def calc_regmean(fld,lat,lon,region,limsdict=None, model='CanESM2',alsomask=None):
     """ calc_regmean(fld, lat,lon,region,limsdict=None):
                  Mask the input data with the given region either defined
                     already in regiondict, or overridden with limsdict.
@@ -929,6 +1018,9 @@ def calc_regmean(fld,lat,lon,region,limsdict=None, model='CanESM2'):
 
                  model: 'CanESM2', gets grid cell areas from file.
                         None, uses calc_cellareas(lat,lon)
+
+                 alsomask: None, 'land', or 'ocean'. In addition to region mask, 
+                            mask out land or ocean (mask out mean do NOT consider it).
 
                  Returns: Regional mean (or series of regional means with length ndim1)
     """
@@ -949,6 +1041,13 @@ def calc_regmean(fld,lat,lon,region,limsdict=None, model='CanESM2'):
             fldreg = global_mean_areawgted(fld,lat,lon,model=model)
     else:
         fldm,regmask = mask_region(fld,lat,lon,region,limsdict)
+        if alsomask != None:
+            if alsomask=='land':
+                fldm,regmask = mask_t63land(fldm)
+            elif alsomask=='ocean':
+                fldm,regmask = mask_t63ocean(fldm)
+            else:
+                print 'alsomask = land or ocean! @@@'
 
         # calculate area-weights
         if model=='CanESM2':
@@ -1370,6 +1469,7 @@ def regress(input1,input2):
     """ Calculate linear regression b/w two variables (x, y)
            Over axis=0!
            Will only do 1-D or 2-D
+             or 1-D and 2-D as long as input2 is the one that's 2-D (2/17/16)
 
         Uses scipy.stats.linregress(input1,input2)
 
@@ -1377,15 +1477,21 @@ def regress(input1,input2):
 
     """
 
-    if input1.ndim==1:
+    if input1.ndim==1 and input2.ndim==1:
         mm, bb, rval, pval, std_err = sp.stats.linregress(input1,input2)
+
     else:
-        mm=np.zeros(input1.shape[1])
-        bb=np.zeros(input1.shape[1])
-        rval=np.zeros(input1.shape[1])
-        pval=np.zeros(input1.shape[1])
-        for ii in np.arange(input1.shape[1]):
-            mm[ii],bb[ii],rval[ii],pval[ii],_ = sp.stats.linregress(input1[:,ii],input2[:,ii])
+        mm=np.zeros(input2.shape[1])
+        bb=np.zeros(input2.shape[1])
+        rval=np.zeros(input2.shape[1])
+        pval=np.zeros(input2.shape[1])
+        if input2.ndim>1 and input1.ndim==1:
+            for ii in np.arange(input2.shape[1]):
+                mm[ii],bb[ii],rval[ii],pval[ii],_ = sp.stats.linregress(input1,input2[:,ii])
+
+        else:
+            for ii in np.arange(input1.shape[1]):
+                mm[ii],bb[ii],rval[ii],pval[ii],_ = sp.stats.linregress(input1[:,ii],input2[:,ii])
 
     # How to plot: onex=np.linspace(axxlims[0],axxlims[1])    
     #              ax.plot(onex,mm*onex + bb, color='k',linewidth=2)
