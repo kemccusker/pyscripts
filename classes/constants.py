@@ -736,6 +736,7 @@ def get_regiondict():
     regdict['eurasiathicke'] = {'latlims': [40,70], 'lonlims': [90,130]}
     regdict['eurasiamorie'] = {'latlims': [40,60], 'lonlims': [90,120]}# eastern half of eurasiamori
     regdict['ntham'] = {'latlims': [35,60], 'lonlims': [240,280]}
+    regdict['nthamkug'] = {'latlims': [40,55], 'lonlims': [240,280]}# Kug et al. 2015, 80W-120W
     regdict['nthamsth'] = {'latlims': [32,55], 'lonlims': [240,280]}
     regdict['nthamthick'] = {'latlims': [32,60], 'lonlims': [238,282]}
     regdict['nthamw'] = {'latlims': [32,60], 'lonlims': [235,265]}
@@ -750,6 +751,8 @@ def get_regiondict():
 
     regdict['bks'] = {'latlims': [65,80], 'lonlims': [27,96]} # Barents-Kara Seas 65N-80N,27E-96E
     regdict['bksmori'] = {'latlims': [65,85], 'lonlims': [30,90]} # Barents-Kara Seas 65N-85N,30E-90E
+    regdict['bkskug'] = {'latlims': [70,80], 'lonlims': [30,70]} # Kug et al. 2015
+    regdict['chuckkug'] = {'latlims': [65,80], 'lonlims': [160,200]} # Kug et al. 2015; 160E-160W
     regdict['less'] = {'latlims': [70,85], 'lonlims': [110,180]}# Laptev-East Siberian Seas 70N-85N, 110E-180E
     regdict['soo'] = {'latlims': [46,61], 'lonlims': [136,158]} # Sea of Okhotsk 46N-61N,136E-158E
     regdict['etroppac'] = {'latlims': [-15, 15], 'lonlims': [180,280]} # eastern trop pacific 15S-15N, 180W-80W
@@ -761,6 +764,7 @@ def get_regiondict():
     regdict['eurasialarge'] = {'latlims': [30,70], 'lonlims': [40,120]}
     regdict['eurasiagrad'] = {'latlims': [35,55], 'lonlims': [100,130]}
     regdict['eurasiagrad2'] = {'latlims': [45,60], 'lonlims': [90,130]}
+    regdict['eurasiakug'] = {'latlims': [35,50], 'lonlims': [80,130]} # East Asia region from Kug et al. 2015
 
     regdict['nino34'] = {'latlims': [-5,5], 'lonlims': [240,290]} #Nino-3.4 index, defined as average SST in a region bounded by 5S-5N, 120-170W
     regdict['pig'] = {'latlims':[0,384], 'lonlims': [230,280]} # CCSM4 OCEAN!!! @@@ untested 10/6/2014
