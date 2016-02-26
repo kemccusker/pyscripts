@@ -21,7 +21,9 @@ def get_cccmacm():
 
 def list_cccmacms():
     # print the colormap name options
-    return ['kem_w20','blue2red_w20','blue2red_20', 'red2blue_w20','red2blue_w24sic', 'red2blue_20',\
+    return ['kem_w20','blue2red_w20','blue2red_20', \
+            'blue2red_w10','blue2red_w11','red2blue_w20',\
+            'red2blue_w20sic', 'red2blue_20',\
             'turq2orange_16',\
             'brown2blue_12', 'brown2blue_12g', 'brown2blue_12w',\
             'brown2blue_16w', 'brown2blue_16g', \
@@ -161,6 +163,72 @@ def register_cccmacms(cmap='all'):
     red2blue_w20sic = np.flipud(cpool)/255.
     thecmap = col.ListedColormap(red2blue_w20sic,'red2blue_w20sic')
     cm.register_cmap(cmap=thecmap)
+
+
+    # =============================================
+    # blue2red_w10
+    # blueish at top, white in middle, reddish at bottom
+
+    cpool = np.array([ #[10,50,120], \
+                       [15,75,165], \
+                       #[30,110,200],\
+                       [60,160,240],\
+                       #[80,180,250],\
+                       [130, 210, 255],\
+                       #[160, 230, 255],\
+                       [190, 235, 255],\
+                       #[210, 245, 255],\
+                       [255, 255, 255],\
+                       
+                       [255, 255, 255],\
+                       #[250, 240, 150],\
+                       [255, 222, 100],\
+                       #[255, 192, 60], \
+                       [255, 160, 0], \
+                       #[255, 96, 0], \
+                       [255, 50, 0], \
+                       #[225, 20, 0], \
+                       [192, 0, 0]], \
+                       #[165, 0, 0]],\
+                       dtype=float)
+    
+    #  blue2red_w10
+    blue2red_w10 = (cpool/255.)
+    thecmap = col.ListedColormap(blue2red_w10,'blue2red_w10')
+    cm.register_cmap(cmap=thecmap)
+
+    # =============================================
+    # blue2red_w11
+    # blueish at top, white in middle, reddish at bottom
+
+    cpool = np.array([ [10,50,120], \
+                       #[15,75,165], \
+                       [30,110,200],\
+                       #[60,160,240],\
+                       [80,180,250],\
+                       #[130, 210, 255],\
+                       [160, 230, 255],\
+                       #[190, 235, 255],\
+                       [210, 245, 255],\
+
+                       [255, 255, 255],\
+
+                       [250, 240, 150],\
+                       #[255, 222, 100],\
+                       [255, 192, 60], \
+                       #[255, 160, 0], \
+                       [255, 96, 0], \
+                       #[255, 50, 0], \
+                       [225, 20, 0], \
+                       #[192, 0, 0], \
+                       [165, 0, 0]],\
+                       dtype=float)
+    
+    #  blue2red_w11
+    blue2red_w11 = (cpool/255.)
+    thecmap = col.ListedColormap(blue2red_w11,'blue2red_w11')
+    cm.register_cmap(cmap=thecmap)
+
 
 
     # =============================================
