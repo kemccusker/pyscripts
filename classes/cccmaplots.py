@@ -70,9 +70,11 @@ def kemmap(fld, lat, lon,title='',units='',cmap='blue2red_w20',ptype='sq',
     if ptype == 'sq':
         mapparams = dict(projection='robin',lon_0=180,lat_0=0, 
                          resolution=coastres,area_thresh=area_thresh)
-    elif ptype == 'nh' or ptype=='nheur':
+    elif ptype == 'nh' or ptype=='nheur' or ptype=='nhkug':
         if ptype=='nheur':
             lon0 = 90.
+        if ptype=='nhkug':
+            lon0 = 180
         else:
             lon0=0.
         if latlim != None: # try 'round=True' !@@@
@@ -120,7 +122,7 @@ def kemmap(fld, lat, lon,title='',units='',cmap='blue2red_w20',ptype='sq',
         mapparams = dict(llcrnrlon=220.,llcrnrlat=20.,urcrnrlon=320.,urcrnrlat=50.,
                          resolution=coastres,area_thresh=area_thresh,projection='stere',lat_0=45.,lon_0=230.)
     else:
-        print "Incorrect map ptype. Choose sq,nh,sh,nastere,eastere,eabksstere,ealamb,eabkslamb"
+        print "Incorrect map ptype. Choose sq,nh,nheur,nhkug,sh,nastere,eastere,eabksstere,ealamb,eabkslamb"
         return -1
         
     # default pcolormesh dictionary
@@ -222,16 +224,59 @@ def kemmap(fld, lat, lon,title='',units='',cmap='blue2red_w20',ptype='sq',
     return bm,pc
 
 
-def add_contours(basem, fld, lat, lon, levels=None, colors='0.5',linewidths=1):
+def add_contours(basem, fld, lat, lon, axis=None,levels=None,cmin=None,cmax=None, 
+                 cmlen=15,colors='0.3',linewidths=1,clab=False,verb=False,fmt='%2.1f'):
+    """ 
+        levels will supercede cmin/cmax
+        use cmlen to make contours if cmin/cmax are given, but not levels
+
+        if verb is True, print out levels
+    """
+
+    if axis != None:
+        ax=axis
+    else:
+        ax=plt.gca()
 
     if np.mod(len(lon),2) == 0:
         # add cyclic lon
         fld,lon = mpltk.basemap.addcyclic(fld,lon)
 
     lons, lats = np.meshgrid(lon,lat)
-    basem.contour(lons,lats,fld,levels=levels,
-           colors=colors,linewidths=linewidths,latlon=True)
 
+    if levels != None:
+        cs = basem.contour(lons,lats,fld,levels=levels,
+                           colors=colors,linewidths=linewidths,latlon=True)
+    elif cmin != None:
+        incr = (cmax-cmin) /np.float(cmlen)
+        levels = np.arange(cmin,cmax+incr,incr)
+
+        cs = basem.contour(lons,lats,fld,levels=levels,
+                           colors=colors,linewidths=linewidths,latlon=True)
+    else:
+        cs = basem.contour(lons,lats,fld,
+                           colors=colors,linewidths=linewidths,latlon=True)
+
+    if clab:
+        ax.clabel(cs,inline=False,fmt = fmt, fontsize=10)
+
+    if verb:
+        print levels
+
+    """ if conts != None:
+        cs = ax.contour(lats,levs,fld,levels=conts,colors=colors)
+    elif cmin != None:
+        incr = (cmax-cmin) /cmlen
+        conts = np.arange(cmin,cmax+incr,incr)
+        cs = ax.contour(lats,levs,fld,levels=conts,colors=colors)
+    else:
+        cs = ax.contour(lats,levs,fld,colors=colors)
+
+    if clab:
+        ax.clabel(cs, fmt = fmt,inline=0,fontsize=10)
+    if verb:
+        print conts
+    """
 
 def addtsigm(basem, pvals, lat, lon, siglevel=0.05,color='k',sigtype='hatch'):
     """ 
@@ -424,7 +469,7 @@ def add_contoursvert(ax,fld,lat,lev,cmin=None,cmax=None,conts=None,cmlen=15,
     if conts != None:
         cs = ax.contour(lats,levs,fld,levels=conts,colors=colors)
     elif cmin != None:
-        incr = (cmax-cmin) /cmlen
+        incr = (cmax-cmin) /np.float(cmlen)
         conts = np.arange(cmin,cmax+incr,incr)
         cs = ax.contour(lats,levs,fld,levels=conts,colors=colors)
     else:
