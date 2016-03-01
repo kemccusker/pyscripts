@@ -142,6 +142,8 @@ def calc_seaicearea(input,lat,lon, model='CanESM2'):
             return -1
 
         lmask = con.get_t63landmask(remcyclic=remcyc)
+    # in case input is not a MaskedArray already
+    input = ma.MaskedArray(input) # @@@@ will this preserve a mask if one alread exists?
     areas = ma.masked_where(input.mask, areas)
 
     sia = input*areas
@@ -1081,14 +1083,14 @@ def calc_regmean(fld,lat,lon,region,limsdict=None, model='CanESM2',alsomask=None
     return fldreg
 
 
-def calc_regtotseaicearea(fld,lat,lon,region,limsdict=None,isarea=False,model='CanESM2'):
+def calc_regtotseaicearea(fld,lat,lon,region,limsdict=None,isarea=False,model='CanESM2',alsomask=None):
     """ calc_regtotseaicearea(fld, lat,lon,region,limsdict=None,isarea=False):
                  Mask the input data with the given region either defined
                     already in regiondict, or overridden with limsdict.
                     If limsdict is to be used, set region='other'
                  The data will be masked everywhere BUT the region!
 
-                 fld: lat x lon array of SEA ICE CONC (unless isarea=True)
+                 fld: lat x lon array of SEA ICE CONC (as fraction; unless isarea=True)
                       time x lat x lon OR lev x lat x lon also accepted (not tested)
 
                  lat: array of lats (coordinates)
@@ -1101,6 +1103,9 @@ def calc_regtotseaicearea(fld,lat,lon,region,limsdict=None,isarea=False,model='C
 
                  model: 'CanESM2', gets grid cell areas from file.
                         None, uses calc_cellareas(lat,lon)
+
+                 alsomask: None, 'land', or 'ocean'. In addition to region mask, 
+                            mask out land or ocean (mask out means do NOT consider it).
 
                  Returns: Regional total SIA (or series of regional totals with length ndim1)
     """
@@ -1126,6 +1131,14 @@ def calc_regtotseaicearea(fld,lat,lon,region,limsdict=None,isarea=False,model='C
     ##     weightsmt = weightsm
 
     tmp = ma.masked_where(regmask,fldm) # am I masking out twice? does it matter?
+    if alsomask != None:
+        if alsomask=='land':
+            tmp,regmask = mask_t63land(tmp)
+        elif alsomask=='ocean':
+            tmp,regmask = mask_t63ocean(tmp)
+        else:
+            print 'alsomask = land or ocean! @@@'
+
     #tmpreg = np.sum(np.sum(tmp,axis=2),axis=1)
     if tmp.ndim==3:
         tmpreg=ma.sum(ma.sum(tmp,axis=2),axis=1) # @@ was this a bug?
