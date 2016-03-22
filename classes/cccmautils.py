@@ -639,8 +639,8 @@ def seasonalize(input,season=None,includenan=0,mo=0,climo=0,verb=False):
     """
 
     if season == None and mo==0:
-        print 'Must specify either season or mo! Months indexed starting from 1'
-        return
+        print 'No season or mo specified! Returning all months. Note month starts with 1.'
+        return input
 
     dims = input.shape
     nt = input.shape[0]
@@ -733,7 +733,7 @@ def seasonalize(input,season=None,includenan=0,mo=0,climo=0,verb=False):
         start=8
         incr=2
     else:
-        print 'seasonalize_monthlyts(): Season ' + season + ' not supported!'
+        print 'seasonalize(): Season ' + season + ' not supported!'
         return None
 
     if len(dims)>1:
