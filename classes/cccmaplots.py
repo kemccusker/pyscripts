@@ -73,10 +73,11 @@ def kemmap(fld, lat, lon,title='',units='',cmap='blue2red_w20',ptype='sq',
     elif ptype == 'nh' or ptype=='nheur' or ptype=='nhkug':
         if ptype=='nheur':
             lon0 = 90.
-        if ptype=='nhkug':
-            lon0 = 180
+        elif ptype=='nhkug':
+            lon0 = 180.
         else:
             lon0=0.
+
         if latlim != None: # try 'round=True' !@@@
             mapparams = dict(projection='npstere',boundinglat=latlim,lon_0=lon0,
                              resolution=coastres,area_thresh=area_thresh)
@@ -84,6 +85,7 @@ def kemmap(fld, lat, lon,title='',units='',cmap='blue2red_w20',ptype='sq',
                 mapparams['round'] = True
             
         else:
+
             # try mill, hammer, merc
             mapparams = dict(projection='ortho',lon_0=lon0,lat_0=89.5,\
                              resolution=coastres,area_thresh=area_thresh) #llcrnrlon='-180',llcrnrlat='45',urcrnrlon='180',urcrnrlat='90'
