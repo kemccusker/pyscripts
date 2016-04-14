@@ -55,13 +55,22 @@ def get_LEbasepath(model='CanESM2'):
     bp={}
     
     plat = platform.system()   
-    if plat == 'Darwin':  # means I'm on my mac
-        bp['basepath'] = '/Volumes/MyPassport2TB/DATA/CanSISE/' + model + '/LE/'
-        bp['subdir'] = ''
+    if model=='CanESM2':
+        if plat == 'Darwin':  # means I'm on my mac
+            bp['basepath'] = '/Volumes/MyPassport2TB/DATA/CanSISE/' + model + '/LE/'
+            bp['subdir'] = ''
 
-    else:  # on linux workstation in Vic
-        bp['basepath'] = '/raid/ra40/data/kem/CanSISE/' + model + '/LE/'
-        bp['subdir'] = ''
+        else:  # on linux workstation in Vic
+            bp['basepath'] = '/raid/ra40/data/kem/CanSISE/' + model + '/LE/'
+            bp['subdir'] = ''
+    elif model=='CESM1':
+        if plat == 'Darwin':  # means I'm on my mac
+            bp['basepath'] = '/Volumes/MyPassport2TB/DATA/cesm1/'
+            bp['subdir'] = ''
+
+        else:  # on linux workstation in Vic
+            bp['basepath'] = '/raid/rc40/data/kem/cesm1/'
+            bp['subdir'] = ''
 
     return bp
 
