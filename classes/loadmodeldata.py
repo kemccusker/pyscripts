@@ -51,7 +51,7 @@ def loadseasdata(fields,simulations,model='CanAM4',levsel=None,meantype=None,ret
 
 
 def loaddata(fields, simulations, ncfields=None,model='CanAM4',timeper='001-121',timefreq=None, 
-             levsel=None,meantype=None,filetype='diff',region=None,rettype='dict'):
+             levsel=None,meantype=None,filetype='diff',region=None,alsomask=None,rettype='dict'):
     """ loaddata(fields, simulations,ncfields=None,model='CanAM4',timeper='001-121',timefreq=None, 
                  levsel=None, meantype=None,filetype='diff',region=None)
     
@@ -70,6 +70,9 @@ def loaddata(fields, simulations, ncfields=None,model='CanAM4',timeper='001-121'
             filetype: 'diff','ctl','pert','pval'
                        Default is diff where both ctl and pert are read in and differenced.
             region:   any of the regions in constants -> region dict. default None.
+            alsomask: if specified as 'land' or 'ocean', then calc_regmean() will mask before
+                      computing regional avg (ie. will NOT include it in average). 
+                      Only used if region!=None. Default None.
 
             returns: nested dictionary@@
                     FIELDS->SIMULATIONS->TIMEFREQ
@@ -202,12 +205,12 @@ def loaddata(fields, simulations, ncfields=None,model='CanAM4',timeper='001-121'
             if region != None:
                 lat=cnc.getNCvar(fnamec,'lat'); lon=cnc.getNCvar(fnamec,'lon')
                 if filetype=='pval':
-                    pert = cutl.calc_regmean(pert,lat,lon,region)
-                    ctl = cutl.calc_regmean(ctl,lat,lon,region)
+                    pert = cutl.calc_regmean(pert,lat,lon,region,alsomask=alsomask)
+                    ctl = cutl.calc_regmean(ctl,lat,lon,region,alsomask=alsomask)
                     (tstat,pval) = cutl.ttest_ind(pert,ctl)
                     fld=pval
                 else:
-                    fld = cutl.calc_regmean(fld,lat,lon,region)
+                    fld = cutl.calc_regmean(fld,lat,lon,region,alsomask=alsomask)
 
             if meantype=='time':
                 if filetype=='pval':
