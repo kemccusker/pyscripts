@@ -23,6 +23,8 @@ def get_hh(comp):
 
     if comp=='cam':
         return 'h0'
+    elif comp=='cice':
+        return 'h'
     else:
         raise Exception('loadCESMLE.get_hh(): Comp other than cam not implemented!')
     
