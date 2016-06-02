@@ -635,7 +635,7 @@ def seasonalize(input,season=None,includenan=0,mo=0,climo=0,verb=False):
     """ new version of seasonalize_monthlyts()
 
              first dim must be time. first time index is expected to be Jan.
-
+             mo is 1-based! e.g. 1 is Jan, etc.
     """
 
     if season == None and mo==0:
