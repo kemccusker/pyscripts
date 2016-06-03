@@ -872,6 +872,8 @@ def climatologize3d(input):
 
 def climatologize(input):
     """ Does not care how many dims! Time MUST be first though.
+
+        returns climo, stddev (for each month)
     """
 
     dims = input.shape
