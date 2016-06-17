@@ -280,12 +280,14 @@ def add_contours(basem, fld, lat, lon, axis=None,levels=None,cmin=None,cmax=None
         print conts
     """
 
-def addtsigm(basem, pvals, lat, lon, siglevel=0.05,color='k',sigtype='hatch'):
+def addtsigm(basem, pvals, lat, lon, siglevel=0.05,color='k',sigtype='hatch',reverse=False):
     """ 
     addtsigm(basem, pvals, lat, lon, siglevel=0.05,color='k',sigtype='hatch')
 
     Add significance contour to given basemap(!)
     If sigtype is anything other than 'hatch', it will be a contour
+    
+    If reverse=True, plot where data is NOT significant
     """
     
     if np.mod(lon.shape,2) == 0:
@@ -296,32 +298,47 @@ def addtsigm(basem, pvals, lat, lon, siglevel=0.05,color='k',sigtype='hatch'):
     plotfld = copy.copy(pvals) # shallow copy
     #plotfld=ma.masked_where(pvals,plotfld) # @@ didn't work...
     
-    plotfld[pvals<=siglevel] = 1.5
-    plotfld[pvals>siglevel] = 0
+    if reverse:# plot sig where NOT significant (for cases where most things are sig)
+        plotfld[pvals<=siglevel] = 0
+        plotfld[pvals>siglevel] = 1.5
+    else:
+        plotfld[pvals<=siglevel] = 1.5
+        plotfld[pvals>siglevel] = 0
 
     lons, lats = np.meshgrid(lon,lat)
 
     if sigtype == 'hatch':
-        basem.contourf(lons,lats,plotfld,levels=[1,2],colors='none',latlon=True,hatches='o')#hatches='.')
-    else:
+            basem.contourf(lons,lats,plotfld,levels=[1,2],colors='none',latlon=True,hatches='.')
+            #'x')#hatches='\\\\')#'.')#hatches='o')
+    elif sigtype == 'conthatch':
+        basem.contourf(lons,lats,plotfld,levels=[1,2],colors='none',latlon=True,hatches='.')
+        basem.contour(lons,lats,plotfld,[0, 1.5],colors=color,linewidths=1.5,latlon=True)
+    else: # 'cont'
         basem.contour(lons,lats,plotfld,[0, 1.5],colors=color,linewidths=2,latlon=True)
 
 
 
-def addtsig(ploth, pvals, dim1, dim2, siglevel=0.05,color='k',sigtype='hatch',cmap='YlGnBu_r'):
+def addtsig(ploth, pvals, dim1, dim2, siglevel=0.05,color='k',sigtype='hatch',cmap='YlGnBu_r',reverse=False):
     """ 
     addtsig(ploth, pvals, dim1, dim2, siglevel=0.05,color='k',sigtype='hatch')
 
     Add significance contour to given pyplot handle.
     sigtype can be 'hatch', 'color', 'cont' (the else case is cont)
+    
+    If reverse=True, plot where data is NOT significant
     """
 
     #print 'be careful, I am not sure this works properly 4/29/14' #@@ might just be when i screwed w/ dims and tried to plot lat x time?
     # I think it's only a potential problem for the stats through time??
     plotfld = copy.copy(pvals) # shallow copy
-    plotfld = ma.masked_where(pvals>siglevel,pvals)
-    plotfld[pvals<=siglevel] = 1.5 # significant!
-    plotfld[pvals>siglevel] = 0
+    if reverse: # plot sig where NOT significant (for cases where most things are sig)
+        plotfld = ma.masked_where(pvals<=siglevel,pvals)
+        plotfld[pvals<=siglevel] = 0 # significant!
+        plotfld[pvals>siglevel] = 1.5
+    else:
+        plotfld = ma.masked_where(pvals>siglevel,pvals)
+        plotfld[pvals<=siglevel] = 1.5 # significant!
+        plotfld[pvals>siglevel] = 0
 
     # expecting lats,levs OR lats,lons OR times,lats
     dim1s, dim2s = np.meshgrid(dim1,dim2)
