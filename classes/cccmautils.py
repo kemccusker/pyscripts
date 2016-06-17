@@ -42,6 +42,78 @@ def updatedict(dd,ud):
             dd[key] = ud[key]
     return dd
 
+def rmse(actual,predicted):
+    
+    """ This computes the RMSE for the input data
+        Note there is no weighting to the "mean square error" so
+           do not use if averaging over spatial data
+           
+        returns rmse (scalar value)
+    """
+    return np.sqrt(((predicted - actual) ** 2).mean())
+    
+    
+def calc_areawgted_rmse(actual,predicted,lat,lon,model='CanESM2'):
+    """ This computes the area-weighted RMSE for the input data.
+        Assumes dims of lat x lon
+    """
+    #print 'calc_areawgted_rmse() needs testing' @@@
+    #deg2rad=2*np.pi/180.0
+        
+    se = (predicted - actual) ** 2
+    #print se.shape # @@@
+
+    if np.mod(se.shape[-1],2) != 0:
+        fld=se[...,:-1]
+    else: fld=se
+
+    if np.mod(lon.shape[0],2) != 0:
+        lon=lon[:-1]
+    #print fld.shape # @@@@
+
+    latlims=(lat[0],lat[-1])
+    lonlims=(lon[0],lon[-1])
+    #print latlims,lonlims # @@@
+    ldict = {'latlims':latlims,'lonlims':lonlims}
+
+    # from calc_regmean()
+    fldm,regmask = mask_region(fld,lat,lon,region='other',limsdict=ldict)
+
+    # calculate area-weights
+    if model=='CanESM2':
+        areas = con.get_t63cellareas()
+    elif model==None:
+        if lat[0]>-80: #probably means don't have all lats (just NH?)
+            print 'Do not use calc_cellareas() if coords do not span full globe!'
+            print 'Getting CanESM2 t63 areas instead'
+            areas = con.get_t63cellareas()
+        else:
+            areas = calc_cellareas(lat,lon)
+    else:
+        print 'model setting incorrect. Either ''CanESM2'' or None' # @@
+        return -1
+
+    if lat.all()>0:
+        print 'NH only'
+        nlat=areas.shape[0]
+        areas = areas[nlat/2:,:] # just get NH
+        #print 'areas ' + str(areas.shape) # @@@@
+
+    areasm = ma.masked_where(regmask,areas)
+    weightsm = areasm / ma.sum(ma.sum(areasm,axis=1),axis=0) # weights masked
+
+    weightsmt = weightsm
+
+    tmp = ma.masked_where(regmask,fldm)
+    if tmp.ndim==3:
+        tmpreg = ma.sum(ma.sum(tmp*weightsmt,axis=2),axis=1)
+    elif tmp.ndim==2:
+        tmpreg = ma.sum(tmp*weightsmt)
+
+    mse = tmpreg # should be ndim1 of regional mean (or just one regional mean)
+    
+    return np.sqrt(mse)
+    
 def pattcorr(x,y):
     """ pattcorr(x,y)
     
@@ -142,6 +214,10 @@ def calc_seaicearea(input,lat,lon, model='CanESM2'):
             return -1
 
         lmask = con.get_t63landmask(remcyclic=remcyc)
+        
+    print 'calc_seaicearea() areas.shape ' + str(areas.shape) # @@@@@@@
+    
+    
     # in case input is not a MaskedArray already
     input = ma.MaskedArray(input) # @@@@ will this preserve a mask if one alread exists?
     areas = ma.masked_where(input.mask, areas)
@@ -968,6 +1044,8 @@ def mask_region(fld,lat,lon,region,limsdict=None):
                  Returns: Tuple of masked field, mask
     """
 
+    #print 'mask_region(): lat,lon shapes: ' + str(lat.shape),str(lon.shape) #@@@
+    
     # @@ if given lons from -180 to 180, have to modify this:
     if np.any(lon<0):
         tmplon=lon
@@ -978,6 +1056,8 @@ def mask_region(fld,lat,lon,region,limsdict=None):
 
     lons,lats = np.meshgrid(lon,lat)    
         
+    #print 'mask_region(): lats,lons shapes: ' + str(lats.shape),str(lons.shape) #@@@
+
     # create mask
     if region=='other':
         pass # use given limsdict
@@ -994,6 +1074,7 @@ def mask_region(fld,lat,lon,region,limsdict=None):
     regmask = np.logical_or( 
                             np.logical_or(lats<latlims[0],lats>latlims[1]), 
                             np.logical_or(lons<lonlims[0],lons>lonlims[1]))
+    
     if fld.ndim>2:
         ndim1 = fld.shape[0]
         regmaskt = np.tile(regmask,(ndim1,1,1))
