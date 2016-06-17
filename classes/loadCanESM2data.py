@@ -8,6 +8,9 @@ import matplotlib.pyplot as plt
 
 # from scipy import signal
 
+""" This class is actually for the CanESM2 LE. Not general runs.
+
+"""
 bp=con.get_LEbasepath()
 
 timepers = ('201501-231012','231101-241012','241101-251012','251101-261012',
