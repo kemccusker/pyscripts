@@ -145,7 +145,7 @@ def getNCvar(filename,field,timesel=None,levsel=None,monsel=None,seas=None,calc=
                     os.system('rm -rf /tmp/cdoPy*')
                 else: # get everything
                     if sqz:
-                        print field + ': squeezing data upon read all' # @@@
+                        #print field + ': squeezing data upon read all' # @@@
                         # for most situations, this is what we want. @@@@
                         fld=np.squeeze(ncfile.variables[field][...])
                     else:
