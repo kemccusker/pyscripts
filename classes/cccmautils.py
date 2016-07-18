@@ -57,31 +57,34 @@ def calc_areawgted_rmse(actual,predicted,lat,lon,model='CanESM2'):
     """ This computes the area-weighted RMSE for the input data.
         Assumes dims of lat x lon
     """
-    #print 'calc_areawgted_rmse() needs testing' @@@
-    #deg2rad=2*np.pi/180.0
         
     se = (predicted - actual) ** 2
     #print se.shape # @@@
 
-    if np.mod(se.shape[-1],2) != 0:
-        fld=se[...,:-1]
-    else: fld=se
+    #if np.mod(se.shape[-1],2) != 0:
+    #    fld=se[...,:-1]
+    #else: fld=se
 
-    if np.mod(lon.shape[0],2) != 0:
-        lon=lon[:-1]
-    #print fld.shape # @@@@
+    #if np.mod(lon.shape[0],2) != 0:
+    #    lon=lon[:-1]
 
-    latlims=(lat[0],lat[-1])
-    lonlims=(lon[0],lon[-1])
-    #print latlims,lonlims # @@@
+    # Rounding has some floating point issues which make it unreliable
+    # for this purpose
+    #latlims=(lat[0].round(decimals=3),lat[-1].round(decimals=3))
+    #lonlims=(lon[0].round(decimals=3),lon[-1].round(decimals=3))
+    latlims=(np.floor(lat[0]),np.ceil(lat[-1]))
+    lonlims=(np.floor(lon[0]),np.ceil(lon[-1]))
     ldict = {'latlims':latlims,'lonlims':lonlims}
 
     # from calc_regmean()
-    fldm,regmask = mask_region(fld,lat,lon,region='other',limsdict=ldict)
+    #fldm,regmask = mask_region(fld,lat,lon,region='other',limsdict=ldict)
 
     # calculate area-weights
     if model=='CanESM2':
         areas = con.get_t63cellareas()
+        latall = con.get_t63lat()
+        lonall = con.get_t63lon()[:-1]
+        
     elif model==None:
         if lat[0]>-80: #probably means don't have all lats (just NH?)
             print 'Do not use calc_cellareas() if coords do not span full globe!'
@@ -93,27 +96,108 @@ def calc_areawgted_rmse(actual,predicted,lat,lon,model='CanESM2'):
         print 'model setting incorrect. Either ''CanESM2'' or None' # @@
         return -1
 
-    if lat.all()>0:
-        print 'NH only'
-        nlat=areas.shape[0]
-        areas = areas[nlat/2:,:] # just get NH
-        #print 'areas ' + str(areas.shape) # @@@@
+    #if lat.all()>0:
+    #    print 'NH only' # @@@ note this is a gross assumption, could be some subset in NH
+    #    nlat=areas.shape[0]
+    #    areas = areas[nlat/2:,:] # just get NH
+    #    #print 'areas ' + str(areas.shape) # @@@@
 
-    areasm = ma.masked_where(regmask,areas)
-    weightsm = areasm / ma.sum(ma.sum(areasm,axis=1),axis=0) # weights masked
+    
+    areasm,regmask = mask_region(areas,latall,lonall,region='other',limsdict=ldict)
+    
+    #areasm = ma.masked_where(regmask,areas)
+    weightsm = areasm / ma.sum(areasm.flatten()) # weights masked
 
-    weightsmt = weightsm
+    #weightsmt = weightsm
+    weightsmt = weightsm[areasm.mask==False] # just get the weights where have data
 
-    tmp = ma.masked_where(regmask,fldm)
-    if tmp.ndim==3:
-        tmpreg = ma.sum(ma.sum(tmp*weightsmt,axis=2),axis=1)
-    elif tmp.ndim==2:
-        tmpreg = ma.sum(tmp*weightsmt)
+    mse = ma.sum(se.flatten()*weightsmt)
 
-    mse = tmpreg # should be ndim1 of regional mean (or just one regional mean)
+    #tmp = ma.masked_where(regmask,fldm)
+    #if tmp.ndim==3:
+    #    tmpreg = ma.sum(ma.sum(tmp*weightsmt,axis=2),axis=1)
+    #elif tmp.ndim==2:
+    #    tmpreg = ma.sum(tmp*weightsmt)
+
+    #mse = tmpreg # should be ndim1 of regional mean (or just one regional mean)
     
     return np.sqrt(mse)
     
+    
+def calc_areawgted_var(input,lat,lon,model='CanESM2'):
+    # mask=TRUE is where the field is masked OUT
+
+
+    # deal with situation where not all lat/lons are given
+    #latlims=(np.around(lat[0],decimals=2),lat[-1].round(decimals=2))
+    #lonlims=(np.around(lon[0],decimals=2),lon[-1].round(decimals=2))
+    latlims=(np.floor(lat[0]),np.ceil(lat[-1]))
+    lonlims=(np.floor(lon[0]),np.ceil(lon[-1]))
+    ldict = {'latlims':latlims,'lonlims':lonlims}
+
+    #print ldict
+    #print lat
+
+    # from calc_regmean()
+    #fldm,regmask = mask_region(input,lat,lon,region='other',limsdict=ldict)
+    
+    # calculate area-weights
+    if model=='CanESM2':
+        areas = con.get_t63cellareas()
+        latall = con.get_t63lat()
+        lonall = con.get_t63lon()[:-1]
+    elif model==None:
+        if lat[0]>-80: #probably means don't have all lats (just NH?)
+            print 'Do not use calc_cellareas() if coords do not span full globe!'
+            print 'Getting CanESM2 t63 areas instead'
+            areas = con.get_t63cellareas()
+        else:
+            areas = calc_cellareas(lat,lon)
+    else:
+        print 'model setting incorrect. Either ''CanESM2'' or None' # @@
+        return -1
+
+    areasm,regmask = mask_region(areas,latall,lonall,region='other',limsdict=ldict)
+    
+    import matplotlib.pyplot as plt
+    import cccmaplots as cplt
+    #print areasm, areasm.mask
+
+    #plt.figure(); cplt.kemmap(areasm,latall,lonall,ptype='sq')
+    #print latall[~areasm.mask[:,1]] # this should match lat input arg
+    
+    #areasm = ma.masked_where(regmask,areas)
+    weightsm = areasm / ma.sum(areasm.flatten()) # weights masked    
+    #print weightsm
+    #print 'weightsm.sum() ' + str(weightsm.sum())
+
+    #print 'weightsm.shape ' + str(weightsm.shape)
+   
+    
+    #weightsmf = weightsm.flatten()
+    #print 'weightsmf.shape ' + str(weightsmf.shape)
+    
+    weightsmt = weightsm[areasm.mask==False] # just get the weights where have data
+    #print 'weightsmt.shape ' + str(weightsmt.shape)
+    #print 'len(lat),len(lon) ' + str(len(lat)),str(len(lon))
+    #wtest = weightsmt.reshape((len(lat),len(lon)))
+    #print 'wtest.shape,len(lat),len(lon) ' + str(wtest.shape),str(len(lat)),str(len(lon))
+    #plt.figure(); cplt.kemmap(wtest,lat,lon,ptype='sq')     
+    
+    #print wtest
+
+    inflat = input.flatten()
+
+    #meanfld = (1/np.float(len(inflat))) * np.sum(weightsmt*inflat)
+    meanfld = ma.sum(weightsmt*inflat)
+    print 'meanfld ' + str(meanfld)
+
+    #var = (1/np.float(len(inflat))) * np.sum(weightsmt * (inflat-meanfld)**2)
+    var = np.sum(weightsmt * (inflat-meanfld)**2)
+
+    return var
+            
+
 def pattcorr(x,y):
     """ pattcorr(x,y)
     
@@ -1067,8 +1151,8 @@ def mask_region(fld,lat,lon,region,limsdict=None):
     latlims = limsdict['latlims']
     lonlims = limsdict['lonlims']    
 
-    reglatsbool = np.logical_and(lat>latlims[0],lat<latlims[1])
-    reglonsbool = np.logical_and(lon>lonlims[0],lon<lonlims[1])
+    reglatsbool = np.logical_and(lat>=latlims[0],lat<=latlims[1])
+    reglonsbool = np.logical_and(lon>=lonlims[0],lon<=lonlims[1])
 
     # create mask of everything but the region of interest
     regmask = np.logical_or( 
