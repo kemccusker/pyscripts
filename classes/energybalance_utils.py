@@ -25,39 +25,53 @@ def inferred_heat_transport( energy_in, lat_deg ):
             integrate.cumtrapz( np.cos(lat_rad)*energy_in,
             x=lat_rad, initial=0. ) )
 
-def calc_inferred_pht(nettoa,lat):
+def calc_inferred_pht(energy,lat):
     """ 
-        nettoa: net top of atmosphere energy imbalance
+        energy: energ in, e.g. net top of atmosphere energy imbalance, net surface imbalance
+        lat: latitude of grid boxes
 
         returns total pht (in whatever input units are, prob W)
     """
+    from scipy import integrate
+
     latrad = np.deg2rad(lat)
 
-    if nettoa.ndim >1:
-        # time is included
-        retpht = 2 * np.math.pi * erad**2 * np.cumsum(nettoa*np.cos(latrad),axis=1)
-    else:
-        retpht = 2 * np.math.pi * erad**2 * np.cumsum(nettoa*np.cos(latrad))
-            
+    #print 'calc_inferred_pht() ' + str(2 * np.math.pi * erad**2 * np.cos(latrad)) #@@@@@
+    #if nettoa.ndim >1:
+    #    # time is included
+    #    #retpht = 2 * np.math.pi * erad**2 * np.cumsum(nettoa*np.cos(latrad),axis=1)
+    #    retpht = 2 * np.math.pi * erad**2 * integrate.cumtrapz( np.cos(latrad)*nettoa,
+    #        x=latrad,initial=0. )
+    #else:
+    #    retpht = 2 * np.math.pi * erad**2 * np.cumsum(nettoa*np.cos(latrad))
+    
+    retpht = 2 * np.math.pi * erad**2 * integrate.cumtrapz( np.cos(latrad)*energy,
+                                                            x=latrad,initial=0. )            
     return retpht
 
-def calc_inferred_ocnpht(netsfc,lat):
-    """ 
+#def calc_inferred_ocnpht(netsfc,lat):
+    """ SAME AS calc_inferred_pht(). No need for 2 funcs. @@@
+
         netsfc: net surface energy imbalance
 
         returns ocean pht (in whatever input units are, prob W)
     """
+"""    from scipy import integrate
+
     latrad = np.deg2rad(lat)
 
-    if netsfc.ndim >1:
-        # time is included
-        retpht = 2 * np.math.pi * erad**2 * np.cumsum(netsfc*np.cos(latrad),axis=1)
-    else:
-        retpht = 2 * np.math.pi * erad**2 * np.cumsum(netsfc*np.cos(latrad))
+    #if netsfc.ndim >1:
+    #    # time is included
+    #    retpht = 2 * np.math.pi * erad**2 * np.cumsum(netsfc*np.cos(latrad),axis=1)
+    #else:
+    #    retpht = 2 * np.math.pi * erad**2 * np.cumsum(netsfc*np.cos(latrad))
+
+    retpht = 2 * np.math.pi * erad**2 * integrate.cumtrapz( np.cos(latrad)*netsfc,
+                                                            x=latrad,initial=0. )
             
     return retpht
-
-def calc_inferred_allpht(nettoa,netsfc,lat):
+"""
+def calc_inferred_pht_components(nettoa,netsfc,lat):
     """ 
         nettoa: net top of atmosphere energy imbalance
         netsfc: net surface energy imbalance
@@ -68,7 +82,7 @@ def calc_inferred_allpht(nettoa,netsfc,lat):
     """
 
     totpht = calc_inferred_pht(nettoa,lat)
-    ocnpht = calc_inferred_ocnpht(netsfc,lat)
+    ocnpht = calc_inferred_pht(netsfc,lat)
     atmpht = totpht - ocnpht
 
             
