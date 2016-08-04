@@ -165,6 +165,35 @@ def get_t63cellareas(repeat=None, model='CanESM2'):
         
     return cellareas
 
+def get_t63latbounds():
+    """ returns the lat_bnds from grid area file. Dims are [64,2]
+
+    """
+    plat = platform.system()
+
+    if plat == "Linux":
+        basepath = '/HOME/rkm/work/DATA/CanAM4/constants/'
+    else:
+        basepath = '/Users/kelly/CCCma/CanSISE/DATA/constants/' #@@
+
+    fname = basepath + 'areacella_fx_CanESM2_historical-r1_r0i0p0.nc'
+
+    return cnc.getNCvar(fname,'lat_bnds')
+
+def get_t63latedges():
+    """ This returns the edges of the latitude grid boxes, from -90 to 90
+        It calls get_t63latbounds() and then generates the array from lat_bnds.
+    """
+
+    latbnds = get_t63latbounds()
+
+    latedges = latbnds.flatten()
+    lel = list(latedges[::2])
+    #lel.append(90.)
+
+    return np.array(lel)
+
+
 def get_t63lat():
     plat = platform.system()
 
