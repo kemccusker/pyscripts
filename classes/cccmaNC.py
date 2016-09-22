@@ -89,7 +89,7 @@ def getNCvar(filename,field,timesel=None,levsel=None,monsel=None,seas=None,calc=
 
     plat = platform.system()
 
-    if plat == 'Darwin':  # means I'm on my mac
+    if False: #@@@@TESTING 9/20/2016 plat == 'Darwin':  # means I'm on my mac
         # Call old func
         if calc != None:
             print '@@ not sure calc will work on mac. calc=' + calc
@@ -599,7 +599,8 @@ if __name__ != '__main__':
  
     plat = platform.system()
     if plat == 'Darwin':  # means I'm on my mac
-        pass
+        #pass @@@@@@TESTING 9/20/2016
+        cdo = cdo.Cdo()
     else:
         cdo = cdo.Cdo()
 
