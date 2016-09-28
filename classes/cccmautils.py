@@ -555,7 +555,7 @@ def global_mean_areawgted3d(fld, lat, lon, model='CanESM2'):
     
     gm = np.zeros(nt)    
     for tidx in range(0,nt):
-        gm[tidx] = np.average(fld[tidx,:,:],weights=wgts)
+        gm[tidx] = ma.average(fld[tidx,:,:],weights=wgts)
         
     return gm
    

@@ -70,6 +70,9 @@ def kemmap(fld, lat, lon,title='',units='',cmap='blue2red_w20',ptype='sq',
     if ptype == 'sq':
         mapparams = dict(projection='robin',lon_0=180,lat_0=0, 
                          resolution=coastres,area_thresh=area_thresh)
+    elif ptype == 'sqshift':
+        mapparams = dict(projection='robin',lon_0=0,lat_0=0, 
+                         resolution=coastres,area_thresh=area_thresh)
     elif ptype == 'nh' or ptype=='nheur' or ptype=='nhkug':
         if ptype=='nheur':
             lon0 = 90.

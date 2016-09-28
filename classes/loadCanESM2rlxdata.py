@@ -20,10 +20,10 @@ shortnames = {'preipreiice': '1C_1I',
 def get_timeinfo(last='last100',includeyr1=False):
 
     if last=='last100':
-        timeper1='3022-3121'; timeper2='2552-2651'; # end of 200 yr runs
+        timeper1="3022-3121"; timeper2='2552-2651'; # end of 200 yr runs
         timeper3='2652-2751'; timeper4='3122-3221' # end of 300 yr runs
         timesel1='3022-01-01,3121-12-31'; timesel2='2552-01-01,2651-12-31'; 
-        timesel3='2652-01-01,2751-12-31'; timesel4='3122-01-01,3221-12-31'; 
+        timesel3='2652-01-01,2751-12-31'; timesel4="3122-01-01,3221-12-31"; 
 
         timepertmp='2921-3021'; 
         timeseltmp='2922-01-01,3021-12-31';
