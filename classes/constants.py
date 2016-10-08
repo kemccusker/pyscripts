@@ -30,8 +30,11 @@ def is_standardlev(level):
     else:
         return False
     
-def get_basepath():
+def get_basepath(runtype='CMIP', model='CanESM2'):
     """ get_basepath():
+           runtype can be CMIP or AGCM for now.
+           model can be CanESM2 or CanAM4
+           
            returns path to data, depending on what machine we're running on
            output: bp['basepath'|'subdir'] (dictionary with basepath and subdir keys)
                      typically the pathtodata would be basepath+model+subdir
@@ -41,10 +44,14 @@ def get_basepath():
     
     plat = platform.system()   
     if plat == 'Darwin':  # means I'm on my mac
-        bp['basepath'] = '/Volumes/MyPassport2TB/DATA/CanSISE/'
-        bp['subdir'] = '/timsel/'
+        if runtype=='AGCM':
+            bp['basepath'] = '/Volumes/MyPassport2TB/DATA/CanSISE/'
+            bp['subdir'] = '/timsel/' # this is only for AGCM runs
+        elif runtype='CMIP':
+            bp['basepath'] = '/Volumes/KellyDataDisk1/work/DATA/'+model+'/'
+            bp['subdir'] = '' # typically going to be the field name
 
-    else:  # on linux workstation in Vic
+    else:  # on linux workstation in Vic (This is no longer an option 10/7/2016)
         bp['basepath'] = '/HOME/rkm/work/DATA/'
         bp['subdir'] = '/ts/'
 
@@ -57,10 +64,11 @@ def get_LEbasepath(model='CanESM2'):
     plat = platform.system()   
     if model=='CanESM2':
         if plat == 'Darwin':  # means I'm on my mac
-            bp['basepath'] = '/Volumes/MyPassport2TB/DATA/CanSISE/' + model + '/LE/'
+            #bp['basepath'] = '/Volumes/MyPassport2TB/DATA/CanSISE/' + model + '/LE/'
+            bp['basepath'] = '/Volumes/KellyDataDisk1/work/DATA/' + model + '/LE/'
             bp['subdir'] = ''
 
-        else:  # on linux workstation in Vic
+        else:  # on linux workstation in Vic (This is no longer an option 10/7/2016)
             bp['basepath'] = '/raid/ra40/data/kem/CanSISE/' + model + '/LE/'
             bp['subdir'] = ''
     elif model=='CESM1':

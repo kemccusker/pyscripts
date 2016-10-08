@@ -11,10 +11,17 @@ import matplotlib.pyplot as plt
 """ This class is actually for the CanESM2 LE. Not general runs.
 
 """
-bp=con.get_LEbasepath()
+bp=con.get_basepath()
 
-timepers = ('201501-231012','231101-241012','241101-251012','251101-261012',
+def get_timepers(casename):
+
+    if casename=='piControl':
+        timepers = ('201501-231012','231101-241012','241101-251012','251101-261012',
             '261101-271012','271101-281012','281101-291012','291101-301012')
+    elif casename=='gregory_2xco2':
+        timepers = ('245101-255012',)
+
+    return timepers
 
 def build_filenames(fielddict, casename, ftype=None,timesel=None,verb=True,local=False):
     """ ftype and timesel are not implemented here yet.
@@ -47,7 +54,7 @@ def build_filenames(fielddict, casename, ftype=None,timesel=None,verb=True,local
         suff=str(styear)+ '-' + str(enyear) + '_climo'
     """
 
-    if local:
+    if local: # as of 10/7/2016, no consistent local directory (ie on laptop or imac itself. just external drives)
         basepath = '/HOME/rkm/work/DATA/CanESM2/'
     else:
         basepath=bp['basepath']
@@ -60,6 +67,7 @@ def build_filenames(fielddict, casename, ftype=None,timesel=None,verb=True,local
 
     flist=[]
 
+    timepers = get_timepers(casename)
 
     for timeper in timepers:
 
