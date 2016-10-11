@@ -42,12 +42,13 @@ def get_basepath(runtype='CMIP', model='CanESM2'):
 
     bp={}
     
-    plat = platform.system()   
+    plat = platform.system()  
+    print plat, runtype # @@@@
     if plat == 'Darwin':  # means I'm on my mac
         if runtype=='AGCM':
             bp['basepath'] = '/Volumes/MyPassport2TB/DATA/CanSISE/'
             bp['subdir'] = '/timsel/' # this is only for AGCM runs
-        elif runtype='CMIP':
+        elif runtype=='CMIP':
             bp['basepath'] = '/Volumes/KellyDataDisk1/work/DATA/'+model+'/'
             bp['subdir'] = '' # typically going to be the field name
 
