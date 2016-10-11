@@ -3,7 +3,9 @@ import cccmaNC as cnc
 import cccmautils as cutl
 import constants as con
 
-basedir='/HOME/rkm/work/DATA/CanESM2/'
+#basedir='/HOME/rkm/work/DATA/CanESM2/'
+bp=con.get_basepath(runtype='CMIP',model='CanESM2')
+basedir = bp['basepath']
 fldsfx=''
 
 
