@@ -8,10 +8,10 @@ import matplotlib.pyplot as plt
 
 # from scipy import signal
 
-""" This class is actually for the CanESM2 LE. Not general runs.
+""" This class is actually for the CanESM2 LE. Not general runs. CMIP style.
 
 """
-bp=con.get_basepath()
+bp=con.get_basepath(runtype='CMIP')
 
 def get_timepers(casename):
 
@@ -34,7 +34,8 @@ def build_filenames(fielddict, casename, ftype=None,timesel=None,verb=True,local
         returns a list of all filenames 
         
     """
-
+    print 'local ' + str(local)
+    
     # for now, don't need these flags
     """if ftype=='fullts':
         suff='195001-202012'
@@ -57,6 +58,7 @@ def build_filenames(fielddict, casename, ftype=None,timesel=None,verb=True,local
     if local: # as of 10/7/2016, no consistent local directory (ie on laptop or imac itself. just external drives)
         basepath = '/HOME/rkm/work/DATA/CanESM2/'
     else:
+        print 'getting basepath'
         basepath=bp['basepath']
 
         
