@@ -146,7 +146,8 @@ def load_ncfield(field, ncfield, zonal=True,conv=1,mo=0,season=None,last='last10
 
         try:
             fld=cnc.getNCvar(fname,ncfield,timesel=timesel)*conv # remlon not operational??? why commented out??
-            #print fname + ', fld.shape ' + str(fld.shape) # @@@
+            if verb:
+                print fname + ', fld.shape ' + str(fld.shape) # @@@
         except RuntimeError as rte:
             print rte
             if 'No such file or directory' in rte.args:
