@@ -117,7 +117,8 @@ def get_t63landmask(repeat=None,remcyclic=False):
     if plat == "Linux":
         basepath = '/HOME/rkm/work/DATA/CanAM4/constants/'
     else:
-        basepath = '/Users/kelly/CCCma/CanSISE/DATA/constants/' #@@
+        #basepath = '/Users/kelly/CCCma/CanSISE/DATA/constants/' #@@
+        basepath = '/Volumes/KellyDataDisk1/work/DATA/CanESM2/' #@@@@ don't have the other dir on imac
 
     ncfile = Dataset(basepath + 't63_landmask.nc','r')
     #float GC(lat, lon) ;
