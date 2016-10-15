@@ -49,7 +49,7 @@ def get_basepath(runtype='CMIP', model='CanESM2'):
             bp['basepath'] = '/Volumes/MyPassport2TB/DATA/CanSISE/'
             bp['subdir'] = '/timsel/' # this is only for AGCM runs
         elif runtype=='CMIP':
-            bp['basepath'] = '/Volumes/KellyDataDisk1/work/DATA/'+model+'/'
+            bp['basepath'] = '/Volumes/KellyDataDisk/work/DATA/'+model+'/'
             bp['subdir'] = '' # typically going to be the field name
 
     else:  # on linux workstation in Vic (This is no longer an option 10/7/2016)
@@ -66,7 +66,7 @@ def get_LEbasepath(model='CanESM2'):
     if model=='CanESM2':
         if plat == 'Darwin':  # means I'm on my mac
             #bp['basepath'] = '/Volumes/MyPassport2TB/DATA/CanSISE/' + model + '/LE/'
-            bp['basepath'] = '/Volumes/KellyDataDisk1/work/DATA/' + model + '/LE/'
+            bp['basepath'] = '/Volumes/KellyDataDisk/work/DATA/' + model + '/LE/'
             bp['subdir'] = ''
 
         else:  # on linux workstation in Vic (This is no longer an option 10/7/2016)
@@ -118,7 +118,7 @@ def get_t63landmask(repeat=None,remcyclic=False):
         basepath = '/HOME/rkm/work/DATA/CanAM4/constants/'
     else:
         #basepath = '/Users/kelly/CCCma/CanSISE/DATA/constants/' #@@
-        basepath = '/Volumes/KellyDataDisk1/work/DATA/CanESM2/' #@@@@ don't have the other dir on imac
+        basepath = '/Volumes/KellyDataDisk/work/DATA/CanESM2/' #@@@@ don't have the other dir on imac
 
     ncfile = Dataset(basepath + 't63_landmask.nc','r')
     #float GC(lat, lon) ;
@@ -155,7 +155,8 @@ def get_t63cellareas(repeat=None, model='CanESM2'):
     if plat == "Linux":
         basepath = '/HOME/rkm/work/DATA/CanAM4/constants/'
     else:
-        basepath = '/Users/kelly/CCCma/CanSISE/DATA/constants/' #@@
+        #basepath = '/Users/kelly/CCCma/CanSISE/DATA/constants/' #@@
+        basepath = '/Volumes/KellyDataDisk/work/DATA/CanESM2/' #@@@@ don't have the other dir on imac
 
     # /HOME/rkm/work/DATA/CanESM2/areacella_fx_CanESM2_historical-r1_r0i0p0.nc
     ncfile = Dataset(basepath + 'areacella_fx_CanESM2_historical-r1_r0i0p0.nc','r')
@@ -184,7 +185,8 @@ def get_t63latbounds():
     if plat == "Linux":
         basepath = '/HOME/rkm/work/DATA/CanAM4/constants/'
     else:
-        basepath = '/Users/kelly/CCCma/CanSISE/DATA/constants/' #@@
+        #basepath = '/Users/kelly/CCCma/CanSISE/DATA/constants/' #@@
+        basepath = '/Volumes/KellyDataDisk/work/DATA/CanESM2/' #@@@@ don't have the other dir on imac
 
     fname = basepath + 'areacella_fx_CanESM2_historical-r1_r0i0p0.nc'
 
@@ -210,7 +212,8 @@ def get_t63lat():
     if plat == "Linux":
         basepath = '/HOME/rkm/work/DATA/CanAM4/constants/'
     else:
-        basepath = '/Users/kelly/CCCma/CanSISE/DATA/constants/' #@@
+        #basepath = '/Users/kelly/CCCma/CanSISE/DATA/constants/' #@@
+        basepath = '/Volumes/KellyDataDisk/work/DATA/CanESM2/' #@@@@ don't have the other dir on imac
 
     fname = basepath + 't63_landmask.nc'
 
@@ -223,7 +226,8 @@ def get_t63lon(remcyclic=False):
     if plat == "Linux":
         basepath = '/HOME/rkm/work/DATA/CanAM4/constants/'
     else:
-        basepath = '/Users/kelly/CCCma/CanSISE/DATA/constants/' #@@
+        #basepath = '/Users/kelly/CCCma/CanSISE/DATA/constants/' #@@
+        basepath = '/Volumes/KellyDataDisk/work/DATA/CanESM2/' #@@@@ don't have the other dir on imac
 
     fname = basepath + 't63_landmask.nc'
     lon=cnc.getNCvar(fname,'lon')
@@ -242,7 +246,8 @@ def get_t63lev(): # prob isn't tied to t63..
     if plat == "Linux":
         basepath = '/HOME/rkm/work/DATA/CanAM4/constants/'
     else:
-        basepath = '/Users/kelly/CCCma/CanSISE/DATA/constants/'
+        #basepath = '/Users/kelly/CCCma/CanSISE/DATA/constants/'
+        basepath = '/Volumes/KellyDataDisk/work/DATA/CanESM2/' #@@@@ don't have the other dir on imac
 
     fname = basepath + 'kem1rcp85a_v_001-061_climo.nc'
     
