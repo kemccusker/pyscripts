@@ -148,7 +148,7 @@ def load_ncfield(field, ncfield, zonal=True,conv=1,mo=0,season=None,last='last10
             fld=cnc.getNCvar(fname,ncfield,timesel=timesel)*conv # remlon not operational??? why commented out??
             if verb:
                 print fname + ', fld.shape ' + str(fld.shape) # @@@
-        except RuntimeError as rte:
+        except IOError as rte: # previously this was a RuntimeError. Not sure what changed. 10/14/2016
             print rte
             if 'No such file or directory' in rte.args:
                 # Here the problem is most likely that pico2ipulse filename fails b/c 
