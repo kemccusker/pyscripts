@@ -12,23 +12,30 @@ import numpy as np
 from netCDF4 import Dataset
 import platform as platform
 import cccmaNC as cnc
+import os as os
 
 
-def is_standardlev(level):
-    """ is_standardlev(level)
-             Checks whether specified pressure level is
-             'standard' in that files exist in which that level
-             has been selected.
-
-             level should be in Pa
-             returns True or False
-
-             Standard levels are 500, 700, 300 hPa
+def get_pymach():
     """
-    if level not in (50000, 70000, 30000):
-        return True
-    else:
-        return False
+        returns the value of PYMACH environment variable, set in 
+           startup script. This is used to determine basepaths.
+           
+           Current options are:
+             'macbookprohome'
+             'imacwork'
+           
+    """
+    # set in startup script
+    return os.environ['PYMACH']
+
+def test_envvar():
+    
+    thismachine = os.environ['PYMACH'] 
+    
+    print 'This machine is specified by $PYMACH, whose value is ' + thismachine
+    
+
+
     
 def get_basepath(runtype='CMIP', model='CanESM2'):
     """ get_basepath():
@@ -42,39 +49,56 @@ def get_basepath(runtype='CMIP', model='CanESM2'):
 
     bp={}
     
-    plat = platform.system()  
-    print plat, runtype # @@@@
-    if plat == 'Darwin':  # means I'm on my mac
-        if runtype=='AGCM':
+    pymach = get_pymach()
+    
+    #plat = platform.system()  
+
+    if pymach == 'macbookprohome':  # means I'm on my mac
+        if runtype=='AGCM': # Note, this is just for sea ice isolation project
             bp['basepath'] = '/Volumes/MyPassport2TB/DATA/CanSISE/'
             bp['subdir'] = '/timsel/' # this is only for AGCM runs
         elif runtype=='CMIP':
-            bp['basepath'] = '/Volumes/KellyDataDisk/work/DATA/'+model+'/'
+            bp['basepath'] = '/Volumes/KellyDataDisk/home/work/DATA/'+model+'/'
             bp['subdir'] = '' # typically going to be the field name
 
-    else:  # on linux workstation in Vic (This is no longer an option 10/7/2016)
+    elif pymach == 'imacwork': # UW imac
+            bp['basepath'] = '/Volumes/KellyDataDisk/work/DATA/'+model+'/'
+            bp['subdir'] = '' # typically going to be the field name
+        
+    else: # on linux workstation in Vic (This is no longer an option 10/7/2016)
         bp['basepath'] = '/HOME/rkm/work/DATA/'
         bp['subdir'] = '/ts/'
-
+    
     return bp
 
 def get_LEbasepath(model='CanESM2'):
 
     bp={}
     
-    plat = platform.system()   
+    pymach = get_pymach()
+    #plat = platform.system()   
+    
     if model=='CanESM2':
-        if plat == 'Darwin':  # means I'm on my mac
+        #if plat == 'Darwin':  # means I'm on my mac
+        if pymach == 'macbookprohome':
+            #bp['basepath'] = '/Volumes/MyPassport2TB/DATA/CanSISE/' + model + '/LE/'
+            bp['basepath'] = '/Volumes/KellyDataDisk/home/work/DATA/' + model + '/LE/'
+            bp['subdir'] = ''
+        elif pymach == 'imacwork':
             #bp['basepath'] = '/Volumes/MyPassport2TB/DATA/CanSISE/' + model + '/LE/'
             bp['basepath'] = '/Volumes/KellyDataDisk/work/DATA/' + model + '/LE/'
             bp['subdir'] = ''
-
         else:  # on linux workstation in Vic (This is no longer an option 10/7/2016)
             bp['basepath'] = '/raid/ra40/data/kem/CanSISE/' + model + '/LE/'
             bp['subdir'] = ''
     elif model=='CESM1':
-        if plat == 'Darwin':  # means I'm on my mac
-            bp['basepath'] = '/Volumes/MyPassport2TB/DATA/cesm1/'
+        if pymach == 'macbookprohome':
+            #bp['basepath'] = '/Volumes/MyPassport2TB/DATA/cesm1/'
+            bp['basepath'] = '/Volumes/KellyDataDisk/raid/rc40/' + model + '/LE/'
+            bp['subdir'] = ''
+        elif pymach == 'imacwork':
+            #bp['basepath'] = '/Volumes/MyPassport2TB/DATA/cesm1/'
+            bp['basepath'] = '/Volumes/KellyDataDisk2/rc40/' + model + '/LE/'
             bp['subdir'] = ''
 
         else:  # on linux workstation in Vic
@@ -92,18 +116,55 @@ def get_BCbasepath():
     """
 
     bp={}
-    
-    plat = platform.system()   
-    if plat == 'Darwin':  # means I'm on my mac
-        bp['basepath'] = '/Volumes/MyPassport2TB/DATA/CanSISE/CanAM4/BCs/'
+    pymach = get_pymach()
+    #plat = platform.system()   
+    #if plat == 'Darwin':  # means I'm on my mac
+    if pymach == 'macbookprohome':
+        #bp['basepath'] = '/Volumes/MyPassport2TB/DATA/CanSISE/CanAM4/BCs/'
+        bp['basepath'] = '/Volumes/KellyDataDisk/home/work/BCs/'
         bp['subdir'] = '/'
-
-    else:  # on linux workstation in Vic
+    elif pymach == 'imacwork':
+        bp['basepath'] = '/Volumes/KellyDataDisk/work/BCs/'
+        bp['subdir'] = '/'
+    else:  # on linux workstation in Vic (This is no longer an option 10/7/2016)
         bp['basepath'] = '/HOME/rkm/work/BCs/'
         bp['subdir'] = '/'
 
     return bp
+
+def get_constantsbasepath():
     
+    pymach = get_pymach()
+
+    if pymach == 'imacwork':
+        #basepath = '/Users/kelly/CCCma/CanSISE/DATA/constants/' #@@
+        basepath = '/Volumes/KellyDataDisk/work/DATA/CanESM2/' 
+    elif pymach == 'macbookprohome':
+        basepath = '/Users/kelly/CCCma/CanSISE/DATA/constants/'
+        # OR '/Volumes/KellyDataDisk/home/work/DATA/CanESM2/'
+    else: # Victoria linux (not an option anymore)
+        basepath = '/HOME/rkm/work/DATA/CanAM4/constants/'
+        
+    return basepath
+    
+    
+def is_standardlev(level):
+    """ is_standardlev(level)
+             Checks whether specified pressure level is
+             'standard' in that files exist in which that level
+             has been selected.
+
+             level should be in Pa
+             returns True or False
+
+             Standard levels are 500, 700, 300 hPa
+    """
+    if level not in (50000, 70000, 30000):
+        return True
+    else:
+        return False
+
+
 def get_t63landmask(repeat=None,remcyclic=False):
     """ Return ground cover.
         64x129 or 64x128 if remcyclic=True
@@ -112,14 +173,19 @@ def get_t63landmask(repeat=None,remcyclic=False):
         repeat: shape you want landmask as. assume last 2 dims are lat,lon
         
         """
-    plat = platform.system()
+    #plat = platform.system()
+    basepath = get_constantsbasepath()
+    #pymach = get_pymach()
 
-    if plat == "Linux":
-        basepath = '/HOME/rkm/work/DATA/CanAM4/constants/'
-    else:
-        #basepath = '/Users/kelly/CCCma/CanSISE/DATA/constants/' #@@
-        basepath = '/Volumes/KellyDataDisk/work/DATA/CanESM2/' #@@@@ don't have the other dir on imac
-
+    #if pymach == 'imacwork':
+    #    #basepath = '/Users/kelly/CCCma/CanSISE/DATA/constants/' #@@
+    #    basepath = '/Volumes/KellyDataDisk/work/DATA/CanESM2/' 
+    #elif pymach == 'macbookprohome':
+    #    basepath = '/Users/kelly/CCCma/CanSISE/DATA/constants/'
+    #    # OR '/Volumes/KellyDataDisk/home/work/DATA/CanESM2/'
+    #else: # Victoria linux (not an option anymore)
+    #    basepath = '/HOME/rkm/work/DATA/CanAM4/constants/'
+        
     ncfile = Dataset(basepath + 't63_landmask.nc','r')
     #float GC(lat, lon) ;
     #           GC:long_name = "Ground cover (-1=land, 0=open water, +1=sea ice)" ;
@@ -150,13 +216,14 @@ def get_t63cellareas(repeat=None, model='CanESM2'):
     except:
         raise
 
-    plat = platform.system()
+    basepath = get_constantsbasepath()
+    #plat = platform.system()
 
-    if plat == "Linux":
-        basepath = '/HOME/rkm/work/DATA/CanAM4/constants/'
-    else:
-        #basepath = '/Users/kelly/CCCma/CanSISE/DATA/constants/' #@@
-        basepath = '/Volumes/KellyDataDisk/work/DATA/CanESM2/' #@@@@ don't have the other dir on imac
+    #if plat == "Linux":
+    #    basepath = '/HOME/rkm/work/DATA/CanAM4/constants/'
+    #else:
+    #    #basepath = '/Users/kelly/CCCma/CanSISE/DATA/constants/' #@@
+    #    basepath = '/Volumes/KellyDataDisk/work/DATA/CanESM2/' #@@@@ don't have the other dir on imac
 
     # /HOME/rkm/work/DATA/CanESM2/areacella_fx_CanESM2_historical-r1_r0i0p0.nc
     ncfile = Dataset(basepath + 'areacella_fx_CanESM2_historical-r1_r0i0p0.nc','r')
@@ -180,13 +247,14 @@ def get_t63latbounds():
     """ returns the lat_bnds from grid area file. Dims are [64,2]
 
     """
-    plat = platform.system()
+    #plat = platform.system()
 
-    if plat == "Linux":
-        basepath = '/HOME/rkm/work/DATA/CanAM4/constants/'
-    else:
-        #basepath = '/Users/kelly/CCCma/CanSISE/DATA/constants/' #@@
-        basepath = '/Volumes/KellyDataDisk/work/DATA/CanESM2/' #@@@@ don't have the other dir on imac
+    basepath = get_constantsbasepath()
+    #if plat == "Linux":
+    #    basepath = '/HOME/rkm/work/DATA/CanAM4/constants/'
+    #else:
+    #    #basepath = '/Users/kelly/CCCma/CanSISE/DATA/constants/' #@@
+    #    basepath = '/Volumes/KellyDataDisk/work/DATA/CanESM2/' #@@@@ don't have the other dir on imac
 
     fname = basepath + 'areacella_fx_CanESM2_historical-r1_r0i0p0.nc'
 
@@ -207,13 +275,14 @@ def get_t63latedges():
 
 
 def get_t63lat():
-    plat = platform.system()
-
-    if plat == "Linux":
-        basepath = '/HOME/rkm/work/DATA/CanAM4/constants/'
-    else:
-        #basepath = '/Users/kelly/CCCma/CanSISE/DATA/constants/' #@@
-        basepath = '/Volumes/KellyDataDisk/work/DATA/CanESM2/' #@@@@ don't have the other dir on imac
+    #plat = platform.system()
+    basepath = get_constantsbasepath()
+    
+    #if plat == "Linux":
+    #    basepath = '/HOME/rkm/work/DATA/CanAM4/constants/'
+    #else:
+    #    #basepath = '/Users/kelly/CCCma/CanSISE/DATA/constants/' #@@
+    #    basepath = '/Volumes/KellyDataDisk/work/DATA/CanESM2/' #@@@@ don't have the other dir on imac
 
     fname = basepath + 't63_landmask.nc'
 
@@ -221,13 +290,13 @@ def get_t63lat():
 
 def get_t63lon(remcyclic=False):
 
-    plat = platform.system()
-
-    if plat == "Linux":
-        basepath = '/HOME/rkm/work/DATA/CanAM4/constants/'
-    else:
-        #basepath = '/Users/kelly/CCCma/CanSISE/DATA/constants/' #@@
-        basepath = '/Volumes/KellyDataDisk/work/DATA/CanESM2/' #@@@@ don't have the other dir on imac
+    #plat = platform.system()
+    basepath = get_constantsbasepath()
+    #if plat == "Linux":
+    #    basepath = '/HOME/rkm/work/DATA/CanAM4/constants/'
+    #else:
+    #    #basepath = '/Users/kelly/CCCma/CanSISE/DATA/constants/' #@@
+    #    basepath = '/Volumes/KellyDataDisk/work/DATA/CanESM2/' #@@@@ don't have the other dir on imac
 
     fname = basepath + 't63_landmask.nc'
     lon=cnc.getNCvar(fname,'lon')
@@ -241,13 +310,13 @@ def get_t63lon(remcyclic=False):
 
 def get_t63lev(): # prob isn't tied to t63..
 
-    plat = platform.system()
-
-    if plat == "Linux":
-        basepath = '/HOME/rkm/work/DATA/CanAM4/constants/'
-    else:
-        #basepath = '/Users/kelly/CCCma/CanSISE/DATA/constants/'
-        basepath = '/Volumes/KellyDataDisk/work/DATA/CanESM2/' #@@@@ don't have the other dir on imac
+    #plat = platform.system()
+    basepath = get_constantsbasepath()
+    #if plat == "Linux":
+    #    basepath = '/HOME/rkm/work/DATA/CanAM4/constants/'
+    #else:
+    #    #basepath = '/Users/kelly/CCCma/CanSISE/DATA/constants/'
+    #    basepath = '/Volumes/KellyDataDisk/work/DATA/CanESM2/' #@@@@ don't have the other dir on imac
 
     fname = basepath + 'kem1rcp85a_v_001-061_climo.nc'
     
