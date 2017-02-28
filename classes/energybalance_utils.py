@@ -73,8 +73,8 @@ def calc_inferred_pht(energy,lat):
 """
 def calc_inferred_pht_components(nettoa,netsfc,lat):
     """ 
-        nettoa: net top of atmosphere energy imbalance
-        netsfc: net surface energy imbalance
+        nettoa: net top of atmosphere energy imbalance (+ into atmos)
+        netsfc: net surface energy imbalance (+ into ocean)
           dims can be time x lat, or just lat
         
         returns total pht, ocn pht, atmos pht as residual
@@ -83,7 +83,7 @@ def calc_inferred_pht_components(nettoa,netsfc,lat):
 
     totpht = calc_inferred_pht(nettoa,lat)
     ocnpht = calc_inferred_pht(netsfc,lat)
-    atmpht = totpht - ocnpht
+    atmpht = calc_inferred_pht(nettoa-netsfc,lat) #totpht - ocnpht
 
             
     return totpht,ocnpht,atmpht

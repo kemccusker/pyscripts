@@ -88,15 +88,21 @@ def get_timeinfo(last='last100',includeyr1=False):
     return timepers,timesels
 
 
-def load_nclatlon(field, last='last100',includeyr1=False,verb=False):
+def load_nclatlon(field, last='last100',includeyr1=False,verb=False,local=False):
     """ return lat,lon from given field nc file. Uses preipreiice casename
                   
+          if local=True, just gets lat/lon from DJF mean files (full globe...). ignores 'field', 'last'
     """
     
     timepers,timesels=get_timeinfo(last,includeyr1)
     
     casename = 'preipreiice'
-    fname= basedir + casename +'/ts/' + casename + '_' + field + '_' + timepers[casename] + '_ts.nc'
+    if local:
+        bd='/Users/kelly/DropboxWork/UWashCanSISE/DATA/relaxationruns/' #limited fields here
+        fname=bd+'preipreiice_gt_2922-3121_DJF_mean.nc' 
+    else:
+        fname= basedir + casename +'/ts/' + casename + '_' + field + '_' + timepers[casename] + '_ts.nc'
+        
     if verb:
         print fname
 
