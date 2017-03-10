@@ -226,6 +226,7 @@ def get_t63cellareas(repeat=None, model='CanESM2'):
     #    basepath = '/Volumes/KellyDataDisk/work/DATA/CanESM2/' #@@@@ don't have the other dir on imac
 
     # /HOME/rkm/work/DATA/CanESM2/areacella_fx_CanESM2_historical-r1_r0i0p0.nc
+    #print basepath + 'areacella_fx_CanESM2_historical-r1_r0i0p0.nc'
     ncfile = Dataset(basepath + 'areacella_fx_CanESM2_historical-r1_r0i0p0.nc','r')
     #float areacella(lat, lon) ;
     #            areacella:standard_name = "cell_area" ;
