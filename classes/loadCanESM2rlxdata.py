@@ -98,8 +98,9 @@ def load_nclatlon(field, last='last100',includeyr1=False,verb=False,local=False)
     
     casename = 'preipreiice'
     if local:
-        bd='/Users/kelly/DropboxWork/UWashCanSISE/DATA/relaxationruns/' #limited fields here
-        fname=bd+'preipreiice_gt_2922-3121_DJF_mean.nc' 
+        #bd='/Users/kelly/DropboxWork/UWashCanSISE/DATA/relaxationruns/' #limited fields here
+        bd='/Users/kelly/DATA/DataDisk/' # limited but not shared so there are more data
+        fname=bd+'preipreiice/preipreiice_st_2922-3121_DJF_mean.nc' 
     else:
         fname= basedir + casename +'/ts/' + casename + '_' + field + '_' + timepers[casename] + '_ts.nc'
         
@@ -128,10 +129,14 @@ def load_nclev(field,verb=False):
 
     return lev
 
-def load_ncfield(field, ncfield, zonal=True,conv=1,mo=0,season=None,last='last100',includeyr1=False,verb=False):
+def load_ncfield(field, ncfield, zonal=True,conv=1,mo=0,season=None,last='last100',
+                     includeyr1=False,verb=False,local=False,seacyc=False,pulse=False):
     """ 
         If zonal=True, compute zonal mean.
            zonal can also be a region, defined in regiondict in constants.py
+        If local, use local data (which is limited)
+        If seacycle, return the 12 month climo average, which only exists 
+                1. locally (as of Mar 24 2017) and 2. is only avail for the last200
 
         returns dictionaries: full field w/ time, zonal mean w/ time
     """
@@ -139,13 +144,30 @@ def load_ncfield(field, ncfield, zonal=True,conv=1,mo=0,season=None,last='last10
 
     timepers,timesels = get_timeinfo(last,includeyr1)
 
-
+    if local:
+        #bd='/Users/kelly/DropboxWork/UWashCanSISE/DATA/relaxationruns/' #limited fields here
+        bd='/Users/kelly/DATA/DataDisk/' # limited but not shared so there are more data
+        subdir='/'
+    else:
+        bd=basedir
+        subdir='/ts/'
+        
     seasonalizedt = {'mo':mo, 'season': season}
     
     ncflddt={}; ncfldtmdt={}; ncfldzmdt={}
     for casename in casenames:
-
-        fname= basedir + casename +'/ts/' + casename + '_' + field + '_' + timepers[casename] + '_ts.nc'
+        
+        if pulse==False and ('pulse' in casename): continue
+            
+        if seacyc:
+            if last!='last200':
+                raise Exception('load_ncfield(): if seacyc=True, last must = last200')
+            if local!=True:
+                raise Exception('load_ncfield(): if seacyc=True, local must be True (as of Mar 24 2017)')
+                
+            fname = bd + casename+subdir+casename + '_' + field + '_' + timepers[casename] + '_seacycle.nc'
+        else:
+            fname= bd + casename +subdir + casename + '_' + field + '_' + timepers[casename] + '_ts.nc'
         timesel=timesels[casename]
         if verb:
             print fname
@@ -214,4 +236,15 @@ def load_ncfield(field, ncfield, zonal=True,conv=1,mo=0,season=None,last='last10
         #ncfldtmdt[casename] = fldtm # time mean
         ncfldzmdt[casename] = fldzm # zonal mean  (w/ time dim)
 
+        # try this: add coords # @@@@@@@@@@
+        lat,lon = load_nclatlon(field,last=last,includeyr1=includeyr1,verb=verb,local=local)
+        ncflddt['lat'] = lat; ncflddt['lon'] = lon;
+        try:
+            lev = load_nclev(field,last=last,includeyr1=includeyr1,verb=verb)
+            ncflddt['lev'] = lev
+        except:
+            print "No lev coord. Leave it"
+        
+        ncfldzmdt['lat'] = lat
+        
     return ncflddt, ncfldzmdt

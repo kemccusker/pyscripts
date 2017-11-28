@@ -23,13 +23,13 @@ def get_timepers(casename):
 
     return timepers
 
-def build_filenames(fielddict, casename, ftype=None,timesel=None,verb=True,local=False):
+def build_filenames(fielddict, casename, ftype=None,timesel=None,verb=True,local=True,etype=None):
     """ ftype and timesel are not implemented here yet.
 
         ftype: type of filename to build. Right now just 'fullts' for full timeseries
               or 'fullclimo' for '1950-2020_climo' or, given timesel:
               for styr-enyr_climo. or 'ensmean'
-        local: is the data on /raid/ra40 or ~/work/DATA (local=True)
+        local: is the data on /raid/ra40 or /Volumes/KellyDataDisk/home/work/DATA (local=True)
               
         returns a list of all filenames 
         
@@ -55,12 +55,14 @@ def build_filenames(fielddict, casename, ftype=None,timesel=None,verb=True,local
         suff=str(styear)+ '-' + str(enyear) + '_climo'
     """
 
-    if local: # as of 10/7/2016, no consistent local directory (ie on laptop or imac itself. just external drives)
-        basepath = '/HOME/rkm/work/DATA/CanESM2/'
+    if local:
+        # as of 10/7/2016, no consistent local directory (ie on laptop or imac itself. just external drives)
+        # July 2017: local is external drive. Not local isn't really defined then.?
+        basepath = '/Users/kelly/DATA/DataDisk/' #'/HOME/rkm/work/DATA/CanESM2/'
     else:
-        print 'getting basepath'
-        basepath=bp['basepath']
-
+        #print 'getting basepath'
+        #basepath=bp['basepath']
+        basepath = '/Volumes/KellyDataDisk/home/work/DATA/CanESM2/'
         
     field=fielddict['field']
     comp=fielddict['comp']
@@ -83,8 +85,8 @@ def build_filenames(fielddict, casename, ftype=None,timesel=None,verb=True,local
 
 
 def load_data(fielddict, casename, seas=None, timesel=None,infodict=None,ftype='fullts',
-              calctype=None, calcdict=None,conv=1, region=None,local=False,
-              orig=None,verb=True, detrend=True):
+              calctype=None, calcdict=None,conv=1, region=None,local=True,
+              orig=None,verb=True, detrend=True,etype=None):
     """ def load_data(fielddict, seas=('DJF','MAM','JJA','SON'), timesel=None, infodict=None, calctype=None, calcdict=None)
 
             fielddict: should have {'field': field, 'ncfield': ncfield, 'comp': comp} at minimum
@@ -94,7 +96,7 @@ def load_data(fielddict, casename, seas=None, timesel=None,infodict=None,ftype='
             rettype: 'dict' or 'ndarray' as return type. 
                       default is dict of DataFrames (to make a Panel). 
                       else, 'ndarray' is a 4D array
-            local: is data in ~/work/DATA (local=True) or /raid/ra40
+            local: is data in /Volumes/KellyDataDisk/home/work/DATA (local=True) or /raid/ra40
             detrend: removes any spurious trend (drift) found in data, for e/ grid point 
                      
 

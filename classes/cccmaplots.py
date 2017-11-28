@@ -311,7 +311,7 @@ def addtsigm(basem, pvals, lat, lon, siglevel=0.05,color='k',sigtype='hatch',rev
     lons, lats = np.meshgrid(lon,lat)
 
     if sigtype == 'hatch':
-            basem.contourf(lons,lats,plotfld,levels=[1,2],colors='none',latlon=True,hatches='.')
+            basem.contourf(lons,lats,plotfld,levels=[1,2],colors='none',latlon=True,hatches='...')#@@@@@@@@
             #'x')#hatches='\\\\')#'.')#hatches='o')
     elif sigtype == 'conthatch':
         basem.contourf(lons,lats,plotfld,levels=[1,2],colors='none',latlon=True,hatches='.')
@@ -348,7 +348,7 @@ def addtsig(ploth, pvals, dim1, dim2, siglevel=0.05,color='k',sigtype='hatch',cm
 
 
     if sigtype == 'hatch':
-        pc = ploth.contourf(dim1s,dim2s,plotfld,levels=[1,2],colors='none',hatches='o')#'.')
+        pc = ploth.contourf(dim1s,dim2s,plotfld,levels=[1,2],colors='none',hatches='.')#'o')#'.')#@@@@@@@@@@
         # ploth.contourf(dim1s,dim2s,plotfld,levels=[1,2],colors='none',hatches='.')
     elif sigtype == 'color':
         pc = ploth.pcolormesh(dim1s,dim2s,plotfld,\
@@ -362,12 +362,13 @@ def addtsig(ploth, pvals, dim1, dim2, siglevel=0.05,color='k',sigtype='hatch',cm
 
 def vert_plot(fld, lev, lat, title='',units='',cmap='blue2red_w20',cmin='',cmax='', ptype=None,
               axis=None, suppcb=False, latlim=None, levlim=None,addcontlines=False,screen=False,
-              suppylab=False,suppxlab=False,hPa=False):
+              suppylab=False,suppxlab=False,hPa=False,addcontlabs=False,fmt='%2.1f'):
     """ screen=False: this flag tells whether the plot should be after Screen et al. 2013, ClimDyn
                           1000-300hPa, 20-90N. Ignores latlim/levlim
         suppylab=False: suppress the y labels
     """
 
+    
     if hPa:
         lats,levs = np.meshgrid(lat,lev) # do not divide by 100, already in hPa
     else:
@@ -406,10 +407,12 @@ def vert_plot(fld, lev, lat, title='',units='',cmap='blue2red_w20',cmin='',cmax=
 
     if addcontlines:
         if cmin=='':
-            ax.contour(lats,levs,fld,colors='.3') #cmlen autolevels@@removed
+            cs=ax.contour(lats,levs,fld,colors='.3') #cmlen autolevels@@removed
         else:
-            ax.contour(lats,levs,fld,levels=conts,colors='.3') # may have to make a dict for levels key
-
+            cs=ax.contour(lats,levs,fld,levels=conts,colors='.3') # may have to make a dict for levels key
+    if addcontlabs:
+        ax.clabel(cs, fmt = fmt,inline=0,fontsize=10)
+        
     #ax.set_ylim(levlim,1000)
     #ax.invert_yaxis()
 
@@ -425,9 +428,11 @@ def vert_plot(fld, lev, lat, title='',units='',cmap='blue2red_w20',cmin='',cmax=
             ax.set_xticklabels((40, 60, 80))
         else:
             ax.set_xticklabels('')
-    else:
+    else:        
         ax.set_yscale('log')
-        ax.set_yticks([1000,800, 500, 300, 100, 10])
+        ax.set_yticks([1000,800, 500, 300, 100, 10], minor=False)
+        ax.set_yticklabels('')
+        
         if ptype=='nh':
             ax.set_xlim(latlim,90)
             ax.set_xticks([20, 45, 70])
@@ -453,10 +458,8 @@ def vert_plot(fld, lev, lat, title='',units='',cmap='blue2red_w20',cmin='',cmax=
         if suppylab==False:
             ax.set_yticklabels((1000,800,500,300,100,10))
         else:
-            ax.set_yticklabels('')
-
-            
-
+            ax.set_yticklabels('') 
+     
     ax.set_ylim(levlim,1000)
     ax.invert_yaxis()
     if suppylab==False:

@@ -53,7 +53,7 @@ def rmse(actual,predicted):
     return np.sqrt(((predicted - actual) ** 2).mean())
     
     
-def calc_areawgted_rmse(actual,predicted,lat,lon,model='CanESM2'):
+def calc_areawgted_rmse(actual,predicted,lat=None,lon=None,model='CanESM2',weights=None):
     """ This computes the area-weighted RMSE for the input data.
         Assumes dims of lat x lon
     """
@@ -61,157 +61,146 @@ def calc_areawgted_rmse(actual,predicted,lat,lon,model='CanESM2'):
     se = (predicted - actual) ** 2
     #print se.shape # @@@
 
-    #if np.mod(se.shape[-1],2) != 0:
-    #    fld=se[...,:-1]
-    #else: fld=se
+    if weights != None:
+        weightsmt = weights
 
-    #if np.mod(lon.shape[0],2) != 0:
-    #    lon=lon[:-1]
-
-    # Rounding has some floating point issues which make it unreliable
-    # for this purpose
-    #latlims=(lat[0].round(decimals=3),lat[-1].round(decimals=3))
-    #lonlims=(lon[0].round(decimals=3),lon[-1].round(decimals=3))
-    latlims=(np.floor(lat[0]),np.ceil(lat[-1]))
-    lonlims=(np.floor(lon[0]),np.ceil(lon[-1]))
-    ldict = {'latlims':latlims,'lonlims':lonlims}
-
-    # from calc_regmean()
-    #fldm,regmask = mask_region(fld,lat,lon,region='other',limsdict=ldict)
-
-    # calculate area-weights
-    if model=='CanESM2':
-        areas = con.get_t63cellareas()
-        latall = con.get_t63lat()
-        lonall = con.get_t63lon()[:-1]
-        
-    elif model==None:
-        if lat[0]>-80: #probably means don't have all lats (just NH?)
-            print 'Do not use calc_cellareas() if coords do not span full globe!'
-            print 'Getting CanESM2 t63 areas instead'
-            areas = con.get_t63cellareas()
-        else:
-            areas = calc_cellareas(lat,lon)
     else:
-        print 'model setting incorrect. Either ''CanESM2'' or None' # @@
-        return -1
+        latlims=(np.floor(lat[0]),np.ceil(lat[-1]))
+        lonlims=(np.floor(lon[0]),np.ceil(lon[-1]))
+        ldict = {'latlims':latlims,'lonlims':lonlims}
 
-    #if lat.all()>0:
-    #    print 'NH only' # @@@ note this is a gross assumption, could be some subset in NH
-    #    nlat=areas.shape[0]
-    #    areas = areas[nlat/2:,:] # just get NH
-    #    #print 'areas ' + str(areas.shape) # @@@@
+        # calculate area-weights
+        if model=='CanESM2':
+            areas = con.get_t63cellareas()
+            latall = con.get_t63lat()
+            lonall = con.get_t63lon()[:-1]
 
-    
-    areasm,regmask = mask_region(areas,latall,lonall,region='other',limsdict=ldict)
-    
-    #areasm = ma.masked_where(regmask,areas)
-    weightsm = areasm / ma.sum(areasm.flatten()) # weights masked
+        elif model==None:
+            if lat[0]>-80: #probably means don't have all lats (just NH?)
+                print 'Do not use calc_cellareas() if coords do not span full globe!'
+                print 'Getting CanESM2 t63 areas instead'
+                areas = con.get_t63cellareas()
+                latall = con.get_t63lat()
+                lonall = con.get_t63lon()[:-1]
+            else:
+                areas = calc_cellareas(lat,lon)
+        else:
+            print 'model setting incorrect. Either ''CanESM2'' or None' # @@
+            return -1
 
-    #weightsmt = weightsm
-    weightsmt = weightsm[areasm.mask==False] # just get the weights where have data
+        areasm,regmask = mask_region(areas,latall,lonall,region='other',limsdict=ldict)
+
+        weightsm = areasm / ma.sum(areasm.flatten()) # weights masked
+
+        weightsmt = weightsm[~areasm.mask] # just get the weights where have data
 
     mse = ma.sum(se.flatten()*weightsmt)
-
-    #tmp = ma.masked_where(regmask,fldm)
-    #if tmp.ndim==3:
-    #    tmpreg = ma.sum(ma.sum(tmp*weightsmt,axis=2),axis=1)
-    #elif tmp.ndim==2:
-    #    tmpreg = ma.sum(tmp*weightsmt)
-
-    #mse = tmpreg # should be ndim1 of regional mean (or just one regional mean)
     
     return np.sqrt(mse)
     
-    
-def calc_areawgted_var(input,lat,lon,model='CanESM2'):
+def calc_areawgted_std(input,lat=None,lon=None,model='CanESM2',weights=None):
+
+    return np.sqrt(calc_areawgted_var(input,lat,lon,model=model,weights=weights))
+
+                       
+def calc_areawgted_var(input,lat=None,lon=None,model='CanESM2',weights=None):
     # mask=TRUE is where the field is masked OUT
-
-
-    # deal with situation where not all lat/lons are given
-    #latlims=(np.around(lat[0],decimals=2),lat[-1].round(decimals=2))
-    #lonlims=(np.around(lon[0],decimals=2),lon[-1].round(decimals=2))
-    latlims=(np.floor(lat[0]),np.ceil(lat[-1]))
-    lonlims=(np.floor(lon[0]),np.ceil(lon[-1]))
-    ldict = {'latlims':latlims,'lonlims':lonlims}
-
-    #print ldict
-    #print lat
-
-    # from calc_regmean()
-    #fldm,regmask = mask_region(input,lat,lon,region='other',limsdict=ldict)
-    
-    # calculate area-weights
-    if model=='CanESM2':
-        areas = con.get_t63cellareas()
-        latall = con.get_t63lat()
-        lonall = con.get_t63lon()[:-1]
-    elif model==None:
-        if lat[0]>-80: #probably means don't have all lats (just NH?)
-            print 'Do not use calc_cellareas() if coords do not span full globe!'
-            print 'Getting CanESM2 t63 areas instead'
-            areas = con.get_t63cellareas()
-        else:
-            areas = calc_cellareas(lat,lon)
+    if weights != None:
+        weightsmt = weights
     else:
-        print 'model setting incorrect. Either ''CanESM2'' or None' # @@
-        return -1
 
-    areasm,regmask = mask_region(areas,latall,lonall,region='other',limsdict=ldict)
-    
-    import matplotlib.pyplot as plt
-    import cccmaplots as cplt
-    #print areasm, areasm.mask
+        # deal with situation where not all lat/lons are given
+        latlims=(np.floor(lat[0]),np.ceil(lat[-1]))
+        lonlims=(np.floor(lon[0]),np.ceil(lon[-1]))
+        ldict = {'latlims':latlims,'lonlims':lonlims}
 
-    #plt.figure(); cplt.kemmap(areasm,latall,lonall,ptype='sq')
-    #print latall[~areasm.mask[:,1]] # this should match lat input arg
-    
-    #areasm = ma.masked_where(regmask,areas)
-    weightsm = areasm / ma.sum(areasm.flatten()) # weights masked    
-    #print weightsm
-    #print 'weightsm.sum() ' + str(weightsm.sum())
+        # calculate area-weights
+        if model=='CanESM2':
+            areas = con.get_t63cellareas()
+            latall = con.get_t63lat()
+            lonall = con.get_t63lon()[:-1]
+        elif model==None:
+            if lat[0]>-80: #probably means don't have all lats (just NH?)
+                print 'Do not use calc_cellareas() if coords do not span full globe!'
+                print 'Getting CanESM2 t63 areas instead'
+                areas = con.get_t63cellareas()
+            else:
+                areas = calc_cellareas(lat,lon)
+        else:
+            print 'model setting incorrect. Either ''CanESM2'' or None' # @@
+            return -1
 
-    #print 'weightsm.shape ' + str(weightsm.shape)
-   
-    
-    #weightsmf = weightsm.flatten()
-    #print 'weightsmf.shape ' + str(weightsmf.shape)
-    
-    weightsmt = weightsm[areasm.mask==False] # just get the weights where have data
-    #print 'weightsmt.shape ' + str(weightsmt.shape)
-    #print 'len(lat),len(lon) ' + str(len(lat)),str(len(lon))
-    #wtest = weightsmt.reshape((len(lat),len(lon)))
-    #print 'wtest.shape,len(lat),len(lon) ' + str(wtest.shape),str(len(lat)),str(len(lon))
-    #plt.figure(); cplt.kemmap(wtest,lat,lon,ptype='sq')     
-    
-    #print wtest
+        areasm,regmask = mask_region(areas,latall,lonall,region='other',limsdict=ldict)
+
+        weightsm = areasm / ma.sum(areasm.flatten()) # weights masked    
+        weightsmt = weightsm[~areasm.mask] # just get the weights where have data
 
     inflat = input.flatten()
-
-    #meanfld = (1/np.float(len(inflat))) * np.sum(weightsmt*inflat)
-    meanfld = ma.sum(weightsmt*inflat)
-    print 'meanfld ' + str(meanfld)
+    meanfld,wsum = ma.average(inflat,weights=weightsmt,returned=True)
+    #print 'meanfld,weightsum ' + str(meanfld),str(wsum)#@@@@
 
     #var = (1/np.float(len(inflat))) * np.sum(weightsmt * (inflat-meanfld)**2)
-    var = np.sum(weightsmt * (inflat-meanfld)**2)
-
-    return var
+    var = ma.sum(weightsmt * (inflat-meanfld)**2)
+    # for unbiased (sample) estimator, need to mult by: V1 / (V1-V2)
+    #    V1= sum of weights. V2= sum of squared weights
+    #    (instead of divide by N-1 for unweighted calc.)
+    #    This doesn't appear to change the calc much esp b/c weights sum to 1
+    multby = ma.sum(weightsmt) / (ma.sum(weightsmt) - ma.sum(weightsmt**2))
+    #print 'var ' + str(var) #@@@
+    return var*multby
             
 
-def pattcorr(x,y):
+def pattcorr_wgted(x,y, weights):
+    """ pattcorr_wgted(x,y,weights)
+    
+           Return the pattern correlation coefficient between x and y (index 0,1 of matrix)
+              x and y must be flattened arrays (of a 2D map)
+              
+              weights: fractional area weights w/ same dims as x and y
+
+           Test against pattcorr(x,y,weights=weights) which uses np.cov() with weights.
+           Here the function implemented is:
+              (1/N) sum( (xn - xbar)*(yn - ybar) * weightsn ) / std(x)*std(y)
+           From: http://www-pcmdi.llnl.gov/publications/pdf/55.pdf
+
+              where xbar,ybar are area weighted means, xn, yn are at e/ grid point, 
+                    N is total num grid points, and std is area weighted standard dev
+
+    """
+
+    N = np.float(np.shape(x)[0])
+    stdxy = calc_areawgted_std(x,weights=weights) * calc_areawgted_std(y,weights=weights)
+    print 'stdxy no weights ' + str(ma.std(x)*ma.std(y))
+    
+    xmean = ma.average(x,weights=weights)
+    ymean = ma.average(y,weights=weights)
+
+    print 'stdxy,N,xmean,ymean ' + str(stdxy),str(N),str(xmean),str(ymean)
+    r = (1/N) * ma.sum((x-xmean)*(y-ymean)*weights) / stdxy
+    # @@@ I suspect it's not 1/N for the weighted calc @@@
+
+    print 'r, r(no weights) ' + str(r),str( (1/N) * ma.sum((x-xmean)*(y-ymean)) / stdxy)
+    
+    return r
+
+
+def pattcorr(x,y, weights=None):
     """ pattcorr(x,y)
     
            Return the pattern correlation coefficient between x and y (index 0,1 of matrix)
               x and y must be flattened arrays (of a 2D map)
               
+              weights: added 5/15/2017. Testing using them in np.cov(). 
+                       (e.g. area weights as fractions. Must have same dims as x and y)
+
            This function is to test the results from np.corrcoef() and ma.corrcoef()
               and gives the same result. @@ what about scipy.stats.pearsonr() @@ ?
                @@ appears to give same result @@
     """
 
-    Cxy = np.cov(x,y)
-    Cxx = np.cov(x)
-    Cyy = np.cov(y)
+    Cxy = np.cov(x,y,aweights=weights)
+    Cxx = np.cov(x,aweights=weights)
+    Cyy = np.cov(y,aweights=weights)
 
     Pxy = Cxy / np.sqrt(Cxx*Cyy)
 
@@ -370,12 +359,21 @@ def calc_totseaicearea(fld,lat,lon,isarea=False,model='CanESM2'):
         sia=fld 
     else:
         sia = calc_seaicearea(fld,lat,lon,model=model)
+        #print sia #@@@@
 
     # Changed to ma.sum() on 12/10/14
-    nh = ma.sum(ma.sum(sia[...,lat>0,:],axis=-1),axis=-1)
-    sh = ma.sum(ma.sum(sia[...,lat<0,:],axis=-1),axis=-1)
+    #nh = ma.sum(ma.sum(sia[...,lat>0,:],axis=-1),axis=-1)
+    #sh = ma.sum(ma.sum(sia[...,lat<0,:],axis=-1),axis=-1)
 
-    return nh,sh
+    latt = np.tile(lat,(fld.shape[0],fld.shape[2],1))
+    latt=latt.transpose((0,2,1))
+    siamnh = ma.masked_where(latt<=0,sia)
+    nh = ma.sum(ma.sum(siamnh,axis=-1),axis=-1)
+
+    siamsh = ma.masked_where(latt>=0,sia)
+    sh = ma.sum(ma.sum(siamsh,axis=-1),axis=-1)
+
+    return nh,sh#,sia
 
 def calc_seaiceextent(fld, lat, lon=None, model='CanESM2'):
     """ 
@@ -510,7 +508,7 @@ def rem_seasonalcycle(input, remclimo=None):
     
     if remclimo==None:
         
-        remclimo,std = cutl.climatologize(input)
+        remclimo,std = climatologize(input)
         
         
     otherdims=input.shape[1:]
@@ -534,7 +532,9 @@ def rem_seasonalcycle(input, remclimo=None):
     return inrem  
     
 def global_mean_areawgted3d(fld, lat, lon, model='CanESM2'):
-    """
+    """ 
+        Assumes fld is time x lat x lon
+
         if model=='CanESM2': use areacella from file
         if model==None: use calc_cellareas() using lat/lon
     """
@@ -550,12 +550,11 @@ def global_mean_areawgted3d(fld, lat, lon, model='CanESM2'):
         print 'model setting incorrect. Either ''CanESM2'' or None' # @@
         return -1
 
-    nt = fld.shape[0]
+    nt,nlat,nlon = fld.shape
     wgts = cellareas/np.float(totalarea)
-    
-    gm = np.zeros(nt)    
-    for tidx in range(0,nt):
-        gm[tidx] = ma.average(fld[tidx,:,:],weights=wgts)
+
+    fldf = fld.reshape((nt,nlat*nlon))
+    gm = ma.average(fldf,weights=wgts.flatten(),axis=1)
         
     return gm
    
@@ -886,10 +885,29 @@ def seasonalize(input,season=None,includenan=0,mo=0,climo=0,verb=False):
         #subwgts = wgts[0:2]
         start=0
         incr=2
+    elif season=='AM': # april / may (nonstandard)
+        indices = [3,4]
+        subwgts = dpm[indices]/np.float(np.sum(dpm[indices]))
+        start=3
+        incr=2
+    elif season=='MA': # march / april 
+        indices = [2,3]
+        subwgts = dpm[indices]/np.float(np.sum(dpm[indices]))
+        start=2
+        incr=2
+    elif season=='MJ': # may / june
+        indices = [4,5]
+        subwgts = dpm[indices]/np.float(np.sum(dpm[indices]))
+        start=4
+        incr=2
+    elif season=='JA': # july / aug
+        indices = [6,7]
+        subwgts = dpm[indices]/np.float(np.sum(dpm[indices]))
+        start=6
+        incr=2
     elif season=='SO':
         indices = [8,9]
         subwgts = dpm[indices]/np.float(np.sum(dpm[indices]))
-        #subwgts = wgts[8:10]
         start=8
         incr=2
     else:
@@ -976,16 +994,70 @@ def calc_cellareas(lat,lon, repeat=None):
         cellareas = np.tile(cellareas,nrep)
         
     return cellareas
-                     
-def get_cellwgts(lat,lon,repeat=None, model='CanESM2'):
+
+def calc_areawgts(lat,lon,model='CanESM2'):
+    """
+       For given lat and lon, return the grid cell area weights
+       
+       This can handle subsets of the full globe. It is most reliable
+        if model='CanESM2'. If it is not and lat/lon are subsets of globe,
+           CanESM coords and grid areas will be used anyway.
+           
+        returns weights as fraction with shape [lat, lon]
+
+        @@@ This appears to fail is wanting the full globe(?). 
+        @@@ Problem arises in mask_region
+    """
+    latlims=(np.floor(lat[0]),np.ceil(lat[-1]))
+    lonlims=(np.floor(lon[0]),np.ceil(lon[-1]))
+    ldict = {'latlims':latlims,'lonlims':lonlims}
+    
+    # calculate area-weights
+    if model=='CanESM2':
+        areas = con.get_t63cellareas()
+        latall = con.get_t63lat()
+        lonall = con.get_t63lon()[:-1]
+        
+    elif model==None:
+        if lat[0]>-80: #probably means don't have all lats (just NH?)
+            print 'Do not use calc_cellareas() if coords do not span full globe!'
+            print 'Getting CanESM2 t63 areas instead'
+            areas = con.get_t63cellareas()
+            latall = con.get_t63lat()
+            lonall = con.get_t63lon()[:-1]
+        else:
+            areas = calc_cellareas(lat,lon)
+    else:
+        print 'model setting incorrect. Either ''CanESM2'' or None' # @@
+        return -1
+
+    # mask out regions not included in the coords
+
+    # If latall is the same as lat and lonall is the same as lon,
+    #  just do a regular weight calc (no consideration of masks)
+    # (can use np.array_equal() to test if exactly the same.)
+    if len(latall) == len(lat) and (np.allclose(latall,lat) and np.allclose(lonall,lon)):
+            weightsmt = areas / np.sum(areas.flatten())
+    else:   
+        areasm,regmask = mask_region(areas,latall,lonall,region='other',limsdict=ldict)
+        weightsm = areasm / ma.sum(areasm.flatten()) # weights masked
+        weightsmt = weightsm[~areasm.mask] # just get the weights where have data
+        weightsmt =np.reshape(weightsmt, (len(lat),len(lon)) )
+
+    return weightsmt
+
+
+def get_cellwgts(lat,lon,repeat=None, model='CanESM2',partial=False):
 
     """ basically, repeat should be the shape of the field that
     #   we want to weight with cell weights. Assume the last
     #   two numbers are lat and lon sizes
-    #   If None, no repeating necessary
+    #   If None, no repeating necessary. Only can do full globe.
 
         if model=='CanESM2': use areacella from file
         if model==None: use calc_cellareas() using lat/lon
+        if partial=True it's partial globe defined by ends of lat/lon
+                        ONLY for model=CanESM2
     """
     
     earthrad = con.get_earthrad()
@@ -995,6 +1067,8 @@ def get_cellwgts(lat,lon,repeat=None, model='CanESM2'):
         print 'total area from sum(grid cell areas)= ' + str(con.get_t63cellareas().sum()) # @@
         print 'diff= ' + str(totalarea-con.get_t63cellareas().sum())
 
+        if partial: #@@@ placeholder
+            pass
         wgts = con.get_t63cellareas()/totalarea
     elif model==None:
         wgts = calc_cellareas(lat,lon)/totalarea
@@ -1375,6 +1449,47 @@ def calc_monthlytstat(input1,input2):
 
     return (tstat,pval)
 
+def calc_monthlyfstat(input1,input2,center='mean'):
+    """ calc_monthlyfstat(input1,input2):
+            Testing the variance of input1 against input2 (think of input2 as a control)
+            This calls sp.stats.levene(pert,ctl,center=center) (See doc for calc_pvals())
+
+            return tuple of fstat,pval with shape 12 [x shape[1:]]
+    """
+
+    dims = input1.shape
+    nt = dims[0]
+
+    if len(dims)==1:
+        tstat = np.zeros((12))
+        pval = np.zeros((12))
+    else:
+        diml = list(dims[1:])
+        diml.insert(0,12) # insert size 12 into first dimension
+        diml = tuple(diml)
+        fstat = np.zeros(diml)
+        pval = np.zeros(diml)
+        
+    mo = np.arange(0,12)
+
+    for moidx in mo:
+        if len(dims)==3:
+            for yidx in np.arange(0,input1.shape[1]):
+                for xidx in np.arange(0,input1.shape[2]): 
+
+                    fstat[moidx,yidx,xidx],pval[moidx,yidx,xidx] = sp.stats.levene(input1[moidx::12,yidx,xidx],
+                                                                    input2[moidx::12,yidx,xidx],
+                                                                    center=center)
+        elif len(dims)==1:
+            fstat[moidx,...],pval[moidx,...] = sp.stats.levene(input1[moidx::12,...],
+                                                            input2[moidx::12,...],
+                                                            center=center)
+        else:
+            print 'dim of ' + str(len(dims)) + ' not supported'
+            raise Exception
+                    
+    return (fstat,pval)
+
 def calc_monthlysigarea(input1,input2,siglevel=0.05,latlim=60,region=None, model='CanESM2'):
     """ calc_monthlysigarea(input1,input2,siglevel=0.05,latlim=60,region=None)
               If 'region' is set, it supercedes latlim!!
@@ -1421,8 +1536,8 @@ def calc_monthlysigarea(input1,input2,siglevel=0.05,latlim=60,region=None, model
     sigarea= np.zeros(mo.shape)
     totarea= np.zeros(sigarea.shape)
     for moidx in mo:
-        sigarea[moidx] = np.sum(amask[moidx,...])
-        totarea[moidx] = np.sum(totmask[moidx,...])
+        sigarea[moidx] = ma.sum(amask[moidx,...])
+        totarea[moidx] = ma.sum(totmask[moidx,...])
 
     #print totarea
     #print sigarea
@@ -1605,6 +1720,41 @@ def ttest_ind(input1,input2,axis=0,effdof=False,equal_var=True):
         
     return (tstat,pval)
 
+def calc_fstat(input1,input2,center='mean'):
+    """ 
+            Testing the variance of input1 against input2 (think of input2 as a control)
+            This calls sp.stats.levene(pert,ctl,center=center) (See doc for calc_pvals())
+
+            Currently this will work for just 1 timeseries, or a grid of timeseries.
+
+            return tuple of fstat,pval with shape input.shape[1:]
+    """
+
+    if input1.shape[1:] != input2.shape[1:]:
+        print 'input1 and input2 must have same dimensions 1:end!'
+        raise Exception
+    
+    dims = input1.shape
+
+    if len(dims)>1:
+        fstat = np.zeros(dims[1:])
+        pval = np.zeros(dims[1:])
+
+    if len(dims)==3:      
+        for yidx in np.arange(0,input1.shape[1]):
+            for xidx in np.arange(0,input1.shape[2]): 
+                fstat[yidx,xidx],pval[yidx,xidx] = sp.stats.levene(input1[:,yidx,xidx],
+                                                                input2[:,yidx,xidx],
+                                                                center=center)
+                
+    elif len(dims)==1:
+        fstat,pval = sp.stats.levene(input1,input2,center=center)
+    else:
+        print 'dim of ' + str(len(dims)) + ' not supported'
+        raise Exception
+                    
+    return (fstat,pval)
+
 
 def calc_normfit(input,verb=True):
     """ use scipy.stats.norm.fit() to calc a pdf mean and sigma
@@ -1759,6 +1909,80 @@ def detrend(input, axis=0, dttype='linear'):
     """
     return sp.signal.detrend(input,axis=axis,type=dttype) + input.mean(axis=0)
 
+
+def runmean(input, window=5,axis=0) :
+    """ compute a running mean with a time range of window, along axis.
+
+        Time index will be: xxrun = origxx[window/2:-window/2+1]
+
+    """
+    ret = np.cumsum(input, dtype=float,axis=axis)
+    ret[window:,...] = ret[window:,...] - ret[:-window,...]
+    return ret[window - 1:,...] / np.float(window)
+
+
+def selectmonths(input,start=11, incr=3, weights=(0.34444444,0.34444444,0.31111111),
+                 retavg=False):
+    """ choose selected months but repeat until end of time dim (assume axis=0!!)
+        This is for a monthly average dataset!
+        
+            retavg: a flag to specify whether the average of the chosen months    
+                should be returned instead of the individual months
+                    For example, if True, if selected months are D,J,F then 
+                       timeseries of DJF means will be returned instead of D,J,F repeating
+            weights are for D,J,F average into DJF seasonal mean
+            
+            returns either array of D,J,F OR array of DJF mean
+
+            DEFAULTS: are set to D,J,F assuming the monthly input starts with Jan.
+            
+    """
+    nt = input.shape[0]
+    #nyrs = nt/12
+    rem = np.mod((nt-start),12)
+    nyrs = (nt-start)/12
+    print 'nyrs,remainder ' + str(nyrs),str(rem)
+    if rem>=incr:
+        nyrs=nyrs+1
+        
+    print 'nyrs ' + str(nyrs)
+    
+    ntout = nyrs*incr # leave off trailing months if they exist. 
+    
+    #print type(input[0])
+    
+    if input.ndim>1:
+        otherdims=input.shape[1:]
+    else:
+        otherdims=()
+    
+    if 'datetime' in str(type(input[0])) :
+        ret=[]
+    else:
+        if retavg:
+            ret = np.zeros((nyrs,)+otherdims)
+        else:
+            ret = np.zeros((ntout,)+otherdims) #input.shape[1],input.shape[2]))
+
+        print 'ret.shape ' + str(ret.shape)
+    print 'nyrs ' + str(nyrs) + ', and ' + str(ntout/incr)
+    
+    for yridx in range(0,nyrs):
+        subsamp = range(start+yridx*12,start+yridx*12+incr)
+        #print yridx, subsamp # @@@
+        if retavg:
+            ret[yridx,...] = np.average(input[subsamp,...],weights=np.array(weights),axis=0)
+        else:
+            if 'datetime' in str(type(input[0])): # hack to check dates that are selected               
+                ret[yridx*incr:yridx*incr+incr] = input[subsamp]
+                
+            else: # hack to check dates that are selected
+                
+                ret[yridx*incr:yridx*incr+incr,...] = input[subsamp,...]  
+        
+        #print 'input[subsamp,...].shape ' + str(input[subsamp,...].shape)
+
+    return ret
 
 """ Trying to figure out correct way to calc 95% confidence interval
 https://github.com/scipy/scipy/blob/v0.13.3/scipy/stats/distributions.py#L788-L819

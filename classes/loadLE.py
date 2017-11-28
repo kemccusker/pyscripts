@@ -11,10 +11,35 @@ bp=con.get_LEbasepath()
 basepath=bp['basepath']
 ensnum=10
 
+ensDT = {'historical':'historical',
+         'historicalNat': 'historicalNat',
+         'historicalAA': 'historicalMisc',
+         'historicalSO': 'historicalMisc',
+         'historicalLU': 'historicalMisc',
+         'historicalSI': 'historicalMisc',
+         'historicalGHG': 'historicalGHG'}
+pnumDT = {'historical':'1', 'historicalNat': '1',
+          'historicalAA': '4',
+          'historicalSO':'6', 'historicalLU': '2',
+          'historicalSI': '3','historicalGHG':'1'}
+timeperDT={'le':'195001-202012',
+           'cmip':'185001-201212',
+           'historicalSO': '195001-200012'} # except for some reason SO is '195001-200012', '200101-205012'
+
 #  Make this a class! CanESM2LE
 
+def load_LEdataxr(fielddict, ens, seas=None, timesel=None,infodict=None,ftype='fullts',
+                calctype=None, calcdict=None, rettype='dict',conv=1, region=None,local=True,
+                orig=None,subens=False,verb=True,zonal=False):
+    """ load LE data using xarray
+    """
+
+    print 'load_LEdataxr() not yet implemented' #@@@
+    
+
+    
 def load_LEdata(fielddict, ens, seas=None, timesel=None,infodict=None,ftype='fullts',
-                calctype=None, calcdict=None, rettype='dict',conv=1, region=None,local=False,
+                calctype=None, calcdict=None, rettype='dict',conv=1, region=None,local=True,
                 orig=None,subens=False,verb=True,zonal=False):
     """ def loadLEdata(fielddict, seas=('DJF','MAM','JJA','SON'), timesel=None, infodict=None, calctype=None, calcdict=None)
 
@@ -27,7 +52,7 @@ def load_LEdata(fielddict, ens, seas=None, timesel=None,infodict=None,ftype='ful
             rettype: 'dict' or 'ndarray' as return type. 
                       default is dict of DataFrames (to make a Panel). 
                       else, 'ndarray' is a 4D array
-            local: is data in ~/work/DATA (local=True) or /raid/ra40
+            local: is data in /Volumes/KellyDataDisk/home/work/DATA (local=True) or /raid/ra40
             orig='just' means just load the original 5 (historical+rcp85) runs (consistent w/ LE). 
             orig='just45' means just load original 5 (historical+rcp45) to the full LE.
 
@@ -162,7 +187,8 @@ def load_originalfive(fielddict, ens,seas=None, timesel=None,infodict=None,ftype
     
 
 
-def build_filenames(fielddict, ens, ftype='fullts',timesel=None,verb=True,local=False,orig=None,subens=False):
+def build_filenames(fielddict, ens, ftype='fullts',timesel=None,verb=True,local=False,orig=None,
+                        subens=False,etype='le'):
     """ here we know that each 'sim' has 10 sub-ensemble members
 
         ftype: type of filename to build. Right now just 'fullts' for full timeseries
@@ -170,7 +196,7 @@ def build_filenames(fielddict, ens, ftype='fullts',timesel=None,verb=True,local=
               for styr-enyr_climo. or 'ensmean'. 
               Also can override default time period by setting ftype to timeperiod.
                    e.g. ftype = '195001-201012'
-        local: is the data on /raid/ra40 or ~/work/DATA (local=True)
+        local: is the data on /raid/ra40 or /Volumes/KellyDataDisk/home/work/DATA (local=True)
               
         orig='just' means just load the original 5 (historical+rcp85) runs (consistent w/ LE). 
         orig='just45' means just load original 5 (historical+rcp45) to the full LE.
@@ -180,16 +206,18 @@ def build_filenames(fielddict, ens, ftype='fullts',timesel=None,verb=True,local=
 
         subens: overrides getting all sim groups in ensemble. must be tuple. e.g. ('historical-r1',)
 
+        etype: 'le', 'cmip': le are the 50-member large ensembles. cmip are the 5-member cmip-submitted ensembles.
+               'cmip' w/ ens='historical' is the same as orig='just'
         returns a list of all filenames (50).
         
     """
-    if ens=='historicalMisc':
-        pnum='4'
-    else: pnum='1'
 
     ensmean=False
     if ftype=='fullts':
-        suff='195001-202012'
+        if ens=='historicalSO':
+            suff='195001-200012'
+        else:
+            suff='195001-202012'
     elif ftype=='ensmean':
         # assume fullts
         suff='195001-202012'
@@ -208,35 +236,47 @@ def build_filenames(fielddict, ens, ftype='fullts',timesel=None,verb=True,local=
         # assume ftype is a time period -- add Exception here @@@@@
         suff = ftype # a way to override default timeperiod
 
+    #if ens in ('historicalMisc', 'historicalAA'):
+    #    pnum='4'
+    #elif ens in ('historicalSO',):
+    #    pnum='6'
+    #else: pnum='1'
+    pnum = pnumDT[ens]
 
     if local:
-        basepath = '/HOME/rkm/work/DATA/CanESM2/LE/'
+        basepath = '/Volumes/KellyDataDisk/home/work/DATA/CanESM2/'
     else:
         basepath=bp['basepath']
 
+    if etype=='le': basepath=basepath+'LE/'
         
     field=fielddict['field']
     comp=fielddict['comp']
     
     flist=[]
-    if orig in ('just','just45'):
+    if etype=='cmip' or (orig in ('just','just45')):
 
         #try:
         if ens=='historical':
             if orig=='just45':
                 casename='historicalrcp45'
                 timeext='185001-201212'
-            else:
+            elif orig=='just':
                 casename='historicalrcp85'
                 timeext='185001-202012'
+            else:
+                # etype=cmip
+                casename='historical'
+                timeext='185001-201212'
         else:
-            print 'ens != historical. What to do?'
+            casename=ensDT[ens]
+            timeext=timeperDT[etype]
                 #raise
         #except:
         #    raise Exception
 
         orignum=5
-        basedir='/HOME/rkm/work/DATA/CanESM2/' + casename
+        basedir=basepath + casename
 
         for eii in np.arange(1,orignum+1):
             fname=basedir + '/' + field + '/' + field + '_' + comp + '_CanESM2_' +\
@@ -269,6 +309,7 @@ def build_filenames(fielddict, ens, ftype='fullts',timesel=None,verb=True,local=
 
             if orig in ('add','add45'):
                 #try:
+                print 'this is not going to be functional anymore (basepath wrong) 8/18/17'#@@@
                 if ens=='historical':
                     if orig=='add45':
                         casename='historicalrcp45'
@@ -312,7 +353,7 @@ def get_sims(ens):
         return ('historical-r1','historical-r2','historical-r3','historical-r4','historical-r5')
     elif ens=='historicalNat':
         return ('historicalNat-r1','historicalNat-r2','historicalNat-r3','historicalNat-r4','historicalNat-r5')
-    elif ens=='historicalMisc':
+    elif ens in ('historicalMisc', 'historicalAA','historicalSO'):
         return ('historicalMisc-r1','historicalMisc-r2','historicalMisc-r3','historicalMisc-r4','historicalMisc-r5')
     else:
         print 'ens not defined!! @@' # should throw an exception

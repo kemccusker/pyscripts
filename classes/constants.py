@@ -53,8 +53,8 @@ def get_basepath(runtype='CMIP', model='CanESM2'):
     
     #plat = platform.system()  
 
-    if pymach == 'macbookprohome':  # means I'm on my mac
-        if runtype=='AGCM': # Note, this is just for sea ice isolation project
+    if pymach in ('macbookprohome','macbookprowork'):  # means I'm on a mac laptop
+        if runtype=='AGCM': # Note, this is just for sea ice isolation project (Eurasian cooling)
             bp['basepath'] = '/Volumes/MyPassport2TB/DATA/CanSISE/'
             bp['subdir'] = '/timsel/' # this is only for AGCM runs
         elif runtype=='CMIP':
@@ -80,7 +80,7 @@ def get_LEbasepath(model='CanESM2'):
     
     if model=='CanESM2':
         #if plat == 'Darwin':  # means I'm on my mac
-        if pymach == 'macbookprohome':
+        if pymach in ('macbookprohome','macbookprowork'):
             #bp['basepath'] = '/Volumes/MyPassport2TB/DATA/CanSISE/' + model + '/LE/'
             bp['basepath'] = '/Volumes/KellyDataDisk/home/work/DATA/' + model + '/LE/'
             bp['subdir'] = ''
@@ -92,7 +92,7 @@ def get_LEbasepath(model='CanESM2'):
             bp['basepath'] = '/raid/ra40/data/kem/CanSISE/' + model + '/LE/'
             bp['subdir'] = ''
     elif model=='CESM1':
-        if pymach == 'macbookprohome':
+        if pymach in ('macbookprohome','macbookprowork'):
             #bp['basepath'] = '/Volumes/MyPassport2TB/DATA/cesm1/'
             bp['basepath'] = '/Volumes/KellyDataDisk/raid/rc40/' + model + '/LE/'
             bp['subdir'] = ''
@@ -119,7 +119,7 @@ def get_BCbasepath():
     pymach = get_pymach()
     #plat = platform.system()   
     #if plat == 'Darwin':  # means I'm on my mac
-    if pymach == 'macbookprohome':
+    if pymach in ('macbookprohome','macbookprowork'):
         #bp['basepath'] = '/Volumes/MyPassport2TB/DATA/CanSISE/CanAM4/BCs/'
         bp['basepath'] = '/Volumes/KellyDataDisk/home/work/BCs/'
         bp['subdir'] = '/'
@@ -139,7 +139,7 @@ def get_constantsbasepath():
     if pymach == 'imacwork':
         #basepath = '/Users/kelly/CCCma/CanSISE/DATA/constants/' #@@
         basepath = '/Volumes/KellyDataDisk/work/DATA/CanESM2/' 
-    elif pymach == 'macbookprohome':
+    elif pymach in ('macbookprohome','macbookprowork'):
         basepath = '/Users/kelly/CCCma/CanSISE/DATA/constants/'
         # OR '/Volumes/KellyDataDisk/home/work/DATA/CanESM2/'
     else: # Victoria linux (not an option anymore)
@@ -845,7 +845,8 @@ def get_regiondict():
     ##            'nthatl','bks','soo','pig')
     regdict = {} #dict.fromkeys(regions, {})
 
-    regdict['nh'] = {'latlims': [0,89], 'lonlims': [0,359]}
+    regdict['nh'] = {'latlims': [0,90], 'lonlims': [0,359]}
+    regdict['sh'] = {'latlims': [-90,0], 'lonlims': [0,359]}
     regdict['polcap70'] = {'latlims': [70,89], 'lonlims': [0,359]}
     regdict['polcap65'] = {'latlims': [65,89], 'lonlims': [0,359]}
     regdict['polcap60'] = {'latlims': [60,89], 'lonlims': [0,359]}
